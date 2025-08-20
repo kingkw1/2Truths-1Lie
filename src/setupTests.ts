@@ -3,7 +3,10 @@
  */
 
 // Mock environment variables
-process.env.REACT_APP_WEBSOCKET_URL = 'ws://localhost:8080/ws';
+process.env.REACT_APP_WEBSOCKET_URL = "ws://localhost:8080/ws";
+
+// Empty export to make this file a module
+export {};
 
 // Mock localStorage
 const localStorageMock = {
