@@ -103,6 +103,32 @@ const challengeCreationSlice = createSlice({
       state.currentChallenge.mediaData.push(action.payload);
     },
 
+    setStatementMedia: (state, action: PayloadAction<{ index: number; media: MediaCapture | null }>) => {
+      const { index, media } = action.payload;
+      
+      if (!state.currentChallenge.mediaData) {
+        state.currentChallenge.mediaData = [];
+      }
+      
+      // Ensure mediaData array has enough elements
+      while (state.currentChallenge.mediaData.length <= index) {
+        state.currentChallenge.mediaData.push({
+          type: 'text',
+          duration: 0,
+        });
+      }
+      
+      if (media) {
+        state.currentChallenge.mediaData[index] = media;
+      } else {
+        // Remove media for this statement
+        state.currentChallenge.mediaData[index] = {
+          type: 'text',
+          duration: 0,
+        };
+      }
+    },
+
     setEmotionAnalysis: (state, action: PayloadAction<EmotionScores>) => {
       if (!state.currentChallenge.emotionAnalysis) {
         state.currentChallenge.emotionAnalysis = [];
@@ -171,6 +197,7 @@ export const {
   startRecording,
   stopRecording,
   setMediaData,
+  setStatementMedia,
   setEmotionAnalysis,
   setQualityScore,
   setEstimatedDifficulty,
