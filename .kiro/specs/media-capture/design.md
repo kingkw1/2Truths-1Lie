@@ -2,20 +2,22 @@
 
 ## Architecture
 
-- Frontend uses browser WebRTC or native mobile APIs for video/audio capture  
-- Local preview buffers recorded media for user confirmation  
-- Backend API endpoints handle chunked uploads and storage to Firebase/Supabase  
-- Use media compression to optimize file size before upload
+- Frontend uses browser WebRTC or native mobile APIs (e.g., MediaRecorder API) for video and audio capture  
+- Captured media buffered locally to enable user preview before uploading  
+- Implement client-side media compression or encoding to optimize upload size and speed  
+- Backend exposes chunked upload API endpoints that support resumable uploads  
+- Media stored securely in cloud storage (Firebase Storage, Supabase Storage, or equivalent) with appropriate access controls  
 
 ## Components
 
-- RecordingControl: Start/stop/pause/cancel controls  
-- MediaPreview: Playback of recorded media  
-- UploadProgress: Visual feedback during media upload
+- RecordingControl: Controls to start, pause, resume, and cancel media recording  
+- MediaPreview: Component to play back recorded media before submission  
+- UploadProgress: Visual progress bar with status messages and user cancel option
 
 ## Data Flow
 
-1. User initiates recording on client  
-2. Media buffered locally until completion or cancellation  
-3. On confirmation, media is compressed and uploaded asynchronously  
-4. Server returns media URL for association with challenge
+1. User initiates media capture on the client  
+2. Recorded media stored locally and available for preview  
+3. On confirmation, media compressed to optimize size without significant quality loss  
+4. Media uploaded asynchronously with progress feedback  
+5. Backend validates and stores media securely, returning media URL for association with challenge data
