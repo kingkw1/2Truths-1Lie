@@ -6,7 +6,7 @@
 - [x] Set up WebSocket connection utilities for real-time notifications and updates  
 
 ### 2. Game Session Management  
-- [ ] Build GameSessionManager class to orchestrate sessions, activity states  
+- [x] Build GameSessionManager class to orchestrate sessions, activity states  
 - [ ] Implement session persistence and recovery mechanisms (local and server)  
 - [ ] Add idle timeout handling and hint triggers  
 - [ ] Write unit tests validating session transitions and persistence _(relates Req 1,5)_  
