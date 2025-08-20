@@ -1,0 +1,23 @@
+{
+  "name": "two-truths-one-lie-game",
+  "version": "1.0.0",
+  "description": "Two Truths and a Lie game with emotion analysis",
+  "main": "src/index.ts",
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc --watch",
+    "type-check": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "typescript": "^5.0.0",
+    "@types/node": "^20.0.0"
+  },
+  "keywords": [
+    "game",
+    "typescript",
+    "emotion-analysis",
+    "social"
+  ],
+  "author": "",
+  "license": "MIT"
+}
