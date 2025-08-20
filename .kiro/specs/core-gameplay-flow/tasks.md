@@ -3,7 +3,7 @@
 ### 1. Set up Core Game Infrastructure  
 - [x] Define TypeScript interfaces for game sessions, player progression, rewards _(relates to Req 1,5,6)_  
 - [x] Implement Redux store (or Vuex) for frontend state management  
-- [ ] Set up WebSocket connection utilities for real-time notifications and updates  
+- [x] Set up WebSocket connection utilities for real-time notifications and updates  
 
 ### 2. Game Session Management  
 - [ ] Build GameSessionManager class to orchestrate sessions, activity states  

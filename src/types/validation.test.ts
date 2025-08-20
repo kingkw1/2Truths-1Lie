@@ -227,6 +227,31 @@ export function validateInterfaces(): boolean {
   return true;
 }
 
+// Jest tests for interface validation
+describe('Interface Validation', () => {
+  test('should validate all interfaces compile correctly', () => {
+    expect(validateInterfaces()).toBe(true);
+  });
+
+  test('should have valid GameSession structure', () => {
+    expect(testGameSession.sessionId).toBeDefined();
+    expect(testGameSession.playerId).toBeDefined();
+    expect(testGameSession.currentActivity).toMatch(/creating|browsing|guessing|idle/);
+    expect(testGameSession.isActive).toBe(true);
+  });
+
+  test('should have valid PlayerProgression structure', () => {
+    expect(testPlayerProgression.level.currentLevel).toBeGreaterThan(0);
+    expect(testPlayerProgression.accuracyRate).toBeGreaterThanOrEqual(0);
+    expect(testPlayerProgression.accuracyRate).toBeLessThanOrEqual(100);
+  });
+
+  test('should have valid Achievement structure', () => {
+    expect(testAchievement.progress).toBeLessThanOrEqual(testAchievement.maxProgress);
+    expect(testAchievement.isUnlocked).toBe(true);
+  });
+});
+
 // Export test data for use in other modules
 export {
   testGameSession,
