@@ -1,0 +1,18 @@
+{
+  "enabled": true,
+  "name": "Auto-format and Lint on File Save",
+  "description": "Automatically runs Prettier and ESLint fixes on JavaScript and TypeScript files when saved",
+  "version": "1",
+  "when": {
+    "type": "fileEdited",
+    "patterns": [
+      "src/**/*.js",
+      "src/**/*.ts",
+      "src/**/*.tsx"
+    ]
+  },
+  "then": {
+    "type": "askAgent",
+    "prompt": "Run Prettier to format the file.  \nThen run ESLint with autofix enabled, and save the file again if modifications were made.\n"
+  }
+}

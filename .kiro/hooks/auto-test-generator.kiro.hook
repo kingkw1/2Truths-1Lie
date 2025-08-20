@@ -1,0 +1,17 @@
+{
+  "enabled": true,
+  "name": "Auto-generate Test Stubs on Component/File Creation",
+  "description": "Automatically generates or updates test files with basic test placeholders when new React component files or backend API files are created",
+  "version": "1",
+  "when": {
+    "type": "fileCreated",
+    "patterns": [
+      "src/components/**/*.tsx",
+      "src/api/**/*.ts"
+    ]
+  },
+  "then": {
+    "type": "askAgent",
+    "prompt": "For the newly created file, create a Jest test file next to it with a basic test skeleton.  \nInclude imports and a placeholder test case for the default export or main function.  \nIf a test file already exists, do not overwrite."
+  }
+}

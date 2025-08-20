@@ -1,0 +1,20 @@
+{
+  "enabled": true,
+  "name": "Update Task Status on File Changes",
+  "description": "Automatically marks associated tasks as 'In Progress' when files related to specification tasks are saved in src/game/, src/components/, or other relevant directories",
+  "version": "1",
+  "when": {
+    "type": "fileEdited",
+    "patterns": [
+      "src/components/**/*",
+      "src/store/**/*",
+      "src/services/**/*",
+      "src/types/**/*",
+      "src/hooks/**/*"
+    ]
+  },
+  "then": {
+    "type": "askAgent",
+    "prompt": "Detect which spec task corresponds to the saved file based on task descriptions or file naming.  \nUpdate that task’s status to 'In Progress' in the spec’s tasks.md file.\n"
+  }
+}
