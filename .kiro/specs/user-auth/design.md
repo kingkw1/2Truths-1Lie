@@ -2,14 +2,16 @@
 
 ## Architecture
 
-- Use JWT tokens for stateless authentication  
-- Backend APIs for login, password reset, profile fetch/update  
-- Encrypted storage of user credentials  
-- Middleware for authorization on protected endpoints
+- Backend exposes secure REST API endpoints for login, logout, registration, password reset, and profile management  
+- Use JWT tokens for authentication with refresh tokens for session continuation  
+- Passwords stored hashed with a secure algorithm (e.g., bcrypt)  
+- Email-based verification and password reset flows integrated with transactional email service (e.g., SendGrid)  
+- Middleware verifies JWT on protected endpoints  
+- Rate limiting and monitoring for authentication attempts to prevent brute force attacks
 
 ## Data Flow
 
-1. Users submit login credentials → backend validates and returns token  
-2. Clients store JWT locally and attach to API requests  
-3. Server middleware verifies tokens on each request  
-4. Profile APIs serve user-related data securely
+1. User submits credentials or registration info → backend validates and returns JWT token  
+2. Client attaches token on API requests → backend middleware authorizes access  
+3. User requests password reset → system sends secure reset link via email  
+4. User updates profile data → system validates and stores updates securely
