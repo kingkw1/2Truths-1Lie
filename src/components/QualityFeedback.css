@@ -1,0 +1,111 @@
+/**
+ * CSS Animations for Quality Feedback Components
+ * Provides smooth visual feedback for recording and statement quality
+ */
+
+/* Spin animation for analyzing indicator */
+@keyframes spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* Pulse animation for recording indicator */
+@keyframes pulse {
+  0% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.5;
+    transform: scale(1.1);
+  }
+  100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* Slide in animation for feedback messages */
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Fade in animation for quality metrics */
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+/* Progress bar fill animation */
+@keyframes fillProgress {
+  from {
+    width: 0%;
+  }
+}
+
+/* Quality indicator bounce */
+@keyframes bounce {
+  0%, 20%, 50%, 80%, 100% {
+    transform: translateY(0);
+  }
+  40% {
+    transform: translateY(-3px);
+  }
+  60% {
+    transform: translateY(-2px);
+  }
+}
+
+/* Recording wave animation */
+@keyframes wave {
+  0%, 100% {
+    transform: scaleY(1);
+  }
+  50% {
+    transform: scaleY(1.5);
+  }
+}
+
+/* Apply animations to components */
+.quality-feedback-container {
+  animation: fadeIn 0.3s ease-out;
+}
+
+.quality-metric-bar-fill {
+  animation: fillProgress 0.5s ease-out;
+}
+
+.analyzing-icon {
+  animation: spin 1s linear infinite;
+}
+
+.recording-dot {
+  animation: pulse 1s infinite;
+}
+
+.animated-feedback {
+  animation: slideIn 0.3s ease-out;
+}
+
+.quality-icon-success {
+  animation: bounce 0.6s ease-out;
+}
+
+.audio-wave-animation {
+  animation: wave 0.8s ease-in-out infinite;
+}
