@@ -9,6 +9,8 @@ import playerProgressionReducer from './slices/playerProgressionSlice';
 import challengeCreationReducer from './slices/challengeCreationSlice';
 import guessingGameReducer from './slices/guessingGameSlice';
 import uiReducer from './slices/uiSlice';
+import { gameMiddleware } from './middleware/gameMiddleware';
+import { websocketMiddleware } from './middleware/websocketMiddleware';
 
 const store = configureStore({
   reducer: {
@@ -28,14 +30,12 @@ const store = configureStore({
         // Ignore these paths in the state
         ignoredPaths: ['gameSession.startTime', 'gameSession.lastActivity'],
       },
-    }),
+    })
+    .concat(gameMiddleware)
+    .concat(websocketMiddleware),
 });
 
-// Add game middleware after store creation to avoid circular dependency
-import('./middleware/gameMiddleware').then(({ gameMiddleware }) => {
-  // In a real app, you'd configure this differently to avoid runtime middleware addition
-  // This is just for demonstration purposes
-});
+
 
 export { store };
 export type RootState = ReturnType<typeof store.getState>;

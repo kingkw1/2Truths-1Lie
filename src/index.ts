@@ -19,6 +19,13 @@ export * from './store/utils';
 // Export selectors
 export * from './store/selectors';
 
+// Export WebSocket services and hooks
+export { WebSocketService } from './services/websocket';
+export { GameWebSocketManager, getGameWebSocket, initializeGameWebSocket } from './services/gameWebSocket';
+export { useWebSocket, useWebSocketNotifications, useLeaderboardUpdates, useGameRoom, useGuessResults } from './hooks/useWebSocket';
+export { WebSocketStatus } from './components/WebSocketStatus';
+export { getWebSocketStatus, requestLeaderboardUpdate, joinGameRoom, leaveGameRoom } from './store/middleware/websocketMiddleware';
+
 // Export action creators from slices
 export {
   startGameSession,
