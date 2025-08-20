@@ -11,8 +11,9 @@
  * - Req 6: Auto-Save and Cross-Device Sync
  */
 
-import { GameSession, GameActivity, SessionPersistence, RewardCalculation } from '../types/game';
+import { GameSession, GameActivity, RewardCalculation } from '../types/game';
 import { GameWebSocketManager } from './gameWebSocket';
+import { SessionPersistenceService, PersistenceConfig } from './sessionPersistence';
 
 export interface GameSessionManagerConfig {
   playerId: string;
@@ -20,8 +21,23 @@ export interface GameSessionManagerConfig {
   idleTimeout?: number; // milliseconds, default 30000
   maxSessionDuration?: number; // milliseconds, default 4 hours
   enableWebSocket?: boolean;
+  hintConfig?: {
+    enableIdleHints?: boolean; // default true
+    idleHintDelay?: number; // milliseconds after idle timeout, default 5000
+    maxIdleHints?: number; // max hints per idle period, default 3
+    hintCooldown?: number; // milliseconds between hints, default 10000
+    enableStruggleHints?: boolean; // default true
+    failureThreshold?: number; // failed attempts before hint, default 2
+  };
   webSocketConfig?: {
     serverUrl: string;
+  };
+  persistenceConfig?: {
+    serverUrl?: string;
+    enableServerSync?: boolean;
+    syncInterval?: number;
+    maxRetries?: number;
+    retryDelay?: number;
   };
 }
 
@@ -38,6 +54,9 @@ export type SessionEventType =
   | 'activity_changed'
   | 'points_earned'
   | 'idle_timeout'
+  | 'hint_triggered'
+  | 'hint_dismissed'
+  | 'engagement_prompt'
   | 'session_saved'
   | 'session_restored';
 
@@ -48,14 +67,59 @@ export interface SessionEvent {
   data?: any;
 }
 
+export type HintType = 
+  | 'idle_engagement' 
+  | 'struggle_assistance' 
+  | 'progress_encouragement'
+  | 'feature_discovery';
+
+export interface HintTrigger {
+  id: string;
+  type: HintType;
+  message: string;
+  animation?: string;
+  actionPrompt?: string;
+  priority: 'low' | 'medium' | 'high';
+  triggeredAt: Date;
+  dismissedAt?: Date;
+  context?: {
+    currentActivity?: GameActivity;
+    failureCount?: number;
+    idleDuration?: number;
+    challengeId?: string;
+  };
+}
+
+export interface IdleState {
+  isIdle: boolean;
+  idleStartTime?: Date | undefined;
+  idleDuration: number; // milliseconds
+  hintsShown: number;
+  lastHintTime?: Date | undefined;
+  engagementPrompts: number;
+}
+
 export class GameSessionManager {
   private config: GameSessionManagerConfig;
   private currentSession: GameSession | null = null;
   private webSocketManager: GameWebSocketManager | null = null;
+  private persistenceService: SessionPersistenceService | null = null;
   private autoSaveTimer: NodeJS.Timeout | null = null;
   private idleTimer: NodeJS.Timeout | null = null;
+  private hintTimer: NodeJS.Timeout | null = null;
   private eventListeners: Map<SessionEventType, ((event: SessionEvent) => void)[]> = new Map();
   private isInitialized = false;
+  
+  // Hint and engagement state
+  private idleState: IdleState = {
+    isIdle: false,
+    idleDuration: 0,
+    hintsShown: 0,
+    engagementPrompts: 0,
+  };
+  private activeHints: Map<string, HintTrigger> = new Map();
+  private failureCount: number = 0;
+  private lastFailureTime?: Date | undefined;
 
   constructor(config: GameSessionManagerConfig) {
     this.config = {
@@ -63,6 +127,15 @@ export class GameSessionManager {
       idleTimeout: 30000,
       maxSessionDuration: 4 * 60 * 60 * 1000, // 4 hours
       enableWebSocket: true,
+      hintConfig: {
+        enableIdleHints: true,
+        idleHintDelay: 5000, // 5 seconds after idle timeout
+        maxIdleHints: 3,
+        hintCooldown: 10000, // 10 seconds between hints
+        enableStruggleHints: true,
+        failureThreshold: 2,
+        ...config.hintConfig,
+      },
       ...config,
     };
   }
@@ -74,6 +147,14 @@ export class GameSessionManager {
     if (this.isInitialized) {
       return;
     }
+
+    // Initialize persistence service
+    const persistenceConfig: PersistenceConfig = {
+      playerId: this.config.playerId,
+      ...this.config.persistenceConfig,
+    };
+    this.persistenceService = new SessionPersistenceService(persistenceConfig);
+    await this.persistenceService.initialize();
 
     // Initialize WebSocket if enabled
     if (this.config.enableWebSocket && this.config.webSocketConfig) {
@@ -89,7 +170,7 @@ export class GameSessionManager {
       }
     }
 
-    // Try to restore previous session
+    // Try to restore previous session with cross-device sync
     await this.restoreSession();
 
     this.isInitialized = true;
@@ -189,6 +270,11 @@ export class GameSessionManager {
 
     // Reset idle timer on activity change
     this.resetIdleTimer();
+
+    // Reset failure count on successful activity change (not to idle)
+    if (activity !== 'idle' && previousActivity === 'idle') {
+      this.resetFailureCount();
+    }
 
     // Send activity heartbeat
     this.sendActivityHeartbeat();
@@ -304,13 +390,37 @@ export class GameSessionManager {
    * Get session metrics
    */
   async getSessionMetrics(): Promise<SessionMetrics> {
-    // This would typically fetch from persistent storage
-    // For now, return basic metrics
+    if (!this.persistenceService) {
+      return {
+        totalSessions: 0,
+        averageSessionDuration: 0,
+        totalPlayTime: 0,
+        lastSessionDate: null,
+      };
+    }
+
+    // Get backup sessions to calculate metrics
+    const backups = this.persistenceService.getBackupSessions();
+    
+    if (backups.length === 0) {
+      return {
+        totalSessions: 0,
+        averageSessionDuration: 0,
+        totalPlayTime: 0,
+        lastSessionDate: null,
+      };
+    }
+
+    const totalSessions = backups.length;
+    const totalPlayTime = backups.reduce((total, backup) => total + backup.gameState.sessionDuration, 0);
+    const averageSessionDuration = totalPlayTime / totalSessions;
+    const lastSessionDate = backups[0]?.timestamp || null; // Most recent backup
+
     return {
-      totalSessions: 0,
-      averageSessionDuration: 0,
-      totalPlayTime: 0,
-      lastSessionDate: null,
+      totalSessions,
+      averageSessionDuration,
+      totalPlayTime,
+      lastSessionDate,
     };
   }
 
@@ -337,6 +447,160 @@ export class GameSessionManager {
   }
 
   /**
+   * Get persistence service sync status
+   */
+  getSyncStatus() {
+    return this.persistenceService?.getSyncStatus() || null;
+  }
+
+  /**
+   * Force sync current session to server
+   */
+  async forceSync(): Promise<boolean> {
+    if (!this.persistenceService || !this.currentSession) {
+      return false;
+    }
+    
+    return await this.persistenceService.forceSync(this.currentSession);
+  }
+
+  /**
+   * Get backup sessions
+   */
+  getBackupSessions() {
+    return this.persistenceService?.getBackupSessions() || [];
+  }
+
+  /**
+   * Restore session from backup
+   */
+  async restoreFromBackup(backupIndex: number): Promise<boolean> {
+    if (!this.persistenceService) {
+      return false;
+    }
+
+    const restoredSession = await this.persistenceService.restoreFromBackup(backupIndex);
+    if (!restoredSession) {
+      return false;
+    }
+
+    // End current session if exists
+    if (this.currentSession) {
+      await this.endGameSession();
+    }
+
+    // Set restored session as current
+    this.currentSession = restoredSession;
+
+    // Update WebSocket with restored session
+    if (this.webSocketManager) {
+      this.webSocketManager.updateConfig({ 
+        gameSessionId: this.currentSession.sessionId 
+      });
+    }
+
+    // Restart timers
+    this.startAutoSave();
+    this.resetIdleTimer();
+
+    this.emitEvent('session_restored', {
+      sessionId: this.currentSession.sessionId,
+      restoredAt: new Date(),
+      fromBackup: true,
+      backupIndex,
+    });
+
+    return true;
+  }
+
+  /**
+   * Clear all session data
+   */
+  async clearAllSessionData(): Promise<void> {
+    if (this.persistenceService) {
+      await this.persistenceService.clearAllData();
+    }
+  }
+
+  /**
+   * Record a failure/incorrect attempt for hint triggering
+   */
+  recordFailure(challengeId?: string): void {
+    if (!this.config.hintConfig?.enableStruggleHints) {
+      return;
+    }
+
+    this.failureCount += 1;
+    this.lastFailureTime = new Date();
+
+    // Check if we should trigger a struggle hint
+    if (this.failureCount >= (this.config.hintConfig.failureThreshold || 2)) {
+      this.triggerStruggleHint(challengeId);
+    }
+  }
+
+  /**
+   * Reset failure count (called on success)
+   */
+  resetFailureCount(): void {
+    this.failureCount = 0;
+    this.lastFailureTime = undefined;
+  }
+
+  /**
+   * Dismiss a specific hint
+   */
+  dismissHint(hintId: string): void {
+    const hint = this.activeHints.get(hintId);
+    if (hint) {
+      hint.dismissedAt = new Date();
+      this.activeHints.delete(hintId);
+
+      this.emitEvent('hint_dismissed', {
+        sessionId: this.currentSession?.sessionId,
+        hintId,
+        hint,
+      });
+    }
+  }
+
+  /**
+   * Get all active hints
+   */
+  getActiveHints(): HintTrigger[] {
+    return Array.from(this.activeHints.values());
+  }
+
+  /**
+   * Get current idle state
+   */
+  getIdleState(): IdleState {
+    if (this.idleState.isIdle && this.idleState.idleStartTime) {
+      this.idleState.idleDuration = Date.now() - this.idleState.idleStartTime.getTime();
+    }
+    return { ...this.idleState };
+  }
+
+  /**
+   * Manually trigger engagement prompt
+   */
+  triggerEngagementPrompt(): void {
+    if (!this.currentSession) {
+      return;
+    }
+
+    const hint = this.createHint('idle_engagement', this.getEngagementMessage());
+    this.activeHints.set(hint.id, hint);
+    this.idleState.engagementPrompts += 1;
+
+    this.emitEvent('engagement_prompt', {
+      sessionId: this.currentSession.sessionId,
+      hint,
+      idleState: { ...this.idleState },
+    });
+  }
+
+  /**
    * Cleanup resources
    */
   async cleanup(): Promise<void> {
@@ -346,19 +610,25 @@ export class GameSessionManager {
 
     this.stopAutoSave();
     this.stopIdleTimer();
+    this.stopHintTimer();
 
     if (this.webSocketManager) {
       this.webSocketManager.disconnect();
     }
 
+    if (this.persistenceService) {
+      this.persistenceService.cleanup();
+    }
+
     this.eventListeners.clear();
+    this.activeHints.clear();
     this.isInitialized = false;
   }
 
   // Private methods
 
   private generateSessionId(): string {
-    return `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+    return `session_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`;
   }
 
   private startAutoSave(): void {
@@ -380,6 +650,16 @@ export class GameSessionManager {
 
   private resetIdleTimer(): void {
     this.stopIdleTimer();
+    this.stopHintTimer();
+
+    // Reset idle state when activity resumes
+    if (this.idleState.isIdle) {
+      this.idleState.isIdle = false;
+      this.idleState.idleStartTime = undefined;
+      this.idleState.idleDuration = 0;
+      this.idleState.hintsShown = 0;
+      this.idleState.lastHintTime = undefined;
+    }
 
     this.idleTimer = setTimeout(() => {
       this.handleIdleTimeout();
@@ -393,43 +673,209 @@ export class GameSessionManager {
     }
   }
 
+  private startIdleHintTimer(): void {
+    if (!this.config.hintConfig?.enableIdleHints || !this.currentSession) {
+      return;
+    }
+
+    const delay = this.config.hintConfig.idleHintDelay || 5000;
+    
+    this.hintTimer = setTimeout(() => {
+      this.showIdleHint();
+    }, delay);
+  }
+
+  private stopHintTimer(): void {
+    if (this.hintTimer) {
+      clearTimeout(this.hintTimer);
+      this.hintTimer = null;
+    }
+  }
+
+  private showIdleHint(): void {
+    if (!this.currentSession || !this.idleState.isIdle) {
+      return;
+    }
+
+    const maxHints = this.config.hintConfig?.maxIdleHints || 3;
+    const cooldown = this.config.hintConfig?.hintCooldown || 10000;
+
+    // Check if we've reached max hints
+    if (this.idleState.hintsShown >= maxHints) {
+      return;
+    }
+
+    // Check cooldown
+    if (this.idleState.lastHintTime) {
+      const timeSinceLastHint = Date.now() - this.idleState.lastHintTime.getTime();
+      if (timeSinceLastHint < cooldown) {
+        // Schedule next hint after cooldown
+        this.hintTimer = setTimeout(() => {
+          this.showIdleHint();
+        }, cooldown - timeSinceLastHint);
+        return;
+      }
+    }
+
+    // Create and show hint
+    const hint = this.createHint('idle_engagement', this.getIdleHintMessage());
+    this.activeHints.set(hint.id, hint);
+    this.idleState.hintsShown += 1;
+    this.idleState.lastHintTime = new Date();
+
+    this.emitEvent('hint_triggered', {
+      sessionId: this.currentSession.sessionId,
+      hint,
+      idleState: { ...this.idleState },
+    });
+
+    // Schedule next hint if we haven't reached the limit
+    if (this.idleState.hintsShown < maxHints) {
+      this.hintTimer = setTimeout(() => {
+        this.showIdleHint();
+      }, cooldown);
+    }
+  }
+
+  private triggerStruggleHint(challengeId?: string): void {
+    if (!this.currentSession) {
+      return;
+    }
+
+    const hint = this.createHint('struggle_assistance', this.getStruggleHintMessage(), {
+      currentActivity: this.currentSession.currentActivity,
+      failureCount: this.failureCount,
+      challengeId,
+    });
+
+    this.activeHints.set(hint.id, hint);
+
+    this.emitEvent('hint_triggered', {
+      sessionId: this.currentSession.sessionId,
+      hint,
+      triggerReason: 'struggle',
+      failureCount: this.failureCount,
+    });
+  }
+
+  private createHint(type: HintType, message: string, context?: any): HintTrigger {
+    return {
+      id: `hint_${Date.now()}_${Math.random().toString(36).substring(2, 11)}`,
+      type,
+      message,
+      animation: this.getHintAnimation(type),
+      actionPrompt: this.getActionPrompt(type),
+      priority: this.getHintPriority(type),
+      triggeredAt: new Date(),
+      context,
+    };
+  }
+
+  private getIdleHintMessage(): string {
+    const messages = [
+      "Ready to create your next challenge?",
+      "Try guessing someone else's lie!",
+      "Check out the leaderboard to see how you're doing!",
+      "Explore new challenges waiting for you!",
+    ];
+    const index = this.idleState.hintsShown % messages.length;
+    return messages[index] ?? "Ready to continue playing?";
+  }
+
+  private getStruggleHintMessage(): string {
+    const messages = [
+      "Having trouble? Try looking for emotional cues in the statements.",
+      "Pay attention to details that seem too specific or too vague.",
+      "Consider which statement feels different from the others.",
+      "Trust your instincts - sometimes the obvious choice is right!",
+    ];
+    const index = Math.max(0, Math.min(this.failureCount - 1, messages.length - 1));
+    return messages[index] ?? "Take your time and trust your instincts!";
+  }
+
+  private getEngagementMessage(): string {
+    const messages = [
+      "Come back and continue your winning streak!",
+      "New challenges are waiting for you!",
+      "Your friends are climbing the leaderboard - catch up!",
+    ];
+    const index = this.idleState.engagementPrompts % messages.length;
+    return messages[index] ?? "Come back and play!";
+  }
+
+  private getHintAnimation(type: HintType): string {
+    const animations = {
+      idle_engagement: 'pulse',
+      struggle_assistance: 'bounce',
+      progress_encouragement: 'glow',
+      feature_discovery: 'slide',
+    };
+    return animations[type];
+  }
+
+  private getActionPrompt(type: HintType): string {
+    const prompts = {
+      idle_engagement: 'Tap to continue playing',
+      struggle_assistance: 'Need a hint?',
+      progress_encouragement: 'Keep going!',
+      feature_discovery: 'Try this feature',
+    };
+    return prompts[type];
+  }
+
+  private getHintPriority(type: HintType): 'low' | 'medium' | 'high' {
+    const priorities = {
+      idle_engagement: 'low' as const,
+      struggle_assistance: 'high' as const,
+      progress_encouragement: 'medium' as const,
+      feature_discovery: 'medium' as const,
+    };
+    return priorities[type];
+  }
+
   private handleIdleTimeout(): void {
-    if (this.currentSession && this.currentSession.currentActivity !== 'idle') {
+    if (!this.currentSession) {
+      return;
+    }
+
+    const previousActivity = this.currentSession.currentActivity;
+    
+    // Update idle state
+    this.idleState.isIdle = true;
+    this.idleState.idleStartTime = new Date();
+    this.idleState.idleDuration = 0;
+    
+    // Update session activity to idle
+    if (previousActivity !== 'idle') {
       this.updateActivity('idle');
-      
-      this.emitEvent('idle_timeout', {
-        sessionId: this.currentSession.sessionId,
-        previousActivity: this.currentSession.currentActivity,
-      });
+    }
+    
+    this.emitEvent('idle_timeout', {
+      sessionId: this.currentSession.sessionId,
+      previousActivity,
+      idleState: { ...this.idleState },
+    });
+
+    // Start hint timer if idle hints are enabled
+    if (this.config.hintConfig?.enableIdleHints) {
+      this.startIdleHintTimer();
     }
   }
 
   private async saveSession(): Promise<void> {
-    if (!this.currentSession) {
+    if (!this.currentSession || !this.persistenceService) {
       return;
     }
 
     // Update session duration
     this.currentSession.sessionDuration = Date.now() - this.currentSession.startTime.getTime();
 
-    const persistenceData: SessionPersistence = {
-      sessionId: this.currentSession.sessionId,
-      playerId: this.config.playerId,
-      gameState: { ...this.currentSession },
-      lastSaved: new Date(),
-      syncStatus: 'pending',
-      deviceId: this.getDeviceId(),
-    };
-
     try {
-      // Save to localStorage
-      localStorage.setItem(`gameSession_${this.config.playerId}`, JSON.stringify(persistenceData));
-      
-      // TODO: Save to server via API
+      await this.persistenceService.saveToLocal(this.currentSession);
       
       this.emitEvent('session_saved', {
         sessionId: this.currentSession.sessionId,
-        lastSaved: persistenceData.lastSaved,
+        lastSaved: new Date(),
       });
     } catch (error) {
       console.error('Failed to save session:', error);
@@ -437,24 +883,16 @@ export class GameSessionManager {
   }
 
   private async restoreSession(): Promise<void> {
-    try {
-      const savedData = localStorage.getItem(`gameSession_${this.config.playerId}`);
-      if (!savedData) {
-        return;
-      }
+    if (!this.persistenceService) {
+      return;
+    }
 
-      const persistenceData: SessionPersistence = JSON.parse(savedData);
+    try {
+      // Try to sync and get the most recent session across devices
+      const restoredSession = await this.persistenceService.syncSession();
       
-      // Check if session is recent (within last hour)
-      const lastSaved = new Date(persistenceData.lastSaved);
-      const hourAgo = new Date(Date.now() - 60 * 60 * 1000);
-      
-      if (lastSaved > hourAgo && persistenceData.gameState.isActive) {
-        this.currentSession = {
-          ...persistenceData.gameState,
-          startTime: new Date(persistenceData.gameState.startTime),
-          lastActivity: new Date(persistenceData.gameState.lastActivity),
-        };
+      if (restoredSession) {
+        this.currentSession = restoredSession;
 
         // Update WebSocket with restored session
         if (this.webSocketManager) {
@@ -470,6 +908,7 @@ export class GameSessionManager {
         this.emitEvent('session_restored', {
           sessionId: this.currentSession.sessionId,
           restoredAt: new Date(),
+          fromBackup: false,
         });
       }
     } catch (error) {
@@ -483,15 +922,7 @@ export class GameSessionManager {
     }
   }
 
-  private getDeviceId(): string {
-    // Simple device ID generation - in production, use a more robust method
-    let deviceId = localStorage.getItem('deviceId');
-    if (!deviceId) {
-      deviceId = `device_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-      localStorage.setItem('deviceId', deviceId);
-    }
-    return deviceId;
-  }
+
 
   private emitEvent(type: SessionEventType, data?: any): void {
     const event: SessionEvent = {

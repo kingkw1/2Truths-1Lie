@@ -296,6 +296,60 @@ describe('GameSessionManager', () => {
       expect(session?.pointsEarned).toBe(150);
       expect(eventSpy).toHaveBeenCalled();
     });
+
+    test('should get sync status', async () => {
+      await manager.initialize();
+      
+      const syncStatus = manager.getSyncStatus();
+      expect(syncStatus).toHaveProperty('lastLocalSave');
+      expect(syncStatus).toHaveProperty('lastServerSync');
+      expect(syncStatus).toHaveProperty('pendingSync');
+    });
+
+    test('should get backup sessions', async () => {
+      await manager.initialize();
+      await manager.startGameSession();
+      
+      // Trigger save to create backup
+      jest.advanceTimersByTime(1500);
+      
+      const backups = manager.getBackupSessions();
+      expect(Array.isArray(backups)).toBe(true);
+    });
+
+    test('should restore from backup', async () => {
+      await manager.initialize();
+      await manager.startGameSession();
+      
+      // Trigger save to create backup
+      jest.advanceTimersByTime(1500);
+      
+      const originalSessionId = manager.getCurrentSession()?.sessionId;
+      
+      // End current session
+      await manager.endGameSession();
+      
+      // Restore from backup
+      const restored = await manager.restoreFromBackup(0);
+      expect(restored).toBe(true);
+      
+      const restoredSession = manager.getCurrentSession();
+      expect(restoredSession?.sessionId).toBe(originalSessionId);
+    });
+
+    test('should clear all session data', async () => {
+      await manager.initialize();
+      await manager.startGameSession();
+      
+      // Trigger save
+      jest.advanceTimersByTime(1500);
+      
+      await manager.clearAllSessionData();
+      
+      // Check that data is cleared
+      const savedData = localStorageMock.getItem('gameSession_test-player-123');
+      expect(savedData).toBeNull();
+    });
   });
 
   describe('Error Handling', () => {
@@ -327,11 +381,253 @@ describe('GameSessionManager', () => {
       // Trigger auto-save
       jest.advanceTimersByTime(1500);
       
-      expect(consoleSpy).toHaveBeenCalledWith('Failed to save session:', expect.any(Error));
+      expect(consoleSpy).toHaveBeenCalledWith('Failed to save session to local storage:', expect.any(Error));
       
       // Restore original method
       localStorageMock.setItem = originalSetItem;
       consoleSpy.mockRestore();
+    });
+  });
+
+  describe('Idle Timeout and Hints', () => {
+    test('should trigger idle timeout and show hints', async () => {
+      const hintConfig = {
+        enableIdleHints: true,
+        idleHintDelay: 1000,
+        maxIdleHints: 2,
+        hintCooldown: 2000,
+      };
+      
+      const managerWithHints = new GameSessionManager({
+        ...config,
+        hintConfig,
+      });
+      
+      await managerWithHints.initialize();
+      const session = await managerWithHints.startGameSession();
+      
+      const idleTimeoutSpy = jest.fn();
+      const hintTriggeredSpy = jest.fn();
+      
+      managerWithHints.addEventListener('idle_timeout', idleTimeoutSpy);
+      managerWithHints.addEventListener('hint_triggered', hintTriggeredSpy);
+      
+      // Trigger idle timeout
+      jest.advanceTimersByTime(5000);
+      
+      expect(idleTimeoutSpy).toHaveBeenCalledWith(expect.objectContaining({
+        type: 'idle_timeout',
+        sessionId: session.sessionId,
+      }));
+      
+      // Advance time to trigger first hint
+      jest.advanceTimersByTime(1000);
+      
+      expect(hintTriggeredSpy).toHaveBeenCalledWith(expect.objectContaining({
+        type: 'hint_triggered',
+        data: expect.objectContaining({
+          hint: expect.objectContaining({
+            type: 'idle_engagement',
+            message: expect.any(String),
+          }),
+        }),
+      }));
+      
+      // Check idle state
+      const idleState = managerWithHints.getIdleState();
+      expect(idleState.isIdle).toBe(true);
+      expect(idleState.hintsShown).toBe(1);
+      
+      await managerWithHints.cleanup();
+    });
+
+    test('should respect max hints limit', async () => {
+      const hintConfig = {
+        enableIdleHints: true,
+        idleHintDelay: 1000,
+        maxIdleHints: 2,
+        hintCooldown: 1000,
+      };
+      
+      const managerWithHints = new GameSessionManager({
+        ...config,
+        hintConfig,
+      });
+      
+      await managerWithHints.initialize();
+      await managerWithHints.startGameSession();
+      
+      const hintTriggeredSpy = jest.fn();
+      managerWithHints.addEventListener('hint_triggered', hintTriggeredSpy);
+      
+      // Trigger idle timeout
+      jest.advanceTimersByTime(5000);
+      
+      // Trigger first hint
+      jest.advanceTimersByTime(1000);
+      expect(hintTriggeredSpy).toHaveBeenCalledTimes(1);
+      
+      // Trigger second hint
+      jest.advanceTimersByTime(1000);
+      expect(hintTriggeredSpy).toHaveBeenCalledTimes(2);
+      
+      // Try to trigger third hint - should not happen
+      jest.advanceTimersByTime(1000);
+      expect(hintTriggeredSpy).toHaveBeenCalledTimes(2);
+      
+      const idleState = managerWithHints.getIdleState();
+      expect(idleState.hintsShown).toBe(2);
+      
+      await managerWithHints.cleanup();
+    });
+
+    test('should reset idle state on activity change', async () => {
+      const hintConfig = {
+        enableIdleHints: true,
+        idleHintDelay: 1000,
+      };
+      
+      const managerWithHints = new GameSessionManager({
+        ...config,
+        hintConfig,
+      });
+      
+      await managerWithHints.initialize();
+      await managerWithHints.startGameSession();
+      
+      // Trigger idle timeout
+      jest.advanceTimersByTime(5000);
+      
+      let idleState = managerWithHints.getIdleState();
+      expect(idleState.isIdle).toBe(true);
+      
+      // Change activity - should reset idle state
+      managerWithHints.updateActivity('creating');
+      
+      idleState = managerWithHints.getIdleState();
+      expect(idleState.isIdle).toBe(false);
+      expect(idleState.hintsShown).toBe(0);
+      
+      await managerWithHints.cleanup();
+    });
+  });
+
+  describe('Struggle Hints', () => {
+    test('should trigger struggle hints after failures', async () => {
+      const hintConfig = {
+        enableStruggleHints: true,
+        failureThreshold: 2,
+      };
+      
+      const managerWithHints = new GameSessionManager({
+        ...config,
+        hintConfig,
+      });
+      
+      await managerWithHints.initialize();
+      await managerWithHints.startGameSession();
+      
+      const hintTriggeredSpy = jest.fn();
+      managerWithHints.addEventListener('hint_triggered', hintTriggeredSpy);
+      
+      // Record first failure - should not trigger hint yet
+      managerWithHints.recordFailure('challenge-123');
+      expect(hintTriggeredSpy).not.toHaveBeenCalled();
+      
+      // Record second failure - should trigger hint
+      managerWithHints.recordFailure('challenge-123');
+      expect(hintTriggeredSpy).toHaveBeenCalledWith(expect.objectContaining({
+        type: 'hint_triggered',
+        data: expect.objectContaining({
+          hint: expect.objectContaining({
+            type: 'struggle_assistance',
+            message: expect.any(String),
+          }),
+          triggerReason: 'struggle',
+          failureCount: 2,
+        }),
+      }));
+      
+      await managerWithHints.cleanup();
+    });
+
+    test('should reset failure count on successful activity', async () => {
+      const hintConfig = {
+        enableStruggleHints: true,
+        failureThreshold: 2,
+      };
+      
+      const managerWithHints = new GameSessionManager({
+        ...config,
+        hintConfig,
+      });
+      
+      await managerWithHints.initialize();
+      await managerWithHints.startGameSession();
+      
+      // Record failure
+      managerWithHints.recordFailure();
+      
+      // Reset failure count
+      managerWithHints.resetFailureCount();
+      
+      const hintTriggeredSpy = jest.fn();
+      managerWithHints.addEventListener('hint_triggered', hintTriggeredSpy);
+      
+      // Record another failure - should not trigger hint since count was reset
+      managerWithHints.recordFailure();
+      expect(hintTriggeredSpy).not.toHaveBeenCalled();
+      
+      await managerWithHints.cleanup();
+    });
+  });
+
+  describe('Hint Management', () => {
+    test('should manage active hints', async () => {
+      await manager.initialize();
+      await manager.startGameSession();
+      
+      // Trigger engagement prompt
+      manager.triggerEngagementPrompt();
+      
+      const activeHints = manager.getActiveHints();
+      expect(activeHints).toHaveLength(1);
+      expect(activeHints[0]?.type).toBe('idle_engagement');
+      
+      // Dismiss hint
+      const hintId = activeHints[0]?.id;
+      expect(hintId).toBeDefined();
+      manager.dismissHint(hintId!);
+      
+      const activeHintsAfterDismiss = manager.getActiveHints();
+      expect(activeHintsAfterDismiss).toHaveLength(0);
+    });
+
+    test('should emit hint dismissed event', async () => {
+      await manager.initialize();
+      await manager.startGameSession();
+      
+      const hintDismissedSpy = jest.fn();
+      manager.addEventListener('hint_dismissed', hintDismissedSpy);
+      
+      // Trigger engagement prompt
+      manager.triggerEngagementPrompt();
+      const activeHints = manager.getActiveHints();
+      const hintId = activeHints[0]?.id;
+      expect(hintId).toBeDefined();
+      
+      // Dismiss hint
+      manager.dismissHint(hintId!);
+      
+      expect(hintDismissedSpy).toHaveBeenCalledWith(expect.objectContaining({
+        type: 'hint_dismissed',
+        data: expect.objectContaining({
+          hintId,
+          hint: expect.objectContaining({
+            dismissedAt: expect.any(Date),
+          }),
+        }),
+      }));
     });
   });
 

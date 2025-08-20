@@ -7,8 +7,8 @@
 
 ### 2. Game Session Management  
 - [x] Build GameSessionManager class to orchestrate sessions, activity states  
-- [ ] Implement session persistence and recovery mechanisms (local and server)  
-- [ ] Add idle timeout handling and hint triggers  
+- [x] Implement session persistence and recovery mechanisms (local and server)  
+- [x] Add idle timeout handling and hint triggers  
 - [ ] Write unit tests validating session transitions and persistence _(relates Req 1,5)_  
 
 ### 3. Challenge Creation Workflow  
