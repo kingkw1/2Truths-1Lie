@@ -101,7 +101,7 @@ export async function demonstrateIdleTimeoutAndHints() {
     console.log('🔍 Active hints:', activeHints.length);
 
     // Dismiss a hint
-    if (activeHints.length > 0) {
+    if (activeHints.length > 0 && activeHints[0]) {
       sessionManager.dismissHint(activeHints[0].id);
     }
 
