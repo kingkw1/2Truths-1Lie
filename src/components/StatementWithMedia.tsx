@@ -101,7 +101,7 @@ export const StatementWithMedia: React.FC<StatementWithMediaProps> = ({
     setMediaError(null);
     
     // If it's a text recording, also update the statement text
-    if (mediaData.type === 'text' && mediaData.url.startsWith('data:text/plain;base64,')) {
+    if (mediaData.type === 'text' && mediaData.url && mediaData.url.startsWith('data:text/plain;base64,')) {
       try {
         const base64Data = mediaData.url.split(',')[1];
         const decodedText = atob(base64Data);
@@ -304,7 +304,7 @@ export const StatementWithMedia: React.FC<StatementWithMediaProps> = ({
             </div>
             
             <div style={styles.mediaDetails}>
-              {recordedMedia.duration > 0 && (
+              {recordedMedia.duration && recordedMedia.duration > 0 && (
                 <span style={styles.mediaDetail}>
                   Duration: {formatDuration(recordedMedia.duration)}
                 </span>

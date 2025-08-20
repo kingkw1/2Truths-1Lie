@@ -7,7 +7,7 @@ import React from 'react';
 import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import '@testing-library/jest-dom';
 import MediaRecorder from '../MediaRecorder';
-import { MediaCapture } from '../../types/challenge';
+import { MediaCapture, MediaType } from '../../types/challenge';
 
 // Mock MediaRecorder API
 const mockMediaRecorder = {
@@ -68,7 +68,7 @@ describe('MediaRecorder Component', () => {
     onRecordingComplete: mockOnRecordingComplete,
     onRecordingError: mockOnRecordingError,
     maxDuration: 30000,
-    allowedTypes: ['video', 'audio', 'text'] as const,
+    allowedTypes: ['video', 'audio', 'text'] as MediaType[],
     disabled: false,
   };
 
