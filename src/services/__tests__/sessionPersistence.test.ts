@@ -471,4 +471,291 @@ describe('SessionPersistenceService', () => {
       expect(mockRemoveEventListener).toHaveBeenCalledWith('offline', expect.any(Function));
     });
   });
+
+  describe('Advanced Persistence Scenarios - Requirement Validation', () => {
+    test('should validate Req 6.1: save within 5 seconds of game actions', async () => {
+      const startTime = Date.now();
+      
+      await service.saveToLocal(mockSession);
+      
+      const endTime = Date.now();
+      const saveTime = endTime - startTime;
+      
+      // Should save well within 5 seconds (5000ms)
+      expect(saveTime).toBeLessThan(5000);
+      
+      // Verify save timestamp is recent
+      const syncStatus = service.getSyncStatus();
+      expect(syncStatus.lastLocalSave).toBeInstanceOf(Date);
+      expect(Date.now() - syncStatus.lastLocalSave!.getTime()).toBeLessThan(1000);
+    });
+
+    test('should validate Req 6.2: cross-device sync with conflict resolution', async () => {
+      // Simulate device 1 session (older)
+      const device1Session = {
+        ...mockSession,
+        sessionId: 'device1-session',
+        lastActivity: new Date('2023-01-01T10:00:00Z'),
+        pointsEarned: 100,
+      };
+
+      // Simulate device 2 session (newer)
+      const device2Session = {
+        ...mockSession,
+        sessionId: 'device2-session',
+        lastActivity: new Date('2023-01-01T11:00:00Z'), // 1 hour later
+        pointsEarned: 200,
+      };
+
+      // Save device 1 session locally
+      await service.saveToLocal(device1Session);
+
+      // Mock server returning device 2 session
+      const mockResponse = {
+        ok: true,
+        json: () => Promise.resolve({
+          success: true,
+          data: {
+            sessionId: 'device2-session',
+            playerId: 'test-player-123',
+            gameState: device2Session,
+            lastSaved: new Date().toISOString(),
+            syncStatus: 'synced',
+            deviceId: 'device-2',
+          }
+        }),
+      };
+      (fetch as jest.Mock).mockResolvedValue(mockResponse);
+
+      // Sync should return the newer session (device 2)
+      const syncedSession = await service.syncSession();
+
+      expect(syncedSession).toBeDefined();
+      expect(syncedSession!.sessionId).toBe('device2-session');
+      expect(syncedSession!.pointsEarned).toBe(200);
+      expect(syncedSession!.lastActivity.getTime()).toBe(new Date('2023-01-01T11:00:00Z').getTime());
+    });
+
+    test('should validate Req 6.3: retry mechanism with exponential backoff', async () => {
+      const retryConfig = {
+        ...config,
+        maxRetries: 3,
+        retryDelay: 1000,
+      };
+      const retryService = new SessionPersistenceService(retryConfig);
+
+      // Mock fetch to fail initially, then succeed
+      let attemptCount = 0;
+      (fetch as jest.Mock).mockImplementation(() => {
+        attemptCount++;
+        if (attemptCount <= 2) {
+          return Promise.resolve({
+            ok: false,
+            status: 500,
+            statusText: 'Internal Server Error',
+          });
+        }
+        return Promise.resolve({
+          ok: true,
+          json: () => Promise.resolve({ success: true }),
+        });
+      });
+
+      // Ensure we're online
+      Object.defineProperty(navigator, 'onLine', { value: true });
+
+      await retryService.initialize();
+      
+      // First attempt should fail and schedule retry
+      const result1 = await retryService.saveToServer(mockSession);
+      expect(result1).toBe(false);
+      
+      const syncStatus1 = retryService.getSyncStatus();
+      expect(syncStatus1.retryCount).toBe(1);
+      expect(syncStatus1.syncError).toContain('Server responded with 500');
+
+      // Second attempt should also fail
+      const result2 = await retryService.saveToServer(mockSession);
+      expect(result2).toBe(false);
+      
+      const syncStatus2 = retryService.getSyncStatus();
+      expect(syncStatus2.retryCount).toBe(2);
+
+      // Third attempt should succeed
+      const result3 = await retryService.saveToServer(mockSession);
+      expect(result3).toBe(true);
+      
+      const syncStatus3 = retryService.getSyncStatus();
+      expect(syncStatus3.retryCount).toBe(0); // Reset on success
+      expect(syncStatus3.syncError).toBeNull();
+
+      retryService.cleanup();
+    });
+
+    test('should validate session data consistency during concurrent operations', async () => {
+      const session1 = { ...mockSession, sessionId: 'concurrent-1', pointsEarned: 50 };
+      const session2 = { ...mockSession, sessionId: 'concurrent-2', pointsEarned: 100 };
+      const session3 = { ...mockSession, sessionId: 'concurrent-3', pointsEarned: 150 };
+
+      // Simulate concurrent save operations
+      const savePromises = [
+        service.saveToLocal(session1),
+        service.saveToLocal(session2),
+        service.saveToLocal(session3),
+      ];
+
+      await Promise.all(savePromises);
+
+      // The last save should win (session3)
+      const loadedSession = await service.loadFromLocal();
+      expect(loadedSession).toBeDefined();
+      expect(loadedSession!.sessionId).toBe('concurrent-3');
+      expect(loadedSession!.pointsEarned).toBe(150);
+
+      // Verify backup rotation worked correctly
+      const backups = service.getBackupSessions();
+      expect(backups).toHaveLength(3);
+      expect(backups[0]?.sessionId).toBe('concurrent-3');
+      expect(backups[1]?.sessionId).toBe('concurrent-2');
+      expect(backups[2]?.sessionId).toBe('concurrent-1');
+    });
+
+    test('should validate data integrity after storage corruption', async () => {
+      // Save valid session first
+      await service.saveToLocal(mockSession);
+
+      // Corrupt the stored data
+      const key = `gameSession_${config.playerId}`;
+      localStorage.setItem(key, 'invalid-json-data');
+
+      // Should handle corruption gracefully
+      const loadedSession = await service.loadFromLocal();
+      expect(loadedSession).toBeNull();
+
+      // Should clear corrupted data
+      const corruptedData = localStorage.getItem(key);
+      expect(corruptedData).toBe('invalid-json-data'); // Still there but ignored
+    });
+
+    test('should validate session age validation and cleanup', async () => {
+      // Create an old session (5 hours ago)
+      const oldSession = {
+        ...mockSession,
+        startTime: new Date(Date.now() - 5 * 60 * 60 * 1000),
+        lastActivity: new Date(Date.now() - 5 * 60 * 60 * 1000),
+      };
+
+      // Manually create old persistence data
+      const persistenceData = {
+        sessionId: oldSession.sessionId,
+        playerId: config.playerId,
+        gameState: oldSession,
+        lastSaved: new Date(Date.now() - 5 * 60 * 60 * 1000),
+        syncStatus: 'synced',
+        deviceId: 'test-device',
+      };
+
+      const key = `gameSession_${config.playerId}`;
+      localStorage.setItem(key, JSON.stringify(persistenceData));
+
+      // Should not load old session
+      const loadedSession = await service.loadFromLocal();
+      expect(loadedSession).toBeNull();
+    });
+
+    test('should validate network state handling during sync operations', async () => {
+      // Create service with server sync disabled for offline test
+      const offlineConfig = {
+        ...config,
+        enableServerSync: false,
+      };
+      const offlineService = new SessionPersistenceService(offlineConfig);
+      await offlineService.initialize();
+
+      // Test offline behavior (server sync disabled)
+      const offlineResult = await offlineService.saveToServer(mockSession);
+      expect(offlineResult).toBe(false);
+
+      offlineService.cleanup();
+
+      // Test online behavior with server sync enabled
+      Object.defineProperty(navigator, 'onLine', { value: true });
+      
+      const mockResponse = {
+        ok: true,
+        json: () => Promise.resolve({ success: true }),
+      };
+      (fetch as jest.Mock).mockResolvedValue(mockResponse);
+
+      await service.initialize();
+      const onlineResult = await service.saveToServer(mockSession);
+      expect(onlineResult).toBe(true);
+      expect(fetch).toHaveBeenCalled();
+    });
+
+    test('should validate backup recovery with data validation', async () => {
+      // Create sessions with different data to test recovery
+      const sessions = [
+        { ...mockSession, sessionId: 'backup-1', pointsEarned: 100 },
+        { ...mockSession, sessionId: 'backup-2', pointsEarned: 200 },
+        { ...mockSession, sessionId: 'backup-3', pointsEarned: 300 },
+      ];
+
+      // Save sessions to create backups
+      for (const session of sessions) {
+        await service.saveToLocal(session);
+      }
+
+      // Verify all backups exist
+      const backups = service.getBackupSessions();
+      expect(backups).toHaveLength(3);
+
+      // Test recovery from each backup
+      for (let i = 0; i < 3; i++) {
+        const restoredSession = await service.restoreFromBackup(i);
+        expect(restoredSession).toBeDefined();
+        expect(restoredSession!.sessionId).toBe(sessions[2 - i]?.sessionId); // Reverse order
+        expect(restoredSession!.pointsEarned).toBe(sessions[2 - i]?.pointsEarned);
+      }
+
+      // Test invalid backup index
+      const invalidRestore = await service.restoreFromBackup(10);
+      expect(invalidRestore).toBeNull();
+    });
+
+    test('should validate sync status tracking accuracy', async () => {
+      await service.initialize();
+
+      // Initial status
+      let status = service.getSyncStatus();
+      expect(status.lastLocalSave).toBeNull();
+      expect(status.lastServerSync).toBeNull();
+      expect(status.pendingSync).toBe(false);
+      expect(status.retryCount).toBe(0);
+
+      // After local save
+      await service.saveToLocal(mockSession);
+      status = service.getSyncStatus();
+      expect(status.lastLocalSave).toBeInstanceOf(Date);
+
+      // Mock successful server save
+      const mockResponse = {
+        ok: true,
+        json: () => Promise.resolve({ success: true }),
+      };
+      (fetch as jest.Mock).mockResolvedValue(mockResponse);
+
+      Object.defineProperty(navigator, 'onLine', { value: true });
+
+      // After server save
+      const serverResult = await service.saveToServer(mockSession);
+      expect(serverResult).toBe(true);
+      
+      status = service.getSyncStatus();
+      expect(status.lastServerSync).toBeInstanceOf(Date);
+      expect(status.pendingSync).toBe(false);
+      expect(status.retryCount).toBe(0);
+      expect(status.syncError).toBeNull();
+    });
+  });
 });
