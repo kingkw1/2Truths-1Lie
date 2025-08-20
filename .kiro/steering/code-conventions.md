@@ -1,0 +1,38 @@
+---
+include: always
+---
+
+# Code Conventions
+
+## Naming
+- Use **camelCase** for variables and functions: `calculateScore()`
+- Use **PascalCase** for React components: `GameBoard`
+- Use **kebab-case** for folder names: `game-logic/`
+- Use meaningful, descriptive names; avoid abbreviations unless widely understood.
+
+## File Organization
+- Keep one primary React or JS component/function per file.
+- Separate utilities into `src/utils/`
+- API logic only in `src/api/`
+- Core game rules and mechanics confined to `src/game/`
+- Avoid large files: refactor into smaller reusable modules.
+
+## Style & Formatting
+- Use Prettier with 2-space indentation.
+- Always include type annotations if using TypeScript.
+- Use ESLint with recommended rules to enforce code quality.
+- Comment complex logic with docstrings and inline comments.
+
+## React Patterns
+- Use functional components and React Hooks.
+- Avoid class-based components.
+- Prefer local state for UI state; lift state up only when necessary.
+- Use context or global state only for app-wide data.
+
+## Error Handling
+- Gracefully handle unexpected user inputs and API errors.
+- Display user-friendly error messages.
+
+## Commit Messages
+- Use clear, imperative style: `Add game board component`  
+---
