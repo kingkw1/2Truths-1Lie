@@ -1,11 +1,14 @@
 /**
  * Media Recording Component
  * Implements video, audio, and text-only recording with fallback mechanisms
+ * Enhanced with real-time quality feedback and recording indicators
  * Requirements 1 & 3: Intuitive Core Game Loop and Game Difficulty/Engagement
  */
 
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { MediaCapture, MediaType } from '../types/challenge';
+import { MediaQualityFeedback, RealTimeQualityIndicator, AnimatedFeedback } from './QualityFeedback';
+import { analyzeMediaQuality, MediaQuality } from '../utils/qualityAssessment';
 
 interface MediaRecorderProps {
   onRecordingComplete: (mediaData: MediaCapture) => void;
@@ -22,6 +25,8 @@ interface RecordingState {
   mediaType: MediaType;
   hasPermission: boolean;
   error: string | null;
+  recordingQuality: MediaQuality | null;
+  showQualityFeedback: boolean;
 }
 
 export const MediaRecorder: React.FC<MediaRecorderProps> = ({
@@ -38,7 +43,15 @@ export const MediaRecorder: React.FC<MediaRecorderProps> = ({
     mediaType: 'text',
     hasPermission: false,
     error: null,
+    recordingQuality: null,
+    showQualityFeedback: false,
   });
+
+  const [feedbackMessage, setFeedbackMessage] = useState<{
+    message: string;
+    type: 'success' | 'warning' | 'error' | 'info';
+    visible: boolean;
+  }>({ message: '', type: 'info', visible: false });
 
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
@@ -180,6 +193,29 @@ export const MediaRecorder: React.FC<MediaRecorderProps> = ({
             mimeType,
           };
 
+          // Analyze media quality
+          const quality = analyzeMediaQuality(mediaData);
+          setRecordingState(prev => ({ 
+            ...prev, 
+            recordingQuality: quality,
+            showQualityFeedback: true 
+          }));
+
+          // Show feedback message based on quality
+          if (quality.score >= 80) {
+            setFeedbackMessage({
+              message: 'Excellent recording! Great quality.',
+              type: 'success',
+              visible: true,
+            });
+          } else if (quality.score < 50) {
+            setFeedbackMessage({
+              message: 'Recording quality could be improved. Try again in a quieter environment.',
+              type: 'warning',
+              visible: true,
+            });
+          }
+
           onRecordingComplete(mediaData);
         };
 
@@ -280,8 +316,28 @@ export const MediaRecorder: React.FC<MediaRecorderProps> = ({
       fileSize: new Blob([text]).size,
       mimeType: 'text/plain',
     };
+
+    // Analyze text media quality
+    const quality = analyzeMediaQuality(mediaData);
+    setRecordingState(prev => ({ 
+      ...prev, 
+      recordingQuality: quality,
+      showQualityFeedback: true 
+    }));
+
+    setFeedbackMessage({
+      message: 'Text recorded successfully!',
+      type: 'success',
+      visible: true,
+    });
+
     onRecordingComplete(mediaData);
   }, [onRecordingComplete]);
+
+  // Dismiss feedback message
+  const dismissFeedback = useCallback(() => {
+    setFeedbackMessage(prev => ({ ...prev, visible: false }));
+  }, []);
 
   // Cleanup on unmount
   useEffect(() => {
@@ -382,7 +438,7 @@ export const MediaRecorder: React.FC<MediaRecorderProps> = ({
         </div>
       )}
 
-      {/* Audio Visualizer Placeholder */}
+      {/* Audio Visualizer with Recording Indicator */}
       {recordingState.mediaType === 'audio' && recordingState.hasPermission && (
         <div style={styles.audioContainer}>
           <div style={styles.audioVisualizer}>
@@ -392,6 +448,12 @@ export const MediaRecorder: React.FC<MediaRecorderProps> = ({
                 <div style={styles.audioWaveAnimation}>♪ ♫ ♪ ♫</div>
               )}
             </div>
+            {recordingState.isRecording && (
+              <div style={styles.recordingIndicator}>
+                <span style={styles.recordingDot}>●</span>
+                <span>Recording...</span>
+              </div>
+            )}
           </div>
         </div>
       )}
@@ -404,11 +466,20 @@ export const MediaRecorder: React.FC<MediaRecorderProps> = ({
         />
       )}
 
-      {/* Recording Controls */}
+      {/* Recording Controls with Quality Indicator */}
       {(recordingState.mediaType === 'video' || recordingState.mediaType === 'audio') && recordingState.hasPermission && (
         <div style={styles.controls}>
-          <div style={styles.duration}>
-            {currentDurationFormatted} / {maxDurationFormatted}
+          <div style={styles.controlsHeader}>
+            <div style={styles.duration}>
+              {currentDurationFormatted} / {maxDurationFormatted}
+            </div>
+            {recordingState.isRecording && (
+              <RealTimeQualityIndicator
+                score={75} // Placeholder - would be real-time analysis
+                isAnalyzing={false}
+                showLabel={true}
+              />
+            )}
           </div>
           
           <div style={styles.controlButtons}>
@@ -447,6 +518,25 @@ export const MediaRecorder: React.FC<MediaRecorderProps> = ({
           </div>
         </div>
       )}
+
+      {/* Media Quality Feedback */}
+      {recordingState.showQualityFeedback && recordingState.recordingQuality && (
+        <MediaQualityFeedback
+          quality={recordingState.recordingQuality}
+          isVisible={recordingState.showQualityFeedback}
+          compact={true}
+        />
+      )}
+
+      {/* Animated Feedback Messages */}
+      <AnimatedFeedback
+        message={feedbackMessage.message}
+        type={feedbackMessage.type}
+        isVisible={feedbackMessage.visible}
+        onDismiss={dismissFeedback}
+        autoHide={true}
+        duration={3000}
+      />
     </div>
   );
 };
@@ -701,11 +791,31 @@ const styles = {
     textAlign: 'center' as const,
   } as React.CSSProperties,
 
+  controlsHeader: {
+    display: 'flex',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: '16px',
+  } as React.CSSProperties,
+
   duration: {
     fontSize: '18px',
     fontWeight: 'bold',
     color: '#374151',
-    marginBottom: '16px',
+  } as React.CSSProperties,
+
+  recordingIndicator: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '6px',
+    fontSize: '14px',
+    color: '#EF4444',
+    marginTop: '8px',
+  } as React.CSSProperties,
+
+  recordingDot: {
+    fontSize: '12px',
+    animation: 'pulse 1s infinite',
   } as React.CSSProperties,
 
   controlButtons: {

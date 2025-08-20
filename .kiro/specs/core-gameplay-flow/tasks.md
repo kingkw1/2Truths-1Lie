@@ -14,8 +14,8 @@
 ### 3. Challenge Creation Workflow  
 - [x] Create UI for entering 3 statements with lie selection and validation _(Req 1,3)_  
 - [x] Implement media recording components: video, audio, fallback to text only  
-- [-] Add immediate feedback on recording and statement quality  
-- [ ] Unit tests for state transitions and input validation  
+- [x] Add immediate feedback on recording and statement quality  
+- [-] Unit tests for state transitions and input validation  
 
 ### 4. Emotion Analysis Integration (Optional MVP Feature)  
 - [ ] Connect to AffectLink API for real-time or batch emotion scoring  

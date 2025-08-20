@@ -2,11 +2,18 @@
  * Statement with Media Component
  * Combines text statement input with optional media recording
  * Implements fallback from video -> audio -> text only
+ * Enhanced with real-time quality feedback
  */
 
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useEffect } from 'react';
 import { MediaCapture, Statement } from '../types/challenge';
 import MediaRecorder from './MediaRecorder';
+import { StatementQualityFeedback, RealTimeQualityIndicator, AnimatedFeedback } from './QualityFeedback';
+import { 
+  analyzeStatementQuality, 
+  createDebouncedQualityAnalyzer, 
+  StatementQuality 
+} from '../utils/qualityAssessment';
 
 interface StatementWithMediaProps {
   statementIndex: number;
@@ -30,6 +37,38 @@ export const StatementWithMedia: React.FC<StatementWithMediaProps> = ({
   const [showMediaRecorder, setShowMediaRecorder] = useState(false);
   const [recordedMedia, setRecordedMedia] = useState<MediaCapture | null>(null);
   const [mediaError, setMediaError] = useState<string | null>(null);
+  const [statementQuality, setStatementQuality] = useState<StatementQuality | null>(null);
+  const [isAnalyzing, setIsAnalyzing] = useState(false);
+  const [showQualityFeedback, setShowQualityFeedback] = useState(false);
+  const [feedbackMessage, setFeedbackMessage] = useState<{
+    message: string;
+    type: 'success' | 'warning' | 'error' | 'info';
+    visible: boolean;
+  }>({ message: '', type: 'info', visible: false });
+
+  // Create debounced quality analyzer
+  const debouncedAnalyzer = useCallback(
+    createDebouncedQualityAnalyzer((quality: StatementQuality) => {
+      setStatementQuality(quality);
+      setIsAnalyzing(false);
+      
+      // Show feedback message for significant quality changes
+      if (quality.score >= 80) {
+        setFeedbackMessage({
+          message: 'Excellent statement! This will make a great challenge.',
+          type: 'success',
+          visible: true,
+        });
+      } else if (quality.score < 40) {
+        setFeedbackMessage({
+          message: 'Consider improving this statement for better engagement.',
+          type: 'warning',
+          visible: true,
+        });
+      }
+    }, 800),
+    []
+  );
 
   // Handle text statement changes
   const handleTextChange = useCallback((text: string) => {
@@ -37,11 +76,22 @@ export const StatementWithMedia: React.FC<StatementWithMediaProps> = ({
     
     const updatedStatement: Statement = {
       ...statement,
-      text: limitedText.trim(),
+      text: limitedText,
     };
     
     onStatementChange(statementIndex, updatedStatement);
-  }, [statement, statementIndex, onStatementChange, maxTextLength]);
+    
+    // Trigger quality analysis
+    if (limitedText.trim().length > 0) {
+      setIsAnalyzing(true);
+      debouncedAnalyzer(limitedText.trim());
+      setShowQualityFeedback(true);
+    } else {
+      setStatementQuality(null);
+      setShowQualityFeedback(false);
+      setIsAnalyzing(false);
+    }
+  }, [statement, statementIndex, onStatementChange, maxTextLength, debouncedAnalyzer]);
 
   // Handle media recording completion
   const handleMediaComplete = useCallback((mediaData: MediaCapture) => {
@@ -83,6 +133,20 @@ export const StatementWithMedia: React.FC<StatementWithMediaProps> = ({
     setShowMediaRecorder(!showMediaRecorder);
     setMediaError(null);
   }, [showMediaRecorder]);
+
+  // Initialize quality analysis for existing text
+  useEffect(() => {
+    if (statement.text.trim().length > 0) {
+      const quality = analyzeStatementQuality(statement.text.trim());
+      setStatementQuality(quality);
+      setShowQualityFeedback(true);
+    }
+  }, [statement.text]);
+
+  // Dismiss feedback message
+  const dismissFeedback = useCallback(() => {
+    setFeedbackMessage(prev => ({ ...prev, visible: false }));
+  }, []);
 
   const getStatementPlaceholder = () => {
     const placeholders = [
@@ -151,9 +215,18 @@ export const StatementWithMedia: React.FC<StatementWithMediaProps> = ({
         />
         
         <div style={styles.textFooter}>
-          <span style={styles.characterCount}>
-            {statement.text.length}/{maxTextLength} characters
-          </span>
+          <div style={styles.textFooterLeft}>
+            <span style={styles.characterCount}>
+              {statement.text.length}/{maxTextLength} characters
+            </span>
+            {statement.text.trim().length > 0 && (
+              <RealTimeQualityIndicator
+                score={statementQuality?.score || 0}
+                isAnalyzing={isAnalyzing}
+                showLabel={false}
+              />
+            )}
+          </div>
           
           <button
             type="button"
@@ -181,6 +254,25 @@ export const StatementWithMedia: React.FC<StatementWithMediaProps> = ({
           />
         </div>
       )}
+
+      {/* Quality Feedback */}
+      {showQualityFeedback && (
+        <StatementQualityFeedback
+          quality={statementQuality}
+          isVisible={showQualityFeedback}
+          compact={true}
+        />
+      )}
+
+      {/* Animated Feedback Messages */}
+      <AnimatedFeedback
+        message={feedbackMessage.message}
+        type={feedbackMessage.type}
+        isVisible={feedbackMessage.visible}
+        onDismiss={dismissFeedback}
+        autoHide={true}
+        duration={4000}
+      />
 
       {/* Media Error Display */}
       {mediaError && (
@@ -320,6 +412,12 @@ const styles = {
     display: 'flex',
     justifyContent: 'space-between',
     alignItems: 'center',
+  } as React.CSSProperties,
+
+  textFooterLeft: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '8px',
   } as React.CSSProperties,
 
   characterCount: {
