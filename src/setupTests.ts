@@ -2,6 +2,8 @@
  * Jest setup file for testing configuration
  */
 
+import '@testing-library/jest-dom';
+
 // Mock environment variables
 process.env.REACT_APP_WEBSOCKET_URL = "ws://localhost:8080/ws";
 

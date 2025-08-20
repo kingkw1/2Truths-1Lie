@@ -12,8 +12,8 @@
 - [x] Write unit tests validating session transitions and persistence _(relates Req 1,5)_  
 
 ### 3. Challenge Creation Workflow  
-- [ ] Create UI for entering 3 statements with lie selection and validation _(Req 1,3)_  
-- [ ] Implement media recording components: video, audio, fallback to text only  
+- [x] Create UI for entering 3 statements with lie selection and validation _(Req 1,3)_  
+- [-] Implement media recording components: video, audio, fallback to text only  
 - [ ] Add immediate feedback on recording and statement quality  
 - [ ] Unit tests for state transitions and input validation  
 
