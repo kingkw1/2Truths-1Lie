@@ -154,7 +154,7 @@ export const UploadProgress: React.FC<UploadProgressProps> = ({
         console.error('Status polling error:', error);
         setUploadState(prev => ({
           ...prev,
-          error: error.message,
+          error: (error as Error).message,
         }));
       }
     }
