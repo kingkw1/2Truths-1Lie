@@ -73,11 +73,11 @@ Defines game mechanics and progression driving engagement: core loop, challenge 
 ### Requirement 8: Media Capture (MVP Mandatory)
 
 - Full controls: start, pause, resume, cancel recording.
-- Real-time preview and option to re-record before submission.
-- Enforce duration limits and media validation.
-- Secure chunked, resumable media uploads.
-- Upload progress with cancel and retry.
+- Real-time preview and option to re-record before submission, integrated seamlessly into challenge creation UI.
+- Enforce duration limits and media validation with user-friendly guidance.
+- Secure chunked, resumable media uploads with upload progress and cancel/retry controls.
 - Robust error handling.
+- Capturing and previewing media must be intuitive and accessible via the challenge creation interface, with state synchronization to the main app state and submission pipeline.
 
 ***
 
