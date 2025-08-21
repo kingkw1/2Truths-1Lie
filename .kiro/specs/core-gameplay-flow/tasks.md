@@ -15,6 +15,8 @@
 - [x] Create UI for entering 3 statements with lie selection and validation _(Req 1,3)_  
 - [x] Add immediate feedback on recording and statement quality  
 - [x] Unit tests for state transitions and input validation  
+- [ ] **Deprecate standalone audio-only and text-only input modes, focusing on video with audio as primary recording modality**  
+- [ ] **Simplify submission validation to make text statements optional fallback when video/audio recording is unavailable or fails**
 
 ### 4. Media Capture  
 - [x] Implement video and audio recording components with full controls (start, pause, resume, cancel)  
@@ -27,7 +29,6 @@
 - [x] Integrate media capture UI components into the Challenge Creation workflow
 - [x] Connect media capture state to Redux and unify with challenge submission logic
 - [x] Test media capture UI across supported browsers/devices to ensure usability and accessibility
-
 
 ### 5. Challenge Publishing and Moderation  
 - [ ] Implement server-side APIs to receive/store challenges and media  
