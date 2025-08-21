@@ -33,6 +33,11 @@ export interface MediaCapture {
   fileSize?: number; // in bytes
   mimeType?: string;
   thumbnail?: string; // for video
+  // Compression metadata
+  originalSize?: number; // original file size before compression
+  compressionRatio?: number; // ratio of compression (originalSize / compressedSize)
+  compressionTime?: number; // time taken to compress in milliseconds
+  compressionQuality?: number; // quality setting used (0-1)
 }
 
 /**
