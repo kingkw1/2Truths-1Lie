@@ -155,6 +155,7 @@ export const ChallengeCreationForm: React.FC<ChallengeCreationFormProps> = ({
         <p style={styles.subtitle}>
           Write three statements about yourself. Two should be true, and one
           should be a lie. Others will try to guess which one is the lie!
+          Text is required for all statements.
         </p>
       </div>
 

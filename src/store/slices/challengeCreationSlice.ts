@@ -189,9 +189,23 @@ const challengeCreationSlice = createSlice({
           errors.push('Must select one statement as the lie');
         }
         
+        // Simplified validation: text statements are always required as fallback
+        // Media recording is optional - if it fails, text serves as fallback
         const emptyStatements = state.currentChallenge.statements.filter(stmt => !stmt.text.trim());
         if (emptyStatements.length > 0) {
-          errors.push('All statements must have text');
+          errors.push('All statements must have text (text serves as fallback when video recording is unavailable)');
+        }
+        
+        // Optional: Check if any media recording failed and provide helpful message
+        if (state.mediaRecordingState && Object.keys(state.mediaRecordingState).length > 0) {
+          const hasFailedRecordings = Object.values(state.mediaRecordingState).some(
+            recordingState => recordingState && recordingState.error !== null
+          );
+          
+          if (hasFailedRecordings) {
+            // This is informational only - not a blocking error
+            console.info('Some media recordings failed, but text fallback is available');
+          }
         }
       }
       

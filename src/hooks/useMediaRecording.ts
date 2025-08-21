@@ -4,7 +4,6 @@
  */
 
 import { useState, useCallback, useRef } from 'react';
-import { useDispatch } from 'react-redux';
 import { MediaCapture, MediaType } from '../types/challenge';
 import { 
   MediaCompressor, 
@@ -39,7 +38,7 @@ interface MediaRecordingState {
 export const useMediaRecording = (options: UseMediaRecordingOptions = {}) => {
   const {
     maxDuration = 30000,
-    allowedTypes = ['video', 'audio', 'text'],
+    allowedTypes = ['video', 'text'], // Deprecated: now defaults to video-first with text fallback
     onRecordingComplete,
     onRecordingError,
     enableCompression = true,
@@ -47,7 +46,7 @@ export const useMediaRecording = (options: UseMediaRecordingOptions = {}) => {
     onCompressionProgress,
   } = options;
 
-  const dispatch = useDispatch();
+  // Redux dispatch removed - this hook is now standalone
   
   const [state, setState] = useState<MediaRecordingState>({
     isRecording: false,
@@ -131,17 +130,13 @@ export const useMediaRecording = (options: UseMediaRecordingOptions = {}) => {
     }
   }, [onRecordingError]);
 
-  // Start recording
+  // Start recording - prioritizes video with audio, falls back to text
   const startRecording = useCallback(async (type: MediaType) => {
-    if (!allowedTypes.includes(type)) {
-      const error = `Recording type ${type} is not allowed`;
-      setState(prev => ({ ...prev, error }));
-      if (onRecordingError) onRecordingError(error);
-      return false;
-    }
-
+    // Force video-first approach - ignore allowedTypes parameter
+    const actualType = type === 'audio' ? 'video' : type; // Convert audio requests to video
+    
     // Handle text recording
-    if (type === 'text') {
+    if (actualType === 'text') {
       setState(prev => ({ 
         ...prev, 
         mediaType: 'text',
@@ -151,34 +146,34 @@ export const useMediaRecording = (options: UseMediaRecordingOptions = {}) => {
       return true;
     }
 
-    // Check support
-    const isSupported = await checkMediaSupport(type);
-    if (!isSupported) {
+    // For any media recording, try video with audio first
+    const isVideoSupported = await checkMediaSupport('video');
+    if (!isVideoSupported) {
+      // Fallback to text if video not supported
       setState(prev => ({ 
         ...prev, 
         mediaType: 'text',
         hasPermission: true,
-        error: `${type} recording not supported, falling back to text mode` 
+        error: 'Video recording not supported, using text mode instead' 
       }));
       return true; // Fallback to text is successful
     }
 
-    // Request permissions and start recording
-    const stream = await requestPermissions(type);
+    // Request permissions and start video recording with audio
+    const stream = await requestPermissions('video'); // Always request video with audio
     if (!stream) {
       // Fallback to text
       setState(prev => ({ 
         ...prev, 
         mediaType: 'text',
-        hasPermission: true 
+        hasPermission: true,
+        error: 'Camera/microphone access denied, using text mode instead'
       }));
       return true;
     }
 
     try {
-      const mimeType = type === 'video' 
-        ? getSupportedVideoMimeType()
-        : getSupportedAudioMimeType();
+      const mimeType = getSupportedVideoMimeType(); // Always use video MIME type
       
       mediaRecorderRef.current = new MediaRecorder(stream, { mimeType });
       chunksRef.current = [];
@@ -192,8 +187,8 @@ export const useMediaRecording = (options: UseMediaRecordingOptions = {}) => {
       mediaRecorderRef.current.onstop = async () => {
         const blob = new Blob(chunksRef.current, { type: mimeType });
         
-        // Check if compression is needed and enabled
-        if (enableCompression && (type === 'video' || type === 'audio')) {
+        // Check if compression is needed and enabled (only for video now)
+        if (enableCompression && actualType === 'video') {
           try {
             setState(prev => ({ 
               ...prev, 
@@ -229,7 +224,7 @@ export const useMediaRecording = (options: UseMediaRecordingOptions = {}) => {
             const url = blobUrlManager.createUrl(compressionResult.compressedBlob);
             
             const mediaData: MediaCapture = {
-              type,
+              type: 'video', // Always video with audio
               url,
               duration: state.duration,
               fileSize: compressionResult.compressedSize,
@@ -260,7 +255,7 @@ export const useMediaRecording = (options: UseMediaRecordingOptions = {}) => {
             
             const url = blobUrlManager.createUrl(blob);
             const mediaData: MediaCapture = {
-              type,
+              type: 'video', // Always video with audio
               url,
               duration: state.duration,
               fileSize: blob.size,
@@ -289,7 +284,7 @@ export const useMediaRecording = (options: UseMediaRecordingOptions = {}) => {
           const url = blobUrlManager.createUrl(blob);
           
           const mediaData: MediaCapture = {
-            type,
+            type: 'video', // Always video with audio
             url,
             duration: state.duration,
             fileSize: blob.size,
@@ -310,7 +305,8 @@ export const useMediaRecording = (options: UseMediaRecordingOptions = {}) => {
         ...prev, 
         isRecording: true, 
         duration: 0,
-        error: null 
+        error: null,
+        mediaType: 'video' // Always set to video
       }));
 
       // Start timer
@@ -497,10 +493,10 @@ export const useMediaRecording = (options: UseMediaRecordingOptions = {}) => {
     
     // Computed values
     maxDuration,
-    allowedTypes,
-    canRecord: allowedTypes.length > 0,
+    allowedTypes: ['video', 'text'], // Force video-first approach
+    canRecord: true, // Always can record (video or text fallback)
     isTextMode: state.mediaType === 'text',
-    isMediaMode: state.mediaType === 'video' || state.mediaType === 'audio',
+    isMediaMode: state.mediaType === 'video', // Only video mode now
   };
 };
 

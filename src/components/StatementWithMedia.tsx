@@ -39,11 +39,11 @@ export const StatementWithMedia: React.FC<StatementWithMediaProps> = ({
   const [showMediaRecorder, setShowMediaRecorder] = useState(false);
   const [showMediaPreview, setShowMediaPreview] = useState(false);
   
-  // Use Redux-connected media recording hook
+  // Use Redux-connected media recording hook with video-first approach
   const mediaRecording = useReduxMediaRecording({
     statementIndex,
     maxDuration: 30000,
-    allowedTypes: ['video', 'audio', 'text'],
+    allowedTypes: ['video', 'text'], // Video-first with text fallback
     onRecordingComplete: (mediaData) => {
       onMediaChange(statementIndex, mediaData);
       setShowMediaRecorder(false);
@@ -176,11 +176,11 @@ export const StatementWithMedia: React.FC<StatementWithMediaProps> = ({
 
   const getStatementPlaceholder = () => {
     const placeholders = [
-      "Enter your first statement (this could be true or false)...",
-      "Enter your second statement (this could be true or false)...",
-      "Enter your third statement (this could be true or false)..."
+      "Enter your first statement (required - serves as fallback if video fails)...",
+      "Enter your second statement (required - serves as fallback if video fails)...",
+      "Enter your third statement (required - serves as fallback if video fails)..."
     ];
-    return placeholders[statementIndex] || "Enter your statement...";
+    return placeholders[statementIndex] || "Enter your statement (required)...";
   };
 
   const getMediaTypeIcon = (type: string) => {
@@ -238,6 +238,7 @@ export const StatementWithMedia: React.FC<StatementWithMediaProps> = ({
           }}
           disabled={disabled}
           maxLength={maxTextLength}
+          required
         />
         
         <div style={styles.textFooter}>
@@ -263,7 +264,7 @@ export const StatementWithMedia: React.FC<StatementWithMediaProps> = ({
             }}
             disabled={disabled}
           >
-            {mediaRecording.recordedMedia ? (showMediaPreview ? '🎬 Edit Media' : '👁️ View Media') : '📹 Add Media'}
+            {mediaRecording.recordedMedia ? (showMediaPreview ? '🎬 Edit Video' : '👁️ View Video') : '🎥 Add Video (Optional)'}
           </button>
         </div>
       </div>
@@ -275,7 +276,7 @@ export const StatementWithMedia: React.FC<StatementWithMediaProps> = ({
             onRecordingComplete={handleMediaComplete}
             onRecordingError={(error) => console.warn('Media recording error:', error)}
             maxDuration={30000} // 30 seconds
-            allowedTypes={['video', 'audio', 'text']}
+            allowedTypes={['video', 'text']} // Video-first with text fallback
             disabled={disabled}
           />
         </div>
