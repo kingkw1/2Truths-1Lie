@@ -74,6 +74,11 @@ export const useMediaRecording = (options: UseMediaRecordingOptions = {}) => {
       return false;
     }
 
+    // Check if MediaRecorder is supported
+    if (typeof MediaRecorder === 'undefined') {
+      return false;
+    }
+
     try {
       const constraints = type === 'video' 
         ? { video: true, audio: true }
@@ -99,12 +104,37 @@ export const useMediaRecording = (options: UseMediaRecordingOptions = {}) => {
               height: { ideal: 480 },
               facingMode: 'user'
             }, 
-            audio: true 
+            audio: {
+              echoCancellation: true,
+              noiseSuppression: true,
+              autoGainControl: true
+            }
           }
-        : { audio: true };
+        : { 
+            audio: {
+              echoCancellation: true,
+              noiseSuppression: true,
+              autoGainControl: true
+            }
+          };
       
       const stream = await navigator.mediaDevices.getUserMedia(constraints);
       streamRef.current = stream;
+      
+      // Verify we have both video and audio tracks for video recording
+      if (type === 'video') {
+        const videoTracks = stream.getVideoTracks();
+        const audioTracks = stream.getAudioTracks();
+        
+        if (videoTracks.length === 0) {
+          throw new Error('No video track available');
+        }
+        if (audioTracks.length === 0) {
+          console.warn('No audio track available for video recording');
+        }
+        
+        console.log(`Video recording setup: ${videoTracks.length} video tracks, ${audioTracks.length} audio tracks`);
+      }
       
       setState(prev => ({ 
         ...prev, 
@@ -147,9 +177,9 @@ export const useMediaRecording = (options: UseMediaRecordingOptions = {}) => {
     }
 
     // For any media recording, try video with audio first
-    const isVideoSupported = await checkMediaSupport('video');
-    if (!isVideoSupported) {
-      // Fallback to text if video not supported
+    // Check basic browser support first
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia || typeof MediaRecorder === 'undefined') {
+      // Fallback to text if basic APIs not supported
       setState(prev => ({ 
         ...prev, 
         mediaType: 'text',
@@ -175,17 +205,305 @@ export const useMediaRecording = (options: UseMediaRecordingOptions = {}) => {
     try {
       const mimeType = getSupportedVideoMimeType(); // Always use video MIME type
       
-      mediaRecorderRef.current = new MediaRecorder(stream, { mimeType });
+      // Verify stream has both video and audio tracks
+      const videoTracks = stream.getVideoTracks();
+      const audioTracks = stream.getAudioTracks();
+      
+      console.log(`Creating MediaRecorder with ${videoTracks.length} video tracks and ${audioTracks.length} audio tracks`);
+      
+      // Log track details for debugging
+      videoTracks.forEach((track, index) => {
+        console.log(`Video track ${index}:`, track.label, track.getSettings());
+      });
+      audioTracks.forEach((track, index) => {
+        console.log(`Audio track ${index}:`, track.label, track.getSettings());
+      });
+      
+      // Ensure we have audio tracks
+      if (audioTracks.length === 0) {
+        console.warn('⚠️ No audio tracks found in stream - audio will not be recorded');
+      } else {
+        // Test if audio tracks are actually working and ensure they're enabled
+        audioTracks.forEach((track, index) => {
+          console.log(`🎤 Audio track ${index} - enabled: ${track.enabled}, muted: ${track.muted}, readyState: ${track.readyState}`);
+          
+          // Ensure audio track is enabled and not muted
+          if (!track.enabled) {
+            console.log(`🔧 Enabling audio track ${index}`);
+            track.enabled = true;
+          }
+          
+          if (track.readyState !== 'live') {
+            console.warn(`⚠️ Audio track ${index} is not live (readyState: ${track.readyState})`);
+          }
+          
+          // Log additional track properties
+          const settings = track.getSettings();
+          console.log(`🎤 Audio track ${index} settings:`, settings);
+        });
+        
+        // Test audio level detection to verify audio is actually working
+        try {
+          const audioContext = new (window.AudioContext || (window as any).webkitAudioContext)();
+          const source = audioContext.createMediaStreamSource(stream);
+          const analyser = audioContext.createAnalyser();
+          source.connect(analyser);
+          
+          const dataArray = new Uint8Array(analyser.frequencyBinCount);
+          let audioDetected = false;
+          
+          const checkAudio = () => {
+            analyser.getByteFrequencyData(dataArray);
+            const average = dataArray.reduce((a, b) => a + b) / dataArray.length;
+            
+            if (average > 0 && !audioDetected) {
+              console.log('🔊 Audio signal detected! Average level:', average);
+              audioDetected = true;
+              audioContext.close();
+            } else if (!audioDetected) {
+              setTimeout(checkAudio, 100);
+            }
+          };
+          
+          setTimeout(() => {
+            if (!audioDetected) {
+              console.warn('⚠️ No audio signal detected after 2 seconds - microphone might be muted or not working');
+              audioContext.close();
+            }
+          }, 2000);
+          
+          checkAudio();
+        } catch (error) {
+          console.warn('⚠️ Could not test audio levels:', error);
+        }
+      }
+      
+      // Create MediaRecorder with explicit options for better audio capture
+      let options: MediaRecorderOptions = {};
+      
+      // Try with MIME type first
+      // Try a more aggressive approach to ensure audio is recorded
+      console.log('🎯 Configuring MediaRecorder for reliable audio recording...');
+      
+      // Force audio inclusion by using specific options
+      if (MediaRecorder.isTypeSupported(mimeType)) {
+        console.log(`✅ Using MIME type: ${mimeType}`);
+        
+        // Try with minimal audio bitrate to ensure compatibility
+        const audioOptimizedOptions = {
+          mimeType,
+          audioBitsPerSecond: 32000, // Very low bitrate for maximum compatibility
+        };
+        
+        try {
+          // Test if audio bitrate is supported
+          const testRecorder = new MediaRecorder(stream, audioOptimizedOptions);
+          testRecorder.stop();
+          options = audioOptimizedOptions;
+          console.log('✅ Using audio-optimized options with 32kbps audio');
+        } catch (error) {
+          console.warn('Audio bitrate not supported, trying MIME type only');
+          options = { mimeType };
+        }
+      } else {
+        console.warn(`⚠️ MIME type ${mimeType} not supported, using browser default`);
+        options = {}; // Let browser choose
+      }
+      
+      console.log('🎬 Final MediaRecorder options:', options);
+      
+      // Final validation: ensure stream has audio tracks
+      const streamAudioTracks = stream.getAudioTracks();
+      const streamVideoTracks = stream.getVideoTracks();
+      
+      if (streamAudioTracks.length === 0) {
+        console.error('❌ No audio tracks in stream - this will cause silent recordings!');
+        throw new Error('No audio tracks available for recording');
+      }
+      
+      if (streamVideoTracks.length === 0) {
+        console.error('❌ No video tracks in stream - this will cause video-less recordings!');
+        throw new Error('No video tracks available for recording');
+      }
+      
+      console.log(`✅ Stream validation passed: ${streamVideoTracks.length} video, ${streamAudioTracks.length} audio tracks`);
+      
+      try {
+        mediaRecorderRef.current = new MediaRecorder(stream, options);
+        console.log('✅ MediaRecorder created successfully');
+      } catch (error) {
+        console.error('❌ Failed to create MediaRecorder with options, trying without options:', error);
+        // Fallback: create without any options
+        mediaRecorderRef.current = new MediaRecorder(stream);
+        console.log('✅ MediaRecorder created with browser defaults');
+      }
       chunksRef.current = [];
 
       mediaRecorderRef.current.ondataavailable = (event) => {
         if (event.data.size > 0) {
           chunksRef.current.push(event.data);
+          console.log(`Data chunk received: ${event.data.size} bytes, type: ${event.data.type}`);
+          
+          // Validate that chunks contain expected audio codec
+          if (event.data.type && !event.data.type.includes('opus') && !event.data.type.includes('aac')) {
+            console.warn('⚠️ Chunk may not contain audio codec:', event.data.type);
+          }
         }
       };
 
       mediaRecorderRef.current.onstop = async () => {
-        const blob = new Blob(chunksRef.current, { type: mimeType });
+        console.log(`Recording stopped. Chunks: ${chunksRef.current.length}, Total size: ${chunksRef.current.reduce((sum, chunk) => sum + chunk.size, 0)} bytes`);
+        
+        // Wait a bit more to ensure all data is processed
+        await new Promise(resolve => setTimeout(resolve, 500));
+        
+        // Log chunk details
+        chunksRef.current.forEach((chunk, index) => {
+          console.log(`Chunk ${index}: ${chunk.size} bytes, type: ${chunk.type}`);
+        });
+        
+        // Ensure we have chunks before creating blob
+        if (chunksRef.current.length === 0) {
+          const errorMessage = 'Recording failed: No data chunks received';
+          setState(prev => ({ ...prev, error: errorMessage }));
+          if (onRecordingError) {
+            onRecordingError(errorMessage);
+          }
+          return;
+        }
+        
+        // Create blob with explicit MIME type to ensure proper format
+        // Use the MIME type from the first chunk if available, otherwise use recording MIME type
+        let blobMimeType = mimeType || 'video/webm;codecs=vp8,opus';
+        
+        if (chunksRef.current.length > 0 && chunksRef.current[0].type) {
+          blobMimeType = chunksRef.current[0].type;
+          console.log(`🎬 Using chunk MIME type: ${blobMimeType}`);
+        } else {
+          console.log(`🎬 Using fallback MIME type: ${blobMimeType}`);
+        }
+        
+        let blob = new Blob(chunksRef.current, { 
+          type: blobMimeType
+        });
+        
+        // Apply compatibility fixes based on container type
+        if (blobMimeType.includes('webm')) {
+          console.log('🔧 Applying WebM compatibility fixes...');
+          
+          // For WebM, try different codec specifications
+          const webmVariants = [
+            blobMimeType, // Use original first
+            'video/webm;codecs=vp8,opus',
+            'video/webm;codecs=vp9,opus', 
+            'video/webm',
+          ];
+          
+          for (const variant of webmVariants) {
+            try {
+              const testBlob = new Blob(chunksRef.current, { type: variant });
+              if (testBlob.size > 1000) {
+                console.log(`✅ Using WebM variant: ${variant}`);
+                blob = testBlob;
+                break;
+              }
+            } catch (error) {
+              console.warn(`WebM variant ${variant} failed:`, error);
+            }
+          }
+        } else if (blobMimeType.includes('mp4')) {
+          console.log('🔧 Applying MP4 compatibility fixes...');
+          
+          // For MP4, ensure proper codec specification
+          const mp4Variants = [
+            blobMimeType, // Use original first
+            'video/mp4;codecs=h264,aac', // Most compatible
+            'video/mp4', // Generic fallback
+          ];
+          
+          for (const variant of mp4Variants) {
+            try {
+              const testBlob = new Blob(chunksRef.current, { type: variant });
+              if (testBlob.size > 1000) {
+                console.log(`✅ Using MP4 variant: ${variant}`);
+                blob = testBlob;
+                break;
+              }
+            } catch (error) {
+              console.warn(`MP4 variant ${variant} failed:`, error);
+            }
+          }
+        }
+        
+        // Verify the blob has content
+        if (blob.size === 0) {
+          const errorMessage = 'Recording failed: No data captured';
+          setState(prev => ({ ...prev, error: errorMessage }));
+          if (onRecordingError) {
+            onRecordingError(errorMessage);
+          }
+          return;
+        }
+        
+        console.log(`✅ Created blob: ${blob.size} bytes, type: ${blob.type}`);
+        
+        // Create a test video element to verify the blob contains audio
+        const testVideo = document.createElement('video');
+        const blobUrl = URL.createObjectURL(blob);
+        testVideo.src = blobUrl;
+        testVideo.preload = 'metadata';
+        
+        const cleanupTestVideo = () => {
+          URL.revokeObjectURL(blobUrl);
+        };
+        
+        testVideo.addEventListener('loadedmetadata', () => {
+          const duration = testVideo.duration;
+          const isValidDuration = duration && isFinite(duration) && duration > 0;
+          
+          console.log(`📹 Video metadata - Duration: ${duration}s (${isValidDuration ? 'VALID' : 'INVALID'}), Dimensions: ${testVideo.videoWidth}x${testVideo.videoHeight}`);
+          
+          if (!isValidDuration) {
+            console.error('❌ Invalid video duration detected - WebM file may be corrupted');
+          }
+          
+          // Check for audio tracks using multiple methods
+          const hasAudioTracks = 'audioTracks' in testVideo && (testVideo as any).audioTracks?.length > 0;
+          const hasMozAudio = (testVideo as any).mozHasAudio;
+          const hasWebkitAudio = (testVideo as any).webkitAudioDecodedByteCount > 0;
+          
+          // Additional audio detection methods
+          const hasAudioContext = testVideo.volume !== undefined; // Basic audio capability
+          const hasAudioCodec = blobMimeType.includes('opus') || blobMimeType.includes('aac');
+          const hasAudioChunks = chunksRef.current.some(chunk => 
+            chunk.type.includes('opus') || chunk.type.includes('aac')
+          );
+          
+          console.log(`🔊 Audio detection:`);
+          console.log(`  - audioTracks: ${hasAudioTracks ? (testVideo as any).audioTracks.length : 'not supported'}`);
+          console.log(`  - mozHasAudio: ${hasMozAudio}`);
+          console.log(`  - webkitAudioDecodedByteCount: ${(testVideo as any).webkitAudioDecodedByteCount || 'not supported'}`);
+          console.log(`  - hasAudioCodec: ${hasAudioCodec}`);
+          console.log(`  - hasAudioChunks: ${hasAudioChunks}`);
+          console.log(`  - blobSize: ${blob.size} bytes`);
+          
+          if (hasAudioTracks || hasMozAudio || hasWebkitAudio || (hasAudioCodec && hasAudioChunks)) {
+            console.log('✅ Audio tracks detected in video!');
+          } else {
+            console.warn('⚠️ No audio tracks detected - but this may be a browser API limitation');
+            console.log('🎵 Audio should still work if codec and chunks are present');
+          }
+          
+          cleanupTestVideo();
+        });
+        testVideo.addEventListener('error', (e) => {
+          console.error('❌ Error loading test video:', e);
+          console.error('This indicates the WebM file is corrupted or invalid');
+          cleanupTestVideo();
+        });
+        
+        // Force load metadata
+        testVideo.load();
         
         // Check if compression is needed and enabled (only for video now)
         if (enableCompression && actualType === 'video') {
@@ -296,10 +614,39 @@ export const useMediaRecording = (options: UseMediaRecordingOptions = {}) => {
           if (onRecordingComplete) {
             onRecordingComplete(mediaData);
           }
+          
+          // Now stop the tracks after blob is created and processed
+          setTimeout(() => {
+            if (streamRef.current) {
+              try {
+                const tracks = streamRef.current.getTracks();
+                console.log(`🔇 Stopping ${tracks.length} media tracks after blob creation...`);
+                tracks.forEach(track => {
+                  console.log(`  Stopping ${track.kind} track: ${track.label}`);
+                  track.stop();
+                });
+                streamRef.current = null;
+              } catch (error) {
+                console.warn('Error stopping tracks:', error);
+              }
+            }
+          }, 100);
         }
       };
 
-      mediaRecorderRef.current.start(100);
+      // Add error handler for MediaRecorder
+      mediaRecorderRef.current.onerror = (event) => {
+        console.error('MediaRecorder error:', event);
+        const errorMessage = 'Recording error occurred';
+        setState(prev => ({ ...prev, error: errorMessage }));
+        if (onRecordingError) {
+          onRecordingError(errorMessage);
+        }
+      };
+
+      // Start recording with smaller time slice to ensure audio capture
+      mediaRecorderRef.current.start(250); // 250ms chunks for better audio capture
+      console.log('MediaRecorder started');
       
       setState(prev => ({ 
         ...prev, 
@@ -341,21 +688,49 @@ export const useMediaRecording = (options: UseMediaRecordingOptions = {}) => {
   }, [allowedTypes, maxDuration, onRecordingComplete, onRecordingError, checkMediaSupport, requestPermissions, state.duration]);
 
   // Stop recording
-  const stopRecording = useCallback(() => {
+  const stopRecording = useCallback(async () => {
+    console.log('🛑 Stopping recording...');
+    
     if (timerRef.current) {
       clearInterval(timerRef.current);
       timerRef.current = null;
     }
 
-    if (mediaRecorderRef.current && state.isRecording) {
-      mediaRecorderRef.current.stop();
+    if (!mediaRecorderRef.current) {
+      console.warn('No MediaRecorder to stop');
+      return;
     }
 
-    if (streamRef.current) {
-      streamRef.current.getTracks().forEach(track => track.stop());
-      streamRef.current = null;
+    const currentState = mediaRecorderRef.current.state;
+    console.log(`MediaRecorder state: ${currentState}`);
+    
+    if (currentState === 'recording' || currentState === 'paused') {
+      try {
+        // Request final data chunk before stopping to ensure complete file
+        if (currentState === 'recording') {
+          console.log('📦 Requesting final data chunk...');
+          mediaRecorderRef.current.requestData();
+          
+          // Wait a bit for the final chunk to be processed
+          await new Promise(resolve => setTimeout(resolve, 100));
+        }
+        
+        // Stop the recorder
+        console.log('🔴 Calling MediaRecorder.stop()...');
+        mediaRecorderRef.current.stop();
+        
+        // Wait for the onstop event to fire and process the blob
+        await new Promise(resolve => setTimeout(resolve, 200));
+        
+      } catch (error) {
+        console.error('Error stopping MediaRecorder:', error);
+      }
     }
-
+    
+    // Don't stop tracks immediately - let the onstop handler complete first
+    // We'll stop tracks after the blob is created
+    console.log('⏳ Waiting for MediaRecorder to finalize...');
+    
     setState(prev => ({ 
       ...prev, 
       isRecording: false, 
@@ -463,8 +838,15 @@ export const useMediaRecording = (options: UseMediaRecordingOptions = {}) => {
     if (timerRef.current) {
       clearInterval(timerRef.current);
     }
-    if (streamRef.current) {
-      streamRef.current.getTracks().forEach(track => track.stop());
+    if (streamRef.current && streamRef.current.getTracks) {
+      try {
+        const tracks = streamRef.current.getTracks();
+        if (tracks && Array.isArray(tracks)) {
+          tracks.forEach(track => track.stop());
+        }
+      } catch (error) {
+        console.warn('Error stopping tracks:', error);
+      }
     }
     if (state.recordedMedia?.url && state.recordedMedia.url.startsWith('blob:')) {
       blobUrlManager.revokeUrl(state.recordedMedia.url);
@@ -474,6 +856,11 @@ export const useMediaRecording = (options: UseMediaRecordingOptions = {}) => {
       compressorRef.current = null;
     }
   }, [state.recordedMedia]);
+
+  // Get current stream
+  const getStream = useCallback(() => {
+    return streamRef.current;
+  }, []);
 
   return {
     // State
@@ -490,6 +877,7 @@ export const useMediaRecording = (options: UseMediaRecordingOptions = {}) => {
     
     // Utilities
     checkMediaSupport,
+    getStream,
     
     // Computed values
     maxDuration,
@@ -503,18 +891,24 @@ export const useMediaRecording = (options: UseMediaRecordingOptions = {}) => {
 // Helper functions for MIME type detection
 function getSupportedVideoMimeType(): string {
   const types = [
-    'video/webm;codecs=vp9',
-    'video/webm;codecs=vp8',
-    'video/webm',
-    'video/mp4',
+    'video/webm;codecs=vp8,opus', // VP8+Opus is most widely supported for audio
+    'video/webm;codecs=vp9,opus', // VP9+Opus backup
+    'video/mp4;codecs=h264,aac', // H.264+AAC if supported
+    'video/webm', // Generic WebM
+    'video/mp4', // Generic MP4 (may choose incompatible codecs)
   ];
   
+  console.log('Testing MIME type support:');
   for (const type of types) {
-    if (MediaRecorder.isTypeSupported(type)) {
+    const isSupported = MediaRecorder.isTypeSupported(type);
+    console.log(`  ${type}: ${isSupported ? 'SUPPORTED' : 'not supported'}`);
+    if (isSupported) {
+      console.log(`✅ Selected MIME type: ${type}`);
       return type;
     }
   }
   
+  console.warn('⚠️ No preferred MIME type supported, using fallback');
   return 'video/webm'; // Fallback
 }
 
