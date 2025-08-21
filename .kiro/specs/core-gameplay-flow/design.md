@@ -77,9 +77,10 @@ Key methods: session lifecycle, progression, rewards, idle hint triggers.
 
 Manages entering three statements with lie selection and validation, plus multi-modal media capture:
 
-- Video, audio, or text fallback.
-- Preview and re-record.
-- Client-side compression.
+- Video, audio, or text fallback.  
+- **Media capture UI components (RecordingControl, MediaPreview, UploadProgress) are integrated directly within the Challenge Creation screen, providing seamless user interaction throughout recording, preview, compression, and upload stages. State management (e.g., Redux) ensures synchronization between UI elements and overall challenge submission workflow.**  
+- Preview and re-record.  
+- Client-side compression.  
 - Chunked, resumable uploads with progress and error handling.
 
 ```typescript
@@ -106,7 +107,7 @@ Supports browsing challenges, guess submissions, realtime feedback, hints, and r
 
 ***
 
-### 5. Progression and Rewards
+### 5. Progression and Rewardsf
 
 Handles leveling, experience, badges, cosmetics, and leaderboards.
 
@@ -142,5 +143,29 @@ Real-time/batch AffectLink API integration for emotion scoring, overlays, and fa
 - Accessibility and cross-platform compatibility.
 - AI scoring validation and fallback tests.
 - Performance and stress testing.
+
+***
+
+# design.md (Add a sentence or two emphasizing UI integration of media capture in Challenge Creation)
+
+### 2. Challenge Creation and Media Capture
+
+Manages entering three statements with lie selection and validation, plus multi-modal media capture:
+
+- Video, audio, or text fallback.  
+- **Media capture UI components (RecordingControl, MediaPreview, UploadProgress) are integrated directly within the Challenge Creation screen, providing seamless user interaction throughout recording, preview, compression, and upload stages. State management (e.g., Redux) ensures synchronization between UI elements and overall challenge submission workflow.**  
+- Preview and re-record.  
+- Client-side compression.  
+- Chunked, resumable uploads with progress and error handling.
+
+```typescript
+interface ChallengeCreation {
+  statements: Statement[];
+  mediaData: MediaCapture;
+  emotionAnalysis?: EmotionScores; // optional later
+  qualityScore?: number;
+  estimatedDifficulty?: 'easy' | 'medium' | 'hard';
+}
+```
 
 ***
