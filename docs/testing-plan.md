@@ -73,16 +73,44 @@ This document outlines the testing strategy, scope, tools, and schedule for the 
 
 ## 8. Testing Schedule Based on Feature Milestones
 
-- **After Core Infrastructure (Task 1 & 2):** Unit and integration tests for session management and state handling.
-- **Once Challenge Creation Workflow (Task 3) is functional:** UI and validation tests for statement input and media capture.
-- **After Guessing Engine (Task 6) completion:** Integration and UI tests for guess submission and feedback mechanics.
-- **When Emotion Analysis integration (Task 4) is implemented:** Testing AI scoring pipelines and fallback behavior.
-- **After Progression and Rewards (Task 7) are live:** Tests for leveling, unlocks, and leaderboard accuracy.
-- **Upon performance optimization (Task 8):** Stress testing and load simulations.
-- **As Error Handling and Resilience (Task 9) complete:** Testing network failures, offline modes, and graceful degradation.
-- **During Comprehensive Testing Suite (Task 10):** Full end-to-end, accessibility, and cross-platform tests.
-- **Throughout Analytics and Monitoring (Task 11):** Verification of data collection and privacy compliance.
-- **Final Integration and Polishing (Task 12):** Final QA, bug fixing, and demo readiness validation.
+- **After Core Infrastructure (Task 1 & 2):**  
+  Unit and integration tests for session management and state handling.
+
+- **Once Challenge Creation Workflow and Media Capture (Task 3 & Media Capture tasks) are functional:**  
+  UI and validation tests for statement input, lie selection, video/audio recording, preview, and media upload.
+
+- **After Challenge Publishing and Moderation (Task 5) implementation:**  
+  Tests for backend APIs, content moderation pipeline, rate limiting, and validation services.
+
+- **Following Guessing Engine and Gameplay (Task 6) completion:**  
+  Integration and UI tests for challenge browsing, guessing interface, real-time feedback, hints, and animations.
+
+- **After User Authentication features are implemented:**  
+  Unit and integration tests covering login/logout, registration flows, JWT handling, password reset, token refresh, and secure route protection.
+
+- **Once Monetization system is integrated:**  
+  Tests for purchase UI, receipt validation, entitlement management, promo code workflows, free trial logic, and event tracking.
+
+- **When Emotion Analysis Integration (Task 4) is implemented (optional MVP):**  
+  Testing AI scoring pipelines, frontend emotion overlays, fallback UI/logic, and validation against labeled samples.
+
+- **After Progression and Rewards (Task 7) are live:**  
+  Tests for leveling, experience, badge unlocks, cosmetics, leaderboard updates, and reward calculus.
+
+- **Upon Performance and Optimization Tasks (Task 8) completion:**  
+  Stress testing, load simulations, client-server caching validations, and rendering optimizations.
+
+- **As Error Handling and Resilience (Task 9) complete:**  
+  Testing network failure handling, offline mode behaviors, retry logic, graceful degradation, and user error messaging.
+
+- **During Comprehensive Testing Suite (Task 10):**  
+  Full end-to-end workflow tests, cross-browser and mobile device compatibility, accessibility validation, UI responsiveness, and fallback scenario tests.
+
+- **Throughout Analytics, Monitoring, and Reporting (Task 11):**  
+  Verification of gameplay, retention, monetization event tracking, backend health monitoring, and privacy-compliant logging.
+
+- **Final Integration and Polishing (Task 12):**  
+  Final QA, bug fixing, UI polishing including smooth animations, theming, documentation completion, and preparation of demo materials for hackathon submission.
 
 ---
 
