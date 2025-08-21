@@ -79,6 +79,7 @@ export const MediaRecorder: React.FC<MediaRecorderProps> = ({
     canRecord,
     isTextMode,
     isMediaMode,
+    getStream, // Add this to access the current stream
   } = useMediaRecording({
     maxDuration,
     allowedTypes: ["video", "text"], // Force video-first approach with text fallback
@@ -119,6 +120,32 @@ export const MediaRecorder: React.FC<MediaRecorderProps> = ({
       // Could add additional UI feedback here
     },
   });
+
+  // Connect video stream to video element when permissions are granted
+  useEffect(() => {
+    if (mediaType === "video" && hasPermission && videoRef.current && getStream) {
+      const stream = getStream();
+      if (stream) {
+        console.log('🎥 Connecting stream to video element');
+        console.log('Stream tracks:', stream.getTracks().map(t => `${t.kind}: ${t.label}`));
+        
+        videoRef.current.srcObject = stream;
+        videoRef.current.play().catch(console.error);
+        
+        // Add event listeners to debug video element
+        const video = videoRef.current;
+        video.addEventListener('loadedmetadata', () => {
+          console.log('📹 Video element metadata loaded');
+          console.log('Video dimensions:', video.videoWidth, 'x', video.videoHeight);
+          console.log('Video duration:', video.duration);
+        });
+        
+        video.addEventListener('canplay', () => {
+          console.log('🎬 Video element can play');
+        });
+      }
+    }
+  }, [mediaType, hasPermission, getStream]);
 
   // Handle text-only completion
   const handleTextComplete = useCallback(
@@ -221,7 +248,13 @@ export const MediaRecorder: React.FC<MediaRecorderProps> = ({
       {/* Video Preview */}
       {mediaType === "video" && hasPermission && (
         <div style={styles.videoContainer}>
-          <video ref={videoRef} autoPlay muted style={styles.video} />
+          <video 
+            ref={videoRef} 
+            autoPlay 
+            muted // Keep muted to prevent audio feedback
+            playsInline
+            style={styles.video} 
+          />
         </div>
       )}
 

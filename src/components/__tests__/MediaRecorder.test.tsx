@@ -72,27 +72,27 @@ describe('MediaRecorder Component', () => {
     disabled: false,
   };
 
-  it('renders media type selection buttons', () => {
+  it('renders primary video recording button and text fallback', () => {
     render(<MediaRecorder {...defaultProps} />);
     
-    expect(screen.getByText('Video')).toBeInTheDocument();
-    expect(screen.getByText('Audio')).toBeInTheDocument();
-    expect(screen.getByText('Text Only')).toBeInTheDocument();
+    expect(screen.getByText('Start Video Recording')).toBeInTheDocument();
+    expect(screen.getByText('Use Text Only')).toBeInTheDocument();
+    expect(screen.getByText('Recommended for best engagement')).toBeInTheDocument();
   });
 
-  it('shows only allowed media types', () => {
+  it('always shows video-first approach regardless of allowedTypes prop', () => {
     render(<MediaRecorder {...defaultProps} allowedTypes={['audio', 'text']} />);
     
-    expect(screen.queryByText('Video')).not.toBeInTheDocument();
-    expect(screen.getByText('Audio')).toBeInTheDocument();
-    expect(screen.getByText('Text Only')).toBeInTheDocument();
+    // Video-first approach ignores allowedTypes and always shows video option
+    expect(screen.getByText('Start Video Recording')).toBeInTheDocument();
+    expect(screen.getByText('Use Text Only')).toBeInTheDocument();
   });
 
   it('handles text-only recording', async () => {
     render(<MediaRecorder {...defaultProps} />);
     
-    // Click text-only button
-    fireEvent.click(screen.getByText('Text Only'));
+    // Click text-only fallback button
+    fireEvent.click(screen.getByText('Use Text Only'));
     
     // Should show text input
     expect(screen.getByPlaceholderText(/Type your statement here/)).toBeInTheDocument();
@@ -114,46 +114,50 @@ describe('MediaRecorder Component', () => {
     });
   });
 
-  it('requests video permissions and starts recording', async () => {
+  it('requests video+audio permissions and starts recording', async () => {
     render(<MediaRecorder {...defaultProps} />);
     
-    // Click video button
-    fireEvent.click(screen.getByText('Video'));
+    // Click primary video recording button
+    fireEvent.click(screen.getByText('Start Video Recording'));
     
     await waitFor(() => {
       expect(navigator.mediaDevices.getUserMedia).toHaveBeenCalledWith({
-        video: true,
-        audio: true,
+        video: { 
+          width: { ideal: 640 }, 
+          height: { ideal: 480 },
+          facingMode: 'user'
+        },
+        audio: {
+          echoCancellation: true,
+          noiseSuppression: true,
+          autoGainControl: true
+        }
       });
     });
   });
 
-  it('requests audio permissions and starts recording', async () => {
+  it('no longer supports standalone audio recording - converts to video', async () => {
     render(<MediaRecorder {...defaultProps} />);
     
-    // Click audio button
-    fireEvent.click(screen.getByText('Audio'));
-    
-    await waitFor(() => {
-      expect(navigator.mediaDevices.getUserMedia).toHaveBeenCalledWith({
-        audio: true,
-      });
-    });
+    // The component now only supports video+audio recording or text fallback
+    // There is no standalone audio recording button
+    expect(screen.queryByText('Audio')).not.toBeInTheDocument();
+    expect(screen.getByText('Start Video Recording')).toBeInTheDocument();
   });
 
-  it('falls back to text when video permission is denied', async () => {
+  it('falls back to text when video+audio permission is denied', async () => {
     (navigator.mediaDevices.getUserMedia as jest.Mock).mockRejectedValue(
       new Error('Permission denied')
     );
     
     render(<MediaRecorder {...defaultProps} />);
     
-    // Click video button
-    fireEvent.click(screen.getByText('Video'));
+    // Click primary video recording button
+    fireEvent.click(screen.getByText('Start Video Recording'));
     
-    // Should show error message in UI instead of calling onRecordingError
+    // Should show error message in UI and fallback to text mode
     await waitFor(() => {
-      expect(screen.getByText(/video recording not supported, using text mode/)).toBeInTheDocument();
+      expect(screen.getByText(/Camera\/microphone access denied, using text mode instead/)).toBeInTheDocument();
     });
     
     // Should show text input as fallback
@@ -162,45 +166,38 @@ describe('MediaRecorder Component', () => {
     });
   });
 
-  it('falls back to text when audio permission is denied', async () => {
-    (navigator.mediaDevices.getUserMedia as jest.Mock).mockRejectedValue(
-      new Error('Permission denied')
-    );
+  it('handles MediaRecorder not supported by falling back to text', async () => {
+    // Mock MediaRecorder as not supported
+    (global as any).MediaRecorder = undefined;
     
     render(<MediaRecorder {...defaultProps} />);
     
-    // Click audio button
-    fireEvent.click(screen.getByText('Audio'));
+    // Click primary video recording button
+    fireEvent.click(screen.getByText('Start Video Recording'));
     
-    // Should show error message in UI instead of calling onRecordingError
-    await waitFor(() => {
-      expect(screen.getByText(/audio recording not supported, using text mode/)).toBeInTheDocument();
-    });
-    
-    // Should show text input as fallback
+    // Should fallback to text mode when MediaRecorder is not supported
     await waitFor(() => {
       expect(screen.getByPlaceholderText(/Type your statement here/)).toBeInTheDocument();
     });
   });
 
-  it('shows error when unsupported media type is requested', () => {
+  it('ignores allowedTypes prop and always shows video-first approach', () => {
     render(<MediaRecorder {...defaultProps} allowedTypes={['text']} />);
     
-    // Manually trigger video recording (simulating internal call)
+    // Video-first approach ignores allowedTypes prop
     const component = screen.getByText('Record Your Statement').closest('div');
     expect(component).toBeInTheDocument();
     
-    // Only text should be available
-    expect(screen.queryByText('Video')).not.toBeInTheDocument();
-    expect(screen.queryByText('Audio')).not.toBeInTheDocument();
-    expect(screen.getByText('Text Only')).toBeInTheDocument();
+    // Should always show video option and text fallback
+    expect(screen.getByText('Start Video Recording')).toBeInTheDocument();
+    expect(screen.getByText('Use Text Only')).toBeInTheDocument();
   });
 
   it('enforces character limit in text mode', () => {
     render(<MediaRecorder {...defaultProps} />);
     
-    // Click text-only button
-    fireEvent.click(screen.getByText('Text Only'));
+    // Click text fallback button
+    fireEvent.click(screen.getByText('Use Text Only'));
     
     const textInput = screen.getByPlaceholderText(/Type your statement here/);
     
@@ -215,8 +212,8 @@ describe('MediaRecorder Component', () => {
   it('shows character count in text mode', () => {
     render(<MediaRecorder {...defaultProps} />);
     
-    // Click text-only button
-    fireEvent.click(screen.getByText('Text Only'));
+    // Click text fallback button
+    fireEvent.click(screen.getByText('Use Text Only'));
     
     const textInput = screen.getByPlaceholderText(/Type your statement here/);
     fireEvent.change(textInput, { target: { value: 'Hello world' } });
@@ -227,20 +224,18 @@ describe('MediaRecorder Component', () => {
   it('disables recording when disabled prop is true', () => {
     render(<MediaRecorder {...defaultProps} disabled={true} />);
     
-    const videoButton = screen.getByText('Video').closest('button');
-    const audioButton = screen.getByText('Audio').closest('button');
-    const textButton = screen.getByText('Text Only').closest('button');
+    const videoButton = screen.getByText('Start Video Recording').closest('button');
+    const textButton = screen.getByText('Use Text Only').closest('button');
     
     expect(videoButton).toBeDisabled();
-    expect(audioButton).toBeDisabled();
     expect(textButton).toBeDisabled();
   });
 
   it('allows text recording reset', async () => {
     render(<MediaRecorder {...defaultProps} />);
     
-    // Click text-only button and complete recording
-    fireEvent.click(screen.getByText('Text Only'));
+    // Click text fallback button and complete recording
+    fireEvent.click(screen.getByText('Use Text Only'));
     
     const textInput = screen.getByPlaceholderText(/Type your statement here/);
     fireEvent.change(textInput, { target: { value: 'Test statement' } });
@@ -257,22 +252,9 @@ describe('MediaRecorder Component', () => {
     expect(screen.getByPlaceholderText(/Type your statement here/)).toBeInTheDocument();
   });
 
-  it('handles MediaRecorder not supported gracefully', async () => {
-    // Mock MediaRecorder as not supported
-    (global as any).MediaRecorder = undefined;
-    
-    render(<MediaRecorder {...defaultProps} />);
-    
-    // Click video button
-    fireEvent.click(screen.getByText('Video'));
-    
-    // Should fall back to text mode
-    await waitFor(() => {
-      expect(screen.getByPlaceholderText(/Type your statement here/)).toBeInTheDocument();
-    });
-  });
+  // This test is now redundant with the earlier test, removing it
 
-  it('shows recording controls when media recording is supported', async () => {
+  it('shows recording controls when video+audio recording is supported', async () => {
     // Mock successful media access and MediaRecorder support
     (navigator.mediaDevices.getUserMedia as jest.Mock).mockResolvedValue(mockStream);
     (global as any).MediaRecorder.isTypeSupported = jest.fn(() => true);
@@ -280,33 +262,40 @@ describe('MediaRecorder Component', () => {
     render(<MediaRecorder {...defaultProps} />);
     
     // Start video recording
-    fireEvent.click(screen.getByText('Video'));
+    fireEvent.click(screen.getByText('Start Video Recording'));
     
     // Wait for permissions to be granted
     await waitFor(() => {
       expect(navigator.mediaDevices.getUserMedia).toHaveBeenCalledWith({
-        video: { width: 640, height: 480 },
-        audio: true,
+        video: { 
+          width: { ideal: 640 }, 
+          height: { ideal: 480 },
+          facingMode: 'user'
+        },
+        audio: {
+          echoCancellation: true,
+          noiseSuppression: true,
+          autoGainControl: true
+        }
       });
     });
 
     // Should show start recording button after permissions are granted
     await waitFor(() => {
-      expect(screen.getByText('Start Recording')).toBeInTheDocument();
+      expect(screen.getByText('Start Video Recording')).toBeInTheDocument();
     });
   });
 
   it('provides comprehensive recording controls interface', () => {
     render(<MediaRecorder {...defaultProps} />);
     
-    // Should show media type selection
-    expect(screen.getByText('Video')).toBeInTheDocument();
-    expect(screen.getByText('Audio')).toBeInTheDocument();
-    expect(screen.getByText('Text Only')).toBeInTheDocument();
+    // Should show video-first approach
+    expect(screen.getByText('Start Video Recording')).toBeInTheDocument();
+    expect(screen.getByText('Use Text Only')).toBeInTheDocument();
     
     // Should show helpful instructions
     expect(screen.getByText('Record Your Statement')).toBeInTheDocument();
-    expect(screen.getByText(/Choose how you'd like to record/)).toBeInTheDocument();
+    expect(screen.getByText(/Record your statement with video and audio for the best experience/)).toBeInTheDocument();
   });
 
   it('supports all required recording controls functionality', () => {
@@ -321,8 +310,7 @@ describe('MediaRecorder Component', () => {
     expect(defaultProps.onRecordingComplete).toBeDefined();
     expect(defaultProps.onRecordingError).toBeDefined();
     expect(defaultProps.maxDuration).toBeDefined();
-    expect(defaultProps.allowedTypes).toContain('video');
-    expect(defaultProps.allowedTypes).toContain('audio');
+    // allowedTypes is now ignored in favor of video-first approach
   });
 });
 
@@ -337,11 +325,10 @@ describe('MediaRecorder Text Recording', () => {
     render(<MediaRecorder 
       onRecordingComplete={mockOnComplete}
       onRecordingError={jest.fn()}
-      allowedTypes={['text']}
     />);
     
-    // Click text-only button
-    fireEvent.click(screen.getByText('Text Only'));
+    // Click text fallback button
+    fireEvent.click(screen.getByText('Use Text Only'));
     
     // Try to complete without text
     const completeButton = screen.getByText('Complete Text Recording');
@@ -359,11 +346,10 @@ describe('MediaRecorder Text Recording', () => {
     render(<MediaRecorder 
       onRecordingComplete={mockOnComplete}
       onRecordingError={jest.fn()}
-      allowedTypes={['text']}
     />);
     
     // Complete text recording
-    fireEvent.click(screen.getByText('Text Only'));
+    fireEvent.click(screen.getByText('Use Text Only'));
     
     const textInput = screen.getByPlaceholderText(/Type your statement here/);
     fireEvent.change(textInput, { target: { value: 'My test statement' } });
