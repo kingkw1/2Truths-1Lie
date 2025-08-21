@@ -58,7 +58,11 @@ describe('challengeCreationSlice', () => {
 
       const newState = challengeCreationReducer(modifiedState, startNewChallenge());
 
-      expect(newState.currentChallenge.statements).toEqual([]);
+      expect(newState.currentChallenge.statements).toEqual([
+        { id: 'stmt_1', text: '', isLie: false, confidence: 0 },
+        { id: 'stmt_2', text: '', isLie: false, confidence: 0 },
+        { id: 'stmt_3', text: '', isLie: false, confidence: 0 },
+      ]);
       expect(newState.currentStatementIndex).toBe(0);
       expect(newState.validationErrors).toEqual([]);
       expect(newState.isSubmitting).toBe(false);
@@ -316,7 +320,7 @@ describe('challengeCreationSlice', () => {
 
       const newState = challengeCreationReducer(stateWithEmptyStatements, validateChallenge());
 
-      expect(newState.validationErrors).toContain('All statements must have text');
+      expect(newState.validationErrors).toContain('All statements must have text (text serves as fallback when video recording is unavailable)');
     });
 
     test('validateChallenge passes with valid challenge', () => {

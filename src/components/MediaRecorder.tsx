@@ -20,7 +20,7 @@ interface MediaRecorderProps {
   onRecordingComplete: (mediaData: MediaCapture) => void;
   onRecordingError: (error: string) => void;
   maxDuration?: number; // in milliseconds, default 30 seconds
-  allowedTypes?: MediaType[];
+  allowedTypes?: MediaType[]; // Deprecated: video with audio is now primary, text is fallback only
   disabled?: boolean;
   enableCompression?: boolean;
   compressionOptions?: CompressionOptions;
@@ -41,7 +41,7 @@ export const MediaRecorder: React.FC<MediaRecorderProps> = ({
   onRecordingComplete,
   onRecordingError,
   maxDuration = 30000, // 30 seconds default
-  allowedTypes = ["video", "audio", "text"],
+  allowedTypes = ["video", "text"], // Deprecated parameter: now defaults to video with audio primary, text fallback
   disabled = false,
   enableCompression = true,
   compressionOptions = {},
@@ -57,7 +57,7 @@ export const MediaRecorder: React.FC<MediaRecorderProps> = ({
 
   const videoRef = useRef<HTMLVideoElement>(null);
 
-  // Use the enhanced media recording hook
+  // Use the enhanced media recording hook with video-first approach
   const {
     isRecording,
     isPaused,
@@ -81,7 +81,7 @@ export const MediaRecorder: React.FC<MediaRecorderProps> = ({
     isMediaMode,
   } = useMediaRecording({
     maxDuration,
-    allowedTypes,
+    allowedTypes: ["video", "text"], // Force video-first approach with text fallback
     onRecordingComplete: (mediaData) => {
       // Analyze media quality
       const quality = analyzeMediaQuality(mediaData);
@@ -154,61 +154,37 @@ export const MediaRecorder: React.FC<MediaRecorderProps> = ({
       <div style={styles.header}>
         <h3 style={styles.title}>Record Your Statement</h3>
         <p style={styles.subtitle}>
-          Choose how you'd like to record your statement. Video and audio add
-          personality to your challenge!
+          Record your statement with video and audio for the best experience. 
+          Text-only mode is available as a fallback if recording isn't possible.
         </p>
       </div>
 
-      {/* Media Type Selection */}
-      {!isRecording && !isCompressing && (
-        <div style={styles.typeSelection}>
-          {allowedTypes.includes("video") && (
-            <button
-              onClick={() => startRecording("video")}
-              style={{
-                ...styles.typeButton,
-                ...(mediaType === "video"
-                  ? styles.typeButtonActive
-                  : {}),
-              }}
-              disabled={disabled}
-            >
-              <span style={styles.typeIcon}>🎥</span>
-              <span>Video</span>
-            </button>
-          )}
-
-          {allowedTypes.includes("audio") && (
-            <button
-              onClick={() => startRecording("audio")}
-              style={{
-                ...styles.typeButton,
-                ...(mediaType === "audio"
-                  ? styles.typeButtonActive
-                  : {}),
-              }}
-              disabled={disabled}
-            >
-              <span style={styles.typeIcon}>🎤</span>
-              <span>Audio</span>
-            </button>
-          )}
-
-          {allowedTypes.includes("text") && (
+      {/* Primary Video Recording Button */}
+      {!isRecording && !isCompressing && !mediaType && (
+        <div style={styles.primaryRecordingSection}>
+          <button
+            onClick={() => startRecording("video")}
+            style={styles.primaryVideoButton}
+            disabled={disabled}
+          >
+            <span style={styles.primaryVideoIcon}>🎥</span>
+            <div style={styles.primaryVideoText}>
+              <span style={styles.primaryVideoTitle}>Start Video Recording</span>
+              <span style={styles.primaryVideoSubtitle}>Recommended for best engagement</span>
+            </div>
+          </button>
+          
+          <div style={styles.fallbackSection}>
+            <span style={styles.fallbackText}>Can't record video?</span>
             <button
               onClick={() => startRecording("text")}
-              style={{
-                ...styles.typeButton,
-                ...(mediaType === "text"
-                  ? styles.typeButtonActive
-                  : {}),
-              }}
+              style={styles.fallbackButton}
               disabled={disabled}
             >
-              <span style={styles.typeIcon}>📝</span>
-              <span>Text Only</span>
+              <span style={styles.fallbackIcon}>📝</span>
+              <span>Use Text Only</span>
             </button>
-          )}
+          </div>
         </div>
       )}
 
@@ -249,22 +225,12 @@ export const MediaRecorder: React.FC<MediaRecorderProps> = ({
         </div>
       )}
 
-      {/* Audio Visualizer with Recording Indicator */}
-      {mediaType === "audio" && hasPermission && (
-        <div style={styles.audioContainer}>
-          <div style={styles.audioVisualizer}>
-            <span style={styles.audioIcon}>🎤</span>
-            <div style={styles.audioWave}>
-              {isRecording && (
-                <div style={styles.audioWaveAnimation}>♪ ♫ ♪ ♫</div>
-              )}
-            </div>
-            {isRecording && (
-              <div style={styles.recordingIndicator}>
-                <span style={styles.recordingDot}>●</span>
-                <span>Recording...</span>
-              </div>
-            )}
+      {/* Video Recording Status - Audio recording removed as standalone option */}
+      {mediaType === "video" && hasPermission && isRecording && (
+        <div style={styles.recordingStatusContainer}>
+          <div style={styles.recordingStatus}>
+            <span style={styles.recordingDot}>●</span>
+            <span style={styles.recordingText}>Recording video with audio...</span>
           </div>
         </div>
       )}
@@ -274,72 +240,71 @@ export const MediaRecorder: React.FC<MediaRecorderProps> = ({
         <TextRecorder onComplete={handleTextComplete} disabled={disabled || isCompressing} />
       )}
 
-      {/* Recording Controls with Quality Indicator */}
-      {(mediaType === "video" || mediaType === "audio") &&
-        hasPermission && (
-          <div style={styles.controls}>
-            <div style={styles.controlsHeader}>
-              <div style={styles.duration}>
-                {currentDurationFormatted} / {maxDurationFormatted}
-              </div>
-              {isRecording && (
-                <RealTimeQualityIndicator
-                  score={75} // Placeholder - would be real-time analysis
-                  isAnalyzing={false}
-                  showLabel={true}
-                />
-              )}
+      {/* Video Recording Controls with Quality Indicator */}
+      {mediaType === "video" && hasPermission && (
+        <div style={styles.controls}>
+          <div style={styles.controlsHeader}>
+            <div style={styles.duration}>
+              {currentDurationFormatted} / {maxDurationFormatted}
             </div>
-
-            <div style={styles.controlButtons}>
-              {!isRecording ? (
-                <button
-                  onClick={() => startRecording(mediaType)}
-                  style={styles.recordButton}
-                  disabled={disabled || isCompressing}
-                  title="Start recording"
-                >
-                  <span style={styles.recordIcon}>⏺️</span>
-                  Start Recording
-                </button>
-              ) : (
-                <>
-                  <button
-                    onClick={togglePause}
-                    style={isPaused ? styles.resumeButton : styles.pauseButton}
-                    disabled={disabled}
-                    title={isPaused ? "Resume recording" : "Pause recording"}
-                  >
-                    <span style={styles.pauseIcon}>
-                      {isPaused ? "▶️" : "⏸️"}
-                    </span>
-                    {isPaused ? "Resume" : "Pause"}
-                  </button>
-
-                  <button
-                    onClick={stopRecording}
-                    style={styles.stopButton}
-                    disabled={disabled}
-                    title="Stop and save recording"
-                  >
-                    <span style={styles.stopIcon}>⏹️</span>
-                    Stop & Save
-                  </button>
-
-                  <button
-                    onClick={cancelRecording}
-                    style={styles.cancelButton}
-                    disabled={disabled}
-                    title="Cancel recording without saving"
-                  >
-                    <span style={styles.cancelIcon}>❌</span>
-                    Cancel
-                  </button>
-                </>
-              )}
-            </div>
+            {isRecording && (
+              <RealTimeQualityIndicator
+                score={75} // Placeholder - would be real-time analysis
+                isAnalyzing={false}
+                showLabel={true}
+              />
+            )}
           </div>
-        )}
+
+          <div style={styles.controlButtons}>
+            {!isRecording ? (
+              <button
+                onClick={() => startRecording("video")}
+                style={styles.recordButton}
+                disabled={disabled || isCompressing}
+                title="Start video recording with audio"
+              >
+                <span style={styles.recordIcon}>⏺️</span>
+                Start Video Recording
+              </button>
+            ) : (
+              <>
+                <button
+                  onClick={togglePause}
+                  style={isPaused ? styles.resumeButton : styles.pauseButton}
+                  disabled={disabled}
+                  title={isPaused ? "Resume recording" : "Pause recording"}
+                >
+                  <span style={styles.pauseIcon}>
+                    {isPaused ? "▶️" : "⏸️"}
+                  </span>
+                  {isPaused ? "Resume" : "Pause"}
+                </button>
+
+                <button
+                  onClick={stopRecording}
+                  style={styles.stopButton}
+                  disabled={disabled}
+                  title="Stop and save recording"
+                >
+                  <span style={styles.stopIcon}>⏹️</span>
+                  Stop & Save
+                </button>
+
+                <button
+                  onClick={cancelRecording}
+                  style={styles.cancelButton}
+                  disabled={disabled}
+                  title="Cancel recording without saving"
+                >
+                  <span style={styles.cancelIcon}>❌</span>
+                  Cancel
+                </button>
+              </>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Media Quality Feedback */}
       {showQualityFeedback && recordingQuality && (
@@ -462,36 +427,84 @@ const styles = {
     lineHeight: "1.5",
   } as React.CSSProperties,
 
-  typeSelection: {
-    display: "flex",
-    gap: "12px",
-    justifyContent: "center",
-    marginBottom: "24px",
-    flexWrap: "wrap" as const,
-  } as React.CSSProperties,
-
-  typeButton: {
+  primaryRecordingSection: {
     display: "flex",
     flexDirection: "column" as const,
     alignItems: "center",
-    gap: "8px",
-    padding: "16px 20px",
-    border: "2px solid #D1D5DB",
-    borderRadius: "8px",
-    backgroundColor: "#FFFFFF",
+    gap: "20px",
+    marginBottom: "24px",
+  } as React.CSSProperties,
+
+  primaryVideoButton: {
+    display: "flex",
+    alignItems: "center",
+    gap: "16px",
+    padding: "20px 32px",
+    border: "3px solid #3B82F6",
+    borderRadius: "12px",
+    backgroundColor: "#3B82F6",
+    color: "#FFFFFF",
     cursor: "pointer",
     transition: "all 0.2s",
-    minWidth: "100px",
+    fontSize: "18px",
+    fontWeight: "bold",
+    minWidth: "300px",
+    boxShadow: "0 4px 6px -1px rgba(0, 0, 0, 0.1)",
   } as React.CSSProperties,
 
-  typeButtonActive: {
-    borderColor: "#3B82F6",
-    backgroundColor: "#EBF8FF",
-    color: "#1E40AF",
+  primaryVideoIcon: {
+    fontSize: "32px",
   } as React.CSSProperties,
 
-  typeIcon: {
-    fontSize: "24px",
+  primaryVideoText: {
+    display: "flex",
+    flexDirection: "column" as const,
+    alignItems: "flex-start",
+    gap: "4px",
+  } as React.CSSProperties,
+
+  primaryVideoTitle: {
+    fontSize: "18px",
+    fontWeight: "bold",
+  } as React.CSSProperties,
+
+  primaryVideoSubtitle: {
+    fontSize: "14px",
+    opacity: 0.9,
+    fontWeight: "normal",
+  } as React.CSSProperties,
+
+  fallbackSection: {
+    display: "flex",
+    alignItems: "center",
+    gap: "12px",
+    padding: "16px",
+    backgroundColor: "#F9FAFB",
+    borderRadius: "8px",
+    border: "1px solid #E5E7EB",
+  } as React.CSSProperties,
+
+  fallbackText: {
+    fontSize: "14px",
+    color: "#6B7280",
+  } as React.CSSProperties,
+
+  fallbackButton: {
+    display: "flex",
+    alignItems: "center",
+    gap: "8px",
+    padding: "8px 16px",
+    border: "2px solid #6B7280",
+    borderRadius: "6px",
+    backgroundColor: "#FFFFFF",
+    color: "#6B7280",
+    cursor: "pointer",
+    transition: "all 0.2s",
+    fontSize: "14px",
+  } as React.CSSProperties,
+
+  fallbackIcon: {
+    fontSize: "16px",
   } as React.CSSProperties,
 
   errorContainer: {
@@ -524,34 +537,27 @@ const styles = {
     borderRadius: "8px",
   } as React.CSSProperties,
 
-  audioContainer: {
+  recordingStatusContainer: {
     marginBottom: "20px",
+    textAlign: "center" as const,
   } as React.CSSProperties,
 
-  audioVisualizer: {
+  recordingStatus: {
     display: "flex",
-    flexDirection: "column" as const,
     alignItems: "center",
-    gap: "16px",
-    padding: "40px",
-    backgroundColor: "#F3F4F6",
+    justifyContent: "center",
+    gap: "8px",
+    padding: "12px 20px",
+    backgroundColor: "#FEF2F2",
+    border: "2px solid #FECACA",
     borderRadius: "8px",
+    color: "#DC2626",
+    fontSize: "16px",
+    fontWeight: "bold",
   } as React.CSSProperties,
 
-  audioIcon: {
-    fontSize: "48px",
-  } as React.CSSProperties,
-
-  audioWave: {
-    height: "40px",
-    display: "flex",
-    alignItems: "center",
-  } as React.CSSProperties,
-
-  audioWaveAnimation: {
-    fontSize: "24px",
-    color: "#3B82F6",
-    animation: "pulse 1s infinite",
+  recordingText: {
+    // No specific styles needed
   } as React.CSSProperties,
 
   textContainer: {

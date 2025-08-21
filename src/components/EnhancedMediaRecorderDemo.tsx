@@ -59,7 +59,8 @@ export const EnhancedMediaRecorderDemo: React.FC = () => {
       <div style={styles.header}>
         <h2 style={styles.title}>Enhanced Media Recorder Demo</h2>
         <p style={styles.subtitle}>
-          Test the full recording controls: start, pause, resume, and cancel functionality
+          Test video recording with full controls: start, pause, resume, and cancel functionality.
+          Text mode is available as fallback when video recording is not supported.
         </p>
       </div>
 
@@ -84,7 +85,7 @@ export const EnhancedMediaRecorderDemo: React.FC = () => {
           onRecordingComplete={handleRecordingComplete}
           onRecordingError={handleRecordingError}
           maxDuration={60000} // 1 minute
-          allowedTypes={['video', 'audio', 'text'] as MediaType[]}
+          allowedTypes={['video', 'text'] as MediaType[]} // Video-first with text fallback
           disabled={isRecorderDisabled}
         />
       </div>

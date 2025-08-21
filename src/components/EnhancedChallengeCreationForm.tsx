@@ -67,30 +67,24 @@ export const EnhancedChallengeCreationForm: React.FC<EnhancedChallengeCreationFo
     checkMediaSupport();
   }, [dispatch]);
 
-  // Check media device support
+  // Check media device support - prioritize video with audio
   const checkMediaSupport = useCallback(async () => {
     const support = {
       video: false,
-      audio: false,
+      audio: false, // Deprecated: standalone audio mode removed
       text: true,
     };
 
     if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
       try {
-        // Test video support
+        // Test video with audio support (primary mode)
         const videoStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
         videoStream.getTracks().forEach(track => track.stop());
         support.video = true;
-        support.audio = true;
+        support.audio = true; // Audio is included with video
       } catch {
-        try {
-          // Test audio-only support
-          const audioStream = await navigator.mediaDevices.getUserMedia({ audio: true });
-          audioStream.getTracks().forEach(track => track.stop());
-          support.audio = true;
-        } catch {
-          // Audio not supported
-        }
+        // Video with audio not supported, text fallback available
+        console.log('Video recording not available, text mode will be used as fallback');
       }
     }
 
@@ -204,6 +198,9 @@ export const EnhancedChallengeCreationForm: React.FC<EnhancedChallengeCreationFo
             media && media.type !== 'text' && media.url && media.url.startsWith('blob:')
           ) || [];
           
+          // Check for any media recording errors
+          const hasMediaErrors = Object.values(mediaRecordingState).some(state => state.error !== null);
+          
           if (mediaFiles.length > 0) {
             // Create upload sessions for media files that haven't been uploaded yet
             const sessions = mediaFiles.map((media, index) => ({
@@ -225,7 +222,15 @@ export const EnhancedChallengeCreationForm: React.FC<EnhancedChallengeCreationFo
               }
             }, 3000);
           } else {
-            // No media files, submit immediately
+            // No media files to upload - this is fine, text serves as fallback
+            if (hasMediaErrors) {
+              setFeedbackMessage({
+                message: 'Video recording failed, but your text statements will be used. Challenge created successfully!',
+                type: 'info',
+                visible: true,
+              });
+            }
+            
             dispatch(completeSubmission({ success: true }));
             if (onSubmit) {
               onSubmit();
@@ -239,25 +244,22 @@ export const EnhancedChallengeCreationForm: React.FC<EnhancedChallengeCreationFo
     }
   }, [dispatch, validationErrors, currentChallenge.mediaData, uploadState, onSubmit]);
 
-  // Check if form is valid
+  // Check if form is valid - simplified to only require text and lie selection
   const isFormValid = useCallback(() => {
     return (
       statements.every(stmt => stmt.text.trim().length > 0) &&
       selectedLieIndex !== null &&
       statements.length === 3
     );
+    // Note: Media recording is optional - text serves as fallback
   }, [statements, selectedLieIndex]);
 
-  // Get available media types based on support
+  // Get available media types based on support - video-first approach
   const getAvailableMediaTypes = useCallback(() => {
-    const types: ('video' | 'audio' | 'text')[] = ['text'];
-    
-    if (mediaSupport.audio) {
-      types.unshift('audio');
-    }
+    const types: ('video' | 'text')[] = ['text']; // Always have text fallback
     
     if (mediaSupport.video) {
-      types.unshift('video');
+      types.unshift('video'); // Video with audio is primary
     }
     
     return types;
@@ -280,33 +282,39 @@ export const EnhancedChallengeCreationForm: React.FC<EnhancedChallengeCreationFo
 
       {/* Media Support Info */}
       <div style={styles.mediaSupportInfo}>
-        <h4 style={styles.mediaSupportTitle}>Available Recording Options:</h4>
+        <h4 style={styles.mediaSupportTitle}>Recording Options:</h4>
         <div style={styles.mediaSupportList}>
-          {mediaSupport.video && (
+          {mediaSupport.video ? (
             <span style={styles.mediaSupportItem}>
-              🎥 Video Recording
+              🎥 Video with Audio (Recommended)
             </span>
-          )}
-          {mediaSupport.audio && (
-            <span style={styles.mediaSupportItem}>
-              🎤 Audio Recording
+          ) : (
+            <span style={styles.mediaSupportItemDisabled}>
+              🎥 Video with Audio (Not Available)
             </span>
           )}
           <span style={styles.mediaSupportItem}>
-            📝 Text Only
+            📝 Text Only (Always Available as Fallback)
           </span>
         </div>
+        <p style={styles.mediaSupportNote}>
+          💡 Text statements are required for all entries. Video recording is optional and will enhance your challenge, but if recording fails, your text will serve as the fallback.
+        </p>
       </div>
 
       {/* Lie Selection Instructions */}
       <div style={styles.instructionsContainer}>
         <h4 style={styles.instructionsTitle}>Instructions:</h4>
         <ol style={styles.instructionsList}>
-          <li>Write or record three statements about yourself</li>
+          <li>Write three statements about yourself (required)</li>
+          <li>Optionally add video recordings to enhance your statements</li>
           <li>Make sure two statements are true and one is false</li>
           <li>Click "Mark as lie" on the statement that is false</li>
           <li>Preview your challenge before publishing</li>
         </ol>
+        <div style={styles.instructionsNote}>
+          <strong>Note:</strong> Text is always required as it serves as a fallback when video recording is unavailable or fails.
+        </div>
       </div>
 
       {/* Statements with Media */}
@@ -375,12 +383,12 @@ export const EnhancedChallengeCreationForm: React.FC<EnhancedChallengeCreationFo
         </div>
 
         <div style={styles.statusItem}>
-          <span style={styles.statusLabel}>Media added:</span>
+          <span style={styles.statusLabel}>Videos added:</span>
           <span style={{
             ...styles.statusValue,
             color: '#3B82F6'
           }}>
-            {currentChallenge.mediaData?.filter(m => m.type !== 'text').length || 0}/3
+            {currentChallenge.mediaData?.filter(m => m.type === 'video').length || 0}/3
           </span>
         </div>
       </div>
@@ -537,6 +545,24 @@ const styles = {
     borderRadius: '4px',
   } as React.CSSProperties,
 
+  mediaSupportItemDisabled: {
+    fontSize: '14px',
+    color: '#9CA3AF',
+    padding: '4px 8px',
+    backgroundColor: '#F3F4F6',
+    borderRadius: '4px',
+  } as React.CSSProperties,
+
+  mediaSupportNote: {
+    fontSize: '14px',
+    color: '#1E40AF',
+    marginTop: '12px',
+    padding: '8px',
+    backgroundColor: '#DBEAFE',
+    borderRadius: '4px',
+    lineHeight: '1.4',
+  } as React.CSSProperties,
+
   instructionsContainer: {
     marginBottom: '32px',
     padding: '16px',
@@ -556,6 +582,16 @@ const styles = {
     margin: 0,
     paddingLeft: '20px',
     color: '#065F46',
+  } as React.CSSProperties,
+
+  instructionsNote: {
+    marginTop: '12px',
+    padding: '8px',
+    backgroundColor: '#DBEAFE',
+    borderRadius: '4px',
+    fontSize: '14px',
+    color: '#1E40AF',
+    lineHeight: '1.4',
   } as React.CSSProperties,
 
   statementsContainer: {
