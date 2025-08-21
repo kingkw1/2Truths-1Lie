@@ -2,7 +2,8 @@
   "name": "two-truths-one-lie-game",
   "version": "1.0.0",
   "description": "Two Truths and a Lie game with emotion analysis",
-  "main": "src/index.ts",
+  "main": "src/lib.ts",
+
   "scripts": {
     "start": "react-scripts start",
     "build": "react-scripts build",

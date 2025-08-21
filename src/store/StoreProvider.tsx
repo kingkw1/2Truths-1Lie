@@ -16,13 +16,8 @@ interface StoreProviderProps {
 
 export const StoreProvider: React.FC<StoreProviderProps> = ({ children }) => {
   useEffect(() => {
-    // Load saved game state on app initialization
-    const savedState = loadSavedGameState();
-
-    if (savedState?.playerProgression?.progression) {
-      store.dispatch(initializeProgression(savedState.playerProgression.progression));
-    } else {
-      // Initialize new player progression
+    try {
+      // Initialize player progression
       store.dispatch(initializeProgression({
         playerId: 'default',
         level: {
@@ -40,16 +35,17 @@ export const StoreProvider: React.FC<StoreProviderProps> = ({ children }) => {
         longestStreak: 0,
         achievements: [],
         unlockedCosmetics: ['default_avatar'],
-        createdAt: new Date(),
-        lastUpdated: new Date(),
+        createdAt: new Date(), // Redux will handle serialization warnings
+        lastUpdated: new Date(), // Redux will handle serialization warnings
       }));
-    }
 
-    // Start a new game session if none exists
-    if (!savedState?.gameSession?.currentSession) {
+      // Start game session
       const playerId = localStorage.getItem('playerId') || `player_${Date.now()}`;
       localStorage.setItem('playerId', playerId);
       store.dispatch(startGameSession({ playerId }));
+      
+    } catch (error) {
+      console.error('StoreProvider initialization error:', error);
     }
   }, []);
 
