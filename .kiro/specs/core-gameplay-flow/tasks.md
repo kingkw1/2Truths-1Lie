@@ -13,16 +13,17 @@
 
 ### 3. Challenge Creation Workflow  
 - [x] Create UI for entering 3 statements with lie selection and validation _(Req 1,3)_  
-- [x] Implement media recording components: video, audio, fallback to text only  
 - [x] Add immediate feedback on recording and statement quality  
 - [x] Unit tests for state transitions and input validation  
 
-### 4. Emotion Analysis Integration (Optional MVP Feature)  
-- [ ] Connect to AffectLink API for real-time or batch emotion scoring  
-- [ ] Implement confidence/difficulty scoring for statements  
-- [ ] Visual overlays indicating emotional signals during gameplay  
-- [ ] Fallback modes for offline or API failure  
-- [ ] Tests for AI pipeline robustness _(relates Req 1,2,6)_  
+### 4. Media Capture  
+- [ ] Implement video and audio recording components with full controls (start, pause, resume, cancel)  
+- [ ] Develop MediaPreview component supporting playback of recorded media  
+- [ ] Add client-side media compression pipeline before upload  
+- [ ] Build secure backend chunked upload API endpoints with resumable support  
+- [ ] Integrate UploadProgress component showing real-time upload progress and cancel option  
+- [ ] Implement robust error handling and retry logic for uploads  
+- [ ] Write comprehensive unit and integration tests covering recording, preview, compression, upload, and failure modes  
 
 ### 5. Challenge Publishing and Moderation  
 - [ ] Implement server-side APIs to receive/store challenges and media  
@@ -37,19 +38,23 @@
 - [ ] Animate feedback for correct/incorrect guesses and streaks  
 - [ ] Unit and integration tests covering gameplay logic _(relates Req 1,3,6)_  
 
-### 7. Progression and Rewards  
+***
+
+### 7. Emotion Analysis Integration (Optional MVP Feature)  
+- [ ] Connect to AffectLink API for real-time or batch emotion scoring  
+- [ ] Implement confidence/difficulty scoring for statements  
+- [ ] Visual overlays indicating emotional signals during gameplay  
+- [ ] Fallback modes for offline or API failure  
+- [ ] Tests for AI pipeline robustness _(relates Req 1,2,6)_  
+
+***
+
+### 8. Progression and Rewards  
 - [ ] Design leveling, experience, and badge system  
 - [ ] Build cosmetic unlocks and inventory management  
 - [ ] Integrate leaderboard with real-time updates and periodic resets  
 - [ ] Implement points calculations and milestone triggers  
 - [ ] Tests for reward calculus and user stats _(relates Req 2,4)_  
-
-### 8. Performance and Optimization  
-- [ ] Client-side lazy loading and caching of assets and data  
-- [ ] Optimize rendering with memoization and throttling  
-- [ ] Server-side caching with Redis or equivalent, DB indexing  
-- [ ] CDN for media delivery  
-- [ ] Stress/load testing of concurrent gameplay _(relates Req 6)_  
 
 ### 9. Error Handling and Resilience  
 - [ ] Network error retries with exponential backoff  
@@ -58,20 +63,27 @@
 - [ ] User-friendly error messages and recovery options  
 - [ ] Validation and rate-limiting to prevent abuse _(relates Req 1,3)_  
 
-### 10. Comprehensive Testing Suite  
+### 10. Performance and Optimization  
+- [ ] Client-side lazy loading and caching of assets and data  
+- [ ] Optimize rendering with memoization and throttling  
+- [ ] Server-side caching with Redis or equivalent, DB indexing  
+- [ ] CDN for media delivery  
+- [ ] Stress/load testing of concurrent gameplay _(relates Req 6)_  
+
+### 11. Comprehensive Testing Suite  
 - [ ] End-to-end workflow tests for typical game sessions  
 - [ ] Cross-browser and mobile device compatibility tests  
 - [ ] Integration tests for real-time and backend APIs  
 - [ ] Accessibility and UI responsiveness tests  
 - [ ] Tests for fallback behaviors and error scenarios _(relates Req 1,3,6)_  
 
-### 11. Analytics, Monitoring, and Reporting  
+### 12. Analytics, Monitoring, and Reporting  
 - [ ] Implement gameplay, retention, and monetization event tracking  
 - [ ] Backend health and performance monitoring  
 - [ ] Privacy-compliant logging and data anonymization  
 - [ ] Prepare dashboards for tracking competition KPIs _(relates Req 2,5,6)_  
 
-### 12. Final Integration and Polishing  
+### 13. Final Integration and Polishing  
 - [ ] Integrate modules into seamless user experiences  
 - [ ] Enhance UI with smooth animations, transitions, and themed cosmetics  
 - [ ] Full documentation for users and developers  

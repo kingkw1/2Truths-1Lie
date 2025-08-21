@@ -1,4 +1,4 @@
-# Core Gameplay Flow - Design Document
+# Core Gameplay Flow - Design 
 
 ## Overview
 
@@ -37,18 +37,18 @@ stateDiagram-v2
 
 ### Core Game Loop Architecture
 
-- **Creation Loop:** Users create challenges → record media & statements → preview and submit → receive feedback & points.
-- **Consumption Loop:** Users browse challenges → analyze statements/media → make guesses → see results with feedback → accumulate points and unlock features.
+- **Creation Loop:** Players create challenges → record media & statements → preview and submit → receive immediate feedback and points.
+- **Consumption Loop:** Players browse challenges → analyze statements/media → make guesses → see results with feedback → accumulate points and unlock features.
 
 ***
 
 ### Technology Stack Integration
 
-- **Frontend:** React/React Native with robust state management (Redux or Context API).
-- **Backend:** FastAPI serving RESTful APIs, responsible for user, game, and media management.
-- **State Management:** Redux/Vuex to handle client game state and UI responsiveness.
+- **Frontend:** React with robust state management (Redux or Context API).
+- **Backend:** FastAPI serving RESTful APIs for user, game, and media management.
+- **State Management:** Redux/Vuex for client game state and UI responsiveness.
 - **Real-time:** WebSockets for live notifications on guesses, leaderboard updates.
-- **AI Integration:** Modular AffectLink emotion recognition API service with fallback mechanisms.
+- **AI Integration:** Modular AffectLink emotion recognition API service with fallback (optional MVP feature).
 
 ***
 
@@ -56,7 +56,7 @@ stateDiagram-v2
 
 ### 1. Game Session Manager
 
-**Purpose:** Central controller managing gameplay session states, player position in loops, timing, and scoring.
+Manages gameplay session states, player position in loops, timing, and scoring.
 
 ```typescript
 interface GameSession {
@@ -69,23 +69,24 @@ interface GameSession {
 }
 ```
 
-**Key Methods:**
-- `startGameSession()`
-- `updatePlayerProgress()`
-- `calculateRewards()`
-- `handleSessionTimeout()`
+Key methods: session lifecycle, progression, rewards, idle hint triggers.
 
 ***
 
-### 2. Challenge Creation Engine
+### 2. Challenge Creation and Media Capture
 
-**Purpose:** Manages challenge input, media capture, emotion analysis triggers, and submission validation.
+Manages entering three statements with lie selection and validation, plus multi-modal media capture:
+
+- Video, audio, or text fallback.
+- Preview and re-record.
+- Client-side compression.
+- Chunked, resumable uploads with progress and error handling.
 
 ```typescript
 interface ChallengeCreation {
   statements: Statement[];
   mediaData: MediaCapture;
-  emotionAnalysis?: EmotionScores;
+  emotionAnalysis?: EmotionScores; // optional later
   qualityScore?: number;
   estimatedDifficulty?: 'easy' | 'medium' | 'hard';
 }
@@ -93,106 +94,53 @@ interface ChallengeCreation {
 
 ***
 
-### 3. Guessing Game Engine
+### 3. Challenge Publishing and Moderation
 
-**Purpose:** Controls presenting challenges to guessers, capturing guesses, tracking confidence, and dynamic hinting.
-
-```typescript
-interface GuessingSession {
-  challengeId: string;
-  statements: AnalyzedStatement[];
-  playerGuess: number | null;
-  confidenceScores: number[];
-  hintsUsed: number;
-  timeSpent: number;
-}
-```
+API backend for receiving, storing challenges and media, content moderation, rate limiting, and validation.
 
 ***
 
-### 4. Progression System
+### 4. Guessing Engine and Gameplay
 
-**Purpose:** Tracks player levels, rewards, unlockables, and leaderboard standing.
-
-```typescript
-interface PlayerProgression {
-  level: number;
-  experiencePoints: number;
-  totalGamesPlayed: number;
-  accuracyRate: number;
-  currentStreak: number;
-  unlockedCosmetics: string[];
-  achievements: Achievement[];
-}
-```
+Supports browsing challenges, guess submissions, realtime feedback, hints, and results animations.
 
 ***
 
-### 5. Feedback and Reward System
+### 5. Progression and Rewards
 
-- Animated point notifications
-- Celebration effects on achievements/unlocks
-- Progressive reward reveals
-- Social validation (community reactions, shares)
+Handles leveling, experience, badges, cosmetics, and leaderboards.
 
 ***
 
-## Data Models (Expanded)
+### 6. Emotion Analysis Integration (Optional MVP)
 
-### Enhanced Challenge Model
-
-```typescript
-interface EnhancedChallenge extends Challenge {
-  difficultyRating: number;
-  averageGuessTime: number;
-  popularityScore: number;
-  emotionComplexity: number;
-  recommendationWeight: number;
-}
-```
-
-### Player Statistics Model
-
-```typescript
-interface PlayerStats {
-  playerId: string;
-  challengesCreated: number;
-  challengesGuessed: number;
-  correctGuesses: number;
-  averageGuessTime: number;
-  preferredDifficulty: string;
-  dominantEmotionTypes: string[];
-  weeklyActivity: ActivityMetrics;
-}
-```
+Real-time/batch AffectLink API integration for emotion scoring, overlays, and fallback modes.
 
 ***
 
 ## Error Handling & Resilience
 
-- Network issues gracefully cached and synced.
-- AI failures degrade to basic guessing mode without emotion overlays.
-- Media capture failures fallback to text-only submissions.
-- Automatic quality adjustment to maintain smooth 30+ FPS gameplay.
-
-***
-
-## Testing Strategy
-
-- Unit test game logic, scoring, and state transitions.
-- Integration test API endpoints including media upload and guesses.
-- UI tests for progression and feedback components.
-- Validate AI emotion scoring on known test data, and fallback behaviors.
-- Conduct performance and cross-platform compatibility tests.
+- Network retry and offline queuing.
+- Graceful fallbacks when AI or media fail.
+- User-friendly error messages.
 
 ***
 
 ## Performance Considerations
 
-- Client-side lazy loading and caching for media and leaderboard data.
-- Indexed DB or localStorage for offline state persistence.
-- Server-side DB indexing, horizontal scaling of game sessions.
-- WebSocket optimization via pooling, debouncing.
-- Emotion recognition batching and asynchronous processing.
+- Client lazy loading and caching.
+- IndexedDB/localStorage offline state.
+- Scalable backend and CDNs.
+- Efficient WebSocket and AI batching.
+
+***
+
+## Testing Strategy
+
+- Unit/integration tests for logic, APIs, and media.
+- E2E tests covering full user flow.
+- Accessibility and cross-platform compatibility.
+- AI scoring validation and fallback tests.
+- Performance and stress testing.
 
 ***
