@@ -69,6 +69,7 @@ export class UploadError extends Error {
   public readonly retryable: boolean;
   public readonly sessionId?: string;
   public readonly chunkNumber?: number;
+  public readonly cause?: Error;
 
   constructor(
     message: string,
@@ -150,8 +151,8 @@ export class ChunkedUploadService {
     options: RequestInit = {},
     timeoutMs: number = 30000
   ): Promise<Response> {
-    const headers = {
-      ...options.headers,
+    const headers: Record<string, string> = {
+      ...(options.headers as Record<string, string> || {}),
     };
 
     if (this.authToken) {
@@ -182,7 +183,7 @@ export class ChunkedUploadService {
       }
 
       return response;
-    } catch (error) {
+    } catch (error: unknown) {
       clearTimeout(timeoutId);
       
       if (error instanceof UploadError) {
@@ -190,34 +191,35 @@ export class ChunkedUploadService {
       }
 
       // Handle different error types
-      if (error.name === 'AbortError') {
+      const err = error as Error;
+      if (err.name === 'AbortError') {
         if (timeoutController.signal.aborted) {
           throw new UploadError(
             `Request timeout after ${timeoutMs}ms`,
             UploadErrorType.TIMEOUT_ERROR,
-            { retryable: true, cause: error }
+            { retryable: true, cause: err }
           );
         } else {
           throw new UploadError(
             'Request cancelled',
             UploadErrorType.CANCELLED,
-            { retryable: false, cause: error }
+            { retryable: false, cause: err }
           );
         }
       }
 
-      if (error.name === 'TypeError' && error.message.includes('fetch')) {
+      if (err.name === 'TypeError' && err.message.includes('fetch')) {
         throw new UploadError(
           'Network connection failed',
           UploadErrorType.NETWORK_ERROR,
-          { retryable: true, cause: error }
+          { retryable: true, cause: err }
         );
       }
 
       throw new UploadError(
-        error.message || 'Unknown error occurred',
+        err.message || 'Unknown error occurred',
         UploadErrorType.UNKNOWN_ERROR,
-        { retryable: false, cause: error }
+        { retryable: false, cause: err }
       );
     }
   }
@@ -317,17 +319,18 @@ export class ChunkedUploadService {
         totalChunks: data.total_chunks,
         expiresAt: new Date(data.expires_at),
       };
-    } catch (error) {
+    } catch (error: unknown) {
       // Re-throw UploadError instances as-is
       if (error instanceof UploadError) {
         throw error;
       }
       
       // Convert other errors to UploadError
+      const err = error as Error;
       throw new UploadError(
-        error.message || 'Failed to initiate upload',
+        err.message || 'Failed to initiate upload',
         UploadErrorType.UNKNOWN_ERROR,
-        { retryable: true, cause: error }
+        { retryable: true, cause: err }
       );
     }
   }
@@ -396,15 +399,16 @@ export class ChunkedUploadService {
           success: true,
           alreadyUploaded: result.status === 'already_exists',
         };
-      } catch (error) {
+      } catch (error: unknown) {
         // Convert to UploadError if needed
         if (error instanceof UploadError) {
           lastError = error;
         } else {
+          const err = error as Error;
           lastError = new UploadError(
-            error.message || 'Unknown error',
+            err.message || 'Unknown error',
             UploadErrorType.UNKNOWN_ERROR,
-            { sessionId, chunkNumber, cause: error }
+            { sessionId, chunkNumber, cause: err }
           );
         }
 
@@ -597,11 +601,12 @@ export class ChunkedUploadService {
         fileSize: completeData.file_size,
         completedAt: new Date(completeData.completed_at),
       };
-    } catch (error) {
+    } catch (error: unknown) {
+      const err = error as Error;
       const uploadError = error instanceof UploadError ? error : new UploadError(
-        error.message || 'Unknown error',
+        err.message || 'Unknown error',
         UploadErrorType.UNKNOWN_ERROR,
-        { sessionId: session?.sessionId, cause: error }
+        { sessionId: session?.sessionId, cause: err }
       );
 
       // Report error progress
@@ -640,14 +645,15 @@ export class ChunkedUploadService {
     for (let attempt = 0; attempt <= maxRetries; attempt++) {
       try {
         return await this.initiateUpload(file, uploadOptions);
-      } catch (error) {
+      } catch (error: unknown) {
         if (error instanceof UploadError) {
           lastError = error;
         } else {
+          const err = error as Error;
           lastError = new UploadError(
-            error.message || 'Failed to initiate upload',
+            err.message || 'Failed to initiate upload',
             UploadErrorType.UNKNOWN_ERROR,
-            { cause: error }
+            { cause: err }
           );
         }
 
@@ -719,14 +725,15 @@ export class ChunkedUploadService {
         );
 
         return await completeResponse.json();
-      } catch (error) {
+      } catch (error: unknown) {
         if (error instanceof UploadError) {
           lastError = error;
         } else {
+          const err = error as Error;
           lastError = new UploadError(
-            error.message || 'Failed to complete upload',
+            err.message || 'Failed to complete upload',
             UploadErrorType.UNKNOWN_ERROR,
-            { sessionId, cause: error }
+            { sessionId, cause: err }
           );
         }
 

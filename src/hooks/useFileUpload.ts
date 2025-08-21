@@ -8,7 +8,7 @@ import { ChunkedUploadService, UploadProgress, UploadResult, UploadOptions } fro
 
 import { UploadError, UploadErrorType } from '../services/uploadService';
 
-export interface UseFileUploadOptions extends Omit<UploadOptions, 'onProgress' | 'signal'> {
+export interface UseFileUploadOptions extends Omit<UploadOptions, 'onProgress' | 'signal' | 'onRetry' | 'onNetworkError'> {
   autoStart?: boolean;
   onUploadComplete?: (result: UploadResult) => void;
   onUploadError?: (error: UploadError) => void;
@@ -98,12 +98,22 @@ export const useFileUpload = (options: UseFileUploadOptions = {}) => {
           }));
           
           if (onRetryAttempt) {
-            onRetryAttempt(attempt, error, chunkNumber);
+            const uploadError = error instanceof UploadError ? error : new UploadError(
+              (error as Error).message || 'Upload failed',
+              UploadErrorType.UNKNOWN_ERROR,
+              { cause: error as Error }
+            );
+            onRetryAttempt(attempt, uploadError, chunkNumber);
           }
         },
         onNetworkError: (error) => {
           if (onNetworkError) {
-            onNetworkError(error);
+            const uploadError = error instanceof UploadError ? error : new UploadError(
+              (error as Error).message || 'Network error',
+              UploadErrorType.NETWORK_ERROR,
+              { cause: error as Error }
+            );
+            onNetworkError(uploadError);
           }
         },
       });
@@ -118,11 +128,11 @@ export const useFileUpload = (options: UseFileUploadOptions = {}) => {
       if (onUploadComplete) {
         onUploadComplete(result);
       }
-    } catch (error) {
+    } catch (error: unknown) {
       const uploadError = error instanceof UploadError ? error : new UploadError(
-        error.message || 'Upload failed',
+        (error as Error).message || 'Upload failed',
         UploadErrorType.UNKNOWN_ERROR,
-        { cause: error }
+        { cause: error as Error }
       );
       
       setState(prev => ({
@@ -221,11 +231,11 @@ export const useFileUpload = (options: UseFileUploadOptions = {}) => {
       if (onUploadComplete) {
         onUploadComplete(result);
       }
-    } catch (error) {
+    } catch (error: unknown) {
       const uploadError = error instanceof UploadError ? error : new UploadError(
-        error.message || 'Resume failed',
+        (error as Error).message || 'Resume failed',
         UploadErrorType.UNKNOWN_ERROR,
-        { cause: error }
+        { cause: error as Error }
       );
       
       setState(prev => ({

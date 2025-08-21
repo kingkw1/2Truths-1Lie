@@ -84,11 +84,11 @@ export const MediaUploadDemo: React.FC<MediaUploadDemoProps> = ({
 
   // Convert MediaCapture to File for upload
   const mediaToFile = useCallback(async (mediaData: MediaCapture): Promise<File> => {
-    if (mediaData.type === 'text') {
+    if (mediaData.type === 'text' && mediaData.url) {
       // Convert text to file
       const textBlob = new Blob([atob(mediaData.url.split(',')[1])], { type: 'text/plain' });
       return new File([textBlob], `statement_${Date.now()}.txt`, { type: 'text/plain' });
-    } else {
+    } else if (mediaData.url) {
       // Convert blob URL to file
       const response = await fetch(mediaData.url);
       const blob = await response.blob();
@@ -99,6 +99,9 @@ export const MediaUploadDemo: React.FC<MediaUploadDemoProps> = ({
       return new File([blob], `recording_${Date.now()}.${extension}`, { 
         type: mediaData.mimeType || blob.type 
       });
+    } else {
+      // Fallback for missing URL
+      throw new Error('Media URL is missing');
     }
   }, []);
 
@@ -246,8 +249,8 @@ export const MediaUploadDemo: React.FC<MediaUploadDemoProps> = ({
                       {upload.mediaData.type} recording
                     </div>
                     <div style={styles.completedItemMeta}>
-                      Size: {formatFileSize(upload.mediaData.fileSize)} • 
-                      Duration: {formatDuration(upload.mediaData.duration)}
+                      Size: {formatFileSize(upload.mediaData.fileSize || 0)} • 
+                      Duration: {formatDuration(upload.mediaData.duration || 0)}
                       {upload.mediaData.compressionRatio && (
                         <span> • Compressed {Math.round((1 - 1/upload.mediaData.compressionRatio) * 100)}%</span>
                       )}
