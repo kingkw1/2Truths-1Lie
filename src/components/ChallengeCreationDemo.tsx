@@ -4,7 +4,7 @@
  */
 
 import React, { useState } from 'react';
-import { ChallengeCreationForm } from './ChallengeCreationForm';
+import { EnhancedChallengeCreationForm } from './EnhancedChallengeCreationForm';
 
 export const ChallengeCreationDemo: React.FC = () => {
   const [showForm, setShowForm] = useState(false);
@@ -36,7 +36,7 @@ export const ChallengeCreationDemo: React.FC = () => {
   if (showForm) {
     return (
       <div style={styles.container}>
-        <ChallengeCreationForm 
+        <EnhancedChallengeCreationForm 
           onSubmit={handleSubmit}
           onCancel={handleCancel}
         />
@@ -50,13 +50,17 @@ export const ChallengeCreationDemo: React.FC = () => {
         <h2 style={styles.title}>Challenge Creation</h2>
         <p style={styles.description}>
           Create your own "Two Truths and a Lie" challenge! Write three statements about yourself - 
-          two that are true and one that's a lie. Other players will try to guess which one is false.
+          two that are true and one that's a lie. Add video or audio recordings to make your challenge more engaging!
         </p>
         
         <div style={styles.features}>
           <div style={styles.feature}>
             <span style={styles.featureIcon}>✍️</span>
             <span>Write 3 statements</span>
+          </div>
+          <div style={styles.feature}>
+            <span style={styles.featureIcon}>🎥</span>
+            <span>Add video/audio</span>
           </div>
           <div style={styles.feature}>
             <span style={styles.featureIcon}>🎭</span>
@@ -69,6 +73,10 @@ export const ChallengeCreationDemo: React.FC = () => {
           <div style={styles.feature}>
             <span style={styles.featureIcon}>👀</span>
             <span>Preview before publishing</span>
+          </div>
+          <div style={styles.feature}>
+            <span style={styles.featureIcon}>📤</span>
+            <span>Upload progress tracking</span>
           </div>
         </div>
 

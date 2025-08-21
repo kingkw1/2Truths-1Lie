@@ -3,7 +3,6 @@
   "version": "1.0.0",
   "description": "Two Truths and a Lie game with emotion analysis",
   "main": "src/lib.ts",
-
   "scripts": {
     "start": "react-scripts start",
     "build": "react-scripts build",
@@ -21,6 +20,7 @@
     "@types/react": "^18.2.0",
     "@types/react-dom": "^18.2.0",
     "@types/react-redux": "^7.1.25",
+    "jest-axe": "^10.0.0",
     "typescript": "^4.9.5"
   },
   "dependencies": {

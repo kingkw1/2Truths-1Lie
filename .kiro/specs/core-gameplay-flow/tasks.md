@@ -24,9 +24,9 @@
 - [x] Integrate UploadProgress component showing real-time upload progress and cancel option  
 - [x] Implement robust error handling and retry logic for uploads  
 - [x] Write comprehensive unit and integration tests covering recording, preview, compression, upload, and failure modes  
-- [ ] Integrate media capture UI components into the Challenge Creation workflow
-- [ ] Connect media capture state to Redux and unify with challenge submission logic
-- [ ] Test media capture UI across supported browsers/devices to ensure usability and accessibility
+- [x] Integrate media capture UI components into the Challenge Creation workflow
+- [x] Connect media capture state to Redux and unify with challenge submission logic
+- [x] Test media capture UI across supported browsers/devices to ensure usability and accessibility
 
 
 ### 5. Challenge Publishing and Moderation  

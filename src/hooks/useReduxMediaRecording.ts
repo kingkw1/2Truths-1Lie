@@ -1,10 +1,11 @@
 /**
- * Custom hook for managing media recording state and integration
- * Provides centralized media recording logic with Redux integration
+ * Redux-integrated media recording hook
+ * Connects media recording state to Redux store for unified state management
  */
 
-import { useState, useCallback, useRef } from 'react';
-import { useDispatch } from 'react-redux';
+import { useCallback, useRef, useEffect } from 'react';
+import { useDispatch, useSelector } from 'react-redux';
+import { RootState } from '../store';
 import { MediaCapture, MediaType } from '../types/challenge';
 import { 
   MediaCompressor, 
@@ -12,9 +13,32 @@ import {
   CompressionProgress,
   CompressionResult 
 } from '../utils/mediaCompression';
+import {
+  startMediaRecording,
+  stopMediaRecording,
+  pauseMediaRecording,
+  resumeMediaRecording,
+  updateRecordingDuration,
+  setMediaRecordingError,
+  setMediaCompression,
+  setStatementMedia,
+  startUpload,
+  updateUploadProgress,
+  completeUpload,
+  setUploadError,
+  cancelUpload,
+  resetMediaState,
+} from '../store/slices/challengeCreationSlice';
+import { useFileUpload } from './useFileUpload';
+import {
+  selectMediaRecordingState,
+  selectUploadState,
+  selectCurrentMedia,
+} from '../store/selectors/mediaSelectors';
 import { blobUrlManager } from '../utils/blobUrlManager';
 
-interface UseMediaRecordingOptions {
+interface UseReduxMediaRecordingOptions {
+  statementIndex: number;
   maxDuration?: number;
   allowedTypes?: MediaType[];
   onRecordingComplete?: (mediaData: MediaCapture) => void;
@@ -24,20 +48,9 @@ interface UseMediaRecordingOptions {
   onCompressionProgress?: (progress: CompressionProgress) => void;
 }
 
-interface MediaRecordingState {
-  isRecording: boolean;
-  isPaused: boolean;
-  duration: number;
-  mediaType: MediaType | null;
-  hasPermission: boolean;
-  error: string | null;
-  recordedMedia: MediaCapture | null;
-  isCompressing: boolean;
-  compressionProgress: CompressionProgress | null;
-}
-
-export const useMediaRecording = (options: UseMediaRecordingOptions = {}) => {
+export const useReduxMediaRecording = (options: UseReduxMediaRecordingOptions) => {
   const {
+    statementIndex,
     maxDuration = 30000,
     allowedTypes = ['video', 'audio', 'text'],
     onRecordingComplete,
@@ -49,23 +62,43 @@ export const useMediaRecording = (options: UseMediaRecordingOptions = {}) => {
 
   const dispatch = useDispatch();
   
-  const [state, setState] = useState<MediaRecordingState>({
-    isRecording: false,
-    isPaused: false,
-    duration: 0,
-    mediaType: null,
-    hasPermission: false,
-    error: null,
-    recordedMedia: null,
-    isCompressing: false,
-    compressionProgress: null,
-  });
+  // Get state from Redux using memoized selectors
+  const mediaRecordingState = useSelector((state: RootState) => 
+    selectMediaRecordingState(state, statementIndex)
+  );
+
+  const uploadState = useSelector((state: RootState) => 
+    selectUploadState(state, statementIndex)
+  );
+
+  const currentMedia = useSelector((state: RootState) => 
+    selectCurrentMedia(state, statementIndex)
+  );
 
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const chunksRef = useRef<Blob[]>([]);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const compressorRef = useRef<MediaCompressor | null>(null);
+
+  // File upload hook for handling media uploads
+  const fileUpload = useFileUpload({
+    onUploadComplete: (result) => {
+      dispatch(completeUpload({
+        statementIndex,
+        fileUrl: result.fileUrl,
+      }));
+    },
+    onUploadError: (error) => {
+      dispatch(setUploadError({
+        statementIndex,
+        error: error.message,
+      }));
+    },
+    onUploadCancel: () => {
+      dispatch(cancelUpload({ statementIndex }));
+    },
+  });
 
   // Check media device support
   const checkMediaSupport = useCallback(async (type: MediaType): Promise<boolean> => {
@@ -107,20 +140,12 @@ export const useMediaRecording = (options: UseMediaRecordingOptions = {}) => {
       const stream = await navigator.mediaDevices.getUserMedia(constraints);
       streamRef.current = stream;
       
-      setState(prev => ({ 
-        ...prev, 
-        hasPermission: true, 
-        error: null,
-        mediaType: type 
-      }));
-      
       return stream;
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Permission denied';
-      setState(prev => ({ 
-        ...prev, 
-        hasPermission: false, 
-        error: errorMessage 
+      dispatch(setMediaRecordingError({
+        statementIndex,
+        error: `Failed to access ${type}: ${errorMessage}`,
       }));
       
       if (onRecordingError) {
@@ -129,37 +154,31 @@ export const useMediaRecording = (options: UseMediaRecordingOptions = {}) => {
       
       return null;
     }
-  }, [onRecordingError]);
+  }, [dispatch, statementIndex, onRecordingError]);
 
   // Start recording
   const startRecording = useCallback(async (type: MediaType) => {
     if (!allowedTypes.includes(type)) {
       const error = `Recording type ${type} is not allowed`;
-      setState(prev => ({ ...prev, error }));
+      dispatch(setMediaRecordingError({ statementIndex, error }));
       if (onRecordingError) onRecordingError(error);
       return false;
     }
 
     // Handle text recording
     if (type === 'text') {
-      setState(prev => ({ 
-        ...prev, 
-        mediaType: 'text',
-        hasPermission: true,
-        error: null 
-      }));
+      dispatch(startMediaRecording({ statementIndex, mediaType: 'text' }));
       return true;
     }
 
     // Check support
     const isSupported = await checkMediaSupport(type);
     if (!isSupported) {
-      setState(prev => ({ 
-        ...prev, 
-        mediaType: 'text',
-        hasPermission: true,
-        error: `${type} recording not supported, falling back to text mode` 
+      dispatch(setMediaRecordingError({
+        statementIndex,
+        error: `${type} recording not supported, falling back to text mode`,
       }));
+      dispatch(startMediaRecording({ statementIndex, mediaType: 'text' }));
       return true; // Fallback to text is successful
     }
 
@@ -167,11 +186,7 @@ export const useMediaRecording = (options: UseMediaRecordingOptions = {}) => {
     const stream = await requestPermissions(type);
     if (!stream) {
       // Fallback to text
-      setState(prev => ({ 
-        ...prev, 
-        mediaType: 'text',
-        hasPermission: true 
-      }));
+      dispatch(startMediaRecording({ statementIndex, mediaType: 'text' }));
       return true;
     }
 
@@ -195,10 +210,10 @@ export const useMediaRecording = (options: UseMediaRecordingOptions = {}) => {
         // Check if compression is needed and enabled
         if (enableCompression && (type === 'video' || type === 'audio')) {
           try {
-            setState(prev => ({ 
-              ...prev, 
+            dispatch(setMediaCompression({
+              statementIndex,
               isCompressing: true,
-              compressionProgress: { stage: 'analyzing', progress: 0 }
+              progress: 0,
             }));
 
             // Initialize compressor
@@ -211,9 +226,10 @@ export const useMediaRecording = (options: UseMediaRecordingOptions = {}) => {
               blob,
               compressionOptions,
               (progress) => {
-                setState(prev => ({ 
-                  ...prev, 
-                  compressionProgress: progress 
+                dispatch(setMediaCompression({
+                  statementIndex,
+                  isCompressing: true,
+                  progress: progress.progress,
                 }));
                 if (onCompressionProgress) {
                   onCompressionProgress(progress);
@@ -222,8 +238,8 @@ export const useMediaRecording = (options: UseMediaRecordingOptions = {}) => {
             );
 
             // Clean up any existing blob URL first
-            if (state.recordedMedia?.url && state.recordedMedia.url.startsWith('blob:')) {
-              blobUrlManager.revokeUrl(state.recordedMedia.url);
+            if (currentMedia?.url && currentMedia.url.startsWith('blob:')) {
+              blobUrlManager.revokeUrl(currentMedia.url);
             }
             
             const url = blobUrlManager.createUrl(compressionResult.compressedBlob);
@@ -231,7 +247,7 @@ export const useMediaRecording = (options: UseMediaRecordingOptions = {}) => {
             const mediaData: MediaCapture = {
               type,
               url,
-              duration: state.duration,
+              duration: mediaRecordingState.duration,
               fileSize: compressionResult.compressedSize,
               mimeType,
               originalSize: compressionResult.originalSize,
@@ -239,41 +255,59 @@ export const useMediaRecording = (options: UseMediaRecordingOptions = {}) => {
               compressionTime: compressionResult.processingTime,
             };
 
-            setState(prev => ({ 
-              ...prev, 
-              recordedMedia: mediaData,
+            dispatch(setMediaCompression({
+              statementIndex,
               isCompressing: false,
-              compressionProgress: null
             }));
+
+            dispatch(setStatementMedia({ index: statementIndex, media: mediaData }));
             
             if (onRecordingComplete) {
               onRecordingComplete(mediaData);
+            }
+
+            // Start upload if the media has a blob URL
+            if (mediaData.url && mediaData.url.startsWith('blob:')) {
+              const file = new File([compressionResult.compressedBlob], `statement_${statementIndex}.${type}`, {
+                type: mimeType,
+              });
+              
+              dispatch(startUpload({
+                statementIndex,
+                sessionId: `upload_${Date.now()}_${statementIndex}`,
+              }));
+
+              fileUpload.startUpload(file);
             }
           } catch (error) {
             // Fallback to uncompressed if compression fails
             console.warn('Compression failed, using original:', error);
             
             // Clean up any existing blob URL first
-            if (state.recordedMedia?.url && state.recordedMedia.url.startsWith('blob:')) {
-              blobUrlManager.revokeUrl(state.recordedMedia.url);
+            if (currentMedia?.url && currentMedia.url.startsWith('blob:')) {
+              blobUrlManager.revokeUrl(currentMedia.url);
             }
             
             const url = blobUrlManager.createUrl(blob);
             const mediaData: MediaCapture = {
               type,
               url,
-              duration: state.duration,
+              duration: mediaRecordingState.duration,
               fileSize: blob.size,
               mimeType,
             };
 
-            setState(prev => ({ 
-              ...prev, 
-              recordedMedia: mediaData,
+            dispatch(setMediaCompression({
+              statementIndex,
               isCompressing: false,
-              compressionProgress: null,
-              error: 'Compression failed, using original quality'
             }));
+
+            dispatch(setMediaRecordingError({
+              statementIndex,
+              error: 'Compression failed, using original quality',
+            }));
+
+            dispatch(setStatementMedia({ index: statementIndex, media: mediaData }));
             
             if (onRecordingComplete) {
               onRecordingComplete(mediaData);
@@ -282,8 +316,8 @@ export const useMediaRecording = (options: UseMediaRecordingOptions = {}) => {
         } else {
           // No compression needed or disabled
           // Clean up any existing blob URL first
-          if (state.recordedMedia?.url && state.recordedMedia.url.startsWith('blob:')) {
-            blobUrlManager.revokeUrl(state.recordedMedia.url);
+          if (currentMedia?.url && currentMedia.url.startsWith('blob:')) {
+            blobUrlManager.revokeUrl(currentMedia.url);
           }
           
           const url = blobUrlManager.createUrl(blob);
@@ -291,49 +325,55 @@ export const useMediaRecording = (options: UseMediaRecordingOptions = {}) => {
           const mediaData: MediaCapture = {
             type,
             url,
-            duration: state.duration,
+            duration: mediaRecordingState.duration,
             fileSize: blob.size,
             mimeType,
           };
 
-          setState(prev => ({ ...prev, recordedMedia: mediaData }));
+          dispatch(setStatementMedia({ index: statementIndex, media: mediaData }));
           
           if (onRecordingComplete) {
             onRecordingComplete(mediaData);
+          }
+
+          // Start upload if needed
+          if (mediaData.url && mediaData.url.startsWith('blob:')) {
+            const file = new File([blob], `statement_${statementIndex}.${type}`, {
+              type: mimeType,
+            });
+            
+            dispatch(startUpload({
+              statementIndex,
+              sessionId: `upload_${Date.now()}_${statementIndex}`,
+            }));
+
+            fileUpload.startUpload(file);
           }
         }
       };
 
       mediaRecorderRef.current.start(100);
       
-      setState(prev => ({ 
-        ...prev, 
-        isRecording: true, 
-        duration: 0,
-        error: null 
-      }));
+      dispatch(startMediaRecording({ statementIndex, mediaType: type }));
 
       // Start timer
       timerRef.current = setInterval(() => {
-        setState(prev => {
-          const newDuration = prev.duration + 100;
-          
-          if (newDuration >= maxDuration) {
-            stopRecording();
-            return { ...prev, duration: maxDuration };
-          }
-          
-          return { ...prev, duration: newDuration };
-        });
+        dispatch(updateRecordingDuration({
+          statementIndex,
+          duration: mediaRecordingState.duration + 100,
+        }));
+        
+        if (mediaRecordingState.duration + 100 >= maxDuration) {
+          stopRecording();
+        }
       }, 100);
 
       return true;
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : 'Recording failed';
-      setState(prev => ({ 
-        ...prev, 
+      dispatch(setMediaRecordingError({
+        statementIndex,
         error: errorMessage,
-        mediaType: 'text' // Fallback to text
       }));
       
       if (onRecordingError) {
@@ -342,7 +382,21 @@ export const useMediaRecording = (options: UseMediaRecordingOptions = {}) => {
       
       return false;
     }
-  }, [allowedTypes, maxDuration, onRecordingComplete, onRecordingError, checkMediaSupport, requestPermissions, state.duration]);
+  }, [
+    allowedTypes, 
+    maxDuration, 
+    onRecordingComplete, 
+    onRecordingError, 
+    checkMediaSupport, 
+    requestPermissions, 
+    mediaRecordingState.duration,
+    dispatch,
+    statementIndex,
+    enableCompression,
+    compressionOptions,
+    onCompressionProgress,
+    fileUpload
+  ]);
 
   // Stop recording
   const stopRecording = useCallback(() => {
@@ -351,7 +405,7 @@ export const useMediaRecording = (options: UseMediaRecordingOptions = {}) => {
       timerRef.current = null;
     }
 
-    if (mediaRecorderRef.current && state.isRecording) {
+    if (mediaRecorderRef.current && mediaRecordingState.isRecording) {
       mediaRecorderRef.current.stop();
     }
 
@@ -360,12 +414,8 @@ export const useMediaRecording = (options: UseMediaRecordingOptions = {}) => {
       streamRef.current = null;
     }
 
-    setState(prev => ({ 
-      ...prev, 
-      isRecording: false, 
-      isPaused: false 
-    }));
-  }, [state.isRecording]);
+    dispatch(stopMediaRecording({ statementIndex }));
+  }, [dispatch, statementIndex, mediaRecordingState.isRecording]);
 
   // Cancel recording (stops without saving)
   const cancelRecording = useCallback(() => {
@@ -374,7 +424,7 @@ export const useMediaRecording = (options: UseMediaRecordingOptions = {}) => {
       timerRef.current = null;
     }
 
-    if (mediaRecorderRef.current && state.isRecording) {
+    if (mediaRecorderRef.current && mediaRecordingState.isRecording) {
       // Stop the recorder but don't trigger onstop callback
       const originalOnStop = mediaRecorderRef.current.onstop;
       mediaRecorderRef.current.onstop = null;
@@ -390,44 +440,39 @@ export const useMediaRecording = (options: UseMediaRecordingOptions = {}) => {
     // Clear chunks to prevent accidental saving
     chunksRef.current = [];
 
-    setState(prev => ({ 
-      ...prev, 
-      isRecording: false, 
-      isPaused: false,
-      duration: 0,
-      error: null,
-      recordedMedia: null
-    }));
-  }, [state.isRecording]);
+    dispatch(resetMediaState({ statementIndex }));
+  }, [dispatch, statementIndex, mediaRecordingState.isRecording]);
 
   // Pause/Resume recording
   const togglePause = useCallback(() => {
     if (!mediaRecorderRef.current) return;
 
-    if (state.isPaused) {
+    if (mediaRecordingState.isPaused) {
       mediaRecorderRef.current.resume();
+      dispatch(resumeMediaRecording({ statementIndex }));
+      
       // Resume timer
       timerRef.current = setInterval(() => {
-        setState(prev => {
-          const newDuration = prev.duration + 100;
-          if (newDuration >= maxDuration) {
-            stopRecording();
-            return { ...prev, duration: maxDuration };
-          }
-          return { ...prev, duration: newDuration };
-        });
+        dispatch(updateRecordingDuration({
+          statementIndex,
+          duration: mediaRecordingState.duration + 100,
+        }));
+        
+        if (mediaRecordingState.duration + 100 >= maxDuration) {
+          stopRecording();
+        }
       }, 100);
     } else {
       mediaRecorderRef.current.pause();
+      dispatch(pauseMediaRecording({ statementIndex }));
+      
       // Pause timer
       if (timerRef.current) {
         clearInterval(timerRef.current);
         timerRef.current = null;
       }
     }
-
-    setState(prev => ({ ...prev, isPaused: !prev.isPaused }));
-  }, [state.isPaused, maxDuration, stopRecording]);
+  }, [dispatch, statementIndex, mediaRecordingState.isPaused, mediaRecordingState.duration, maxDuration, stopRecording]);
 
   // Complete text recording
   const completeTextRecording = useCallback((text: string) => {
@@ -439,28 +484,18 @@ export const useMediaRecording = (options: UseMediaRecordingOptions = {}) => {
       mimeType: 'text/plain',
     };
 
-    setState(prev => ({ ...prev, recordedMedia: mediaData }));
+    dispatch(setStatementMedia({ index: statementIndex, media: mediaData }));
     
     if (onRecordingComplete) {
       onRecordingComplete(mediaData);
     }
-  }, [onRecordingComplete]);
+  }, [dispatch, statementIndex, onRecordingComplete]);
 
   // Reset recording state
   const resetRecording = useCallback(() => {
     stopRecording();
-    setState({
-      isRecording: false,
-      isPaused: false,
-      duration: 0,
-      mediaType: null,
-      hasPermission: false,
-      error: null,
-      recordedMedia: null,
-      isCompressing: false,
-      compressionProgress: null,
-    });
-  }, [stopRecording]);
+    dispatch(resetMediaState({ statementIndex }));
+  }, [dispatch, statementIndex, stopRecording]);
 
   // Cleanup function
   const cleanup = useCallback(() => {
@@ -470,18 +505,30 @@ export const useMediaRecording = (options: UseMediaRecordingOptions = {}) => {
     if (streamRef.current) {
       streamRef.current.getTracks().forEach(track => track.stop());
     }
-    if (state.recordedMedia?.url && state.recordedMedia.url.startsWith('blob:')) {
-      blobUrlManager.revokeUrl(state.recordedMedia.url);
+    if (currentMedia?.url && currentMedia.url.startsWith('blob:')) {
+      blobUrlManager.revokeUrl(currentMedia.url);
     }
     if (compressorRef.current) {
       compressorRef.current.dispose();
       compressorRef.current = null;
     }
-  }, [state.recordedMedia]);
+  }, [currentMedia]);
+
+  // Update file upload progress in Redux
+  useEffect(() => {
+    if (fileUpload.isUploading && fileUpload.progress) {
+      dispatch(updateUploadProgress({
+        statementIndex,
+        progress: fileUpload.progressPercent,
+      }));
+    }
+  }, [fileUpload.isUploading, fileUpload.progressPercent, dispatch, statementIndex]);
 
   return {
-    // State
-    ...state,
+    // State from Redux
+    ...mediaRecordingState,
+    uploadState,
+    recordedMedia: currentMedia,
     
     // Actions
     startRecording,
@@ -499,8 +546,8 @@ export const useMediaRecording = (options: UseMediaRecordingOptions = {}) => {
     maxDuration,
     allowedTypes,
     canRecord: allowedTypes.length > 0,
-    isTextMode: state.mediaType === 'text',
-    isMediaMode: state.mediaType === 'video' || state.mediaType === 'audio',
+    isTextMode: mediaRecordingState.mediaType === 'text',
+    isMediaMode: mediaRecordingState.mediaType === 'video' || mediaRecordingState.mediaType === 'audio',
   };
 };
 
@@ -539,4 +586,4 @@ function getSupportedAudioMimeType(): string {
   return 'audio/webm'; // Fallback
 }
 
-export default useMediaRecording;
+export default useReduxMediaRecording;

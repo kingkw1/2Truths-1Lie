@@ -8,12 +8,14 @@
 import React, { useState, useCallback, useEffect } from 'react';
 import { MediaCapture, Statement } from '../types/challenge';
 import MediaRecorder from './MediaRecorder';
+import MediaPreview from './MediaPreview';
 import { StatementQualityFeedback, RealTimeQualityIndicator, AnimatedFeedback } from './QualityFeedback';
 import { 
   analyzeStatementQuality, 
   createDebouncedQualityAnalyzer, 
   StatementQuality 
 } from '../utils/qualityAssessment';
+import { useReduxMediaRecording } from '../hooks/useReduxMediaRecording';
 
 interface StatementWithMediaProps {
   statementIndex: number;
@@ -35,8 +37,23 @@ export const StatementWithMedia: React.FC<StatementWithMediaProps> = ({
   maxTextLength = 280,
 }) => {
   const [showMediaRecorder, setShowMediaRecorder] = useState(false);
-  const [recordedMedia, setRecordedMedia] = useState<MediaCapture | null>(null);
-  const [mediaError, setMediaError] = useState<string | null>(null);
+  const [showMediaPreview, setShowMediaPreview] = useState(false);
+  
+  // Use Redux-connected media recording hook
+  const mediaRecording = useReduxMediaRecording({
+    statementIndex,
+    maxDuration: 30000,
+    allowedTypes: ['video', 'audio', 'text'],
+    onRecordingComplete: (mediaData) => {
+      onMediaChange(statementIndex, mediaData);
+      setShowMediaRecorder(false);
+      setShowMediaPreview(true);
+    },
+    onRecordingError: (error) => {
+      console.warn('Media recording error:', error);
+    },
+    enableCompression: true,
+  });
   const [statementQuality, setStatementQuality] = useState<StatementQuality | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
   const [showQualityFeedback, setShowQualityFeedback] = useState(false);
@@ -95,10 +112,9 @@ export const StatementWithMedia: React.FC<StatementWithMediaProps> = ({
 
   // Handle media recording completion
   const handleMediaComplete = useCallback((mediaData: MediaCapture) => {
-    setRecordedMedia(mediaData);
     onMediaChange(statementIndex, mediaData);
     setShowMediaRecorder(false);
-    setMediaError(null);
+    setShowMediaPreview(true);
     
     // If it's a text recording, also update the statement text
     if (mediaData.type === 'text' && mediaData.url && mediaData.url.startsWith('data:text/plain;base64,')) {
@@ -112,27 +128,37 @@ export const StatementWithMedia: React.FC<StatementWithMediaProps> = ({
     }
   }, [statementIndex, onMediaChange, handleTextChange]);
 
-  // Handle media recording errors
-  const handleMediaError = useCallback((error: string) => {
-    setMediaError(error);
-    console.warn('Media recording error:', error);
-  }, []);
-
   // Remove recorded media
   const handleRemoveMedia = useCallback(() => {
-    if (recordedMedia?.url && recordedMedia.url.startsWith('blob:')) {
-      URL.revokeObjectURL(recordedMedia.url);
+    if (mediaRecording.recordedMedia?.url && mediaRecording.recordedMedia.url.startsWith('blob:')) {
+      URL.revokeObjectURL(mediaRecording.recordedMedia.url);
     }
-    setRecordedMedia(null);
+    mediaRecording.resetRecording();
     onMediaChange(statementIndex, null);
-    setMediaError(null);
-  }, [recordedMedia, statementIndex, onMediaChange]);
+    setShowMediaPreview(false);
+  }, [mediaRecording, statementIndex, onMediaChange]);
+
+  // Handle re-recording
+  const handleReRecord = useCallback(() => {
+    setShowMediaPreview(false);
+    setShowMediaRecorder(true);
+  }, []);
+
+  // Handle media confirmation
+  const handleConfirmMedia = useCallback(() => {
+    setShowMediaPreview(false);
+  }, []);
 
   // Toggle media recorder
   const toggleMediaRecorder = useCallback(() => {
-    setShowMediaRecorder(!showMediaRecorder);
-    setMediaError(null);
-  }, [showMediaRecorder]);
+    if (mediaRecording.recordedMedia && !showMediaRecorder) {
+      // If we have recorded media, show preview instead
+      setShowMediaPreview(true);
+    } else {
+      setShowMediaRecorder(!showMediaRecorder);
+      setShowMediaPreview(false);
+    }
+  }, [showMediaRecorder, mediaRecording.recordedMedia]);
 
   // Initialize quality analysis for existing text
   useEffect(() => {
@@ -237,7 +263,7 @@ export const StatementWithMedia: React.FC<StatementWithMediaProps> = ({
             }}
             disabled={disabled}
           >
-            {recordedMedia ? '🎬 Edit Media' : '📹 Add Media'}
+            {mediaRecording.recordedMedia ? (showMediaPreview ? '🎬 Edit Media' : '👁️ View Media') : '📹 Add Media'}
           </button>
         </div>
       </div>
@@ -247,10 +273,23 @@ export const StatementWithMedia: React.FC<StatementWithMediaProps> = ({
         <div style={styles.mediaSection}>
           <MediaRecorder
             onRecordingComplete={handleMediaComplete}
-            onRecordingError={handleMediaError}
+            onRecordingError={(error) => console.warn('Media recording error:', error)}
             maxDuration={30000} // 30 seconds
             allowedTypes={['video', 'audio', 'text']}
             disabled={disabled}
+          />
+        </div>
+      )}
+
+      {/* Media Preview Section */}
+      {showMediaPreview && mediaRecording.recordedMedia && (
+        <div style={styles.mediaSection}>
+          <MediaPreview
+            mediaData={mediaRecording.recordedMedia}
+            onReRecord={handleReRecord}
+            onConfirm={handleConfirmMedia}
+            showControls={true}
+            autoPlay={false}
           />
         </div>
       )}
@@ -275,23 +314,73 @@ export const StatementWithMedia: React.FC<StatementWithMediaProps> = ({
       />
 
       {/* Media Error Display */}
-      {mediaError && (
+      {mediaRecording.error && (
         <div style={styles.errorContainer}>
           <span style={styles.errorIcon}>⚠️</span>
-          <span>{mediaError}</span>
+          <span>{mediaRecording.error}</span>
+        </div>
+      )}
+
+      {/* Upload Progress Display */}
+      {mediaRecording.uploadState.isUploading && (
+        <div style={styles.uploadContainer}>
+          <div style={styles.uploadHeader}>
+            <span style={styles.uploadIcon}>⬆️</span>
+            <span>Uploading media...</span>
+          </div>
+          <div style={styles.progressBar}>
+            <div 
+              style={{
+                ...styles.progressFill,
+                width: `${mediaRecording.uploadState.uploadProgress}%`
+              }}
+            />
+          </div>
+          <div style={styles.uploadDetails}>
+            <span>{Math.round(mediaRecording.uploadState.uploadProgress)}% complete</span>
+          </div>
+        </div>
+      )}
+
+      {/* Upload Error Display */}
+      {mediaRecording.uploadState.uploadError && (
+        <div style={styles.errorContainer}>
+          <span style={styles.errorIcon}>⚠️</span>
+          <span>Upload failed: {mediaRecording.uploadState.uploadError}</span>
+        </div>
+      )}
+
+      {/* Compression Progress Display */}
+      {mediaRecording.isCompressing && (
+        <div style={styles.compressionContainer}>
+          <div style={styles.compressionHeader}>
+            <span style={styles.compressionIcon}>⚙️</span>
+            <span>Compressing media...</span>
+          </div>
+          <div style={styles.progressBar}>
+            <div 
+              style={{
+                ...styles.progressFill,
+                width: `${mediaRecording.compressionProgress || 0}%`
+              }}
+            />
+          </div>
+          <div style={styles.compressionDetails}>
+            <span>{Math.round(mediaRecording.compressionProgress || 0)}% complete</span>
+          </div>
         </div>
       )}
 
       {/* Recorded Media Display */}
-      {recordedMedia && !showMediaRecorder && (
+      {mediaRecording.recordedMedia && !showMediaRecorder && (
         <div style={styles.mediaPreview}>
           <div style={styles.mediaInfo}>
             <div style={styles.mediaHeader}>
               <span style={styles.mediaIcon}>
-                {getMediaTypeIcon(recordedMedia.type)}
+                {getMediaTypeIcon(mediaRecording.recordedMedia.type)}
               </span>
               <span style={styles.mediaType}>
-                {recordedMedia.type.charAt(0).toUpperCase() + recordedMedia.type.slice(1)} Recording
+                {mediaRecording.recordedMedia.type.charAt(0).toUpperCase() + mediaRecording.recordedMedia.type.slice(1)} Recording
               </span>
               <button
                 type="button"
@@ -304,39 +393,44 @@ export const StatementWithMedia: React.FC<StatementWithMediaProps> = ({
             </div>
             
             <div style={styles.mediaDetails}>
-              {recordedMedia.duration && recordedMedia.duration > 0 && (
+              {mediaRecording.recordedMedia.duration && mediaRecording.recordedMedia.duration > 0 && (
                 <span style={styles.mediaDetail}>
-                  Duration: {formatDuration(recordedMedia.duration)}
+                  Duration: {formatDuration(mediaRecording.recordedMedia.duration)}
                 </span>
               )}
-              {recordedMedia.fileSize && (
+              {mediaRecording.recordedMedia.fileSize && (
                 <span style={styles.mediaDetail}>
-                  Size: {formatFileSize(recordedMedia.fileSize)}
+                  Size: {formatFileSize(mediaRecording.recordedMedia.fileSize)}
+                </span>
+              )}
+              {mediaRecording.recordedMedia.compressionRatio && mediaRecording.recordedMedia.compressionRatio > 1 && (
+                <span style={styles.mediaDetail}>
+                  Compressed: {Math.round((1 - 1/mediaRecording.recordedMedia.compressionRatio) * 100)}% smaller
                 </span>
               )}
             </div>
           </div>
 
           {/* Media Preview */}
-          {recordedMedia.type === 'video' && recordedMedia.url && (
+          {mediaRecording.recordedMedia.type === 'video' && mediaRecording.recordedMedia.url && (
             <video
-              src={recordedMedia.url}
+              src={mediaRecording.recordedMedia.url}
               controls
               style={styles.videoPreview}
               preload="metadata"
             />
           )}
           
-          {recordedMedia.type === 'audio' && recordedMedia.url && (
+          {mediaRecording.recordedMedia.type === 'audio' && mediaRecording.recordedMedia.url && (
             <audio
-              src={recordedMedia.url}
+              src={mediaRecording.recordedMedia.url}
               controls
               style={styles.audioPreview}
               preload="metadata"
             />
           )}
           
-          {recordedMedia.type === 'text' && (
+          {mediaRecording.recordedMedia.type === 'text' && (
             <div style={styles.textPreview}>
               <span style={styles.textPreviewLabel}>Recorded Text:</span>
               <p style={styles.textPreviewContent}>"{statement.text}"</p>
@@ -352,7 +446,9 @@ export const StatementWithMedia: React.FC<StatementWithMediaProps> = ({
 const styles = {
   container: {
     padding: '20px',
-    border: '2px solid #E5E7EB',
+    borderWidth: '2px',
+    borderStyle: 'solid',
+    borderColor: '#E5E7EB',
     borderRadius: '12px',
     backgroundColor: '#F9FAFB',
     marginBottom: '20px',
@@ -395,7 +491,9 @@ const styles = {
     minHeight: '100px',
     padding: '16px',
     fontSize: '16px',
-    border: '2px solid #D1D5DB',
+    borderWidth: '2px',
+    borderStyle: 'solid',
+    borderColor: '#D1D5DB',
     borderRadius: '8px',
     resize: 'vertical' as const,
     fontFamily: 'inherit',
@@ -548,6 +646,78 @@ const styles = {
     color: '#374151',
     fontStyle: 'italic',
     margin: 0,
+  } as React.CSSProperties,
+
+  uploadContainer: {
+    padding: '12px',
+    backgroundColor: '#EBF8FF',
+    border: '2px solid #93C5FD',
+    borderRadius: '6px',
+    marginTop: '12px',
+  } as React.CSSProperties,
+
+  uploadHeader: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '8px',
+    marginBottom: '8px',
+    fontSize: '14px',
+    fontWeight: 'bold',
+    color: '#1E40AF',
+  } as React.CSSProperties,
+
+  uploadIcon: {
+    fontSize: '16px',
+  } as React.CSSProperties,
+
+  uploadDetails: {
+    fontSize: '12px',
+    color: '#1E40AF',
+    textAlign: 'center' as const,
+  } as React.CSSProperties,
+
+  compressionContainer: {
+    padding: '12px',
+    backgroundColor: '#F0FDF4',
+    border: '2px solid #BBF7D0',
+    borderRadius: '6px',
+    marginTop: '12px',
+  } as React.CSSProperties,
+
+  compressionHeader: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '8px',
+    marginBottom: '8px',
+    fontSize: '14px',
+    fontWeight: 'bold',
+    color: '#065F46',
+  } as React.CSSProperties,
+
+  compressionIcon: {
+    fontSize: '16px',
+    animation: 'spin 2s linear infinite',
+  } as React.CSSProperties,
+
+  compressionDetails: {
+    fontSize: '12px',
+    color: '#065F46',
+    textAlign: 'center' as const,
+  } as React.CSSProperties,
+
+  progressBar: {
+    width: '100%',
+    height: '6px',
+    backgroundColor: '#E5E7EB',
+    borderRadius: '3px',
+    overflow: 'hidden',
+    marginBottom: '8px',
+  } as React.CSSProperties,
+
+  progressFill: {
+    height: '100%',
+    backgroundColor: '#3B82F6',
+    transition: 'width 0.3s ease',
   } as React.CSSProperties,
 };
 
