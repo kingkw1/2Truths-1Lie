@@ -11,7 +11,7 @@ Defines game mechanics and progression driving engagement: core loop, challenge 
 ### Requirement 1: Intuitive Core Game Loop (MVP Mandatory)
 
 - Present UI for three statements and lie selection.
-- Allow optional video/audio recording with preview and re-record.
+- Support primarily video with audio recording with preview and re-record; text input allowed only as fallback option.
 - Immediate visual/audio feedback on core actions.
 - Helpful guidance on invalid input.
 - Subtle hints on player idle after 30 seconds.

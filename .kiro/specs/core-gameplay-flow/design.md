@@ -77,8 +77,8 @@ Key methods: session lifecycle, progression, rewards, idle hint triggers.
 
 Manages entering three statements with lie selection and validation, plus multi-modal media capture:
 
-- Video, audio, or text fallback.  
-- **Media capture UI components (RecordingControl, MediaPreview, UploadProgress) are integrated directly within the Challenge Creation screen, providing seamless user interaction throughout recording, preview, compression, and upload stages. State management (e.g., Redux) ensures synchronization between UI elements and overall challenge submission workflow.**  
+- Video with audio is the primary supported recording modality integrated within the Challenge Creation screen, offering seamless recording controls, media preview, compression, and upload feedback.  
+- Media capture UI components (RecordingControl, MediaPreview, UploadProgress) are integrated directly within the Challenge Creation screen, providing seamless user interaction throughout recording, preview, compression, and upload stages. State management (e.g., Redux) ensures synchronization between UI elements and overall challenge submission workflow.  
 - Preview and re-record.  
 - Client-side compression.  
 - Chunked, resumable uploads with progress and error handling.
