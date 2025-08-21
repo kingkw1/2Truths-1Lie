@@ -15,9 +15,13 @@ import {
   validateChallenge,
   enterPreviewMode,
   clearValidationErrors,
+  startSubmission,
+  completeSubmission,
 } from '../store/slices/challengeCreationSlice';
 import { Statement, MediaCapture } from '../types/challenge';
 import StatementWithMedia from './StatementWithMedia';
+import UploadProgress from './UploadProgress';
+import { AnimatedFeedback } from './QualityFeedback';
 
 interface EnhancedChallengeCreationFormProps {
   onSubmit?: () => void;
@@ -34,6 +38,8 @@ export const EnhancedChallengeCreationForm: React.FC<EnhancedChallengeCreationFo
     validationErrors,
     isSubmitting,
     previewMode,
+    mediaRecordingState,
+    uploadState,
   } = useSelector((state: RootState) => state.challengeCreation);
 
   const [selectedLieIndex, setSelectedLieIndex] = useState<number | null>(null);
@@ -43,6 +49,17 @@ export const EnhancedChallengeCreationForm: React.FC<EnhancedChallengeCreationFo
     audio: false,
     text: true,
   });
+  const [uploadSessions, setUploadSessions] = useState<Array<{
+    sessionId: string;
+    filename: string;
+    fileSize: number;
+    statementIndex: number;
+  }>>([]);
+  const [feedbackMessage, setFeedbackMessage] = useState<{
+    message: string;
+    type: 'success' | 'warning' | 'error' | 'info';
+    visible: boolean;
+  }>({ message: '', type: 'info', visible: false });
 
   // Initialize challenge on component mount
   useEffect(() => {
@@ -148,14 +165,79 @@ export const EnhancedChallengeCreationForm: React.FC<EnhancedChallengeCreationFo
   }, [dispatch, validationErrors]);
 
   // Handle form submission
-  const handleSubmit = useCallback(() => {
+  const handleSubmit = useCallback(async () => {
     dispatch(validateChallenge());
     setShowValidation(true);
     
-    if (validationErrors.length === 0 && onSubmit) {
-      onSubmit();
+    if (validationErrors.length === 0) {
+      dispatch(startSubmission());
+      
+      try {
+        // Check if any uploads are still in progress
+        const hasActiveUploads = Object.values(uploadState).some(state => state.isUploading);
+        
+        if (hasActiveUploads) {
+          // Wait for uploads to complete
+          setFeedbackMessage({
+            message: 'Waiting for media uploads to complete...',
+            type: 'info',
+            visible: true,
+          });
+          
+          // Poll for upload completion
+          const checkUploads = () => {
+            const stillUploading = Object.values(uploadState).some(state => state.isUploading);
+            if (!stillUploading) {
+              dispatch(completeSubmission({ success: true }));
+              if (onSubmit) {
+                onSubmit();
+              }
+            } else {
+              setTimeout(checkUploads, 1000);
+            }
+          };
+          
+          setTimeout(checkUploads, 1000);
+        } else {
+          // Check if we have media files that need uploading
+          const mediaFiles = currentChallenge.mediaData?.filter(media => 
+            media && media.type !== 'text' && media.url && media.url.startsWith('blob:')
+          ) || [];
+          
+          if (mediaFiles.length > 0) {
+            // Create upload sessions for media files that haven't been uploaded yet
+            const sessions = mediaFiles.map((media, index) => ({
+              sessionId: `challenge_${Date.now()}_${index}`,
+              filename: `statement_${index}_${media.type}.${media.mimeType?.split('/')[1] || 'webm'}`,
+              fileSize: media.fileSize || 0,
+              statementIndex: index,
+            }));
+            
+            setUploadSessions(sessions);
+            
+            // Note: In a real implementation, uploads would be handled by the Redux-connected hook
+            // For now, we'll simulate the upload process
+            setTimeout(() => {
+              dispatch(completeSubmission({ success: true }));
+              setUploadSessions([]);
+              if (onSubmit) {
+                onSubmit();
+              }
+            }, 3000);
+          } else {
+            // No media files, submit immediately
+            dispatch(completeSubmission({ success: true }));
+            if (onSubmit) {
+              onSubmit();
+            }
+          }
+        }
+      } catch (error) {
+        console.error('Submission error:', error);
+        dispatch(completeSubmission({ success: false }));
+      }
     }
-  }, [dispatch, validationErrors, onSubmit]);
+  }, [dispatch, validationErrors, currentChallenge.mediaData, uploadState, onSubmit]);
 
   // Check if form is valid
   const isFormValid = useCallback(() => {
@@ -180,6 +262,11 @@ export const EnhancedChallengeCreationForm: React.FC<EnhancedChallengeCreationFo
     
     return types;
   }, [mediaSupport]);
+
+  // Dismiss feedback message
+  const dismissFeedback = useCallback(() => {
+    setFeedbackMessage(prev => ({ ...prev, visible: false }));
+  }, []);
 
   return (
     <div style={styles.container}>
@@ -336,12 +423,58 @@ export const EnhancedChallengeCreationForm: React.FC<EnhancedChallengeCreationFo
         </button>
       </div>
 
+      {/* Upload Progress */}
+      {uploadSessions.length > 0 && (
+        <div style={styles.uploadContainer}>
+          <h4 style={styles.uploadTitle}>Uploading Media Files...</h4>
+          {uploadSessions.map((session) => (
+            <UploadProgress
+              key={session.sessionId}
+              sessionId={session.sessionId}
+              filename={session.filename}
+              fileSize={session.fileSize}
+              onUploadComplete={(fileUrl) => {
+                console.log(`Upload completed for statement ${session.statementIndex}:`, fileUrl);
+                // Update the media URL in the Redux store
+                const updatedMedia = currentChallenge.mediaData?.[session.statementIndex];
+                if (updatedMedia) {
+                  dispatch(setStatementMedia({ 
+                    index: session.statementIndex, 
+                    media: { ...updatedMedia, url: fileUrl } 
+                  }));
+                }
+              }}
+              onUploadError={(error) => {
+                console.error(`Upload failed for statement ${session.statementIndex}:`, error);
+              }}
+              onUploadCancel={() => {
+                console.log(`Upload cancelled for statement ${session.statementIndex}`);
+                setUploadSessions(prev => prev.filter(s => s.sessionId !== session.sessionId));
+              }}
+              autoStart={true}
+              showDetails={true}
+              compact={false}
+            />
+          ))}
+        </div>
+      )}
+
       {/* Preview Mode Indicator */}
       {previewMode && (
         <div style={styles.previewIndicator}>
           <span>🔍 Preview mode active - review your challenge above</span>
         </div>
       )}
+
+      {/* Animated Feedback Messages */}
+      <AnimatedFeedback
+        message={feedbackMessage.message}
+        type={feedbackMessage.type}
+        isVisible={feedbackMessage.visible}
+        onDismiss={dismissFeedback}
+        autoHide={true}
+        duration={4000}
+      />
     </div>
   );
 };
@@ -442,7 +575,9 @@ const styles = {
   lieButton: {
     padding: '8px 16px',
     fontSize: '14px',
-    border: '2px solid #D1D5DB',
+    borderWidth: '2px',
+    borderStyle: 'solid',
+    borderColor: '#D1D5DB',
     borderRadius: '6px',
     backgroundColor: '#FFFFFF',
     color: '#374151',
@@ -550,6 +685,22 @@ const styles = {
   buttonDisabled: {
     opacity: 0.5,
     cursor: 'not-allowed',
+  } as React.CSSProperties,
+
+  uploadContainer: {
+    marginTop: '24px',
+    padding: '20px',
+    backgroundColor: '#F0FDF4',
+    border: '2px solid #BBF7D0',
+    borderRadius: '8px',
+  } as React.CSSProperties,
+
+  uploadTitle: {
+    fontSize: '16px',
+    fontWeight: 'bold',
+    color: '#065F46',
+    marginBottom: '16px',
+    textAlign: 'center' as const,
   } as React.CSSProperties,
 
   previewIndicator: {

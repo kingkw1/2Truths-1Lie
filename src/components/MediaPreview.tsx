@@ -6,6 +6,7 @@
 
 import React, { useState, useRef, useEffect, useCallback } from "react";
 import { MediaCapture, MediaType } from "../types/challenge";
+import { blobUrlManager } from "../utils/blobUrlManager";
 
 interface MediaPreviewProps {
   mediaData: MediaCapture;
@@ -147,6 +148,11 @@ export const MediaPreview: React.FC<MediaPreviewProps> = ({
     const handleLoadedData = () => {
       setPlaybackState(prev => ({ ...prev, isLoading: false }));
       updatePlaybackState();
+      
+      // Mark URL as accessed
+      if (mediaData.url && mediaData.url.startsWith('blob:')) {
+        blobUrlManager.accessUrl(mediaData.url);
+      }
     };
     const handleTimeUpdate = updatePlaybackState;
     const handlePlay = () => setPlaybackState(prev => ({ ...prev, isPlaying: true }));
@@ -182,7 +188,8 @@ export const MediaPreview: React.FC<MediaPreviewProps> = ({
   useEffect(() => {
     return () => {
       if (mediaData.url && mediaData.url.startsWith("blob:")) {
-        URL.revokeObjectURL(mediaData.url);
+        // Don't revoke here - let the blob URL manager handle it
+        // The URL might still be needed by other components
       }
     };
   }, [mediaData.url]);

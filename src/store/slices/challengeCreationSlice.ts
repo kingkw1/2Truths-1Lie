@@ -15,6 +15,28 @@ export interface ChallengeCreationState {
   isSubmitting: boolean;
   submissionSuccess: boolean;
   previewMode: boolean;
+  // Media recording state per statement
+  mediaRecordingState: {
+    [statementIndex: number]: {
+      isRecording: boolean;
+      isPaused: boolean;
+      duration: number;
+      mediaType: 'video' | 'audio' | 'text' | null;
+      hasPermission: boolean;
+      error: string | null;
+      isCompressing: boolean;
+      compressionProgress: number | null;
+    };
+  };
+  // Upload state per statement
+  uploadState: {
+    [statementIndex: number]: {
+      isUploading: boolean;
+      uploadProgress: number;
+      uploadError: string | null;
+      sessionId: string | null;
+    };
+  };
 }
 
 const initialState: ChallengeCreationState = {
@@ -35,6 +57,8 @@ const initialState: ChallengeCreationState = {
   isSubmitting: false,
   submissionSuccess: false,
   previewMode: false,
+  mediaRecordingState: {},
+  uploadState: {},
 };
 
 const challengeCreationSlice = createSlice({
@@ -195,6 +219,221 @@ const challengeCreationSlice = createSlice({
     clearValidationErrors: (state) => {
       state.validationErrors = [];
     },
+
+    // Media recording state actions
+    setMediaRecordingState: (state, action: PayloadAction<{
+      statementIndex: number;
+      recordingState: Partial<ChallengeCreationState['mediaRecordingState'][number]>;
+    }>) => {
+      const { statementIndex, recordingState } = action.payload;
+      if (!state.mediaRecordingState[statementIndex]) {
+        state.mediaRecordingState[statementIndex] = {
+          isRecording: false,
+          isPaused: false,
+          duration: 0,
+          mediaType: null,
+          hasPermission: false,
+          error: null,
+          isCompressing: false,
+          compressionProgress: null,
+        };
+      }
+      state.mediaRecordingState[statementIndex] = {
+        ...state.mediaRecordingState[statementIndex],
+        ...recordingState,
+      };
+    },
+
+    startMediaRecording: (state, action: PayloadAction<{
+      statementIndex: number;
+      mediaType: 'video' | 'audio' | 'text';
+    }>) => {
+      const { statementIndex, mediaType } = action.payload;
+      state.mediaRecordingState[statementIndex] = {
+        isRecording: true,
+        isPaused: false,
+        duration: 0,
+        mediaType,
+        hasPermission: true,
+        error: null,
+        isCompressing: false,
+        compressionProgress: null,
+      };
+      state.isRecording = true;
+      state.recordingType = mediaType === 'text' ? null : mediaType;
+      state.currentStatementIndex = statementIndex;
+    },
+
+    stopMediaRecording: (state, action: PayloadAction<{ statementIndex: number }>) => {
+      const { statementIndex } = action.payload;
+      if (state.mediaRecordingState[statementIndex]) {
+        state.mediaRecordingState[statementIndex].isRecording = false;
+        state.mediaRecordingState[statementIndex].isPaused = false;
+      }
+      state.isRecording = false;
+      state.recordingType = null;
+    },
+
+    pauseMediaRecording: (state, action: PayloadAction<{ statementIndex: number }>) => {
+      const { statementIndex } = action.payload;
+      if (state.mediaRecordingState[statementIndex]) {
+        state.mediaRecordingState[statementIndex].isPaused = true;
+      }
+    },
+
+    resumeMediaRecording: (state, action: PayloadAction<{ statementIndex: number }>) => {
+      const { statementIndex } = action.payload;
+      if (state.mediaRecordingState[statementIndex]) {
+        state.mediaRecordingState[statementIndex].isPaused = false;
+      }
+    },
+
+    updateRecordingDuration: (state, action: PayloadAction<{
+      statementIndex: number;
+      duration: number;
+    }>) => {
+      const { statementIndex, duration } = action.payload;
+      if (state.mediaRecordingState[statementIndex]) {
+        state.mediaRecordingState[statementIndex].duration = duration;
+      }
+    },
+
+    setMediaRecordingError: (state, action: PayloadAction<{
+      statementIndex: number;
+      error: string | null;
+    }>) => {
+      const { statementIndex, error } = action.payload;
+      if (!state.mediaRecordingState[statementIndex]) {
+        state.mediaRecordingState[statementIndex] = {
+          isRecording: false,
+          isPaused: false,
+          duration: 0,
+          mediaType: null,
+          hasPermission: false,
+          error: null,
+          isCompressing: false,
+          compressionProgress: null,
+        };
+      }
+      state.mediaRecordingState[statementIndex].error = error;
+    },
+
+    setMediaCompression: (state, action: PayloadAction<{
+      statementIndex: number;
+      isCompressing: boolean;
+      progress?: number;
+    }>) => {
+      const { statementIndex, isCompressing, progress } = action.payload;
+      if (!state.mediaRecordingState[statementIndex]) {
+        state.mediaRecordingState[statementIndex] = {
+          isRecording: false,
+          isPaused: false,
+          duration: 0,
+          mediaType: null,
+          hasPermission: false,
+          error: null,
+          isCompressing: false,
+          compressionProgress: null,
+        };
+      }
+      state.mediaRecordingState[statementIndex].isCompressing = isCompressing;
+      state.mediaRecordingState[statementIndex].compressionProgress = progress || null;
+    },
+
+    // Upload state actions
+    setUploadState: (state, action: PayloadAction<{
+      statementIndex: number;
+      uploadState: Partial<ChallengeCreationState['uploadState'][number]>;
+    }>) => {
+      const { statementIndex, uploadState } = action.payload;
+      if (!state.uploadState[statementIndex]) {
+        state.uploadState[statementIndex] = {
+          isUploading: false,
+          uploadProgress: 0,
+          uploadError: null,
+          sessionId: null,
+        };
+      }
+      state.uploadState[statementIndex] = {
+        ...state.uploadState[statementIndex],
+        ...uploadState,
+      };
+    },
+
+    startUpload: (state, action: PayloadAction<{
+      statementIndex: number;
+      sessionId: string;
+    }>) => {
+      const { statementIndex, sessionId } = action.payload;
+      state.uploadState[statementIndex] = {
+        isUploading: true,
+        uploadProgress: 0,
+        uploadError: null,
+        sessionId,
+      };
+    },
+
+    updateUploadProgress: (state, action: PayloadAction<{
+      statementIndex: number;
+      progress: number;
+    }>) => {
+      const { statementIndex, progress } = action.payload;
+      if (state.uploadState[statementIndex]) {
+        state.uploadState[statementIndex].uploadProgress = progress;
+      }
+    },
+
+    completeUpload: (state, action: PayloadAction<{
+      statementIndex: number;
+      fileUrl: string;
+    }>) => {
+      const { statementIndex, fileUrl } = action.payload;
+      if (state.uploadState[statementIndex]) {
+        state.uploadState[statementIndex].isUploading = false;
+        state.uploadState[statementIndex].uploadProgress = 100;
+        state.uploadState[statementIndex].uploadError = null;
+      }
+      
+      // Update the media data with the final URL
+      if (state.currentChallenge.mediaData && state.currentChallenge.mediaData[statementIndex]) {
+        state.currentChallenge.mediaData[statementIndex].url = fileUrl;
+      }
+    },
+
+    setUploadError: (state, action: PayloadAction<{
+      statementIndex: number;
+      error: string;
+    }>) => {
+      const { statementIndex, error } = action.payload;
+      if (state.uploadState[statementIndex]) {
+        state.uploadState[statementIndex].isUploading = false;
+        state.uploadState[statementIndex].uploadError = error;
+      }
+    },
+
+    cancelUpload: (state, action: PayloadAction<{ statementIndex: number }>) => {
+      const { statementIndex } = action.payload;
+      if (state.uploadState[statementIndex]) {
+        state.uploadState[statementIndex].isUploading = false;
+        state.uploadState[statementIndex].uploadProgress = 0;
+        state.uploadState[statementIndex].uploadError = null;
+        state.uploadState[statementIndex].sessionId = null;
+      }
+    },
+
+    resetMediaState: (state, action: PayloadAction<{ statementIndex: number }>) => {
+      const { statementIndex } = action.payload;
+      delete state.mediaRecordingState[statementIndex];
+      delete state.uploadState[statementIndex];
+      
+      // Clear media data for this statement
+      if (state.currentChallenge.mediaData && state.currentChallenge.mediaData[statementIndex]) {
+        state.currentChallenge.mediaData[statementIndex] = {
+          type: 'text',
+          duration: 0,
+        };
+      }
+    },
   },
 });
 
@@ -215,6 +454,23 @@ export const {
   startSubmission,
   completeSubmission,
   clearValidationErrors,
+  // Media recording actions
+  setMediaRecordingState,
+  startMediaRecording,
+  stopMediaRecording,
+  pauseMediaRecording,
+  resumeMediaRecording,
+  updateRecordingDuration,
+  setMediaRecordingError,
+  setMediaCompression,
+  // Upload actions
+  setUploadState,
+  startUpload,
+  updateUploadProgress,
+  completeUpload,
+  setUploadError,
+  cancelUpload,
+  resetMediaState,
 } = challengeCreationSlice.actions;
 
 export default challengeCreationSlice.reducer;
