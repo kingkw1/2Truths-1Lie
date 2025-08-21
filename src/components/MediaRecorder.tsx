@@ -13,6 +13,8 @@ import {
   AnimatedFeedback,
 } from "./QualityFeedback";
 import { analyzeMediaQuality, MediaQuality } from "../utils/qualityAssessment";
+import { useMediaRecording } from "../hooks/useMediaRecording";
+import { CompressionOptions, CompressionProgress } from "../utils/mediaCompression";
 
 interface MediaRecorderProps {
   onRecordingComplete: (mediaData: MediaCapture) => void;
@@ -20,6 +22,8 @@ interface MediaRecorderProps {
   maxDuration?: number; // in milliseconds, default 30 seconds
   allowedTypes?: MediaType[];
   disabled?: boolean;
+  enableCompression?: boolean;
+  compressionOptions?: CompressionOptions;
 }
 
 interface RecordingState {
@@ -39,336 +43,89 @@ export const MediaRecorder: React.FC<MediaRecorderProps> = ({
   maxDuration = 30000, // 30 seconds default
   allowedTypes = ["video", "audio", "text"],
   disabled = false,
+  enableCompression = true,
+  compressionOptions = {},
 }) => {
-  const [recordingState, setRecordingState] = useState<RecordingState>({
-    isRecording: false,
-    isPaused: false,
-    duration: 0,
-    mediaType: "text",
-    hasPermission: false,
-    error: null,
-    recordingQuality: null,
-    showQualityFeedback: false,
-  });
-
   const [feedbackMessage, setFeedbackMessage] = useState<{
     message: string;
     type: "success" | "warning" | "error" | "info";
     visible: boolean;
   }>({ message: "", type: "info", visible: false });
 
-  const mediaRecorderRef = useRef<any>(null);
-  const streamRef = useRef<MediaStream | null>(null);
+  const [recordingQuality, setRecordingQuality] = useState<MediaQuality | null>(null);
+  const [showQualityFeedback, setShowQualityFeedback] = useState(false);
+
   const videoRef = useRef<HTMLVideoElement>(null);
-  const chunksRef = useRef<Blob[]>([]);
-  const timerRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Check for media device support
-  const checkMediaSupport = useCallback(
-    async (type: MediaType): Promise<boolean> => {
-      if (type === "text") return true;
+  // Use the enhanced media recording hook
+  const {
+    isRecording,
+    isPaused,
+    duration,
+    mediaType,
+    hasPermission,
+    error,
+    recordedMedia,
+    isCompressing,
+    compressionProgress,
+    startRecording,
+    stopRecording,
+    cancelRecording,
+    togglePause,
+    completeTextRecording,
+    resetRecording,
+    cleanup,
+    checkMediaSupport,
+    canRecord,
+    isTextMode,
+    isMediaMode,
+  } = useMediaRecording({
+    maxDuration,
+    allowedTypes,
+    onRecordingComplete: (mediaData) => {
+      // Analyze media quality
+      const quality = analyzeMediaQuality(mediaData);
+      setRecordingQuality(quality);
+      setShowQualityFeedback(true);
 
-      if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-        return false;
-      }
-
-      try {
-        const constraints =
-          type === "video" ? { video: true, audio: true } : { audio: true };
-
-        const stream = await navigator.mediaDevices.getUserMedia(constraints);
-        stream.getTracks().forEach((track) => track.stop());
-        return true;
-      } catch (error) {
-        console.warn(`Media type ${type} not supported:`, error);
-        return false;
-      }
-    },
-    [],
-  );
-
-  // Request media permissions
-  const requestPermissions = useCallback(
-    async (type: MediaType) => {
-      if (type === "text") {
-        setRecordingState((prev) => ({
-          ...prev,
-          hasPermission: true,
-          error: null,
-        }));
-        return true;
-      }
-
-      try {
-        const constraints =
-          type === "video"
-            ? { video: { width: 640, height: 480 }, audio: true }
-            : { audio: true };
-
-        const stream = await navigator.mediaDevices.getUserMedia(constraints);
-        streamRef.current = stream;
-
-        if (type === "video" && videoRef.current) {
-          videoRef.current.srcObject = stream;
-        }
-
-        setRecordingState((prev) => ({
-          ...prev,
-          hasPermission: true,
-          error: null,
-          mediaType: type,
-        }));
-
-        return true;
-      } catch (error) {
-        const errorMessage =
-          error instanceof Error ? error.message : "Permission denied";
-        setRecordingState((prev) => ({
-          ...prev,
-          hasPermission: false,
-          error: errorMessage,
-        }));
-        onRecordingError(`Failed to access ${type}: ${errorMessage}`);
-        return false;
-      }
-    },
-    [onRecordingError],
-  );
-
-  // Start recording
-  const startRecording = useCallback(
-    async (type: MediaType) => {
-      if (disabled) return;
-
-      // Check if type is allowed
-      if (!allowedTypes.includes(type)) {
-        onRecordingError(`Recording type ${type} is not allowed`);
-        return;
-      }
-
-      // For text-only, just switch to text mode
-      if (type === "text") {
-        setRecordingState((prev) => ({
-          ...prev,
-          mediaType: "text",
-          hasPermission: true,
-          error: null,
-        }));
-        return;
-      }
-
-      // Check support and request permissions
-      const isSupported = await checkMediaSupport(type);
-      if (!isSupported) {
-        // Fallback to text
-        setRecordingState((prev) => ({
-          ...prev,
-          mediaType: "text",
-          hasPermission: true,
-          error: `${type} recording not supported, using text mode`,
-        }));
-        return;
-      }
-
-      const hasPermission = await requestPermissions(type);
-      if (!hasPermission) {
-        // Fallback to text
-        setRecordingState((prev) => ({
-          ...prev,
-          mediaType: "text",
-          hasPermission: true,
-        }));
-        return;
-      }
-
-      // Start actual recording
-      if (streamRef.current) {
-        try {
-          const mimeType =
-            type === "video"
-              ? "video/webm;codecs=vp9"
-              : "audio/webm;codecs=opus";
-
-          mediaRecorderRef.current = new window.MediaRecorder(
-            streamRef.current,
-            { mimeType },
-          );
-          chunksRef.current = [];
-
-          if (mediaRecorderRef.current) {
-            mediaRecorderRef.current.ondataavailable = (event: any) => {
-              if (event.data.size > 0) {
-                chunksRef.current.push(event.data);
-              }
-            };
-
-            mediaRecorderRef.current.onstop = () => {
-              const blob = new Blob(chunksRef.current, { type: mimeType });
-              const url = URL.createObjectURL(blob);
-
-              const mediaData: MediaCapture = {
-                type,
-                url,
-                duration: recordingState.duration,
-                fileSize: blob.size,
-                mimeType,
-              };
-
-              // Analyze media quality
-              const quality = analyzeMediaQuality(mediaData);
-              setRecordingState((prev) => ({
-                ...prev,
-                recordingQuality: quality,
-                showQualityFeedback: true,
-              }));
-
-              // Show feedback message based on quality
-              if (quality.score >= 80) {
-                setFeedbackMessage({
-                  message: "Excellent recording! Great quality.",
-                  type: "success",
-                  visible: true,
-                });
-              } else if (quality.score < 50) {
-                setFeedbackMessage({
-                  message:
-                    "Recording quality could be improved. Try again in a quieter environment.",
-                  type: "warning",
-                  visible: true,
-                });
-              }
-
-              onRecordingComplete(mediaData);
-            };
-
-            mediaRecorderRef.current.start(100); // Collect data every 100ms
-          }
-
-          setRecordingState((prev) => ({
-            ...prev,
-            isRecording: true,
-            duration: 0,
-          }));
-
-          // Start timer
-          timerRef.current = setInterval(() => {
-            setRecordingState((prev) => {
-              const newDuration = prev.duration + 100;
-
-              // Auto-stop at max duration
-              if (newDuration >= maxDuration) {
-                stopRecording();
-                return { ...prev, duration: maxDuration };
-              }
-
-              return { ...prev, duration: newDuration };
-            });
-          }, 100);
-        } catch (error) {
-          const errorMessage =
-            error instanceof Error ? error.message : "Recording failed";
-          setRecordingState((prev) => ({
-            ...prev,
-            error: errorMessage,
-            mediaType: "text", // Fallback to text
-          }));
-          onRecordingError(`Recording failed: ${errorMessage}`);
-        }
-      }
-    },
-    [
-      disabled,
-      allowedTypes,
-      maxDuration,
-      onRecordingComplete,
-      onRecordingError,
-      checkMediaSupport,
-      requestPermissions,
-      recordingState.duration,
-    ],
-  );
-
-  // Stop recording
-  const stopRecording = useCallback(() => {
-    if (timerRef.current) {
-      clearInterval(timerRef.current);
-      timerRef.current = null;
-    }
-
-    if (mediaRecorderRef.current && recordingState.isRecording) {
-      mediaRecorderRef.current.stop();
-    }
-
-    if (streamRef.current) {
-      streamRef.current.getTracks().forEach((track) => track.stop());
-      streamRef.current = null;
-    }
-
-    setRecordingState((prev) => ({
-      ...prev,
-      isRecording: false,
-      isPaused: false,
-      hasPermission: false,
-    }));
-  }, [recordingState.isRecording]);
-
-  // Pause/Resume recording
-  const togglePause = useCallback(() => {
-    if (!mediaRecorderRef.current) return;
-
-    if (recordingState.isPaused) {
-      mediaRecorderRef.current.resume();
-      // Resume timer
-      timerRef.current = setInterval(() => {
-        setRecordingState((prev) => {
-          const newDuration = prev.duration + 100;
-          if (newDuration >= maxDuration) {
-            stopRecording();
-            return { ...prev, duration: maxDuration };
-          }
-          return { ...prev, duration: newDuration };
+      // Show feedback message based on quality and compression
+      if (mediaData.compressionRatio && mediaData.compressionRatio > 1) {
+        const savings = Math.round((1 - 1/mediaData.compressionRatio) * 100);
+        setFeedbackMessage({
+          message: `Recording compressed successfully! ${savings}% size reduction.`,
+          type: "success",
+          visible: true,
         });
-      }, 100);
-    } else {
-      mediaRecorderRef.current.pause();
-      // Pause timer
-      if (timerRef.current) {
-        clearInterval(timerRef.current);
-        timerRef.current = null;
+      } else if (quality.score >= 80) {
+        setFeedbackMessage({
+          message: "Excellent recording! Great quality.",
+          type: "success",
+          visible: true,
+        });
+      } else if (quality.score < 50) {
+        setFeedbackMessage({
+          message: "Recording quality could be improved. Try again in a quieter environment.",
+          type: "warning",
+          visible: true,
+        });
       }
-    }
 
-    setRecordingState((prev) => ({ ...prev, isPaused: !prev.isPaused }));
-  }, [recordingState.isPaused, maxDuration, stopRecording]);
+      onRecordingComplete(mediaData);
+    },
+    onRecordingError,
+    enableCompression,
+    compressionOptions,
+    onCompressionProgress: (progress) => {
+      // Could add additional UI feedback here
+    },
+  });
 
   // Handle text-only completion
   const handleTextComplete = useCallback(
     (text: string) => {
-      const mediaData: MediaCapture = {
-        type: "text",
-        url: `data:text/plain;base64,${btoa(text)}`,
-        duration: 0,
-        fileSize: new Blob([text]).size,
-        mimeType: "text/plain",
-      };
-
-      // Analyze text media quality
-      const quality = analyzeMediaQuality(mediaData);
-      setRecordingState((prev) => ({
-        ...prev,
-        recordingQuality: quality,
-        showQualityFeedback: true,
-      }));
-
-      setFeedbackMessage({
-        message: "Text recorded successfully!",
-        type: "success",
-        visible: true,
-      });
-
-      onRecordingComplete(mediaData);
+      completeTextRecording(text);
     },
-    [onRecordingComplete],
+    [completeTextRecording],
   );
 
   // Dismiss feedback message
@@ -378,15 +135,8 @@ export const MediaRecorder: React.FC<MediaRecorderProps> = ({
 
   // Cleanup on unmount
   useEffect(() => {
-    return () => {
-      if (timerRef.current) {
-        clearInterval(timerRef.current);
-      }
-      if (streamRef.current) {
-        streamRef.current.getTracks().forEach((track) => track.stop());
-      }
-    };
-  }, []);
+    return cleanup;
+  }, [cleanup]);
 
   // Format duration for display
   const formatDuration = (ms: number): string => {
@@ -397,7 +147,7 @@ export const MediaRecorder: React.FC<MediaRecorderProps> = ({
   };
 
   const maxDurationFormatted = formatDuration(maxDuration);
-  const currentDurationFormatted = formatDuration(recordingState.duration);
+  const currentDurationFormatted = formatDuration(duration);
 
   return (
     <div style={styles.container}>
@@ -410,14 +160,14 @@ export const MediaRecorder: React.FC<MediaRecorderProps> = ({
       </div>
 
       {/* Media Type Selection */}
-      {!recordingState.isRecording && (
+      {!isRecording && !isCompressing && (
         <div style={styles.typeSelection}>
           {allowedTypes.includes("video") && (
             <button
               onClick={() => startRecording("video")}
               style={{
                 ...styles.typeButton,
-                ...(recordingState.mediaType === "video"
+                ...(mediaType === "video"
                   ? styles.typeButtonActive
                   : {}),
               }}
@@ -433,7 +183,7 @@ export const MediaRecorder: React.FC<MediaRecorderProps> = ({
               onClick={() => startRecording("audio")}
               style={{
                 ...styles.typeButton,
-                ...(recordingState.mediaType === "audio"
+                ...(mediaType === "audio"
                   ? styles.typeButtonActive
                   : {}),
               }}
@@ -449,7 +199,7 @@ export const MediaRecorder: React.FC<MediaRecorderProps> = ({
               onClick={() => startRecording("text")}
               style={{
                 ...styles.typeButton,
-                ...(recordingState.mediaType === "text"
+                ...(mediaType === "text"
                   ? styles.typeButtonActive
                   : {}),
               }}
@@ -463,31 +213,53 @@ export const MediaRecorder: React.FC<MediaRecorderProps> = ({
       )}
 
       {/* Error Display */}
-      {recordingState.error && (
+      {error && (
         <div style={styles.errorContainer}>
           <span style={styles.errorIcon}>⚠️</span>
-          <span>{recordingState.error}</span>
+          <span>{error}</span>
+        </div>
+      )}
+
+      {/* Compression Progress */}
+      {isCompressing && compressionProgress && (
+        <div style={styles.compressionContainer}>
+          <div style={styles.compressionHeader}>
+            <span style={styles.compressionIcon}>⚙️</span>
+            <span>Compressing media...</span>
+          </div>
+          <div style={styles.progressBar}>
+            <div 
+              style={{
+                ...styles.progressFill,
+                width: `${compressionProgress.progress}%`
+              }}
+            />
+          </div>
+          <div style={styles.compressionDetails}>
+            <span>{compressionProgress.stage}</span>
+            <span>{Math.round(compressionProgress.progress)}%</span>
+          </div>
         </div>
       )}
 
       {/* Video Preview */}
-      {recordingState.mediaType === "video" && recordingState.hasPermission && (
+      {mediaType === "video" && hasPermission && (
         <div style={styles.videoContainer}>
           <video ref={videoRef} autoPlay muted style={styles.video} />
         </div>
       )}
 
       {/* Audio Visualizer with Recording Indicator */}
-      {recordingState.mediaType === "audio" && recordingState.hasPermission && (
+      {mediaType === "audio" && hasPermission && (
         <div style={styles.audioContainer}>
           <div style={styles.audioVisualizer}>
             <span style={styles.audioIcon}>🎤</span>
             <div style={styles.audioWave}>
-              {recordingState.isRecording && (
+              {isRecording && (
                 <div style={styles.audioWaveAnimation}>♪ ♫ ♪ ♫</div>
               )}
             </div>
-            {recordingState.isRecording && (
+            {isRecording && (
               <div style={styles.recordingIndicator}>
                 <span style={styles.recordingDot}>●</span>
                 <span>Recording...</span>
@@ -498,20 +270,19 @@ export const MediaRecorder: React.FC<MediaRecorderProps> = ({
       )}
 
       {/* Text Input */}
-      {recordingState.mediaType === "text" && (
-        <TextRecorder onComplete={handleTextComplete} disabled={disabled} />
+      {mediaType === "text" && (
+        <TextRecorder onComplete={handleTextComplete} disabled={disabled || isCompressing} />
       )}
 
       {/* Recording Controls with Quality Indicator */}
-      {(recordingState.mediaType === "video" ||
-        recordingState.mediaType === "audio") &&
-        recordingState.hasPermission && (
+      {(mediaType === "video" || mediaType === "audio") &&
+        hasPermission && (
           <div style={styles.controls}>
             <div style={styles.controlsHeader}>
               <div style={styles.duration}>
                 {currentDurationFormatted} / {maxDurationFormatted}
               </div>
-              {recordingState.isRecording && (
+              {isRecording && (
                 <RealTimeQualityIndicator
                   score={75} // Placeholder - would be real-time analysis
                   isAnalyzing={false}
@@ -521,11 +292,12 @@ export const MediaRecorder: React.FC<MediaRecorderProps> = ({
             </div>
 
             <div style={styles.controlButtons}>
-              {!recordingState.isRecording ? (
+              {!isRecording ? (
                 <button
-                  onClick={() => startRecording(recordingState.mediaType)}
+                  onClick={() => startRecording(mediaType)}
                   style={styles.recordButton}
-                  disabled={disabled}
+                  disabled={disabled || isCompressing}
+                  title="Start recording"
                 >
                   <span style={styles.recordIcon}>⏺️</span>
                   Start Recording
@@ -534,22 +306,34 @@ export const MediaRecorder: React.FC<MediaRecorderProps> = ({
                 <>
                   <button
                     onClick={togglePause}
-                    style={styles.pauseButton}
+                    style={isPaused ? styles.resumeButton : styles.pauseButton}
                     disabled={disabled}
+                    title={isPaused ? "Resume recording" : "Pause recording"}
                   >
                     <span style={styles.pauseIcon}>
-                      {recordingState.isPaused ? "▶️" : "⏸️"}
+                      {isPaused ? "▶️" : "⏸️"}
                     </span>
-                    {recordingState.isPaused ? "Resume" : "Pause"}
+                    {isPaused ? "Resume" : "Pause"}
                   </button>
 
                   <button
                     onClick={stopRecording}
                     style={styles.stopButton}
                     disabled={disabled}
+                    title="Stop and save recording"
                   >
                     <span style={styles.stopIcon}>⏹️</span>
-                    Stop
+                    Stop & Save
+                  </button>
+
+                  <button
+                    onClick={cancelRecording}
+                    style={styles.cancelButton}
+                    disabled={disabled}
+                    title="Cancel recording without saving"
+                  >
+                    <span style={styles.cancelIcon}>❌</span>
+                    Cancel
                   </button>
                 </>
               )}
@@ -558,14 +342,13 @@ export const MediaRecorder: React.FC<MediaRecorderProps> = ({
         )}
 
       {/* Media Quality Feedback */}
-      {recordingState.showQualityFeedback &&
-        recordingState.recordingQuality && (
-          <MediaQualityFeedback
-            quality={recordingState.recordingQuality}
-            isVisible={recordingState.showQualityFeedback}
-            compact={true}
-          />
-        )}
+      {showQualityFeedback && recordingQuality && (
+        <MediaQualityFeedback
+          quality={recordingQuality}
+          isVisible={showQualityFeedback}
+          compact={true}
+        />
+      )}
 
       {/* Animated Feedback Messages */}
       <AnimatedFeedback
@@ -892,6 +675,35 @@ const styles = {
     borderRadius: "8px",
     cursor: "pointer",
     fontSize: "16px",
+    transition: "all 0.2s",
+  } as React.CSSProperties,
+
+  resumeButton: {
+    display: "flex",
+    alignItems: "center",
+    gap: "8px",
+    padding: "12px 24px",
+    backgroundColor: "#10B981",
+    color: "#FFFFFF",
+    border: "none",
+    borderRadius: "8px",
+    cursor: "pointer",
+    fontSize: "16px",
+    transition: "all 0.2s",
+  } as React.CSSProperties,
+
+  cancelButton: {
+    display: "flex",
+    alignItems: "center",
+    gap: "8px",
+    padding: "12px 24px",
+    backgroundColor: "#EF4444",
+    color: "#FFFFFF",
+    border: "none",
+    borderRadius: "8px",
+    cursor: "pointer",
+    fontSize: "16px",
+    transition: "all 0.2s",
   } as React.CSSProperties,
 
   stopButton: {
@@ -919,9 +731,58 @@ const styles = {
     fontSize: "16px",
   } as React.CSSProperties,
 
+  cancelIcon: {
+    fontSize: "16px",
+  } as React.CSSProperties,
+
   buttonDisabled: {
     opacity: 0.5,
     cursor: "not-allowed",
+  } as React.CSSProperties,
+
+  compressionContainer: {
+    padding: "16px",
+    backgroundColor: "#F3F4F6",
+    border: "2px solid #D1D5DB",
+    borderRadius: "8px",
+    marginBottom: "16px",
+  } as React.CSSProperties,
+
+  compressionHeader: {
+    display: "flex",
+    alignItems: "center",
+    gap: "8px",
+    marginBottom: "12px",
+    fontSize: "14px",
+    fontWeight: "bold",
+    color: "#374151",
+  } as React.CSSProperties,
+
+  compressionIcon: {
+    fontSize: "16px",
+    animation: "spin 2s linear infinite",
+  } as React.CSSProperties,
+
+  progressBar: {
+    width: "100%",
+    height: "8px",
+    backgroundColor: "#E5E7EB",
+    borderRadius: "4px",
+    overflow: "hidden",
+    marginBottom: "8px",
+  } as React.CSSProperties,
+
+  progressFill: {
+    height: "100%",
+    backgroundColor: "#3B82F6",
+    transition: "width 0.3s ease",
+  } as React.CSSProperties,
+
+  compressionDetails: {
+    display: "flex",
+    justifyContent: "space-between",
+    fontSize: "12px",
+    color: "#6B7280",
   } as React.CSSProperties,
 };
 

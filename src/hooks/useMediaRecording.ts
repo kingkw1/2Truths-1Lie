@@ -6,12 +6,21 @@
 import { useState, useCallback, useRef } from 'react';
 import { useDispatch } from 'react-redux';
 import { MediaCapture, MediaType } from '../types/challenge';
+import { 
+  MediaCompressor, 
+  CompressionOptions, 
+  CompressionProgress,
+  CompressionResult 
+} from '../utils/mediaCompression';
 
 interface UseMediaRecordingOptions {
   maxDuration?: number;
   allowedTypes?: MediaType[];
   onRecordingComplete?: (mediaData: MediaCapture) => void;
   onRecordingError?: (error: string) => void;
+  enableCompression?: boolean;
+  compressionOptions?: CompressionOptions;
+  onCompressionProgress?: (progress: CompressionProgress) => void;
 }
 
 interface MediaRecordingState {
@@ -22,6 +31,8 @@ interface MediaRecordingState {
   hasPermission: boolean;
   error: string | null;
   recordedMedia: MediaCapture | null;
+  isCompressing: boolean;
+  compressionProgress: CompressionProgress | null;
 }
 
 export const useMediaRecording = (options: UseMediaRecordingOptions = {}) => {
@@ -30,6 +41,9 @@ export const useMediaRecording = (options: UseMediaRecordingOptions = {}) => {
     allowedTypes = ['video', 'audio', 'text'],
     onRecordingComplete,
     onRecordingError,
+    enableCompression = true,
+    compressionOptions = {},
+    onCompressionProgress,
   } = options;
 
   const dispatch = useDispatch();
@@ -42,12 +56,15 @@ export const useMediaRecording = (options: UseMediaRecordingOptions = {}) => {
     hasPermission: false,
     error: null,
     recordedMedia: null,
+    isCompressing: false,
+    compressionProgress: null,
   });
 
   const mediaRecorderRef = useRef<MediaRecorder | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const chunksRef = useRef<Blob[]>([]);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
+  const compressorRef = useRef<MediaCompressor | null>(null);
 
   // Check media device support
   const checkMediaSupport = useCallback(async (type: MediaType): Promise<boolean> => {
@@ -171,22 +188,103 @@ export const useMediaRecording = (options: UseMediaRecordingOptions = {}) => {
         }
       };
 
-      mediaRecorderRef.current.onstop = () => {
+      mediaRecorderRef.current.onstop = async () => {
         const blob = new Blob(chunksRef.current, { type: mimeType });
-        const url = URL.createObjectURL(blob);
         
-        const mediaData: MediaCapture = {
-          type,
-          url,
-          duration: state.duration,
-          fileSize: blob.size,
-          mimeType,
-        };
+        // Check if compression is needed and enabled
+        if (enableCompression && (type === 'video' || type === 'audio')) {
+          try {
+            setState(prev => ({ 
+              ...prev, 
+              isCompressing: true,
+              compressionProgress: { stage: 'analyzing', progress: 0 }
+            }));
 
-        setState(prev => ({ ...prev, recordedMedia: mediaData }));
-        
-        if (onRecordingComplete) {
-          onRecordingComplete(mediaData);
+            // Initialize compressor
+            if (!compressorRef.current) {
+              compressorRef.current = new MediaCompressor();
+            }
+
+            // Compress the media
+            const compressionResult = await compressorRef.current.compressMedia(
+              blob,
+              compressionOptions,
+              (progress) => {
+                setState(prev => ({ 
+                  ...prev, 
+                  compressionProgress: progress 
+                }));
+                if (onCompressionProgress) {
+                  onCompressionProgress(progress);
+                }
+              }
+            );
+
+            const url = URL.createObjectURL(compressionResult.compressedBlob);
+            
+            const mediaData: MediaCapture = {
+              type,
+              url,
+              duration: state.duration,
+              fileSize: compressionResult.compressedSize,
+              mimeType,
+              originalSize: compressionResult.originalSize,
+              compressionRatio: compressionResult.compressionRatio,
+              compressionTime: compressionResult.processingTime,
+            };
+
+            setState(prev => ({ 
+              ...prev, 
+              recordedMedia: mediaData,
+              isCompressing: false,
+              compressionProgress: null
+            }));
+            
+            if (onRecordingComplete) {
+              onRecordingComplete(mediaData);
+            }
+          } catch (error) {
+            // Fallback to uncompressed if compression fails
+            console.warn('Compression failed, using original:', error);
+            
+            const url = URL.createObjectURL(blob);
+            const mediaData: MediaCapture = {
+              type,
+              url,
+              duration: state.duration,
+              fileSize: blob.size,
+              mimeType,
+            };
+
+            setState(prev => ({ 
+              ...prev, 
+              recordedMedia: mediaData,
+              isCompressing: false,
+              compressionProgress: null,
+              error: 'Compression failed, using original quality'
+            }));
+            
+            if (onRecordingComplete) {
+              onRecordingComplete(mediaData);
+            }
+          }
+        } else {
+          // No compression needed or disabled
+          const url = URL.createObjectURL(blob);
+          
+          const mediaData: MediaCapture = {
+            type,
+            url,
+            duration: state.duration,
+            fileSize: blob.size,
+            mimeType,
+          };
+
+          setState(prev => ({ ...prev, recordedMedia: mediaData }));
+          
+          if (onRecordingComplete) {
+            onRecordingComplete(mediaData);
+          }
         }
       };
 
@@ -253,6 +351,39 @@ export const useMediaRecording = (options: UseMediaRecordingOptions = {}) => {
     }));
   }, [state.isRecording]);
 
+  // Cancel recording (stops without saving)
+  const cancelRecording = useCallback(() => {
+    if (timerRef.current) {
+      clearInterval(timerRef.current);
+      timerRef.current = null;
+    }
+
+    if (mediaRecorderRef.current && state.isRecording) {
+      // Stop the recorder but don't trigger onstop callback
+      const originalOnStop = mediaRecorderRef.current.onstop;
+      mediaRecorderRef.current.onstop = null;
+      mediaRecorderRef.current.stop();
+      mediaRecorderRef.current.onstop = originalOnStop;
+    }
+
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach(track => track.stop());
+      streamRef.current = null;
+    }
+
+    // Clear chunks to prevent accidental saving
+    chunksRef.current = [];
+
+    setState(prev => ({ 
+      ...prev, 
+      isRecording: false, 
+      isPaused: false,
+      duration: 0,
+      error: null,
+      recordedMedia: null
+    }));
+  }, [state.isRecording]);
+
   // Pause/Resume recording
   const togglePause = useCallback(() => {
     if (!mediaRecorderRef.current) return;
@@ -310,6 +441,8 @@ export const useMediaRecording = (options: UseMediaRecordingOptions = {}) => {
       hasPermission: false,
       error: null,
       recordedMedia: null,
+      isCompressing: false,
+      compressionProgress: null,
     });
   }, [stopRecording]);
 
@@ -324,6 +457,10 @@ export const useMediaRecording = (options: UseMediaRecordingOptions = {}) => {
     if (state.recordedMedia?.url && state.recordedMedia.url.startsWith('blob:')) {
       URL.revokeObjectURL(state.recordedMedia.url);
     }
+    if (compressorRef.current) {
+      compressorRef.current.dispose();
+      compressorRef.current = null;
+    }
   }, [state.recordedMedia]);
 
   return {
@@ -333,6 +470,7 @@ export const useMediaRecording = (options: UseMediaRecordingOptions = {}) => {
     // Actions
     startRecording,
     stopRecording,
+    cancelRecording,
     togglePause,
     completeTextRecording,
     resetRecording,

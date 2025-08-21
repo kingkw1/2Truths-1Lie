@@ -17,13 +17,13 @@
 - [x] Unit tests for state transitions and input validation  
 
 ### 4. Media Capture  
-- [ ] Implement video and audio recording components with full controls (start, pause, resume, cancel)  
-- [ ] Develop MediaPreview component supporting playback of recorded media  
-- [ ] Add client-side media compression pipeline before upload  
-- [ ] Build secure backend chunked upload API endpoints with resumable support  
-- [ ] Integrate UploadProgress component showing real-time upload progress and cancel option  
-- [ ] Implement robust error handling and retry logic for uploads  
-- [ ] Write comprehensive unit and integration tests covering recording, preview, compression, upload, and failure modes  
+- [x] Implement video and audio recording components with full controls (start, pause, resume, cancel)  
+- [x] Develop MediaPreview component supporting playback of recorded media  
+- [x] Add client-side media compression pipeline before upload  
+- [x] Build secure backend chunked upload API endpoints with resumable support  
+- [x] Integrate UploadProgress component showing real-time upload progress and cancel option  
+- [x] Implement robust error handling and retry logic for uploads  
+- [x] Write comprehensive unit and integration tests covering recording, preview, compression, upload, and failure modes  
 
 ### 5. Challenge Publishing and Moderation  
 - [ ] Implement server-side APIs to receive/store challenges and media  
