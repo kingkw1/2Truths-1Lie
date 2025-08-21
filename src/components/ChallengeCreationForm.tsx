@@ -27,8 +27,24 @@ export const ChallengeCreationForm: React.FC<ChallengeCreationFormProps> = ({
   onCancel,
 }) => {
   const dispatch = useDispatch();
+  const challengeCreationState = useSelector(
+    (state: RootState) => state.challengeCreation,
+  );
+
+  // Safety check for Redux state
+  if (!challengeCreationState) {
+    return (
+      <div style={styles.container}>
+        <div style={{ textAlign: "center", padding: "40px" }}>
+          <h3>Loading Challenge Creation...</h3>
+          <p>Initializing Redux store...</p>
+        </div>
+      </div>
+    );
+  }
+
   const { currentChallenge, validationErrors, isSubmitting, previewMode } =
-    useSelector((state: RootState) => state.challengeCreation);
+    challengeCreationState;
 
   const [localStatements, setLocalStatements] = useState<string[]>([
     "",
@@ -43,47 +59,45 @@ export const ChallengeCreationForm: React.FC<ChallengeCreationFormProps> = ({
     dispatch(startNewChallenge());
   }, [dispatch]);
 
-  // Sync local state with Redux store
+  // Sync local state with Redux store (simplified to prevent conflicts)
   useEffect(() => {
-    if (currentChallenge.statements && currentChallenge.statements.length > 0) {
-      // Ensure we always have 3 statement slots
-      const texts = ["", "", ""];
-      currentChallenge.statements.forEach((stmt, index) => {
-        if (index < 3) {
-          texts[index] = stmt.text;
-        }
-      });
-      setLocalStatements(texts);
-
+    if (currentChallenge.statements && currentChallenge.statements.length === 3) {
       const lieIndex = currentChallenge.statements.findIndex(
-        (stmt) => stmt.isLie,
+        (stmt) => stmt && stmt.isLie,
       );
       setSelectedLieIndex(lieIndex >= 0 ? lieIndex : null);
     }
   }, [currentChallenge.statements]);
 
+  // Debug logging (removed for performance)
+
   const handleStatementChange = (index: number, text: string) => {
-    // Enforce character limit
-    const limitedText = text.length > 280 ? text.substring(0, 280) : text;
+    try {
+      // Enforce character limit
+      const limitedText = text.length > 280 ? text.substring(0, 280) : text;
 
-    const newStatements = [...localStatements];
-    newStatements[index] = limitedText;
-    setLocalStatements(newStatements);
+      // Update local state immediately for responsive UI
+      const newStatements = [...localStatements];
+      newStatements[index] = limitedText;
+      setLocalStatements(newStatements);
 
-    // Update Redux store
-    const statement: Statement = {
-      id: `stmt_${Date.now()}_${index}`,
-      text: limitedText.trim(),
-      isLie: selectedLieIndex === index,
-      confidence: 0,
-    };
+      // Update Redux store - keep spaces intact, only trim for validation
+      const statement: Statement = {
+        id: `stmt_${Date.now()}_${index}`,
+        text: limitedText, // Don't trim here - preserve spaces
+        isLie: selectedLieIndex === index,
+        confidence: 0,
+      };
 
-    dispatch(updateStatement({ index, statement }));
+      dispatch(updateStatement({ index, statement }));
 
-    // Clear validation errors when user starts typing
-    if (validationErrors.length > 0) {
-      dispatch(clearValidationErrors());
-      setShowValidation(false);
+      // Clear validation errors when user starts typing
+      if (validationErrors.length > 0) {
+        dispatch(clearValidationErrors());
+        setShowValidation(false);
+      }
+    } catch (error) {
+      console.error('Error updating statement:', error);
     }
   };
 

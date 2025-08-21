@@ -10,6 +10,8 @@ export const ChallengeCreationDemo: React.FC = () => {
   const [showForm, setShowForm] = useState(false);
   const [submissionResult, setSubmissionResult] = useState<string | null>(null);
 
+  // Debug logging removed for cleaner console
+
   const handleStartChallenge = () => {
     setShowForm(true);
     setSubmissionResult(null);

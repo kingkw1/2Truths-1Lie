@@ -20,7 +20,11 @@ export interface ChallengeCreationState {
 const initialState: ChallengeCreationState = {
   currentChallenge: {
     creatorId: '',
-    statements: [],
+    statements: [
+      { id: 'stmt_1', text: '', isLie: false, confidence: 0 },
+      { id: 'stmt_2', text: '', isLie: false, confidence: 0 },
+      { id: 'stmt_3', text: '', isLie: false, confidence: 0 },
+    ],
     mediaData: [],
     isPublic: true,
   },
@@ -40,7 +44,11 @@ const challengeCreationSlice = createSlice({
     startNewChallenge: (state) => {
       state.currentChallenge = {
         creatorId: '',
-        statements: [],
+        statements: [
+          { id: 'stmt_1', text: '', isLie: false, confidence: 0 },
+          { id: 'stmt_2', text: '', isLie: false, confidence: 0 },
+          { id: 'stmt_3', text: '', isLie: false, confidence: 0 },
+        ],
         mediaData: [],
         isPublic: true,
       };
