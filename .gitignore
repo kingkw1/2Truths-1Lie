@@ -65,3 +65,6 @@ android/build/
 # Firebase or other SDK config history/cache
 firebase-debug.log
 .firebaserc
+
+# Python
+__pycache__/
