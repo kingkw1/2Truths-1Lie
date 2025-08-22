@@ -26,18 +26,6 @@ export const App: React.FC = () => {
         🎯 Two Truths and a Lie Game
       </h1>
 
-      <div style={{
-        padding: "20px",
-        backgroundColor: "#D1FAE5",
-        border: "2px solid #10B981",
-        borderRadius: "8px",
-        textAlign: "center",
-        margin: "20px 0",
-        fontSize: "16px"
-      }}>
-        ✅ App is now working! The challenge creation form is below.
-      </div>
-
       {/* Text input is working correctly - test component removed */}
 
       <ErrorBoundary
