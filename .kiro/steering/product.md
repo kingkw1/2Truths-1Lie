@@ -16,7 +16,7 @@ Create an engaging, social, gamified mobile and web application based on the cla
 - Early adopters of AI-driven games and emotion analytics  
 
 **Key Features:**  
-- Async social gameplay: users post 3 statements (2 truths, 1 lie) with recordings (video/audio/text).  
+- Async social gameplay: users post 3 statements (2 truths, 1 lie) with video recordings.  
 - Community guesses the lie; points awarded for correct guesses and deceptive skill.  
 - Real-time emotion analysis drives feedback overlays and scoring metrics.  
 - Monetization via cosmetic unlocks (voice changers, avatars), premium analytics, and additional game features.  

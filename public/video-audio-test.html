@@ -1,0 +1,398 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Video+Audio Recording Test</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        .container {
+            border: 2px solid #e5e7eb;
+            border-radius: 12px;
+            padding: 20px;
+            margin: 20px 0;
+        }
+        
+        button {
+            background-color: #3b82f6;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 6px;
+            cursor: pointer;
+            margin: 10px;
+            font-size: 16px;
+        }
+        
+        button:hover {
+            background-color: #2563eb;
+        }
+        
+        button:disabled {
+            background-color: #9ca3af;
+            cursor: not-allowed;
+        }
+        
+        video {
+            width: 100%;
+            max-width: 640px;
+            border: 1px solid #ccc;
+            border-radius: 8px;
+            margin: 10px 0;
+        }
+        
+        .log {
+            background-color: #f3f4f6;
+            border: 1px solid #d1d5db;
+            border-radius: 4px;
+            padding: 10px;
+            font-family: monospace;
+            font-size: 12px;
+            height: 200px;
+            overflow-y: scroll;
+            margin: 10px 0;
+        }
+        
+        .status {
+            padding: 8px 12px;
+            border-radius: 4px;
+            margin: 10px 0;
+        }
+        
+        .status.success { background-color: #d1fae5; color: #065f46; }
+        .status.error { background-color: #fee2e2; color: #991b1b; }
+        .status.warning { background-color: #fef3c7; color: #92400e; }
+        .status.info { background-color: #dbeafe; color: #1e40af; }
+    </style>
+</head>
+<body>
+    <h1>🎥 Video+Audio Recording Test</h1>
+    <p>This page tests the core video+audio recording functionality without React overhead.</p>
+    
+    <div class="container">
+        <h2>Test Controls</h2>
+        <button id="startBtn">Start Video+Audio Recording</button>
+        <button id="stopBtn" disabled>Stop Recording</button>
+        <button id="playBtn" disabled>Play Recording</button>
+        <button id="clearBtn">Clear Log</button>
+    </div>
+    
+    <div class="container">
+        <h2>Live Preview</h2>
+        <video id="preview" autoplay muted playsinline></video>
+        <div id="status" class="status info">Ready to start recording</div>
+    </div>
+    
+    <div class="container">
+        <h2>Recorded Video</h2>
+        <video id="recorded" controls></video>
+        <div id="recordingInfo"></div>
+    </div>
+    
+    <div class="container">
+        <h2>Debug Log</h2>
+        <div id="log" class="log"></div>
+    </div>
+
+    <script>
+        // Enhanced logging
+        function log(message, type = 'info') {
+            const timestamp = new Date().toLocaleTimeString();
+            const logEl = document.getElementById('log');
+            const statusEl = document.getElementById('status');
+            
+            const entry = `[${timestamp}] ${message}`;
+            logEl.innerHTML += entry + '\n';
+            logEl.scrollTop = logEl.scrollHeight;
+            
+            // Update status
+            statusEl.textContent = message;
+            statusEl.className = `status ${type}`;
+            
+            // Also log to console with emoji
+            const emoji = {
+                'info': 'ℹ️',
+                'success': '✅',
+                'error': '❌',
+                'warning': '⚠️'
+            }[type] || 'ℹ️';
+            
+            console.log(`${emoji} ${message}`);
+        }
+
+        // Global variables
+        let mediaRecorder = null;
+        let recordedChunks = [];
+        let stream = null;
+        let recordingStartTime = null;
+        let recordingEndTime = null;
+
+        // DOM elements
+        const startBtn = document.getElementById('startBtn');
+        const stopBtn = document.getElementById('stopBtn');
+        const playBtn = document.getElementById('playBtn');
+        const clearBtn = document.getElementById('clearBtn');
+        const preview = document.getElementById('preview');
+        const recorded = document.getElementById('recorded');
+        const recordingInfo = document.getElementById('recordingInfo');
+
+        // Test the exact constraints and configuration from our React component
+        async function startRecording() {
+            try {
+                log('Starting video+audio recording test...', 'info');
+                
+                // Use the exact same constraints as our React component
+                const constraints = {
+                    video: { 
+                        width: { ideal: 640 }, 
+                        height: { ideal: 480 },
+                        facingMode: 'user'
+                    }, 
+                    audio: {
+                        echoCancellation: true,
+                        noiseSuppression: true,
+                        autoGainControl: true
+                    }
+                };
+                
+                log(`Requesting getUserMedia with constraints: ${JSON.stringify(constraints)}`, 'info');
+                
+                // Get the media stream
+                stream = await navigator.mediaDevices.getUserMedia(constraints);
+                
+                // Validate stream composition
+                const videoTracks = stream.getVideoTracks();
+                const audioTracks = stream.getAudioTracks();
+                
+                log(`Stream obtained: ${videoTracks.length} video tracks, ${audioTracks.length} audio tracks`, 'success');
+                
+                // Log track details
+                videoTracks.forEach((track, index) => {
+                    const settings = track.getSettings();
+                    log(`Video track ${index}: ${track.label} - ${settings.width}x${settings.height}@${settings.frameRate}fps`, 'info');
+                });
+                
+                audioTracks.forEach((track, index) => {
+                    const settings = track.getSettings();
+                    log(`Audio track ${index}: ${track.label} - ${settings.sampleRate}Hz, ${settings.channelCount} channels`, 'info');
+                });
+                
+                // Connect to preview
+                preview.srcObject = stream;
+                
+                // Test the exact MIME types our React component uses
+                const mimeTypes = [
+                    'video/webm;codecs=vp8,opus',
+                    'video/mp4;codecs=h264,aac',
+                    'video/webm',
+                    'video/mp4'
+                ];
+                
+                let selectedMimeType = 'video/webm'; // fallback
+                for (const mimeType of mimeTypes) {
+                    const isSupported = MediaRecorder.isTypeSupported(mimeType);
+                    log(`MIME type ${mimeType}: ${isSupported ? 'SUPPORTED' : 'not supported'}`, isSupported ? 'success' : 'warning');
+                    if (isSupported && selectedMimeType === 'video/webm') {
+                        selectedMimeType = mimeType;
+                        log(`Selected MIME type: ${mimeType}`, 'success');
+                    }
+                }
+                
+                // Create MediaRecorder with the same options as our React component
+                const options = {
+                    mimeType: selectedMimeType,
+                    audioBitsPerSecond: 128000,
+                    videoBitsPerSecond: 2500000,
+                };
+                
+                log(`Creating MediaRecorder with options: ${JSON.stringify(options)}`, 'info');
+                
+                try {
+                    mediaRecorder = new MediaRecorder(stream, options);
+                    log('MediaRecorder created successfully with video+audio support', 'success');
+                } catch (error) {
+                    log(`Failed to create MediaRecorder with options: ${error.message}`, 'warning');
+                    log('Trying with minimal WebM config...', 'info');
+                    try {
+                        mediaRecorder = new MediaRecorder(stream, { mimeType: 'video/webm' });
+                        log('MediaRecorder created with minimal WebM config', 'success');
+                    } catch (fallbackError) {
+                        log(`Failed with WebM, using browser default: ${fallbackError.message}`, 'warning');
+                        mediaRecorder = new MediaRecorder(stream);
+                        log('MediaRecorder created with browser defaults', 'success');
+                    }
+                }
+                
+                // Reset chunks
+                recordedChunks = [];
+                
+                // Set up event handlers
+                mediaRecorder.ondataavailable = (event) => {
+                    if (event.data.size > 0) {
+                        recordedChunks.push(event.data);
+                        log(`Data chunk received: ${event.data.size} bytes, type: ${event.data.type}`, 'info');
+                    }
+                };
+                
+                mediaRecorder.onstop = () => {
+                    log(`Recording stopped. Chunks: ${recordedChunks.length}, Total size: ${recordedChunks.reduce((sum, chunk) => sum + chunk.size, 0)} bytes`, 'success');
+                    
+                    // Create blob using MediaRecorder's actual MIME type
+                    const mimeType = mediaRecorder.mimeType || 'video/webm';
+                    const blob = new Blob(recordedChunks, { type: mimeType });
+                    
+                    log(`Created blob: ${blob.size} bytes, type: ${blob.type}`, 'success');
+                    
+                    // Create URL and set up playback
+                    const url = URL.createObjectURL(blob);
+                    recorded.src = url;
+                    recorded.load();
+                    
+                    // Enable play button
+                    playBtn.disabled = false;
+                    
+                    // Show recording info
+                    recordingInfo.innerHTML = `
+                        <p><strong>Recording Details:</strong></p>
+                        <p>Size: ${(blob.size / 1024 / 1024).toFixed(2)} MB</p>
+                        <p>MIME Type: ${blob.type}</p>
+                        <p>Chunks: ${recordedChunks.length}</p>
+                        <p>Duration: ${recorded.duration && isFinite(recorded.duration) && recorded.duration > 0 ? recorded.duration.toFixed(2) + 's' : 'Loading...'}</p>
+                    `;
+                    
+                    // Test audio detection
+                    recorded.addEventListener('loadedmetadata', () => {
+                        const duration = recorded.duration;
+                        const hasValidDuration = duration && isFinite(duration) && duration > 0;
+                        
+                        // Calculate actual recording duration as fallback
+                        let actualRecordingDuration = null;
+                        if (recordingStartTime && recordingEndTime) {
+                            actualRecordingDuration = (recordingEndTime - recordingStartTime) / 1000;
+                        } else if (recordingStartTime) {
+                            actualRecordingDuration = (Date.now() - recordingStartTime) / 1000;
+                        }
+                        
+                        // Format duration properly
+                        let durationText;
+                        if (hasValidDuration) {
+                            durationText = `${duration.toFixed(2)}s`;
+                        } else if (actualRecordingDuration) {
+                            durationText = `~${actualRecordingDuration.toFixed(2)}s (estimated)`;
+                        } else if (duration === Infinity) {
+                            durationText = 'Unknown (live stream)';
+                        } else if (isNaN(duration)) {
+                            durationText = 'Unknown (NaN)';
+                        } else {
+                            durationText = `Unknown (${duration})`;
+                        }
+                        
+                        log(`Video metadata loaded - Duration: ${durationText} (${hasValidDuration ? 'VALID' : 'INVALID'})`, hasValidDuration ? 'success' : 'warning');
+                        if (actualRecordingDuration) {
+                            log(`Actual recording time: ${actualRecordingDuration.toFixed(2)}s`, 'info');
+                        }
+                        log(`Video dimensions: ${recorded.videoWidth}x${recorded.videoHeight}`, 'info');
+                        
+                        // Audio detection methods
+                        const hasAudioTracks = 'audioTracks' in recorded && recorded.audioTracks?.length > 0;
+                        const hasMozAudio = recorded.mozHasAudio;
+                        const hasWebkitAudio = recorded.webkitAudioDecodedByteCount > 0;
+                        
+                        log(`Audio detection:`, 'info');
+                        log(`  - audioTracks: ${hasAudioTracks ? recorded.audioTracks.length : 'not supported'}`, hasAudioTracks ? 'success' : 'warning');
+                        log(`  - mozHasAudio: ${hasMozAudio || 'not supported'}`, hasMozAudio ? 'success' : 'warning');
+                        log(`  - webkitAudioDecodedByteCount: ${recorded.webkitAudioDecodedByteCount || 'not supported'}`, hasWebkitAudio ? 'success' : 'warning');
+                        
+                        if (hasAudioTracks || hasMozAudio || hasWebkitAudio) {
+                            log('✅ Audio tracks detected in video!', 'success');
+                        } else {
+                            log('⚠️ No audio tracks detected - but may be browser API limitation', 'warning');
+                        }
+                        
+                        // Update recording info with duration
+                        recordingInfo.innerHTML = recordingInfo.innerHTML.replace(
+                            'Duration: Loading...',
+                            `Duration: ${durationText}`
+                        );
+                    });
+                    
+                    // Clean up
+                    if (stream) {
+                        stream.getTracks().forEach(track => track.stop());
+                        preview.srcObject = null;
+                    }
+                };
+                
+                // Start recording
+                recordingStartTime = Date.now();
+                mediaRecorder.start(1000); // Request data every second
+                log('Recording started!', 'success');
+                
+                // Update UI
+                startBtn.disabled = true;
+                stopBtn.disabled = false;
+                playBtn.disabled = true;
+                
+            } catch (error) {
+                log(`Error starting recording: ${error.message}`, 'error');
+                console.error('Recording error:', error);
+            }
+        }
+
+        function stopRecording() {
+            if (mediaRecorder && mediaRecorder.state === 'recording') {
+                log('Stopping recording...', 'info');
+                recordingEndTime = Date.now();
+                mediaRecorder.stop();
+                
+                // Update UI
+                startBtn.disabled = false;
+                stopBtn.disabled = true;
+            }
+        }
+
+        function playRecording() {
+            if (recorded.src) {
+                log('Playing recorded video...', 'info');
+                recorded.play().catch(error => {
+                    log(`Error playing recording: ${error.message}`, 'error');
+                });
+            }
+        }
+
+        function clearLog() {
+            document.getElementById('log').innerHTML = '';
+            log('Log cleared', 'info');
+        }
+
+        // Event listeners
+        startBtn.addEventListener('click', startRecording);
+        stopBtn.addEventListener('click', stopRecording);
+        playBtn.addEventListener('click', playRecording);
+        clearBtn.addEventListener('click', clearLog);
+
+        // Initial log
+        log('Video+Audio Recording Test Page Loaded', 'success');
+        log('This page tests the core functionality that should work in the React component', 'info');
+        
+        // Test browser support
+        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+            log('❌ getUserMedia not supported in this browser', 'error');
+        } else {
+            log('✅ getUserMedia supported', 'success');
+        }
+        
+        if (typeof MediaRecorder === 'undefined') {
+            log('❌ MediaRecorder not supported in this browser', 'error');
+        } else {
+            log('✅ MediaRecorder supported', 'success');
+        }
+    </script>
+</body>
+</html>

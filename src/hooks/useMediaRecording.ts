@@ -203,7 +203,8 @@ export const useMediaRecording = (options: UseMediaRecordingOptions = {}) => {
     }
 
     try {
-      const mimeType = getSupportedVideoMimeType(); // Always use video MIME type
+      const mimeType = getSupportedVideoMimeType(); // Get the best MIME type
+      console.log(`🎯 Selected video MIME type: ${mimeType}`);
       
       // Verify stream has both video and audio tracks
       const videoTracks = stream.getVideoTracks();
@@ -278,64 +279,66 @@ export const useMediaRecording = (options: UseMediaRecordingOptions = {}) => {
         }
       }
       
-      // Create MediaRecorder with explicit options for better audio capture
-      let options: MediaRecorderOptions = {};
+      // Create MediaRecorder with optimized options for reliable video+audio capture
+      console.log('🎯 Configuring MediaRecorder for reliable video+audio recording...');
       
-      // Try with MIME type first
-      // Try a more aggressive approach to ensure audio is recorded
-      console.log('🎯 Configuring MediaRecorder for reliable audio recording...');
-      
-      // Force audio inclusion by using specific options
-      if (MediaRecorder.isTypeSupported(mimeType)) {
-        console.log(`✅ Using MIME type: ${mimeType}`);
-        
-        // Try with minimal audio bitrate to ensure compatibility
-        const audioOptimizedOptions = {
-          mimeType,
-          audioBitsPerSecond: 32000, // Very low bitrate for maximum compatibility
-        };
-        
-        try {
-          // Test if audio bitrate is supported
-          const testRecorder = new MediaRecorder(stream, audioOptimizedOptions);
-          testRecorder.stop();
-          options = audioOptimizedOptions;
-          console.log('✅ Using audio-optimized options with 32kbps audio');
-        } catch (error) {
-          console.warn('Audio bitrate not supported, trying MIME type only');
-          options = { mimeType };
-        }
-      } else {
-        console.warn(`⚠️ MIME type ${mimeType} not supported, using browser default`);
-        options = {}; // Let browser choose
-      }
-      
-      console.log('🎬 Final MediaRecorder options:', options);
-      
-      // Final validation: ensure stream has audio tracks
-      const streamAudioTracks = stream.getAudioTracks();
+      // Final validation: ensure stream has both video and audio tracks
       const streamVideoTracks = stream.getVideoTracks();
-      
-      if (streamAudioTracks.length === 0) {
-        console.error('❌ No audio tracks in stream - this will cause silent recordings!');
-        throw new Error('No audio tracks available for recording');
-      }
+      const streamAudioTracks = stream.getAudioTracks();
       
       if (streamVideoTracks.length === 0) {
-        console.error('❌ No video tracks in stream - this will cause video-less recordings!');
+        console.error('❌ No video tracks in stream');
         throw new Error('No video tracks available for recording');
+      }
+      
+      if (streamAudioTracks.length === 0) {
+        console.warn('⚠️ No audio tracks in stream - audio will be missing');
+        // Don't throw error, allow video-only recording as fallback
       }
       
       console.log(`✅ Stream validation passed: ${streamVideoTracks.length} video, ${streamAudioTracks.length} audio tracks`);
       
+      // Use a proven MediaRecorder configuration that works reliably
+      let options: MediaRecorderOptions = {};
+      
+      // Try the most compatible video+audio format first
+      const preferredMimeTypes = [
+        'video/webm;codecs=vp8,opus',  // Most widely supported
+        'video/mp4;codecs=h264,aac',   // Good browser support
+        'video/webm',                  // Generic WebM fallback
+        'video/mp4'                    // Generic MP4 fallback
+      ];
+      
+      for (const mimeType of preferredMimeTypes) {
+        if (MediaRecorder.isTypeSupported(mimeType)) {
+          options = {
+            mimeType,
+            audioBitsPerSecond: 128000,    // 128 kbps for good audio quality
+            videoBitsPerSecond: 2500000,   // 2.5 Mbps for good video quality
+          };
+          console.log(`✅ Using MIME type: ${mimeType} with optimized bitrates`);
+          break;
+        }
+      }
+      
+      console.log('🎬 Final MediaRecorder options:', options);
+      
+      // Create MediaRecorder with error handling
       try {
         mediaRecorderRef.current = new MediaRecorder(stream, options);
-        console.log('✅ MediaRecorder created successfully');
+        console.log('✅ MediaRecorder created successfully with video+audio support');
       } catch (error) {
-        console.error('❌ Failed to create MediaRecorder with options, trying without options:', error);
-        // Fallback: create without any options
-        mediaRecorderRef.current = new MediaRecorder(stream);
-        console.log('✅ MediaRecorder created with browser defaults');
+        console.warn('⚠️ Failed to create MediaRecorder with options, trying minimal config:', error);
+        try {
+          // Fallback to minimal options
+          mediaRecorderRef.current = new MediaRecorder(stream, { mimeType: 'video/webm' });
+          console.log('✅ MediaRecorder created with minimal WebM config');
+        } catch (fallbackError) {
+          console.warn('⚠️ Failed with WebM, trying browser default:', fallbackError);
+          // Final fallback: no options
+          mediaRecorderRef.current = new MediaRecorder(stream);
+          console.log('✅ MediaRecorder created with browser defaults');
+        }
       }
       chunksRef.current = [];
 
@@ -373,67 +376,11 @@ export const useMediaRecording = (options: UseMediaRecordingOptions = {}) => {
         }
         
         // Create blob with explicit MIME type to ensure proper format
-        // Use the MIME type from the first chunk if available, otherwise use recording MIME type
-        let blobMimeType = mimeType || 'video/webm;codecs=vp8,opus';
+        const recorderMimeType = mediaRecorderRef.current?.mimeType || 'video/webm';
+        console.log(`🎬 Creating blob with MIME type: ${recorderMimeType}`);
         
-        if (chunksRef.current.length > 0 && chunksRef.current[0].type) {
-          blobMimeType = chunksRef.current[0].type;
-          console.log(`🎬 Using chunk MIME type: ${blobMimeType}`);
-        } else {
-          console.log(`🎬 Using fallback MIME type: ${blobMimeType}`);
-        }
-        
-        let blob = new Blob(chunksRef.current, { 
-          type: blobMimeType
-        });
-        
-        // Apply compatibility fixes based on container type
-        if (blobMimeType.includes('webm')) {
-          console.log('🔧 Applying WebM compatibility fixes...');
-          
-          // For WebM, try different codec specifications
-          const webmVariants = [
-            blobMimeType, // Use original first
-            'video/webm;codecs=vp8,opus',
-            'video/webm;codecs=vp9,opus', 
-            'video/webm',
-          ];
-          
-          for (const variant of webmVariants) {
-            try {
-              const testBlob = new Blob(chunksRef.current, { type: variant });
-              if (testBlob.size > 1000) {
-                console.log(`✅ Using WebM variant: ${variant}`);
-                blob = testBlob;
-                break;
-              }
-            } catch (error) {
-              console.warn(`WebM variant ${variant} failed:`, error);
-            }
-          }
-        } else if (blobMimeType.includes('mp4')) {
-          console.log('🔧 Applying MP4 compatibility fixes...');
-          
-          // For MP4, ensure proper codec specification
-          const mp4Variants = [
-            blobMimeType, // Use original first
-            'video/mp4;codecs=h264,aac', // Most compatible
-            'video/mp4', // Generic fallback
-          ];
-          
-          for (const variant of mp4Variants) {
-            try {
-              const testBlob = new Blob(chunksRef.current, { type: variant });
-              if (testBlob.size > 1000) {
-                console.log(`✅ Using MP4 variant: ${variant}`);
-                blob = testBlob;
-                break;
-              }
-            } catch (error) {
-              console.warn(`MP4 variant ${variant} failed:`, error);
-            }
-          }
-        }
+        // Use the MediaRecorder's actual MIME type for maximum compatibility
+        let blob = new Blob(chunksRef.current, { type: recorderMimeType });
         
         // Verify the blob has content
         if (blob.size === 0) {
@@ -474,7 +421,7 @@ export const useMediaRecording = (options: UseMediaRecordingOptions = {}) => {
           
           // Additional audio detection methods
           const hasAudioContext = testVideo.volume !== undefined; // Basic audio capability
-          const hasAudioCodec = blobMimeType.includes('opus') || blobMimeType.includes('aac');
+          const hasAudioCodec = blob.type.includes('opus') || blob.type.includes('aac');
           const hasAudioChunks = chunksRef.current.some(chunk => 
             chunk.type.includes('opus') || chunk.type.includes('aac')
           );
@@ -929,4 +876,3 @@ function getSupportedAudioMimeType(): string {
   return 'audio/webm'; // Fallback
 }
 
-export default useMediaRecording;

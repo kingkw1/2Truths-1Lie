@@ -130,7 +130,7 @@ export const MediaRecorder: React.FC<MediaRecorderProps> = ({
         console.log('Stream tracks:', stream.getTracks().map(t => `${t.kind}: ${t.label}`));
         
         videoRef.current.srcObject = stream;
-        videoRef.current.play().catch(console.error);
+        videoRef.current.play()?.catch?.(console.error);
         
         // Add event listeners to debug video element
         const video = videoRef.current;
@@ -187,7 +187,7 @@ export const MediaRecorder: React.FC<MediaRecorderProps> = ({
       </div>
 
       {/* Primary Video Recording Button */}
-      {!isRecording && !isCompressing && !mediaType && (
+      {!isRecording && !isCompressing && !mediaType && allowedTypes.includes('video') && (
         <div style={styles.primaryRecordingSection}>
           <button
             onClick={() => startRecording("video")}
@@ -212,6 +212,23 @@ export const MediaRecorder: React.FC<MediaRecorderProps> = ({
               <span>Use Text Only</span>
             </button>
           </div>
+        </div>
+      )}
+
+      {/* Text-Only Mode (when video is not allowed) */}
+      {!isRecording && !isCompressing && !mediaType && !allowedTypes.includes('video') && allowedTypes.includes('text') && (
+        <div style={styles.primaryRecordingSection}>
+          <button
+            onClick={() => startRecording("text")}
+            style={styles.primaryVideoButton}
+            disabled={disabled}
+          >
+            <span style={styles.primaryVideoIcon}>📝</span>
+            <div style={styles.primaryVideoText}>
+              <span style={styles.primaryVideoTitle}>Use Text Only</span>
+              <span style={styles.primaryVideoSubtitle}>Type your statement</span>
+            </div>
+          </button>
         </div>
       )}
 

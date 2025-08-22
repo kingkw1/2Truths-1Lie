@@ -28,13 +28,12 @@ describe('MediaRecorder Integration Tests', () => {
   it('provides complete recording workflow with all controls', async () => {
     render(<MediaRecorder {...defaultProps} />);
     
-    // Should show all media type options
-    expect(screen.getByText('Video')).toBeInTheDocument();
-    expect(screen.getByText('Audio')).toBeInTheDocument();
-    expect(screen.getByText('Text Only')).toBeInTheDocument();
+    // Should show video-first interface with current UI
+    expect(screen.getByText('Start Video Recording')).toBeInTheDocument();
+    expect(screen.getByText('Use Text Only')).toBeInTheDocument();
     
     // Test text recording workflow (most reliable in test environment)
-    fireEvent.click(screen.getByText('Text Only'));
+    fireEvent.click(screen.getByText('Use Text Only'));
     
     // Should show text input interface
     const textInput = screen.getByPlaceholderText(/Type your statement here/);
@@ -79,36 +78,31 @@ describe('MediaRecorder Integration Tests', () => {
     render(<MediaRecorder {...defaultProps} />);
     
     // Should provide clear interface for all recording types
-    const videoButton = screen.getByText('Video').closest('button');
-    const audioButton = screen.getByText('Audio').closest('button');
-    const textButton = screen.getByText('Text Only').closest('button');
+    const videoButton = screen.getByText('Start Video Recording').closest('button');
+    const textButton = screen.getByText('Use Text Only').closest('button');
     
     expect(videoButton).not.toBeDisabled();
-    expect(audioButton).not.toBeDisabled();
     expect(textButton).not.toBeDisabled();
     
     // Should show helpful icons
     expect(screen.getByText('🎥')).toBeInTheDocument();
-    expect(screen.getByText('🎤')).toBeInTheDocument();
     expect(screen.getByText('📝')).toBeInTheDocument();
   });
 
   it('respects disabled state for all controls', () => {
     render(<MediaRecorder {...defaultProps} disabled={true} />);
     
-    const videoButton = screen.getByText('Video').closest('button');
-    const audioButton = screen.getByText('Audio').closest('button');
-    const textButton = screen.getByText('Text Only').closest('button');
+    const videoButton = screen.getByText('Start Video Recording').closest('button');
+    const textButton = screen.getByText('Use Text Only').closest('button');
     
     expect(videoButton).toBeDisabled();
-    expect(audioButton).toBeDisabled();
     expect(textButton).toBeDisabled();
   });
 
   it('enforces character limits in text mode', () => {
     render(<MediaRecorder {...defaultProps} />);
     
-    fireEvent.click(screen.getByText('Text Only'));
+    fireEvent.click(screen.getByText('Use Text Only'));
     
     const textInput = screen.getByPlaceholderText(/Type your statement here/) as HTMLTextAreaElement;
     
@@ -125,8 +119,7 @@ describe('MediaRecorder Integration Tests', () => {
     render(<MediaRecorder {...defaultProps} allowedTypes={['text']} />);
     
     // Should only show text option when other types are not allowed
-    expect(screen.queryByText('Video')).not.toBeInTheDocument();
-    expect(screen.queryByText('Audio')).not.toBeInTheDocument();
-    expect(screen.getByText('Text Only')).toBeInTheDocument();
+    expect(screen.queryByText('Start Video Recording')).not.toBeInTheDocument();
+    expect(screen.getByText('Use Text Only')).toBeInTheDocument();
   });
 });
