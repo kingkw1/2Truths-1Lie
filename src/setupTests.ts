@@ -3,6 +3,10 @@
  */
 
 import '@testing-library/jest-dom';
+import { toHaveNoViolations } from 'jest-axe';
+
+// Add jest-axe matcher
+expect.extend(toHaveNoViolations);
 
 // Mock environment variables
 process.env.REACT_APP_WEBSOCKET_URL = "ws://localhost:8080/ws";
