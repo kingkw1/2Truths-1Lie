@@ -15,20 +15,22 @@
 - [x] Create UI for entering 3 statements with lie selection and validation _(Req 1,3)_  
 - [x] Add immediate feedback on recording and statement quality  
 - [x] Unit tests for state transitions and input validation  
-- [x] Deprecate standalone audio-only and text-only input modes, focusing on video with audio as primary recording modality
-- [x] Simplify submission validation to make text statements optional fallback when video/audio recording is unavailable or fails
+- [x] **Implement video-only recording workflow** - removed text input requirements
+- [x] **Simplify submission validation to require video recordings for all statements**
+- [x] **Integrate video recording directly into challenge creation form with seamless UI**
 
 ### 4. Media Capture  
 - [x] Implement video and audio recording components with full controls (start, pause, resume, cancel)  
 - [x] Develop MediaPreview component supporting playback of recorded media  
 - [x] Add client-side media compression pipeline before upload  
-- [x] Build secure backend chunked upload API endpoints with resumable support  
-- [x] Integrate UploadProgress component showing real-time upload progress and cancel option  
-- [x] Implement robust error handling and retry logic for uploads  
-- [x] Write comprehensive unit and integration tests covering recording, preview, compression, upload, and failure modes  
+- [x] **Implement video-only recording workflow with blob URL handling (backend upload optional)**
+- [x] **Integrate UploadProgress component with error handling for optional cloud upload**
+- [x] Implement robust error handling and retry logic for media recording 
+- [x] Write comprehensive unit and integration tests covering recording, preview, compression, and failure modes  
 - [x] Integrate media capture UI components into the Challenge Creation workflow
 - [x] Connect media capture state to Redux and unify with challenge submission logic
 - [x] Test media capture UI across supported browsers/devices to ensure usability and accessibility
+- [x] **Remove dependency on backend upload for core functionality - work with local blob URLs**
 
 ### 5. Challenge Publishing and Moderation  
 - [ ] Implement server-side APIs to receive/store challenges and media  

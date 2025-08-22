@@ -10,10 +10,10 @@ Defines game mechanics and progression driving engagement: core loop, challenge 
 
 ### Requirement 1: Intuitive Core Game Loop (MVP Mandatory)
 
-- Present UI for three statements and lie selection.
-- Support primarily video with audio recording with preview and re-record; text input allowed only as fallback option.
+- Present UI for lie selection among three video statements.
+- **Require video with audio recording for all statements** - no text input or fallback options.
 - Immediate visual/audio feedback on core actions.
-- Helpful guidance on invalid input.
+- Helpful guidance on invalid input or missing recordings.
 - Subtle hints on player idle after 30 seconds.
 
 ***
@@ -75,8 +75,8 @@ Defines game mechanics and progression driving engagement: core loop, challenge 
 - Full controls: start, pause, resume, cancel recording.
 - Real-time preview and option to re-record before submission, integrated seamlessly into challenge creation UI.
 - Enforce duration limits and media validation with user-friendly guidance.
-- Secure chunked, resumable media uploads with upload progress and cancel/retry controls.
-- Robust error handling.
+- **Video recording is mandatory for all three statements** - no text fallback options.
+- Local blob URL handling with robust error handling and validation.
 - Capturing and previewing media must be intuitive and accessible via the challenge creation interface, with state synchronization to the main app state and submission pipeline.
 
 ***

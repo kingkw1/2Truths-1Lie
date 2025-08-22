@@ -75,18 +75,18 @@ Key methods: session lifecycle, progression, rewards, idle hint triggers.
 
 ### 2. Challenge Creation and Media Capture
 
-Manages entering three statements with lie selection and validation, plus multi-modal media capture:
+Manages entering three statements with lie selection and validation, plus video-only media capture:
 
-- Video with audio is the primary supported recording modality integrated within the Challenge Creation screen, offering seamless recording controls, media preview, compression, and upload feedback.  
-- Media capture UI components (RecordingControl, MediaPreview, UploadProgress) are integrated directly within the Challenge Creation screen, providing seamless user interaction throughout recording, preview, compression, and upload stages. State management (e.g., Redux) ensures synchronization between UI elements and overall challenge submission workflow.  
-- Preview and re-record.  
-- Client-side compression.  
-- Chunked, resumable uploads with progress and error handling.
+- **Video with audio is the required recording modality** - no text input or fallback options.
+- **Media capture UI components (RecordingControl, MediaPreview, UploadProgress) are integrated directly within the Challenge Creation screen, providing seamless user interaction throughout recording, preview, compression, and upload stages. State management (e.g., Redux) ensures synchronization between UI elements and overall challenge submission workflow.**  
+- Preview and re-record functionality for each statement.
+- Client-side compression for video optimization.
+- Local blob URL handling with optional cloud upload for production deployment.
 
 ```typescript
 interface ChallengeCreation {
-  statements: Statement[];
-  mediaData: MediaCapture;
+  statements: Statement[]; // Contains metadata only, no text content
+  mediaData: MediaCapture[]; // Required video recordings for each statement
   emotionAnalysis?: EmotionScores; // optional later
   qualityScore?: number;
   estimatedDifficulty?: 'easy' | 'medium' | 'hard';
@@ -143,29 +143,5 @@ Real-time/batch AffectLink API integration for emotion scoring, overlays, and fa
 - Accessibility and cross-platform compatibility.
 - AI scoring validation and fallback tests.
 - Performance and stress testing.
-
-***
-
-# design.md (Add a sentence or two emphasizing UI integration of media capture in Challenge Creation)
-
-### 2. Challenge Creation and Media Capture
-
-Manages entering three statements with lie selection and validation, plus multi-modal media capture:
-
-- Video, audio, or text fallback.  
-- **Media capture UI components (RecordingControl, MediaPreview, UploadProgress) are integrated directly within the Challenge Creation screen, providing seamless user interaction throughout recording, preview, compression, and upload stages. State management (e.g., Redux) ensures synchronization between UI elements and overall challenge submission workflow.**  
-- Preview and re-record.  
-- Client-side compression.  
-- Chunked, resumable uploads with progress and error handling.
-
-```typescript
-interface ChallengeCreation {
-  statements: Statement[];
-  mediaData: MediaCapture;
-  emotionAnalysis?: EmotionScores; // optional later
-  qualityScore?: number;
-  estimatedDifficulty?: 'easy' | 'medium' | 'hard';
-}
-```
 
 ***
