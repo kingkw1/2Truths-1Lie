@@ -1,0 +1,512 @@
+"""
+Challenge service for managing game challenges and guesses
+"""
+import json
+import uuid
+from pathlib import Path
+from typing import List, Optional, Dict, Any, Tuple
+from datetime import datetime, timedelta
+import logging
+
+from models import (
+    Challenge, Statement, GuessSubmission, ChallengeStatus, StatementType,
+    CreateChallengeRequest, SubmitGuessRequest
+)
+from config import settings
+from services.moderation_service import ModerationService, ModerationStatus
+from services.rate_limiter import RateLimiter, RateLimitExceeded
+from services.validation_service import gameplay_validator, integrity_validator
+
+logger = logging.getLogger(__name__)
+
+class ChallengeServiceError(Exception):
+    """Custom exception for challenge service errors"""
+    pass
+
+class ChallengeService:
+    """Service for managing challenges and guesses"""
+    
+    def __init__(self):
+        self.challenges: Dict[str, Challenge] = {}
+        self.guesses: Dict[str, GuessSubmission] = {}
+        self.challenges_file = settings.TEMP_DIR / "challenges.json"
+        self.guesses_file = settings.TEMP_DIR / "guesses.json"
+        self.moderation_service = ModerationService()
+        self.rate_limiter = RateLimiter()
+        self._load_data()
+    
+    def _load_data(self):
+        """Load challenges and guesses from disk"""
+        try:
+            # Load challenges
+            if self.challenges_file.exists():
+                with open(self.challenges_file, 'r') as f:
+                    data = json.load(f)
+                    for challenge_data in data.values():
+                        challenge = Challenge(**challenge_data)
+                        self.challenges[challenge.challenge_id] = challenge
+            
+            # Load guesses
+            if self.guesses_file.exists():
+                with open(self.guesses_file, 'r') as f:
+                    data = json.load(f)
+                    for guess_data in data.values():
+                        guess = GuessSubmission(**guess_data)
+                        self.guesses[guess.guess_id] = guess
+                        
+        except Exception as e:
+            logger.error(f"Error loading challenge data: {e}")
+            self.challenges = {}
+            self.guesses = {}
+    
+    async def _save_challenges(self):
+        """Save challenges to disk"""
+        try:
+            data = {
+                challenge_id: challenge.model_dump() 
+                for challenge_id, challenge in self.challenges.items()
+            }
+            with open(self.challenges_file, 'w') as f:
+                json.dump(data, f, default=str, indent=2)
+        except Exception as e:
+            logger.error(f"Error saving challenges: {e}")
+    
+    async def _save_guesses(self):
+        """Save guesses to disk"""
+        try:
+            data = {
+                guess_id: guess.model_dump() 
+                for guess_id, guess in self.guesses.items()
+            }
+            with open(self.guesses_file, 'w') as f:
+                json.dump(data, f, default=str, indent=2)
+        except Exception as e:
+            logger.error(f"Error saving guesses: {e}")
+    
+    async def create_challenge(
+        self, 
+        creator_id: str, 
+        request: CreateChallengeRequest,
+        upload_service
+    ) -> Challenge:
+        """Create a new challenge"""
+        
+        # Check rate limit before creating challenge
+        try:
+            await self.rate_limiter.check_rate_limit(creator_id)
+        except RateLimitExceeded as e:
+            raise ChallengeServiceError(str(e))
+        
+        # Validate challenge creation request
+        validation_result = await gameplay_validator.validate_challenge_creation(request, upload_service)
+        if not validation_result.is_valid:
+            raise ChallengeServiceError(f"Challenge validation failed: {validation_result.message}")
+        
+        # Validate that we have exactly 3 statements
+        if len(request.statements) != 3:
+            raise ChallengeServiceError("Challenge must have exactly 3 statements")
+        
+        # Validate lie statement index
+        if request.lie_statement_index < 0 or request.lie_statement_index >= 3:
+            raise ChallengeServiceError("Lie statement index must be 0, 1, or 2")
+        
+        # Generate challenge ID
+        challenge_id = str(uuid.uuid4())
+        
+        # Create statements from uploaded media
+        statements = []
+        lie_statement_id = None
+        
+        for i, stmt_data in enumerate(request.statements):
+            statement_id = str(uuid.uuid4())
+            
+            # Determine if this is the lie
+            statement_type = StatementType.LIE if i == request.lie_statement_index else StatementType.TRUTH
+            if statement_type == StatementType.LIE:
+                lie_statement_id = statement_id
+            
+            # Get media info from upload service
+            media_file_id = stmt_data.get('media_file_id')
+            if not media_file_id:
+                raise ChallengeServiceError(f"Missing media_file_id for statement {i}")
+            
+            # Verify the upload session exists and is completed
+            upload_session = await upload_service.get_upload_status(media_file_id)
+            if not upload_session:
+                raise ChallengeServiceError(f"Upload session {media_file_id} not found")
+            
+            if upload_session.status != "completed":
+                raise ChallengeServiceError(f"Upload session {media_file_id} is not completed")
+            
+            # Create statement
+            statement = Statement(
+                statement_id=statement_id,
+                statement_type=statement_type,
+                media_url=f"/api/v1/files/{media_file_id}_{upload_session.filename}",
+                media_file_id=media_file_id,
+                duration_seconds=stmt_data.get('duration_seconds', 0.0),
+                created_at=datetime.utcnow()
+            )
+            statements.append(statement)
+        
+        # Create challenge
+        challenge = Challenge(
+            challenge_id=challenge_id,
+            creator_id=creator_id,
+            title=request.title,
+            statements=statements,
+            lie_statement_id=lie_statement_id,
+            status=ChallengeStatus.DRAFT,
+            tags=request.tags,
+            created_at=datetime.utcnow(),
+            updated_at=datetime.utcnow()
+        )
+        
+        # Validate complete challenge structure
+        structure_validation = await gameplay_validator.validate_challenge_structure(challenge)
+        if not structure_validation.is_valid:
+            raise ChallengeServiceError(f"Challenge structure validation failed: {structure_validation.message}")
+        
+        # Validate challenge integrity
+        integrity_validation = await integrity_validator.validate_challenge_consistency(challenge)
+        if not integrity_validation.is_valid:
+            raise ChallengeServiceError(f"Challenge integrity validation failed: {integrity_validation.message}")
+        
+        # Store challenge
+        self.challenges[challenge_id] = challenge
+        await self._save_challenges()
+        
+        # Record the request for rate limiting
+        await self.rate_limiter.record_request(creator_id)
+        
+        logger.info(f"Challenge {challenge_id} created by user {creator_id} (validation passed)")
+        return challenge
+    
+    async def publish_challenge(self, challenge_id: str, creator_id: str) -> Challenge:
+        """Publish a draft challenge after moderation"""
+        challenge = self.challenges.get(challenge_id)
+        if not challenge:
+            raise ChallengeServiceError("Challenge not found")
+        
+        if challenge.creator_id != creator_id:
+            raise ChallengeServiceError("Access denied")
+        
+        if challenge.status != ChallengeStatus.DRAFT:
+            raise ChallengeServiceError("Only draft challenges can be published")
+        
+        # Run complete validation before publishing
+        complete_validation = await gameplay_validator.validate_complete_challenge(challenge, self)
+        if not complete_validation.is_valid:
+            raise ChallengeServiceError(f"Challenge failed pre-publication validation: {complete_validation.message}")
+        
+        # Prepare challenge data for moderation
+        challenge_data = {
+            "challenge_id": challenge_id,
+            "title": challenge.title,
+            "statements": [
+                {
+                    "duration_seconds": stmt.duration_seconds,
+                    "mime_type": "video/mp4",  # Default for video challenges
+                    "file_size": 0  # Would be populated from upload service in real implementation
+                }
+                for stmt in challenge.statements
+            ]
+        }
+        
+        # Run content moderation
+        moderation_result = await self.moderation_service.moderate_challenge(challenge_data)
+        
+        # Update challenge status based on moderation result
+        if moderation_result.status == ModerationStatus.APPROVED:
+            challenge.status = ChallengeStatus.PUBLISHED
+            challenge.published_at = datetime.utcnow()
+        elif moderation_result.status == ModerationStatus.REJECTED:
+            challenge.status = ChallengeStatus.REJECTED
+        else:  # FLAGGED or PENDING
+            challenge.status = ChallengeStatus.PENDING_MODERATION
+        
+        challenge.updated_at = datetime.utcnow()
+        await self._save_challenges()
+        
+        logger.info(f"Challenge {challenge_id} moderation completed: {challenge.status.value}")
+        return challenge
+    
+    async def get_challenge(self, challenge_id: str) -> Optional[Challenge]:
+        """Get a challenge by ID"""
+        challenge = self.challenges.get(challenge_id)
+        if challenge and challenge.status == ChallengeStatus.PUBLISHED:
+            # Increment view count
+            challenge.view_count += 1
+            challenge.updated_at = datetime.utcnow()
+            await self._save_challenges()
+        return challenge
+    
+    async def list_challenges(
+        self, 
+        page: int = 1, 
+        page_size: int = 20,
+        creator_id: Optional[str] = None,
+        status: Optional[ChallengeStatus] = None,
+        tags: Optional[List[str]] = None
+    ) -> Tuple[List[Challenge], int]:
+        """List challenges with pagination and filtering"""
+        
+        # Filter challenges
+        filtered_challenges = []
+        for challenge in self.challenges.values():
+            # Filter by creator
+            if creator_id and challenge.creator_id != creator_id:
+                continue
+            
+            # Filter by status (default to published for public listing)
+            if status:
+                if challenge.status != status:
+                    continue
+            elif not creator_id:  # Public listing - only show published
+                if challenge.status != ChallengeStatus.PUBLISHED:
+                    continue
+            
+            # Filter by tags
+            if tags:
+                if not any(tag in challenge.tags for tag in tags):
+                    continue
+            
+            filtered_challenges.append(challenge)
+        
+        # Sort by creation date (newest first)
+        filtered_challenges.sort(key=lambda x: x.created_at, reverse=True)
+        
+        # Paginate
+        total_count = len(filtered_challenges)
+        start_idx = (page - 1) * page_size
+        end_idx = start_idx + page_size
+        page_challenges = filtered_challenges[start_idx:end_idx]
+        
+        return page_challenges, total_count
+    
+    async def submit_guess(
+        self, 
+        user_id: str, 
+        request: SubmitGuessRequest
+    ) -> Tuple[GuessSubmission, int]:
+        """Submit a guess for a challenge"""
+        
+        # Get challenge
+        challenge = self.challenges.get(request.challenge_id)
+        if not challenge:
+            raise ChallengeServiceError("Challenge not found")
+        
+        if challenge.status != ChallengeStatus.PUBLISHED:
+            raise ChallengeServiceError("Challenge is not available for guessing")
+        
+        # Check if user already guessed on this challenge
+        existing_guess = None
+        for guess in self.guesses.values():
+            if guess.challenge_id == request.challenge_id and guess.user_id == user_id:
+                existing_guess = guess
+                break
+        
+        if existing_guess:
+            raise ChallengeServiceError("User has already guessed on this challenge")
+        
+        # Validate guessed statement exists
+        guessed_statement = None
+        for statement in challenge.statements:
+            if statement.statement_id == request.guessed_lie_statement_id:
+                guessed_statement = statement
+                break
+        
+        if not guessed_statement:
+            raise ChallengeServiceError("Invalid statement ID")
+        
+        # Check if guess is correct
+        is_correct = request.guessed_lie_statement_id == challenge.lie_statement_id
+        
+        # Calculate points (simple scoring system)
+        points_earned = 0
+        if is_correct:
+            base_points = 100
+            # Bonus for quick response (if provided)
+            if request.response_time_seconds and request.response_time_seconds < 30:
+                time_bonus = max(0, int((30 - request.response_time_seconds) * 2))
+                points_earned = base_points + time_bonus
+            else:
+                points_earned = base_points
+        
+        # Create guess submission
+        guess_id = str(uuid.uuid4())
+        guess = GuessSubmission(
+            guess_id=guess_id,
+            challenge_id=request.challenge_id,
+            user_id=user_id,
+            guessed_lie_statement_id=request.guessed_lie_statement_id,
+            is_correct=is_correct,
+            submitted_at=datetime.utcnow(),
+            response_time_seconds=request.response_time_seconds
+        )
+        
+        # Update challenge statistics
+        challenge.guess_count += 1
+        if is_correct:
+            challenge.correct_guess_count += 1
+        challenge.updated_at = datetime.utcnow()
+        
+        # Store guess and update challenge
+        self.guesses[guess_id] = guess
+        await self._save_guesses()
+        await self._save_challenges()
+        
+        logger.info(f"Guess {guess_id} submitted by user {user_id} for challenge {request.challenge_id}, correct: {is_correct}")
+        return guess, points_earned
+    
+    async def get_user_guesses(self, user_id: str) -> List[GuessSubmission]:
+        """Get all guesses by a user"""
+        user_guesses = [
+            guess for guess in self.guesses.values() 
+            if guess.user_id == user_id
+        ]
+        return sorted(user_guesses, key=lambda x: x.submitted_at, reverse=True)
+    
+    async def get_challenge_guesses(self, challenge_id: str, creator_id: str) -> List[GuessSubmission]:
+        """Get all guesses for a challenge (only for challenge creator)"""
+        challenge = self.challenges.get(challenge_id)
+        if not challenge:
+            raise ChallengeServiceError("Challenge not found")
+        
+        if challenge.creator_id != creator_id:
+            raise ChallengeServiceError("Access denied")
+        
+        challenge_guesses = [
+            guess for guess in self.guesses.values() 
+            if guess.challenge_id == challenge_id
+        ]
+        return sorted(challenge_guesses, key=lambda x: x.submitted_at, reverse=True)
+    
+    async def delete_challenge(self, challenge_id: str, creator_id: str) -> bool:
+        """Delete a challenge (only draft challenges)"""
+        challenge = self.challenges.get(challenge_id)
+        if not challenge:
+            return False
+        
+        if challenge.creator_id != creator_id:
+            raise ChallengeServiceError("Access denied")
+        
+        if challenge.status != ChallengeStatus.DRAFT:
+            raise ChallengeServiceError("Only draft challenges can be deleted")
+        
+        # Remove challenge
+        del self.challenges[challenge_id]
+        await self._save_challenges()
+        
+        logger.info(f"Challenge {challenge_id} deleted by user {creator_id}")
+        return True
+    
+    async def flag_challenge(self, challenge_id: str, user_id: str, reason: str) -> bool:
+        """Flag a challenge for manual review"""
+        challenge = self.challenges.get(challenge_id)
+        if not challenge:
+            raise ChallengeServiceError("Challenge not found")
+        
+        # Only published challenges can be flagged
+        if challenge.status != ChallengeStatus.PUBLISHED:
+            raise ChallengeServiceError("Only published challenges can be flagged")
+        
+        # Flag the challenge through moderation service
+        success = await self.moderation_service.flag_challenge(challenge_id, user_id, reason)
+        
+        if success:
+            # Update challenge status
+            challenge.status = ChallengeStatus.FLAGGED
+            challenge.updated_at = datetime.utcnow()
+            await self._save_challenges()
+        
+        return success
+    
+    async def manual_moderation_review(
+        self, 
+        challenge_id: str, 
+        moderator_id: str, 
+        decision: str, 
+        reason: Optional[str] = None
+    ) -> Challenge:
+        """Manually review a flagged or pending challenge"""
+        challenge = self.challenges.get(challenge_id)
+        if not challenge:
+            raise ChallengeServiceError("Challenge not found")
+        
+        # Validate decision
+        valid_decisions = ["approved", "rejected", "flagged"]
+        if decision not in valid_decisions:
+            raise ChallengeServiceError(f"Invalid decision. Must be one of: {valid_decisions}")
+        
+        # Map decision to moderation status
+        moderation_status_map = {
+            "approved": ModerationStatus.APPROVED,
+            "rejected": ModerationStatus.REJECTED,
+            "flagged": ModerationStatus.FLAGGED
+        }
+        
+        moderation_status = moderation_status_map[decision]
+        
+        # Update moderation service
+        success = await self.moderation_service.manual_review(
+            challenge_id, moderator_id, moderation_status, reason
+        )
+        
+        if not success:
+            raise ChallengeServiceError("Failed to update moderation status")
+        
+        # Update challenge status
+        if decision == "approved":
+            challenge.status = ChallengeStatus.PUBLISHED
+            if not challenge.published_at:
+                challenge.published_at = datetime.utcnow()
+        elif decision == "rejected":
+            challenge.status = ChallengeStatus.REJECTED
+        else:  # flagged
+            challenge.status = ChallengeStatus.FLAGGED
+        
+        challenge.updated_at = datetime.utcnow()
+        await self._save_challenges()
+        
+        logger.info(f"Challenge {challenge_id} manually reviewed by {moderator_id}: {decision}")
+        return challenge
+    
+    async def get_moderation_status(self, challenge_id: str) -> Optional[Dict[str, Any]]:
+        """Get moderation status for a challenge"""
+        return await self.moderation_service.get_moderation_status(challenge_id)
+    
+    async def get_challenges_for_moderation(
+        self, 
+        status: Optional[str] = None,
+        page: int = 1,
+        page_size: int = 20
+    ) -> Tuple[List[Challenge], int]:
+        """Get challenges that need moderation review"""
+        moderation_statuses = [
+            ChallengeStatus.PENDING_MODERATION,
+            ChallengeStatus.FLAGGED
+        ]
+        
+        if status:
+            if status == "pending":
+                moderation_statuses = [ChallengeStatus.PENDING_MODERATION]
+            elif status == "flagged":
+                moderation_statuses = [ChallengeStatus.FLAGGED]
+        
+        # Filter challenges by moderation status
+        filtered_challenges = [
+            challenge for challenge in self.challenges.values()
+            if challenge.status in moderation_statuses
+        ]
+        
+        # Sort by creation date (oldest first for review queue)
+        filtered_challenges.sort(key=lambda x: x.created_at)
+        
+        # Paginate
+        total_count = len(filtered_challenges)
+        start_idx = (page - 1) * page_size
+        end_idx = start_idx + page_size
+        page_challenges = filtered_challenges[start_idx:end_idx]
+        
+        return page_challenges, total_count

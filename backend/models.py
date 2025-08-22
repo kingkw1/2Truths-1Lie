@@ -1,7 +1,7 @@
 """
 Data models for chunked upload system
 """
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ConfigDict
 from typing import Optional, Dict, Any, List
 from datetime import datetime
 from enum import Enum
@@ -23,6 +23,8 @@ class ChunkInfo(BaseModel):
 
 class UploadSession(BaseModel):
     """Upload session metadata"""
+    model_config = ConfigDict(use_enum_values=True)
+    
     session_id: str = Field(..., description="Unique session identifier")
     user_id: str = Field(..., description="User who initiated upload")
     filename: str = Field(..., description="Original filename")
@@ -93,3 +95,108 @@ class UploadStatusResponse(BaseModel):
     created_at: datetime
     updated_at: datetime
     error_message: Optional[str] = None
+
+# Challenge and Game Models
+
+class ChallengeStatus(str, Enum):
+    """Challenge status"""
+    DRAFT = "draft"
+    PENDING_MODERATION = "pending_moderation"
+    PUBLISHED = "published"
+    MODERATED = "moderated"
+    REJECTED = "rejected"
+    FLAGGED = "flagged"
+    ARCHIVED = "archived"
+
+class StatementType(str, Enum):
+    """Statement type"""
+    TRUTH = "truth"
+    LIE = "lie"
+
+class Statement(BaseModel):
+    """Individual statement within a challenge"""
+    statement_id: str = Field(..., description="Unique statement identifier")
+    statement_type: StatementType = Field(..., description="Whether this is a truth or lie")
+    media_url: str = Field(..., description="URL to the video recording")
+    media_file_id: str = Field(..., description="File ID from upload service")
+    duration_seconds: float = Field(..., gt=0, description="Duration of the video in seconds")
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+    
+class Challenge(BaseModel):
+    """Challenge containing three statements (2 truths, 1 lie)"""
+    challenge_id: str = Field(..., description="Unique challenge identifier")
+    creator_id: str = Field(..., description="User who created the challenge")
+    title: Optional[str] = Field(None, max_length=200, description="Optional challenge title")
+    statements: List[Statement] = Field(..., min_items=3, max_items=3, description="Exactly 3 statements")
+    lie_statement_id: str = Field(..., description="ID of the statement that is the lie")
+    status: ChallengeStatus = Field(default=ChallengeStatus.DRAFT)
+    difficulty_level: Optional[str] = Field(None, description="Estimated difficulty: easy, medium, hard")
+    tags: List[str] = Field(default_factory=list, description="Optional tags for categorization")
+    created_at: datetime = Field(default_factory=datetime.utcnow)
+    updated_at: datetime = Field(default_factory=datetime.utcnow)
+    published_at: Optional[datetime] = None
+    view_count: int = Field(default=0, ge=0)
+    guess_count: int = Field(default=0, ge=0)
+    correct_guess_count: int = Field(default=0, ge=0)
+    
+    @property
+    def accuracy_rate(self) -> float:
+        """Calculate the accuracy rate of guesses"""
+        if self.guess_count == 0:
+            return 0.0
+        return self.correct_guess_count / self.guess_count
+
+class CreateChallengeRequest(BaseModel):
+    """Request to create a new challenge"""
+    title: Optional[str] = Field(None, max_length=200)
+    statements: List[Dict[str, Any]] = Field(..., min_items=3, max_items=3, description="Statement metadata (media file IDs)")
+    lie_statement_index: int = Field(..., ge=0, le=2, description="Index (0-2) of the lie statement")
+    tags: List[str] = Field(default_factory=list, max_items=10)
+    
+class CreateChallengeResponse(BaseModel):
+    """Response from challenge creation"""
+    challenge_id: str
+    status: ChallengeStatus
+    created_at: datetime
+    statements: List[Statement]
+
+class ChallengeListResponse(BaseModel):
+    """Response for challenge listing"""
+    challenges: List[Challenge]
+    total_count: int
+    page: int
+    page_size: int
+    has_next: bool
+
+class GuessSubmission(BaseModel):
+    """User's guess submission"""
+    guess_id: str = Field(..., description="Unique guess identifier")
+    challenge_id: str = Field(..., description="Challenge being guessed on")
+    user_id: str = Field(..., description="User making the guess")
+    guessed_lie_statement_id: str = Field(..., description="Statement ID the user thinks is the lie")
+    is_correct: bool = Field(..., description="Whether the guess was correct")
+    submitted_at: datetime = Field(default_factory=datetime.utcnow)
+    response_time_seconds: Optional[float] = Field(None, ge=0, description="Time taken to make guess")
+
+class SubmitGuessRequest(BaseModel):
+    """Request to submit a guess"""
+    challenge_id: str
+    guessed_lie_statement_id: str
+    response_time_seconds: Optional[float] = Field(None, ge=0)
+
+class SubmitGuessResponse(BaseModel):
+    """Response from guess submission"""
+    guess_id: str
+    is_correct: bool
+    correct_lie_statement_id: str
+    points_earned: int
+    submitted_at: datetime
+
+class FlagChallengeRequest(BaseModel):
+    """Request to flag a challenge for review"""
+    reason: str = Field(..., max_length=500, description="Reason for flagging")
+
+class ModerationReviewRequest(BaseModel):
+    """Request for manual moderation review"""
+    decision: str = Field(..., description="approved, rejected, or flagged")
+    reason: Optional[str] = Field(None, max_length=500, description="Reason for decision")
