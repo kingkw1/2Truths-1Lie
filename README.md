@@ -47,6 +47,10 @@ npm test    # Run unit and integration tests
 ## API Documentation
 See [docs/api.md](docs/api.md) for full REST endpoint specs and usage examples.
 
+## Hackathon Participation
+This project leverages AI-assisted development tools, primarily the Kiro agent, to accelerate and guide the build process.  
+Detailed documentation of the AI-driven workflow, task execution logs, and usage of Kiro are available in [KIRO_HACKATHON.md](KIRO_HACKATHON.md).
+
 ## Contributing
 Contributions welcome! Please open issues or pull requests following our [CONTRIBUTING.md](CONTRIBUTING.md).
 
