@@ -15,9 +15,12 @@ export interface GuessingGameState {
   guessSubmitted: boolean;
   guessResult: GuessResult | null;
   timeRemaining: number | null;
+  currentStreak: number;
+  showAnimatedFeedback: boolean;
   filters: {
     difficulty: 'all' | 'easy' | 'medium' | 'hard';
-    sortBy: 'popularity' | 'difficulty' | 'recent';
+    sortBy: 'popularity' | 'difficulty' | 'recent' | 'oldest' | 'most_played' | 'highest_rated';
+    minPopularity?: 'all' | '50' | '70' | '90';
   };
 }
 
@@ -30,9 +33,12 @@ const initialState: GuessingGameState = {
   guessSubmitted: false,
   guessResult: null,
   timeRemaining: null,
+  currentStreak: 0,
+  showAnimatedFeedback: false,
   filters: {
     difficulty: 'all',
     sortBy: 'popularity',
+    minPopularity: 'all',
   },
 };
 
@@ -93,6 +99,14 @@ const guessingGameSlice = createSlice({
 
     setGuessResult: (state, action: PayloadAction<GuessResult>) => {
       state.guessResult = action.payload;
+      state.showAnimatedFeedback = true;
+      
+      // Update streak based on result
+      if (action.payload.wasCorrect) {
+        state.currentStreak += 1;
+      } else {
+        state.currentStreak = 0;
+      }
     },
 
     useHint: (state) => {
@@ -123,6 +137,11 @@ const guessingGameSlice = createSlice({
       state.guessResult = null;
       state.showHint = false;
       state.timeRemaining = null;
+      state.showAnimatedFeedback = false;
+    },
+
+    hideAnimatedFeedback: (state) => {
+      state.showAnimatedFeedback = false;
     },
 
     updateFilters: (state, action: PayloadAction<Partial<GuessingGameState['filters']>>) => {
@@ -143,6 +162,12 @@ const guessingGameSlice = createSlice({
         });
       }
       
+      // Apply popularity filter
+      if (state.filters.minPopularity && state.filters.minPopularity !== 'all') {
+        const minScore = parseInt(state.filters.minPopularity);
+        filtered = filtered.filter(challenge => challenge.popularityScore >= minScore);
+      }
+      
       // Apply sorting
       switch (state.filters.sortBy) {
         case 'popularity':
@@ -155,6 +180,17 @@ const guessingGameSlice = createSlice({
           filtered.sort((a, b) => 
             new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
           );
+          break;
+        case 'oldest':
+          filtered.sort((a, b) => 
+            new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
+          );
+          break;
+        case 'most_played':
+          filtered.sort((a, b) => b.totalGuesses - a.totalGuesses);
+          break;
+        case 'highest_rated':
+          filtered.sort((a, b) => b.correctGuessRate - a.correctGuessRate);
           break;
       }
       
@@ -178,6 +214,7 @@ export const {
   endGuessingSession,
   updateFilters,
   applyFilters,
+  hideAnimatedFeedback,
 } = guessingGameSlice.actions;
 
 export default guessingGameSlice.reducer;

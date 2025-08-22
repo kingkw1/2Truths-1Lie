@@ -39,11 +39,11 @@
 - [x] Automated validation services and associated tests _(relates Req 1,3)_  
 
 ### 6. Guessing Engine and Gameplay  
-- [ ] Build challenge browsing UI with filtering/sorting by difficulty or popularity  
-- [ ] Implement guess submission interface with real-time feedback  
-- [ ] Add hints and progressive revelation of analysis or clues  
-- [ ] Animate feedback for correct/incorrect guesses and streaks  
-- [ ] Unit and integration tests covering gameplay logic _(relates Req 1,3,6)_  
+- [x] Build challenge browsing UI with filtering/sorting by difficulty or popularity  
+- [x] Implement guess submission interface with real-time feedback  
+- [x] Add hints and progressive revelation of analysis or clues  
+- [x] Animate feedback for correct/incorrect guesses and streaks  
+- [x] Unit and integration tests covering gameplay logic _(relates Req 1,3,6)_  
 
 ### 7. Emotion Analysis Integration (Optional MVP Feature)  
 - [ ] Connect to AffectLink API for real-time or batch emotion scoring  
