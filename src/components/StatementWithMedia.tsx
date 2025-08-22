@@ -1,7 +1,7 @@
 /**
  * Statement with Media Component
- * Combines text statement input with optional media recording
- * Implements fallback from video -> audio -> text only
+ * Video-only statement recording for challenge creation
+ * No text input required - purely video-based statements
  * Enhanced with real-time quality feedback
  */
 
@@ -39,11 +39,11 @@ export const StatementWithMedia: React.FC<StatementWithMediaProps> = ({
   const [showMediaRecorder, setShowMediaRecorder] = useState(false);
   const [showMediaPreview, setShowMediaPreview] = useState(false);
   
-  // Use Redux-connected media recording hook with video-first approach
+  // Use Redux-connected media recording hook for video-only approach
   const mediaRecording = useReduxMediaRecording({
     statementIndex,
     maxDuration: 30000,
-    allowedTypes: ['video', 'text'], // Video-first with text fallback
+    allowedTypes: ['video'], // Video-only recording
     onRecordingComplete: (mediaData) => {
       onMediaChange(statementIndex, mediaData);
       setShowMediaRecorder(false);
@@ -87,46 +87,12 @@ export const StatementWithMedia: React.FC<StatementWithMediaProps> = ({
     []
   );
 
-  // Handle text statement changes
-  const handleTextChange = useCallback((text: string) => {
-    const limitedText = text.length > maxTextLength ? text.substring(0, maxTextLength) : text;
-    
-    const updatedStatement: Statement = {
-      ...statement,
-      text: limitedText,
-    };
-    
-    onStatementChange(statementIndex, updatedStatement);
-    
-    // Trigger quality analysis
-    if (limitedText.trim().length > 0) {
-      setIsAnalyzing(true);
-      debouncedAnalyzer(limitedText.trim());
-      setShowQualityFeedback(true);
-    } else {
-      setStatementQuality(null);
-      setShowQualityFeedback(false);
-      setIsAnalyzing(false);
-    }
-  }, [statement, statementIndex, onStatementChange, maxTextLength, debouncedAnalyzer]);
-
   // Handle media recording completion
   const handleMediaComplete = useCallback((mediaData: MediaCapture) => {
     onMediaChange(statementIndex, mediaData);
     setShowMediaRecorder(false);
     setShowMediaPreview(true);
-    
-    // If it's a text recording, also update the statement text
-    if (mediaData.type === 'text' && mediaData.url && mediaData.url.startsWith('data:text/plain;base64,')) {
-      try {
-        const base64Data = mediaData.url.split(',')[1];
-        const decodedText = atob(base64Data);
-        handleTextChange(decodedText);
-      } catch (error) {
-        console.warn('Failed to decode text from media data:', error);
-      }
-    }
-  }, [statementIndex, onMediaChange, handleTextChange]);
+  }, [statementIndex, onMediaChange]);
 
   // Remove recorded media
   const handleRemoveMedia = useCallback(() => {
@@ -174,15 +140,6 @@ export const StatementWithMedia: React.FC<StatementWithMediaProps> = ({
     setFeedbackMessage(prev => ({ ...prev, visible: false }));
   }, []);
 
-  const getStatementPlaceholder = () => {
-    const placeholders = [
-      "Enter your first statement (required - serves as fallback if video fails)...",
-      "Enter your second statement (required - serves as fallback if video fails)...",
-      "Enter your third statement (required - serves as fallback if video fails)..."
-    ];
-    return placeholders[statementIndex] || "Enter your statement (required)...";
-  };
-
   const getMediaTypeIcon = (type: string) => {
     switch (type) {
       case 'video': return '🎥';
@@ -226,47 +183,40 @@ export const StatementWithMedia: React.FC<StatementWithMediaProps> = ({
         )}
       </div>
 
-      {/* Text Input */}
-      <div style={styles.textSection}>
-        <textarea
-          value={statement.text}
-          onChange={(e) => handleTextChange(e.target.value)}
-          placeholder={getStatementPlaceholder()}
-          style={{
-            ...styles.textInput,
-            ...(isLie ? styles.textInputLie : {}),
-          }}
-          disabled={disabled}
-          maxLength={maxTextLength}
-          required
-        />
-        
-        <div style={styles.textFooter}>
-          <div style={styles.textFooterLeft}>
-            <span style={styles.characterCount}>
-              {statement.text.length}/{maxTextLength} characters
-            </span>
-            {statement.text.trim().length > 0 && (
-              <RealTimeQualityIndicator
-                score={statementQuality?.score || 0}
-                isAnalyzing={isAnalyzing}
-                showLabel={false}
-              />
-            )}
-          </div>
-          
+      {/* Video Recording Section - Primary Action */}
+      <div style={styles.videoActionSection}>
+        {!mediaRecording.recordedMedia ? (
           <button
             type="button"
             onClick={toggleMediaRecorder}
             style={{
-              ...styles.mediaButton,
-              ...(showMediaRecorder ? styles.mediaButtonActive : {}),
+              ...styles.primaryVideoButton,
+              ...(showMediaRecorder ? styles.primaryVideoButtonActive : {}),
             }}
             disabled={disabled}
           >
-            {mediaRecording.recordedMedia ? (showMediaPreview ? '🎬 Edit Video' : '👁️ View Video') : '🎥 Add Video (Optional)'}
+            {showMediaRecorder ? '📹 Recording...' : '🎥 Record Your Statement'}
           </button>
-        </div>
+        ) : (
+          <div style={styles.videoControls}>
+            <button
+              type="button"
+              onClick={() => setShowMediaPreview(!showMediaPreview)}
+              style={styles.previewButton}
+              disabled={disabled}
+            >
+              {showMediaPreview ? '📝 Hide Preview' : '👁️ Preview Video'}
+            </button>
+            <button
+              type="button"
+              onClick={toggleMediaRecorder}
+              style={styles.rerecordButton}
+              disabled={disabled}
+            >
+              🔄 Re-record
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Media Recording Section */}
@@ -276,7 +226,7 @@ export const StatementWithMedia: React.FC<StatementWithMediaProps> = ({
             onRecordingComplete={handleMediaComplete}
             onRecordingError={(error) => console.warn('Media recording error:', error)}
             maxDuration={30000} // 30 seconds
-            allowedTypes={['video', 'text']} // Video-first with text fallback
+            allowedTypes={['video']} // Video-only recording
             disabled={disabled}
           />
         </div>
@@ -719,6 +669,65 @@ const styles = {
     height: '100%',
     backgroundColor: '#3B82F6',
     transition: 'width 0.3s ease',
+  } as React.CSSProperties,
+
+  // New styles for video-only interface
+  videoActionSection: {
+    marginBottom: '16px',
+    display: 'flex',
+    flexDirection: 'column',
+    alignItems: 'center',
+    gap: '12px',
+  } as React.CSSProperties,
+
+  primaryVideoButton: {
+    display: 'flex',
+    alignItems: 'center',
+    gap: '8px',
+    padding: '16px 24px',
+    fontSize: '18px',
+    fontWeight: 'bold',
+    border: '3px solid #3B82F6',
+    borderRadius: '12px',
+    backgroundColor: '#3B82F6',
+    color: '#FFFFFF',
+    cursor: 'pointer',
+    transition: 'all 0.2s',
+    minWidth: '200px',
+    justifyContent: 'center',
+  } as React.CSSProperties,
+
+  primaryVideoButtonActive: {
+    backgroundColor: '#EF4444',
+    borderColor: '#EF4444',
+  } as React.CSSProperties,
+
+  videoControls: {
+    display: 'flex',
+    gap: '12px',
+    alignItems: 'center',
+  } as React.CSSProperties,
+
+  previewButton: {
+    padding: '8px 16px',
+    fontSize: '14px',
+    border: '2px solid #10B981',
+    borderRadius: '6px',
+    backgroundColor: '#FFFFFF',
+    color: '#10B981',
+    cursor: 'pointer',
+    transition: 'all 0.2s',
+  } as React.CSSProperties,
+
+  rerecordButton: {
+    padding: '8px 16px',
+    fontSize: '14px',
+    border: '2px solid #F59E0B',
+    borderRadius: '6px',
+    backgroundColor: '#FFFFFF',
+    color: '#F59E0B',
+    cursor: 'pointer',
+    transition: 'all 0.2s',
   } as React.CSSProperties,
 };
 

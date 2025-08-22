@@ -189,23 +189,21 @@ const challengeCreationSlice = createSlice({
           errors.push('Must select one statement as the lie');
         }
         
-        // Simplified validation: text statements are always required as fallback
-        // Media recording is optional - if it fails, text serves as fallback
-        const emptyStatements = state.currentChallenge.statements.filter(stmt => !stmt.text.trim());
-        if (emptyStatements.length > 0) {
-          errors.push('All statements must have text (text serves as fallback when video recording is unavailable)');
-        }
-        
-        // Optional: Check if any media recording failed and provide helpful message
-        if (state.mediaRecordingState && Object.keys(state.mediaRecordingState).length > 0) {
-          const hasFailedRecordings = Object.values(state.mediaRecordingState).some(
-            recordingState => recordingState && recordingState.error !== null
-          );
-          
-          if (hasFailedRecordings) {
-            // This is informational only - not a blocking error
-            console.info('Some media recordings failed, but text fallback is available');
+        // Video-only mode: Check if we have video recordings for each statement
+        if (state.currentChallenge.mediaData && state.currentChallenge.mediaData.length >= 3) {
+          const missingVideoStatements = [];
+          for (let i = 0; i < 3; i++) {
+            const media = state.currentChallenge.mediaData[i];
+            if (!media || media.type !== 'video' || !media.url) {
+              missingVideoStatements.push(i + 1);
+            }
           }
+          
+          if (missingVideoStatements.length > 0) {
+            errors.push(`Statement${missingVideoStatements.length > 1 ? 's' : ''} ${missingVideoStatements.join(', ')} must have video recordings`);
+          }
+        } else {
+          errors.push('All statements must have video recordings');
         }
       }
       

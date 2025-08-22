@@ -1,7 +1,7 @@
 /**
  * Enhanced Challenge Creation Form Component
- * Integrates media recording with statement creation
- * Implements video, audio, and text-only recording with fallback mechanisms
+ * Video-only statement recording for challenge creation
+ * No text input required - purely video-based challenge creation
  */
 
 import React, { useState, useEffect, useCallback } from 'react';
@@ -47,7 +47,7 @@ export const EnhancedChallengeCreationForm: React.FC<EnhancedChallengeCreationFo
   const [mediaSupport, setMediaSupport] = useState({
     video: false,
     audio: false,
-    text: true,
+    text: false, // Text input removed from workflow
   });
   const [uploadSessions, setUploadSessions] = useState<Array<{
     sessionId: string;
@@ -67,24 +67,24 @@ export const EnhancedChallengeCreationForm: React.FC<EnhancedChallengeCreationFo
     checkMediaSupport();
   }, [dispatch]);
 
-  // Check media device support - prioritize video with audio
+  // Check media device support - require video with audio
   const checkMediaSupport = useCallback(async () => {
     const support = {
       video: false,
-      audio: false, // Deprecated: standalone audio mode removed
-      text: true,
+      audio: false,
+      text: false, // Text input removed from workflow
     };
 
     if (navigator.mediaDevices && navigator.mediaDevices.getUserMedia) {
       try {
-        // Test video with audio support (primary mode)
+        // Test video with audio support (required mode)
         const videoStream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
         videoStream.getTracks().forEach(track => track.stop());
         support.video = true;
         support.audio = true; // Audio is included with video
       } catch {
-        // Video with audio not supported, text fallback available
-        console.log('Video recording not available, text mode will be used as fallback');
+        // Video with audio not supported - show error guidance
+        console.log('Video recording not available - please check camera and microphone permissions');
       }
     }
 
@@ -109,7 +109,7 @@ export const EnhancedChallengeCreationForm: React.FC<EnhancedChallengeCreationFo
       } else {
         baseStatements.push({
           id: `stmt_${Date.now()}_${i}`,
-          text: '',
+          text: '', // Not used in video-only workflow
           isLie: false,
           confidence: 0,
         });
@@ -193,48 +193,35 @@ export const EnhancedChallengeCreationForm: React.FC<EnhancedChallengeCreationFo
           
           setTimeout(checkUploads, 1000);
         } else {
-          // Check if we have media files that need uploading
+          // Check if we have media files - for video-only workflow, we'll work with blob URLs directly
           const mediaFiles = currentChallenge.mediaData?.filter(media => 
-            media && media.type !== 'text' && media.url && media.url.startsWith('blob:')
+            media && media.type === 'video' && media.url && media.url.startsWith('blob:')
           ) || [];
           
-          // Check for any media recording errors
-          const hasMediaErrors = Object.values(mediaRecordingState).some(state => state.error !== null);
-          
           if (mediaFiles.length > 0) {
-            // Create upload sessions for media files that haven't been uploaded yet
-            const sessions = mediaFiles.map((media, index) => ({
-              sessionId: `challenge_${Date.now()}_${index}`,
-              filename: `statement_${index}_${media.type}.${media.mimeType?.split('/')[1] || 'webm'}`,
-              fileSize: media.fileSize || 0,
-              statementIndex: index,
-            }));
+            // For video-only workflow, we'll complete submission immediately with blob URLs
+            // In a production app, you might want to upload to a cloud service here
+            console.log('Challenge created with video blob URLs:', mediaFiles);
             
-            setUploadSessions(sessions);
-            
-            // Note: In a real implementation, uploads would be handled by the Redux-connected hook
-            // For now, we'll simulate the upload process
-            setTimeout(() => {
-              dispatch(completeSubmission({ success: true }));
-              setUploadSessions([]);
-              if (onSubmit) {
-                onSubmit();
-              }
-            }, 3000);
-          } else {
-            // No media files to upload - this is fine, text serves as fallback
-            if (hasMediaErrors) {
-              setFeedbackMessage({
-                message: 'Video recording failed, but your text statements will be used. Challenge created successfully!',
-                type: 'info',
-                visible: true,
-              });
-            }
+            setFeedbackMessage({
+              message: 'Challenge created successfully with video recordings!',
+              type: 'success',
+              visible: true,
+            });
             
             dispatch(completeSubmission({ success: true }));
             if (onSubmit) {
               onSubmit();
             }
+          } else {
+            // No media files to upload - this means no videos were recorded
+            console.log('No videos recorded for upload');
+            setFeedbackMessage({
+                message: 'No video recordings found. Please record at least one video statement.',
+                type: 'warning',
+                visible: true,
+            });
+            return;
           }
         }
       } catch (error) {
@@ -244,22 +231,25 @@ export const EnhancedChallengeCreationForm: React.FC<EnhancedChallengeCreationFo
     }
   }, [dispatch, validationErrors, currentChallenge.mediaData, uploadState, onSubmit]);
 
-  // Check if form is valid - simplified to only require text and lie selection
+  // Check if form is valid - require videos and lie selection
   const isFormValid = useCallback(() => {
     return (
-      statements.every(stmt => stmt.text.trim().length > 0) &&
+      statements.every((stmt, index) => {
+        const mediaForStatement = currentChallenge.mediaData?.[index];
+        return mediaForStatement && mediaForStatement.type === 'video';
+      }) &&
       selectedLieIndex !== null &&
       statements.length === 3
     );
-    // Note: Media recording is optional - text serves as fallback
-  }, [statements, selectedLieIndex]);
+    // Note: Video recording is required for all statements
+  }, [statements, selectedLieIndex, currentChallenge.mediaData]);
 
-  // Get available media types based on support - video-first approach
+  // Get available media types - video-only approach
   const getAvailableMediaTypes = useCallback(() => {
-    const types: ('video' | 'text')[] = ['text']; // Always have text fallback
+    const types: ('video')[] = []; // No fallback options
     
     if (mediaSupport.video) {
-      types.unshift('video'); // Video with audio is primary
+      types.push('video'); // Video with audio is required
     }
     
     return types;
@@ -282,23 +272,20 @@ export const EnhancedChallengeCreationForm: React.FC<EnhancedChallengeCreationFo
 
       {/* Media Support Info */}
       <div style={styles.mediaSupportInfo}>
-        <h4 style={styles.mediaSupportTitle}>Recording Options:</h4>
+        <h4 style={styles.mediaSupportTitle}>Recording Requirements:</h4>
         <div style={styles.mediaSupportList}>
           {mediaSupport.video ? (
             <span style={styles.mediaSupportItem}>
-              🎥 Video with Audio (Recommended)
+              🎥 Video with Audio (Available)
             </span>
           ) : (
             <span style={styles.mediaSupportItemDisabled}>
-              🎥 Video with Audio (Not Available)
+              🎥 Video with Audio (Required - Please Enable Camera & Microphone)
             </span>
           )}
-          <span style={styles.mediaSupportItem}>
-            📝 Text Only (Always Available as Fallback)
-          </span>
         </div>
         <p style={styles.mediaSupportNote}>
-          💡 Text statements are required for all entries. Video recording is optional and will enhance your challenge, but if recording fails, your text will serve as the fallback.
+          💡 Video recording is required for all statements. Please ensure your camera and microphone are enabled.
         </p>
       </div>
 
@@ -306,14 +293,13 @@ export const EnhancedChallengeCreationForm: React.FC<EnhancedChallengeCreationFo
       <div style={styles.instructionsContainer}>
         <h4 style={styles.instructionsTitle}>Instructions:</h4>
         <ol style={styles.instructionsList}>
-          <li>Write three statements about yourself (required)</li>
-          <li>Optionally add video recordings to enhance your statements</li>
+          <li>Record three video statements about yourself</li>
           <li>Make sure two statements are true and one is false</li>
           <li>Click "Mark as lie" on the statement that is false</li>
           <li>Preview your challenge before publishing</li>
         </ol>
         <div style={styles.instructionsNote}>
-          <strong>Note:</strong> Text is always required as it serves as a fallback when video recording is unavailable or fails.
+          <strong>Note:</strong> All statements must be recorded as videos. Text input is not required.
         </div>
       </div>
 
@@ -363,12 +349,12 @@ export const EnhancedChallengeCreationForm: React.FC<EnhancedChallengeCreationFo
       {/* Form Status */}
       <div style={styles.statusContainer}>
         <div style={styles.statusItem}>
-          <span style={styles.statusLabel}>Statements:</span>
+          <span style={styles.statusLabel}>Videos recorded:</span>
           <span style={{
             ...styles.statusValue,
-            color: statements.filter(s => s.text.trim()).length === 3 ? '#10B981' : '#EF4444'
+            color: currentChallenge.mediaData?.filter(m => m.type === 'video').length === 3 ? '#10B981' : '#EF4444'
           }}>
-            {statements.filter(s => s.text.trim()).length}/3
+            {currentChallenge.mediaData?.filter(m => m.type === 'video').length || 0}/3
           </span>
         </div>
         
@@ -383,12 +369,12 @@ export const EnhancedChallengeCreationForm: React.FC<EnhancedChallengeCreationFo
         </div>
 
         <div style={styles.statusItem}>
-          <span style={styles.statusLabel}>Videos added:</span>
+          <span style={styles.statusLabel}>Ready to submit:</span>
           <span style={{
             ...styles.statusValue,
-            color: '#3B82F6'
+            color: isFormValid() ? '#10B981' : '#EF4444'
           }}>
-            {currentChallenge.mediaData?.filter(m => m.type === 'video').length || 0}/3
+            {isFormValid() ? 'Yes' : 'No'}
           </span>
         </div>
       </div>
@@ -431,8 +417,8 @@ export const EnhancedChallengeCreationForm: React.FC<EnhancedChallengeCreationFo
         </button>
       </div>
 
-      {/* Upload Progress */}
-      {uploadSessions.length > 0 && (
+      {/* Upload Progress - Hidden in video-only workflow */}
+      {false && uploadSessions.length > 0 && (
         <div style={styles.uploadContainer}>
           <h4 style={styles.uploadTitle}>Uploading Media Files...</h4>
           {uploadSessions.map((session) => (
