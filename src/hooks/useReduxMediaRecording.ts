@@ -1,6 +1,12 @@
 /**
  * Redux-integrated media recording hook
- * Connects media recording state to Redux store for unified state management
+ * Conne    maxDuration = 30000,
+    allowedTypes = ['video', 'text'],
+    onRecordingComplete,
+    onRecordingError,
+    enableCompression = false, // Disabled by default to preserve audio in video recordings
+    compressionOptions = {},
+    onCompressionProgress,ia recording state to Redux store for unified state management
  */
 
 import { useCallback, useRef, useEffect } from 'react';
@@ -133,12 +139,45 @@ export const useReduxMediaRecording = (options: UseReduxMediaRecordingOptions) =
               height: { ideal: 480 },
               facingMode: 'user'
             }, 
-            audio: true 
+            audio: {
+              echoCancellation: true,
+              noiseSuppression: true,
+              autoGainControl: true
+            }
           }
-        : { audio: true };
+        : { 
+            audio: {
+              echoCancellation: true,
+              noiseSuppression: true,
+              autoGainControl: true
+            }
+          };
       
       const stream = await navigator.mediaDevices.getUserMedia(constraints);
       streamRef.current = stream;
+      
+      // Verify we have both video and audio tracks for video recording
+      if (type === 'video') {
+        const videoTracks = stream.getVideoTracks();
+        const audioTracks = stream.getAudioTracks();
+        
+        if (videoTracks.length === 0) {
+          throw new Error('No video track available');
+        }
+        if (audioTracks.length === 0) {
+          console.warn('No audio track available for video recording');
+        }
+        
+        console.log(`✅ Video recording setup: ${videoTracks.length} video tracks, ${audioTracks.length} audio tracks`);
+        
+        // Log track details for debugging
+        videoTracks.forEach((track, index) => {
+          console.log(`Video track ${index}: ${track.label} - ${track.kind}`);
+        });
+        audioTracks.forEach((track, index) => {
+          console.log(`Audio track ${index}: ${track.label} - ${track.kind}`);
+        });
+      }
       
       return stream;
     } catch (error) {
@@ -195,7 +234,20 @@ export const useReduxMediaRecording = (options: UseReduxMediaRecordingOptions) =
         ? getSupportedVideoMimeType()
         : getSupportedAudioMimeType();
       
-      mediaRecorderRef.current = new MediaRecorder(stream, { mimeType });
+      // Create MediaRecorder with optimized settings for video+audio
+      const options: MediaRecorderOptions = {
+        mimeType,
+      };
+      
+      // Add bitrate settings for better quality when supported
+      if (type === 'video' && mimeType.includes('codecs=')) {
+        options.audioBitsPerSecond = 128000;   // 128 kbps for good audio quality
+        options.videoBitsPerSecond = 2500000;  // 2.5 Mbps for good video quality
+      }
+      
+      console.log(`🎬 Creating MediaRecorder for ${type} with options:`, options);
+      
+      mediaRecorderRef.current = new MediaRecorder(stream, options);
       chunksRef.current = [];
 
       mediaRecorderRef.current.ondataavailable = (event) => {
@@ -554,18 +606,22 @@ export const useReduxMediaRecording = (options: UseReduxMediaRecordingOptions) =
 // Helper functions for MIME type detection
 function getSupportedVideoMimeType(): string {
   const types = [
-    'video/webm;codecs=vp9',
-    'video/webm;codecs=vp8',
-    'video/webm',
-    'video/mp4',
+    'video/webm;codecs=vp8,opus',  // Most widely supported with audio
+    'video/mp4;codecs=h264,aac',   // Good browser support with audio
+    'video/webm;codecs=vp9,opus',  // VP9 with audio
+    'video/webm;codecs=vp8',       // VP8 without audio spec
+    'video/webm',                  // Generic WebM fallback
+    'video/mp4',                   // Generic MP4 fallback
   ];
   
   for (const type of types) {
     if (MediaRecorder.isTypeSupported(type)) {
+      console.log(`✅ Using video MIME type: ${type}`);
       return type;
     }
   }
   
+  console.warn('⚠️ No preferred video MIME types supported, using fallback');
   return 'video/webm'; // Fallback
 }
 

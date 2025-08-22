@@ -41,7 +41,7 @@ export const useMediaRecording = (options: UseMediaRecordingOptions = {}) => {
     allowedTypes = ['video', 'text'], // Deprecated: now defaults to video-first with text fallback
     onRecordingComplete,
     onRecordingError,
-    enableCompression = true,
+    enableCompression = false, // Disabled by default to preserve audio in video recordings
     compressionOptions = {},
     onCompressionProgress,
   } = options;
@@ -65,6 +65,25 @@ export const useMediaRecording = (options: UseMediaRecordingOptions = {}) => {
   const chunksRef = useRef<Blob[]>([]);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const compressorRef = useRef<MediaCompressor | null>(null);
+  const recordingStartTimeRef = useRef<number | null>(null);
+  const recordingEndTimeRef = useRef<number | null>(null);
+  const validatedDurationRef = useRef<number | null>(null);
+
+  // Helper function to calculate the best available duration
+  const getBestDuration = useCallback((videoDuration?: number): number => {
+    // Try video metadata duration first if it's valid
+    if (videoDuration && isFinite(videoDuration) && videoDuration > 0) {
+      return videoDuration * 1000; // Convert to milliseconds
+    }
+    
+    // Fall back to actual recording time
+    if (recordingStartTimeRef.current && recordingEndTimeRef.current) {
+      return recordingEndTimeRef.current - recordingStartTimeRef.current;
+    }
+    
+    // Last resort: use the state duration (timer-based)
+    return state.duration;
+  }, [state.duration]);
 
   // Check media device support
   const checkMediaSupport = useCallback(async (type: MediaType): Promise<boolean> => {
@@ -408,10 +427,35 @@ export const useMediaRecording = (options: UseMediaRecordingOptions = {}) => {
           const duration = testVideo.duration;
           const isValidDuration = duration && isFinite(duration) && duration > 0;
           
-          console.log(`📹 Video metadata - Duration: ${duration}s (${isValidDuration ? 'VALID' : 'INVALID'}), Dimensions: ${testVideo.videoWidth}x${testVideo.videoHeight}`);
+          // Calculate actual recording duration as fallback
+          let actualRecordingDuration = null;
+          if (recordingStartTimeRef.current && recordingEndTimeRef.current) {
+            actualRecordingDuration = (recordingEndTimeRef.current - recordingStartTimeRef.current) / 1000;
+          } else if (recordingStartTimeRef.current) {
+            actualRecordingDuration = (Date.now() - recordingStartTimeRef.current) / 1000;
+          }
+          
+          // Format duration properly
+          let durationText;
+          if (isValidDuration) {
+            durationText = `${duration.toFixed(2)}s`;
+          } else if (actualRecordingDuration) {
+            durationText = `~${actualRecordingDuration.toFixed(2)}s (estimated)`;
+          } else if (duration === Infinity) {
+            durationText = 'Unknown (live stream)';
+          } else if (isNaN(duration)) {
+            durationText = 'Unknown (NaN)';
+          } else {
+            durationText = `Unknown (${duration})`;
+          }
+          
+          console.log(`📹 Video metadata - Duration: ${durationText} (${isValidDuration ? 'VALID' : 'INVALID'}), Dimensions: ${testVideo.videoWidth}x${testVideo.videoHeight}`);
+          if (actualRecordingDuration) {
+            console.log(`⏱️ Actual recording time: ${actualRecordingDuration.toFixed(2)}s`);
+          }
           
           if (!isValidDuration) {
-            console.error('❌ Invalid video duration detected - WebM file may be corrupted');
+            console.warn('⚠️ Invalid video duration detected - using estimated duration from recording time');
           }
           
           // Check for audio tracks using multiple methods
@@ -440,6 +484,9 @@ export const useMediaRecording = (options: UseMediaRecordingOptions = {}) => {
             console.warn('⚠️ No audio tracks detected - but this may be a browser API limitation');
             console.log('🎵 Audio should still work if codec and chunks are present');
           }
+          
+          // Store the validated duration for use in MediaCapture creation
+          validatedDurationRef.current = getBestDuration(duration);
           
           cleanupTestVideo();
         });
@@ -491,7 +538,7 @@ export const useMediaRecording = (options: UseMediaRecordingOptions = {}) => {
             const mediaData: MediaCapture = {
               type: 'video', // Always video with audio
               url,
-              duration: state.duration,
+              duration: validatedDurationRef.current || getBestDuration(),
               fileSize: compressionResult.compressedSize,
               mimeType,
               originalSize: compressionResult.originalSize,
@@ -522,7 +569,7 @@ export const useMediaRecording = (options: UseMediaRecordingOptions = {}) => {
             const mediaData: MediaCapture = {
               type: 'video', // Always video with audio
               url,
-              duration: state.duration,
+              duration: validatedDurationRef.current || getBestDuration(),
               fileSize: blob.size,
               mimeType,
             };
@@ -551,7 +598,7 @@ export const useMediaRecording = (options: UseMediaRecordingOptions = {}) => {
           const mediaData: MediaCapture = {
             type: 'video', // Always video with audio
             url,
-            duration: state.duration,
+            duration: validatedDurationRef.current || getBestDuration(),
             fileSize: blob.size,
             mimeType,
           };
@@ -592,6 +639,7 @@ export const useMediaRecording = (options: UseMediaRecordingOptions = {}) => {
       };
 
       // Start recording with smaller time slice to ensure audio capture
+      recordingStartTimeRef.current = Date.now();
       mediaRecorderRef.current.start(250); // 250ms chunks for better audio capture
       console.log('MediaRecorder started');
       
@@ -637,6 +685,7 @@ export const useMediaRecording = (options: UseMediaRecordingOptions = {}) => {
   // Stop recording
   const stopRecording = useCallback(async () => {
     console.log('🛑 Stopping recording...');
+    recordingEndTimeRef.current = Date.now();
     
     if (timerRef.current) {
       clearInterval(timerRef.current);

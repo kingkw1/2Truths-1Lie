@@ -10,6 +10,7 @@ import { SimpleTextTest } from "./components/SimpleTextTest";
 import { GameExample } from "./components/GameExample";
 import { WebSocketExample } from "./components/WebSocketExample";
 import { ChallengeCreationDemo } from "./components/ChallengeCreationDemo";
+import { DurationTestDemo } from "./components/DurationTestDemo";
 
 export const App: React.FC = () => {
   return (
@@ -62,6 +63,12 @@ export const App: React.FC = () => {
         }
       >
         <ChallengeCreationDemo />
+      </ErrorBoundary>
+
+      <hr style={{ margin: "40px 0", border: "1px solid #E5E7EB" }} />
+
+      <ErrorBoundary>
+        <DurationTestDemo />
       </ErrorBoundary>
 
       <hr style={{ margin: "40px 0", border: "1px solid #E5E7EB" }} />
