@@ -33,10 +33,10 @@
 - [x] **Remove dependency on backend upload for core functionality - work with local blob URLs**
 
 ### 5. Challenge Publishing and Moderation  
-- [ ] Implement server-side APIs to receive/store challenges and media  
-- [ ] Content moderation pipeline to filter inappropriate material  
-- [ ] Rate limiting to prevent spam/flooding (max 5 per hour)  
-- [ ] Automated validation services and associated tests _(relates Req 1,3)_  
+- [x] Implement server-side APIs to receive/store challenges and media  
+- [x] Content moderation pipeline to filter inappropriate material  
+- [x] Rate limiting to prevent spam/flooding (max 5 per hour)  
+- [x] Automated validation services and associated tests _(relates Req 1,3)_  
 
 ### 6. Guessing Engine and Gameplay  
 - [ ] Build challenge browsing UI with filtering/sorting by difficulty or popularity  
@@ -45,16 +45,12 @@
 - [ ] Animate feedback for correct/incorrect guesses and streaks  
 - [ ] Unit and integration tests covering gameplay logic _(relates Req 1,3,6)_  
 
-***
-
 ### 7. Emotion Analysis Integration (Optional MVP Feature)  
 - [ ] Connect to AffectLink API for real-time or batch emotion scoring  
 - [ ] Implement confidence/difficulty scoring for statements  
 - [ ] Visual overlays indicating emotional signals during gameplay  
 - [ ] Fallback modes for offline or API failure  
 - [ ] Tests for AI pipeline robustness _(relates Req 1,2,6)_  
-
-***
 
 ### 8. Progression and Rewards  
 - [ ] Design leveling, experience, and badge system  
@@ -96,5 +92,3 @@
 - [ ] Full documentation for users and developers  
 - [ ] Final bug fixing and optimizations  
 - [ ] Prepare demo video and all required assets for hackathon submissions _(relates to all)_  
-
-***
