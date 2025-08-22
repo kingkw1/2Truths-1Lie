@@ -55,6 +55,12 @@ Object.defineProperty(navigator, 'mediaDevices', {
   return type.includes('video/webm') || type.includes('video/mp4');
 });
 
+// Ensure MediaRecorder is available globally 
+Object.defineProperty(global, 'MediaRecorder', {
+  writable: true,
+  value: (global as any).MediaRecorder,
+});
+
 // Mock URL.createObjectURL
 (global as any).URL = {
   createObjectURL: jest.fn(() => 'blob:mock-video-url'),
@@ -73,11 +79,37 @@ describe('MediaRecorder Video+Audio Recording', () => {
 
   beforeEach(() => {
     jest.clearAllMocks();
+    
+    // Reset MediaRecorder mock state completely
     mockMediaRecorder.start.mockClear();
     mockMediaRecorder.stop.mockClear();
+    mockMediaRecorder.pause.mockClear();
+    mockMediaRecorder.resume.mockClear();
+    mockMediaRecorder.state = 'inactive';
+    mockMediaRecorder.ondataavailable = null;
+    mockMediaRecorder.onstop = null;
+    mockMediaRecorder.onerror = null;
+    
+    // Reset track mocks
     mockVideoTrack.stop.mockClear();
     mockAudioTrack.stop.mockClear();
+    
+    // Reset stream mocks
+    mockStream.getTracks.mockReturnValue([mockVideoTrack, mockAudioTrack]);
+    mockStream.getVideoTracks.mockReturnValue([mockVideoTrack]);
+    mockStream.getAudioTracks.mockReturnValue([mockAudioTrack]);
+    
+    // Ensure getUserMedia succeeds
     (navigator.mediaDevices.getUserMedia as jest.Mock).mockResolvedValue(mockStream);
+    
+    // Ensure MediaRecorder support check succeeds
+    ((global as any).MediaRecorder.isTypeSupported as jest.Mock).mockImplementation((type: string) => {
+      return type.includes('video/webm') || type.includes('video/mp4');
+    });
+    
+    // Reset URL mocks
+    ((global as any).URL.createObjectURL as jest.Mock).mockReturnValue('blob:mock-video-url');
+    ((global as any).URL.revokeObjectURL as jest.Mock).mockClear();
   });
 
   const defaultProps = {
@@ -122,6 +154,11 @@ describe('MediaRecorder Video+Audio Recording', () => {
 
   it('creates MediaRecorder with video+audio MIME type', async () => {
     render(<MediaRecorder {...defaultProps} />);
+    
+    // Wait for component to be ready, should show the Start Video Recording button
+    await waitFor(() => {
+      expect(screen.getByText('Start Video Recording')).toBeInTheDocument();
+    });
     
     fireEvent.click(screen.getByText('Start Video Recording'));
     
