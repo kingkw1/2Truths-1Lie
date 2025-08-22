@@ -52,7 +52,7 @@ export const StatementWithMedia: React.FC<StatementWithMediaProps> = ({
     onRecordingError: (error) => {
       console.warn('Media recording error:', error);
     },
-    enableCompression: true,
+    enableCompression: false, // Disabled to preserve audio in video recordings
   });
   const [statementQuality, setStatementQuality] = useState<StatementQuality | null>(null);
   const [isAnalyzing, setIsAnalyzing] = useState(false);
