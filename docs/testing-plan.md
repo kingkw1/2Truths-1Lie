@@ -114,7 +114,23 @@ This document outlines the testing strategy, scope, tools, and schedule for the 
 
 ---
 
-## 9. Continuous Improvement
+## 9. Advanced Testing & Quality Assurance
+
+**Post-MVP Enhancement**: After core gameplay is complete and mobile-deployed, implement comprehensive quality assurance measures outlined in the **Advanced Testing & QA Specification** (`docs/advanced-testing-qa-spec.md`).
+
+This includes:
+- Enhanced content moderation edge case testing
+- End-to-end user journey automation  
+- Performance and load testing
+- Production monitoring and observability
+- Security and compliance validation
+
+See the dedicated specification for detailed implementation timeline and success criteria.
+
+---
+
+## 10. Continuous Improvement
 
 - Update this plan as project evolves.
 - Gather feedback from testing cycles to refine processes.
+- Implement advanced testing phases based on user adoption and scaling needs.
