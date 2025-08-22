@@ -107,12 +107,11 @@ const mockMediaRecorder = {
   requestData: jest.fn(),
 };
 
-// Mock global MediaRecorder constructor - create fresh instance each time
-global.MediaRecorder = jest.fn().mockImplementation((stream, options) => {
+// Mock global MediaRecorder constructor
+(global as any).MediaRecorder = jest.fn().mockImplementation((stream, options) => {
   const instance = {
     start: jest.fn(function(this: any, timeslice?: number) {
       this.state = 'recording';
-      // Simulate successful start
       setTimeout(() => {
         if (this.onstart) {
           this.onstart(new Event('start'));
@@ -121,7 +120,6 @@ global.MediaRecorder = jest.fn().mockImplementation((stream, options) => {
     }),
     stop: jest.fn(function(this: any) {
       this.state = 'inactive';
-      // Simulate successful stop with data
       setTimeout(() => {
         if (this.ondataavailable) {
           this.ondataavailable({
@@ -165,8 +163,10 @@ global.MediaRecorder = jest.fn().mockImplementation((stream, options) => {
     requestData: jest.fn(),
   };
   return instance;
-}) as any;
-(global.MediaRecorder as any).isTypeSupported = jest.fn().mockReturnValue(true);
+});
+
+// Add isTypeSupported static method
+(global as any).MediaRecorder.isTypeSupported = jest.fn().mockReturnValue(true);
 
 // Mock navigator.mediaDevices
 Object.defineProperty(navigator, 'mediaDevices', {
