@@ -42,6 +42,8 @@ describe('challengeCreationSlice', () => {
       isSubmitting: false,
       submissionSuccess: false,
       previewMode: false,
+      mediaRecordingState: {},
+      uploadState: {},
     };
   });
 

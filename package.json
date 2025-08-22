@@ -16,6 +16,7 @@
     "@testing-library/user-event": "^14.6.1",
     "@types/babel__core": "^7.20.5",
     "@types/jest": "^27.5.2",
+    "@types/jest-axe": "^3.5.9",
     "@types/node": "^16.18.0",
     "@types/react": "^18.2.0",
     "@types/react-dom": "^18.2.0",

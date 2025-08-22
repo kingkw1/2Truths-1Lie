@@ -2,8 +2,11 @@
  * Tests for media compression functionality
  */
 
+// Export to make this a module
+export {};
+
 // Mock MediaRecorder and related APIs
-global.MediaRecorder = jest.fn().mockImplementation(() => ({
+const mockMediaRecorderInstance = {
   start: jest.fn(),
   stop: jest.fn(),
   pause: jest.fn(),
@@ -11,7 +14,12 @@ global.MediaRecorder = jest.fn().mockImplementation(() => ({
   ondataavailable: null,
   onstop: null,
   onerror: null,
-}));
+};
+
+const MockMediaRecorderConstructor = jest.fn(() => mockMediaRecorderInstance);
+(MockMediaRecorderConstructor as any).isTypeSupported = jest.fn().mockReturnValue(true);
+
+global.MediaRecorder = MockMediaRecorderConstructor as any;
 
 Object.defineProperty(global.MediaRecorder, 'isTypeSupported', {
   value: jest.fn().mockReturnValue(true),
@@ -162,9 +170,11 @@ describe('MediaCompressor', () => {
     it('should handle compression failures gracefully', async () => {
       // Mock a failure in MediaRecorder
       const originalMediaRecorder = global.MediaRecorder;
-      global.MediaRecorder = jest.fn().mockImplementation(() => {
+      const failingMockConstructor = jest.fn().mockImplementation(() => {
         throw new Error('MediaRecorder failed');
       });
+      (failingMockConstructor as any).isTypeSupported = jest.fn().mockReturnValue(true);
+      global.MediaRecorder = failingMockConstructor as any;
 
       const compressor = new MediaCompressor();
       const videoBlob = new Blob(['video content'], { type: 'video/webm' });
