@@ -13,8 +13,9 @@ export const ChallengeBrowserDemo: React.FC = () => {
   const [showGuessInterface, setShowGuessInterface] = useState(false);
 
   const handleChallengeSelect = (challenge: EnhancedChallenge) => {
-    setSelectedChallenge(challenge);
+    // Always reset to browsing mode when selecting a new challenge
     setShowGuessInterface(false);
+    setSelectedChallenge(challenge);
   };
 
   const startGuessing = () => {
@@ -28,15 +29,22 @@ export const ChallengeBrowserDemo: React.FC = () => {
     setSelectedChallenge(null);
   };
 
+  const handleGuessComplete = (result: any) => {
+    console.log('Guess completed:', result);
+    // Reset to browsing state but keep the challenge selected
+    // so user can see it was completed and try another
+    setShowGuessInterface(false);
+    // Don't reset selectedChallenge immediately to give user feedback
+    setTimeout(() => {
+      setSelectedChallenge(null);
+    }, 1000);
+  };
+
   if (showGuessInterface && selectedChallenge) {
     return (
       <GuessSubmissionInterface
         challenge={selectedChallenge}
-        onComplete={(result) => {
-          console.log('Guess completed:', result);
-          // In a real app, this would navigate to results or update player stats
-          backToBrowsing();
-        }}
+        onComplete={handleGuessComplete}
         onBack={backToBrowsing}
       />
     );
