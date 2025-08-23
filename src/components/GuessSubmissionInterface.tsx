@@ -55,8 +55,19 @@ export const GuessSubmissionInterface: React.FC<GuessSubmissionInterfaceProps> =
   const [showProgressiveHint, setShowProgressiveHint] = useState(false);
   const [hintProgress, setHintProgress] = useState(0);
 
+  // Debug selectedStatement changes
+  useEffect(() => {
+    console.log('🎯 selectedStatement changed to:', selectedStatement);
+  }, [selectedStatement]);
+
+  // Debug guessSubmitted changes
+  useEffect(() => {
+    console.log('✉️ guessSubmitted changed to:', guessSubmitted);
+  }, [guessSubmitted]);
+
   const { subscribeToGuessResults } = useGuessResults();
   const hintServiceRef = useRef<ProgressiveHintService | null>(null);
+  const prevChallengeIdRef = useRef<string | null>(null);
 
   // Initialize guessing session and progressive hints
   useEffect(() => {
@@ -81,6 +92,44 @@ export const GuessSubmissionInterface: React.FC<GuessSubmissionInterfaceProps> =
       setHintProgress(hintServiceRef.current.getHintProgress());
     }
   }, [challenge, currentSession, dispatch]);
+
+  // TEMPORARILY DISABLED - Testing if this is causing the selection reset
+  // Reset component state only when challenge ID actually changes
+  // useEffect(() => {
+  //   const currentChallengeId = challenge.id;
+    
+  //   // Only reset if this is a different challenge than before
+  //   if (prevChallengeIdRef.current && prevChallengeIdRef.current !== currentChallengeId) {
+  //     console.log('🔄 Resetting state for new challenge:', currentChallengeId);
+  //     // Reset local state only when challenge ID changes
+  //     setSelectedStatement(null);
+  //     setConfidenceLevel(50);
+  //     setIsSubmitting(false);
+  //     setShowFeedback(false);
+  //     setProgressiveHints([]);
+  //     setCurrentHintLevel('basic');
+  //     setShowProgressiveHint(false);
+  //     setHintProgress(0);
+      
+  //     // End existing session when challenge changes
+  //     if (currentSession && currentSession.challengeId !== currentChallengeId) {
+  //       dispatch(endGuessingSession());
+  //     }
+  //   }
+    
+  //   // Update the ref with current challenge ID
+  //   prevChallengeIdRef.current = currentChallengeId;
+  // }, [challenge.id, dispatch, currentSession]);
+
+  // Cleanup when component unmounts
+  useEffect(() => {
+    return () => {
+      // Clean up any timers or subscriptions if component unmounts
+      if (currentSession) {
+        dispatch(endGuessingSession());
+      }
+    };
+  }, []);
 
   // Timer countdown
   useEffect(() => {
@@ -139,8 +188,14 @@ export const GuessSubmissionInterface: React.FC<GuessSubmissionInterfaceProps> =
   }, [guessSubmitted, selectedStatement, challenge.statements.length]);
 
   const handleStatementSelect = (index: number) => {
+    console.log('📝 Statement selected:', index, 'guessSubmitted:', guessSubmitted);
+    console.log('🔍 Current session:', currentSession?.sessionId, 'Current challenge:', challenge.id);
     if (!guessSubmitted) {
       setSelectedStatement(index);
+      // Log state immediately after setting it
+      setTimeout(() => {
+        console.log('✅ Selected statement after set:', index);
+      }, 10);
     }
   };
 
