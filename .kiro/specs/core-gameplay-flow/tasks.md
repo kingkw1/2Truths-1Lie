@@ -31,9 +31,9 @@
 - [x] Connect media capture state to Redux and unify with challenge submission logic  
 - [x] Test media capture UI across supported browsers/devices to ensure usability and accessibility  
 - [x] **Remove dependency on backend upload for core functionality - work with local blob URLs**
-- [ ] **Add mobile-specific camera integration using Expo Camera module with permissions management, real-time preview, and recording controls**  
-- [ ] **Implement mobile media capture error handling and platform-specific UI adaptations**  
-- [ ] **Write unit and integration tests verifying mobile media capture scenarios and permission flows**
+- [x] **Add mobile-specific camera integration using Expo Camera module with permissions management, real-time preview, and recording controls**  
+- [x] **Implement mobile media capture error handling and platform-specific UI adaptations**  
+- [x] **Write unit and integration tests verifying mobile media capture scenarios and permission flows**
 
 ### 5. Challenge Publishing and Moderation  
 - [x] Implement server-side APIs to receive/store challenges and media  
