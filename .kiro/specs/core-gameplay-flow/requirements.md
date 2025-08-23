@@ -100,7 +100,7 @@ Defines game mechanics and progression driving engagement: core loop, challenge 
 ### Requirement 10: Code Quality and Completion Criteria
 
 - All code generated or modified must result in a project state where the application compiles successfully with no build errors.
-- Code changes must not break local development workflows, including `npm run start` and `npm run build`.
+- Code changes must not break local development workflows, including `npm run start`, `npm run build`, and `npm run type-check`.
 - Automated tests relevant to the modified/added features must pass before considering the task complete.
 - Failure to build or pass tests should trigger task rework until compliance is met.
 - Developers and AI automation alike should use this criterion as a gate to finalize tasks.

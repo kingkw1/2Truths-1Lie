@@ -37,6 +37,7 @@ include: always
 
 - All code changes must ensure the project compiles successfully with zero build errors.
 - The application should run correctly with `npm run start` or equivalent without runtime errors.
+- TypeScript type checking must pass. Before completing a task, run `npm run type-check` and ensure there are no errors.
 - Tasks are not considered complete until the build passes and no compilation issues exist.
 - Automated test suites covering new or modified features must pass before merging code.
 - Failed builds or tests must trigger immediate fixes rather than partial or broken implementations.
