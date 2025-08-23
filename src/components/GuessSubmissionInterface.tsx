@@ -65,9 +65,15 @@ export const GuessSubmissionInterface: React.FC<GuessSubmissionInterfaceProps> =
     console.log('✉️ guessSubmitted changed to:', guessSubmitted);
   }, [guessSubmitted]);
 
+  // Debug guessResult changes
+  useEffect(() => {
+    console.log('🎯 guessResult changed to:', guessResult);
+  }, [guessResult]);
+
   const { subscribeToGuessResults } = useGuessResults();
   const hintServiceRef = useRef<ProgressiveHintService | null>(null);
   const prevChallengeIdRef = useRef<string | null>(null);
+  const resultProcessedRef = useRef<boolean>(false);
 
   // Initialize guessing session and progressive hints
   useEffect(() => {
@@ -162,14 +168,22 @@ export const GuessSubmissionInterface: React.FC<GuessSubmissionInterfaceProps> =
   useEffect(() => {
     const unsubscribe = subscribeToGuessResults((result: GuessResult) => {
       if (result.sessionId === currentSession?.sessionId) {
-        dispatch(setGuessResult(result));
-        setIsSubmitting(false);
-        setShowFeedback(true);
+        console.log('🔔 WebSocket guess result received for session:', result);
         
-        // Auto-complete after showing feedback
-        setTimeout(() => {
-          onComplete?.(result);
-        }, 3000);
+        if (!resultProcessedRef.current) {
+          console.log('🔔 Processing WebSocket result');
+          resultProcessedRef.current = true;
+          dispatch(setGuessResult(result));
+          setIsSubmitting(false);
+          setShowFeedback(true);
+          
+          // Auto-complete after showing feedback
+          setTimeout(() => {
+            onComplete?.(result);
+          }, 3000);
+        } else {
+          console.log('🔔 Result already processed, ignoring WebSocket duplicate');
+        }
       }
     });
 
@@ -250,55 +264,67 @@ export const GuessSubmissionInterface: React.FC<GuessSubmissionInterfaceProps> =
     if (selectedStatement === null || guessSubmitted) return;
 
     setIsSubmitting(true);
+    resultProcessedRef.current = false; // Reset for new guess
     dispatch(submitGuess(selectedStatement));
 
     // Simulate API call for guess result (in real app this would be handled by WebSocket)
+    // NOTE: Check if WebSocket is already handling results to avoid double animation
     setTimeout(() => {
-      const correctStatement = challenge.statements.findIndex(stmt => stmt.isLie);
-      const wasCorrect = selectedStatement === correctStatement;
-      
-      // Calculate points based on various factors
-      const basePoints = wasCorrect ? 100 : 0;
-      const timeBonus = timeRemaining ? Math.floor((timeRemaining / 60) * 20) : 0;
-      const confidenceBonus = wasCorrect ? Math.floor((confidenceLevel / 100) * 30) : 0;
-      const difficultyBonus = Math.floor((challenge.difficultyRating / 100) * 50);
-      
-      // Calculate streak bonus
-      const streakBonus = wasCorrect && currentStreak >= 1 ? (currentStreak + 1) * 25 : 0;
-      
-      // Generate achievements based on performance
-      const achievements: string[] = [];
-      if (wasCorrect) {
-        if (currentStreak === 0) achievements.push('first_correct_guess');
-        if (currentStreak + 1 === 3) achievements.push('streak_master');
-        if (currentStreak + 1 === 5) achievements.push('deception_expert');
-        if (confidenceLevel >= 90 && wasCorrect) achievements.push('perfectionist');
-        if (timeRemaining && timeRemaining >= 45) achievements.push('speed_demon');
+      // Only proceed with mock result if no real-time result has been received
+      if (!resultProcessedRef.current) {
+        console.log('🎯 Creating mock guess result');
+        resultProcessedRef.current = true;
+        
+        const correctStatement = challenge.statements.findIndex(stmt => stmt.isLie);
+        const wasCorrect = selectedStatement === correctStatement;
+        
+        // Calculate points based on various factors
+        const basePoints = wasCorrect ? 100 : 0;
+        const timeBonus = timeRemaining ? Math.floor((timeRemaining / 60) * 20) : 0;
+        const confidenceBonus = wasCorrect ? Math.floor((confidenceLevel / 100) * 30) : 0;
+        const difficultyBonus = Math.floor((challenge.difficultyRating || 50) / 100 * 50);
+        
+        // Calculate streak bonus
+        const streakBonus = wasCorrect && currentStreak >= 1 ? (currentStreak + 1) * 25 : 0;
+        
+        // Generate achievements based on performance
+        const achievements: string[] = [];
+        if (wasCorrect) {
+          if (currentStreak === 0) achievements.push('first_correct_guess');
+          if (currentStreak + 1 === 3) achievements.push('streak_master');
+          if (currentStreak + 1 === 5) achievements.push('deception_expert');
+          if (confidenceLevel >= 90 && wasCorrect) achievements.push('perfectionist');
+          if (timeRemaining && timeRemaining >= 45) achievements.push('speed_demon');
+        }
+
+        const mockResult: GuessResult = {
+          sessionId: currentSession!.sessionId,
+          playerId: currentSession!.playerId,
+          challengeId: challenge.id,
+          guessedStatement: selectedStatement,
+          correctStatement,
+          wasCorrect,
+          pointsEarned: basePoints,
+          timeBonus,
+          accuracyBonus: confidenceBonus,
+          streakBonus,
+          totalScore: basePoints + timeBonus + confidenceBonus + difficultyBonus + streakBonus,
+          newAchievements: achievements,
+          levelUp: wasCorrect && (currentStreak + 1) % 5 === 0 ? {
+            oldLevel: Math.floor((currentStreak + 1) / 5),
+            newLevel: Math.floor((currentStreak + 1) / 5) + 1,
+            rewardsUnlocked: ['new_cosmetic_pack']
+          } : undefined
+        };
+
+        console.log('🎯 Dispatching mock guess result');
+        dispatch(setGuessResult(mockResult));
+        setIsSubmitting(false);
+        // Don't set showFeedback here - let AnimatedFeedback handle the timing
+      } else {
+        console.log('🔔 Real-time result already processed, skipping mock result');
+        setIsSubmitting(false);
       }
-
-      const mockResult: GuessResult = {
-        sessionId: currentSession!.sessionId,
-        playerId: currentSession!.playerId,
-        challengeId: challenge.id,
-        guessedStatement: selectedStatement,
-        correctStatement,
-        wasCorrect,
-        pointsEarned: basePoints,
-        timeBonus,
-        accuracyBonus: confidenceBonus,
-        streakBonus,
-        totalScore: basePoints + timeBonus + confidenceBonus + difficultyBonus + streakBonus,
-        newAchievements: achievements,
-        levelUp: wasCorrect && (currentStreak + 1) % 5 === 0 ? {
-          oldLevel: Math.floor((currentStreak + 1) / 5),
-          newLevel: Math.floor((currentStreak + 1) / 5) + 1,
-          rewardsUnlocked: ['new_cosmetic_pack']
-        } : undefined
-      };
-
-      dispatch(setGuessResult(mockResult));
-      setIsSubmitting(false);
-      // Don't set showFeedback here - let AnimatedFeedback handle the timing
     }, 1500);
   };
 
@@ -846,6 +872,7 @@ export const GuessSubmissionInterface: React.FC<GuessSubmissionInterfaceProps> =
       {/* Animated Feedback Overlay */}
       {showAnimatedFeedback && guessResult && (
         <AnimatedFeedback
+          key={`${guessResult.sessionId}-${guessResult.challengeId}-${guessResult.guessedStatement}`}
           result={guessResult}
           currentStreak={currentStreak}
           showStreakAnimation={guessResult.wasCorrect && currentStreak > 1}

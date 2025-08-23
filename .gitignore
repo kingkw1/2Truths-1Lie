@@ -68,3 +68,7 @@ firebase-debug.log
 
 # Python
 __pycache__/
+
+# Expo files
+.expo/
+.expo-shared/

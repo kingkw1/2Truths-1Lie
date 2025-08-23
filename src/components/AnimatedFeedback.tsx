@@ -4,7 +4,7 @@
  * Relates to Requirements 1, 2, 4: Core Game Loop, Progress Feedback, Social Interaction
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { GuessResult } from '../types';
 
 interface AnimatedFeedbackProps {
@@ -23,6 +23,19 @@ export const AnimatedFeedback: React.FC<AnimatedFeedbackProps> = ({
   const [animationPhase, setAnimationPhase] = useState<'initial' | 'result' | 'score' | 'streak' | 'complete'>('initial');
   const [showParticles, setShowParticles] = useState(false);
   const [scoreCounter, setScoreCounter] = useState(0);
+  const animationStartedRef = useRef(false);
+  const stableResultRef = useRef(result);
+
+  // Lock in the result when animation first starts
+  useEffect(() => {
+    if (!animationStartedRef.current) {
+      stableResultRef.current = result;
+      animationStartedRef.current = true;
+    }
+  }, []);
+
+  // Use the stable result for all animations
+  const stableResult = stableResultRef.current;
 
   useEffect(() => {
     const sequence = async () => {
@@ -55,18 +68,18 @@ export const AnimatedFeedback: React.FC<AnimatedFeedbackProps> = ({
     };
 
     sequence();
-  }, [result, showStreakAnimation, currentStreak, onAnimationComplete]);
+  }, [stableResult, showStreakAnimation, currentStreak, onAnimationComplete]);
 
   const animateScore = () => {
     const duration = 1000;
     const steps = 30;
-    const increment = result.totalScore / steps;
+    const increment = stableResult.totalScore / steps;
     let current = 0;
     
     const timer = setInterval(() => {
       current += increment;
-      if (current >= result.totalScore) {
-        setScoreCounter(result.totalScore);
+      if (current >= stableResult.totalScore) {
+        setScoreCounter(stableResult.totalScore);
         clearInterval(timer);
       } else {
         setScoreCounter(Math.floor(current));
@@ -75,18 +88,18 @@ export const AnimatedFeedback: React.FC<AnimatedFeedbackProps> = ({
   };
 
   const getResultIcon = () => {
-    if (result.wasCorrect) {
+    if (stableResult.wasCorrect) {
       return currentStreak > 1 ? '🔥' : '🎉';
     }
     return '🤔';
   };
 
   const getResultColor = () => {
-    return result.wasCorrect ? '#059669' : '#DC2626';
+    return stableResult.wasCorrect ? '#059669' : '#DC2626';
   };
 
   const getResultMessage = () => {
-    if (result.wasCorrect) {
+    if (stableResult.wasCorrect) {
       if (currentStreak > 1) {
         return `${currentStreak} in a row!`;
       }
@@ -206,6 +219,7 @@ export const AnimatedFeedback: React.FC<AnimatedFeedbackProps> = ({
             font-weight: 700;
             margin-bottom: 20px;
             animation: slideUp 0.5s ease-out 0.3s both;
+            transition: opacity 0.3s ease-out;
           }
           
           .score-display {
@@ -213,6 +227,8 @@ export const AnimatedFeedback: React.FC<AnimatedFeedbackProps> = ({
             font-weight: 800;
             margin: 20px 0;
             animation: slideUp 0.5s ease-out 0.6s both;
+            transition: opacity 0.3s ease-out;
+            font-family: 'Courier New', 'Monaco', monospace; /* Consistent character width */
           }
           
           .score-breakdown {
@@ -221,6 +237,7 @@ export const AnimatedFeedback: React.FC<AnimatedFeedbackProps> = ({
             gap: 15px;
             margin: 20px 0;
             animation: slideUp 0.5s ease-out 0.9s both;
+            transition: opacity 0.3s ease-out;
           }
           
           .score-item {
@@ -284,7 +301,7 @@ export const AnimatedFeedback: React.FC<AnimatedFeedbackProps> = ({
         <div className="feedback-content">
           {/* Result Icon */}
           <span 
-            className={`result-icon ${!result.wasCorrect ? 'incorrect-shake' : ''}`}
+            className={`result-icon ${!stableResult.wasCorrect ? 'incorrect-shake' : ''}`}
             style={{ 
               animationDelay: animationPhase === 'initial' ? '0s' : '0s'
             }}
@@ -293,45 +310,64 @@ export const AnimatedFeedback: React.FC<AnimatedFeedbackProps> = ({
           </span>
           
           {/* Result Message */}
-          {animationPhase !== 'initial' && (
-            <div 
-              className="result-message"
-              style={{ color: getResultColor() }}
-            >
-              {getResultMessage()}
-            </div>
-          )}
+          <div 
+            className="result-message"
+            style={{ 
+              color: getResultColor(),
+              opacity: animationPhase !== 'initial' ? 1 : 0,
+              visibility: animationPhase !== 'initial' ? 'visible' : 'hidden',
+              height: '50px', // Reserve fixed height to prevent layout shift
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center'
+            }}
+          >
+            {getResultMessage()}
+          </div>
           
           {/* Score Display */}
-          {animationPhase === 'score' || animationPhase === 'streak' || animationPhase === 'complete' ? (
-            <div className="score-display score-counter">
-              +{scoreCounter.toLocaleString()} points
-            </div>
-          ) : null}
+          <div 
+            className="score-display score-counter"
+            style={{ 
+              opacity: (animationPhase === 'score' || animationPhase === 'streak' || animationPhase === 'complete') ? 1 : 0,
+              visibility: (animationPhase === 'score' || animationPhase === 'streak' || animationPhase === 'complete') ? 'visible' : 'hidden',
+              height: '58px', // Reserve fixed height to prevent layout shift
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center'
+            }}
+          >
+            +{scoreCounter.toLocaleString()} points
+          </div>
           
           {/* Score Breakdown */}
-          {animationPhase === 'score' || animationPhase === 'streak' || animationPhase === 'complete' ? (
-            <div className="score-breakdown">
-              <div className="score-item">
-                <div className="score-label">Base</div>
-                <div className="score-value">+{result.pointsEarned}</div>
-              </div>
-              <div className="score-item">
-                <div className="score-label">Time</div>
-                <div className="score-value">+{result.timeBonus}</div>
-              </div>
-              <div className="score-item">
-                <div className="score-label">Accuracy</div>
-                <div className="score-value">+{result.accuracyBonus}</div>
-              </div>
-              {result.streakBonus > 0 && (
-                <div className="score-item">
-                  <div className="score-label">Streak</div>
-                  <div className="score-value">+{result.streakBonus}</div>
-                </div>
-              )}
+          <div 
+            className="score-breakdown"
+            style={{ 
+              opacity: (animationPhase === 'score' || animationPhase === 'streak' || animationPhase === 'complete') ? 1 : 0,
+              visibility: (animationPhase === 'score' || animationPhase === 'streak' || animationPhase === 'complete') ? 'visible' : 'hidden',
+              minHeight: '80px' // Reserve fixed height to prevent layout shift
+            }}
+          >
+            <div className="score-item">
+              <div className="score-label">Base</div>
+              <div className="score-value">+{stableResult.pointsEarned}</div>
             </div>
-          ) : null}
+            <div className="score-item">
+              <div className="score-label">Time</div>
+              <div className="score-value">+{stableResult.timeBonus}</div>
+            </div>
+            <div className="score-item">
+              <div className="score-label">Accuracy</div>
+              <div className="score-value">+{stableResult.accuracyBonus}</div>
+            </div>
+            {stableResult.streakBonus > 0 && (
+              <div className="score-item">
+                <div className="score-label">Streak</div>
+                <div className="score-value">+{stableResult.streakBonus}</div>
+              </div>
+            )}
+          </div>
           
           {/* Streak Animation */}
           {animationPhase === 'streak' && showStreakAnimation && currentStreak > 1 && (
@@ -341,7 +377,7 @@ export const AnimatedFeedback: React.FC<AnimatedFeedbackProps> = ({
           )}
           
           {/* Achievement Notifications */}
-          {result.newAchievements.length > 0 && (animationPhase === 'complete' || animationPhase === 'streak') && (
+          {stableResult.newAchievements.length > 0 && (animationPhase === 'complete' || animationPhase === 'streak') && (
             <div style={{
               marginTop: '20px',
               animation: 'slideUp 0.5s ease-out'
@@ -352,9 +388,9 @@ export const AnimatedFeedback: React.FC<AnimatedFeedbackProps> = ({
                 marginBottom: '10px',
                 color: '#FFD700'
               }}>
-                🏆 New Achievement{result.newAchievements.length > 1 ? 's' : ''}!
+                🏆 New Achievement{stableResult.newAchievements.length > 1 ? 's' : ''}!
               </div>
-              {result.newAchievements.map((achievement, index) => (
+              {stableResult.newAchievements.map((achievement, index) => (
                 <div 
                   key={achievement}
                   style={{
@@ -373,7 +409,7 @@ export const AnimatedFeedback: React.FC<AnimatedFeedbackProps> = ({
           )}
           
           {/* Level Up Animation */}
-          {result.levelUp && (animationPhase === 'complete' || animationPhase === 'streak') && (
+          {stableResult.levelUp && (animationPhase === 'complete' || animationPhase === 'streak') && (
             <div style={{
               marginTop: '20px',
               padding: '15px',
@@ -389,14 +425,14 @@ export const AnimatedFeedback: React.FC<AnimatedFeedbackProps> = ({
                 🎊 LEVEL UP! 🎊
               </div>
               <div style={{ fontSize: '16px' }}>
-                Level {result.levelUp.oldLevel} → {result.levelUp.newLevel}
+                Level {stableResult.levelUp.oldLevel} → {stableResult.levelUp.newLevel}
               </div>
             </div>
           )}
         </div>
         
         {/* Particle Effects */}
-        {showParticles && result.wasCorrect && (
+        {showParticles && stableResult.wasCorrect && (
           <div className="particles">
             {Array.from({ length: 12 }, (_, i) => (
               <div

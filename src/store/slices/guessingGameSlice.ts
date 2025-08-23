@@ -99,7 +99,12 @@ const guessingGameSlice = createSlice({
 
     setGuessResult: (state, action: PayloadAction<GuessResult>) => {
       state.guessResult = action.payload;
-      state.showAnimatedFeedback = true;
+      
+      // Only set showAnimatedFeedback to true if it's not already true
+      // This prevents restarting the animation when duplicate results arrive
+      if (!state.showAnimatedFeedback) {
+        state.showAnimatedFeedback = true;
+      }
       
       // Update streak based on result
       if (action.payload.wasCorrect) {
