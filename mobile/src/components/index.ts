@@ -1,0 +1,1 @@
+export { MobileCameraRecorder } from './MobileCameraRecorder';
