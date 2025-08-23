@@ -33,6 +33,15 @@ include: always
 - Gracefully handle unexpected user inputs and API errors.
 - Display user-friendly error messages.
 
+## Code Quality and Build Compliance
+
+- All code changes must ensure the project compiles successfully with zero build errors.
+- The application should run correctly with `npm run start` or equivalent without runtime errors.
+- Tasks are not considered complete until the build passes and no compilation issues exist.
+- Automated test suites covering new or modified features must pass before merging code.
+- Failed builds or tests must trigger immediate fixes rather than partial or broken implementations.
+- Developers and automation (e.g., Kiro) should respect these quality gates and prioritize compilation success.
+
 ## Commit Messages
 - Use clear, imperative style: `Add game board component`  
 ---

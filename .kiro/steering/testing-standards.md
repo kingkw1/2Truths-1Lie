@@ -25,6 +25,13 @@ pattern: "**/*.test.*"
 - Aim for at least 80% coverage on business logic and API.
 - Review coverage reports as part of CI.
 
+## Build and Test Validation
+
+- Tests should be run in conjunction with build verification to ensure stable merges.
+- Developers and automation pipelines must run build commands (e.g., `npm run build`) prior to finalizing task completion.
+- Test failures or build errors must prevent task closure until resolved.
+- Maintain CI integration to automate these checks on every push.
+
 ## Running Tests
 - Tests runnable via `npm test` or `yarn test`.
 - Include test scripts in `package.json`.
