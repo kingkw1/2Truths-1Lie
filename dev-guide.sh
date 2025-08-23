@@ -1,0 +1,20 @@
+#!/bin/bash
+
+# Development workflow script
+echo "🚀 Two Truths & a Lie - Development Menu"
+echo "========================================"
+echo "1. Start Web Development (npm start)"
+echo "2. Start Mobile Development (npm run mobile)"
+echo "3. Run Tests (npm test)"
+echo "4. Build Web App (npm run build)"
+echo ""
+echo "💡 Quick Commands:"
+echo "   Web:    npm start"
+echo "   Mobile: npm run mobile"
+echo "   Both:   npm start & npm run mobile"
+echo ""
+echo "📁 Shared Code:"
+echo "   Types:  src/types/ (shared between web & mobile)"
+echo "   Store:  src/store/ (shared between web & mobile)"
+echo "   Components: Some components are shared via symlinks"
+echo ""
