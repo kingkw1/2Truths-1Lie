@@ -23,28 +23,38 @@ jest.mock('expo-permissions', () => ({
 }));
 
 // Mock React Native modules
-jest.mock('react-native', () => {
-  const RN = jest.requireActual('react-native');
-  return {
-    ...RN,
-    Vibration: {
-      vibrate: jest.fn(),
-    },
-    AppState: {
-      addEventListener: jest.fn(() => ({ remove: jest.fn() })),
-      currentState: 'active',
-    },
-    BackHandler: {
-      addEventListener: jest.fn(() => ({ remove: jest.fn() })),
-    },
-    Dimensions: {
-      get: jest.fn(() => ({ width: 375, height: 812 })),
-    },
-    Alert: {
-      alert: jest.fn(),
-    },
-  };
-});
+jest.mock('react-native', () => ({
+  Platform: {
+    OS: 'ios',
+    select: jest.fn((options) => options.ios || options.default),
+  },
+  Vibration: {
+    vibrate: jest.fn(),
+  },
+  AppState: {
+    addEventListener: jest.fn(() => ({ remove: jest.fn() })),
+    currentState: 'active',
+  },
+  BackHandler: {
+    addEventListener: jest.fn(() => ({ remove: jest.fn() })),
+  },
+  Dimensions: {
+    get: jest.fn(() => ({ width: 375, height: 812 })),
+  },
+  Alert: {
+    alert: jest.fn(),
+  },
+  View: 'View',
+  Text: 'Text',
+  TouchableOpacity: 'TouchableOpacity',
+  ScrollView: 'ScrollView',
+  StyleSheet: {
+    create: jest.fn((styles) => styles),
+  },
+  ActivityIndicator: 'ActivityIndicator',
+  Modal: 'Modal',
+  SafeAreaView: 'SafeAreaView',
+}));
 
 // Global test utilities
 global.fetch = jest.fn();

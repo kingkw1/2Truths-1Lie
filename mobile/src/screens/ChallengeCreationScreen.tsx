@@ -7,7 +7,7 @@ import {
   TouchableOpacity,
   SafeAreaView,
   Alert,
-  Modal,
+  Platform,
   Dimensions,
 } from 'react-native';
 import { useAppDispatch, useAppSelector } from '../store';
@@ -21,6 +21,7 @@ import {
   exitPreviewMode,
 } from '../store/slices/challengeCreationSlice';
 import { MobileCameraRecorder } from '../components/MobileCameraRecorder';
+import { EnhancedMobileCameraIntegration } from '../components/EnhancedMobileCameraIntegration';
 import { MediaCapture } from '../types';
 
 interface ChallengeCreationScreenProps {
@@ -89,10 +90,28 @@ export const ChallengeCreationScreen: React.FC<ChallengeCreationScreenProps> = (
   const handleRecordingComplete = (media: MediaCapture) => {
     setShowCameraModal(false);
     
+    // Enhanced success feedback with haptic response
+    if (Platform.OS === 'ios') {
+      // Success haptic feedback
+      const { HapticFeedback } = require('expo-haptics');
+      HapticFeedback?.notificationAsync(HapticFeedback?.NotificationFeedbackType?.Success);
+    }
+    
+    // Show brief success message
+    Alert.alert(
+      '✅ Recording Complete',
+      `Statement ${currentStatementIndex + 1} recorded successfully!`,
+      [{ text: 'Continue', style: 'default' }],
+      { cancelable: false }
+    );
+    
     // Move to next statement or lie selection
     if (currentStatementIndex < 2) {
       setCurrentStatementIndex(currentStatementIndex + 1);
-      setShowCameraModal(true);
+      // Small delay before showing next camera to allow user to process success
+      setTimeout(() => {
+        setShowCameraModal(true);
+      }, 500);
     } else {
       setCurrentStep('lie-selection');
     }
@@ -392,27 +411,14 @@ export const ChallengeCreationScreen: React.FC<ChallengeCreationScreenProps> = (
 
       {renderCurrentStep()}
 
-      {/* Camera Recording Modal */}
-      <Modal
-        visible={showCameraModal}
-        animationType="slide"
-        presentationStyle="fullScreen"
-      >
-        <MobileCameraRecorder
-          statementIndex={currentStatementIndex}
-          onRecordingComplete={handleRecordingComplete}
-          onError={handleRecordingError}
-          onCancel={() => setShowCameraModal(false)}
-        />
-        <SafeAreaView style={styles.cameraModalControls}>
-          <TouchableOpacity
-            style={styles.cameraCloseButton}
-            onPress={() => setShowCameraModal(false)}
-          >
-            <Text style={styles.cameraCloseButtonText}>Close</Text>
-          </TouchableOpacity>
-        </SafeAreaView>
-      </Modal>
+      {/* Enhanced Camera Recording Integration */}
+      <EnhancedMobileCameraIntegration
+        statementIndex={currentStatementIndex}
+        isVisible={showCameraModal}
+        onComplete={handleRecordingComplete}
+        onCancel={() => setShowCameraModal(false)}
+        onError={handleRecordingError}
+      />
     </SafeAreaView>
   );
 };
@@ -668,25 +674,5 @@ const styles = StyleSheet.create({
   disabledButton: {
     backgroundColor: '#ccc',
   },
-  cameraModalControls: {
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    backgroundColor: 'transparent',
-    paddingTop: 50,
-    paddingHorizontal: 20,
-  },
-  cameraCloseButton: {
-    alignSelf: 'flex-end',
-    backgroundColor: 'rgba(0, 0, 0, 0.7)',
-    paddingHorizontal: 15,
-    paddingVertical: 8,
-    borderRadius: 20,
-  },
-  cameraCloseButtonText: {
-    color: 'white',
-    fontSize: 14,
-    fontWeight: 'bold',
-  },
+
 });
