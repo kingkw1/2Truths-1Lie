@@ -78,6 +78,13 @@ Defines game mechanics and progression driving engagement: core loop, challenge 
 - **Video recording is mandatory for all three statements** - no text fallback options.
 - Local blob URL handling with robust error handling and validation.
 - Capturing and previewing media must be intuitive and accessible via the challenge creation interface, with state synchronization to the main app state and submission pipeline.
+- **Explicit Mobile Platform Considerations:**
+  - Implement seamless **camera and microphone access on mobile devices** (using Expo Camera or equivalent) including permission requests, denials, and retries.
+  - Provide **mobile-optimized recording UI** with responsive touch controls, real-time video preview, and haptic/visual feedback.
+  - Handle **mobile-specific errors** such as hardware unavailability, low storage, or interrupted recordings gracefully.
+  - Integrate mobile media capture fully with Redux state and cross-platform code sharing to maintain consistent challenge creation workflow.
+  - Ensure local storage and offline support for recorded media on mobile devices with smooth sync to backend on reconnect.
+  - Include testing for permission workflows, device compatibility, and mobile UI ergonomics.
 
 ***
 
@@ -94,7 +101,5 @@ Defines game mechanics and progression driving engagement: core loop, challenge 
 
 - Unit and integration tests for all modules.
 - End-to-end typical session tests.
-- Cross-browser and device compatibility.
+- Cross-browser and device compatibility, including mobile device testing.
 - Accessibility and fallback checks.
-
-***

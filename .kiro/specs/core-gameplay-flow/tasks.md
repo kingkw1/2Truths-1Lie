@@ -1,16 +1,9 @@
 # Implementation Plan
 
 ### 1. Set up Core Game Infrastructure  
-- [x] Define TypeScript interfaces### 14. Final Integration and Polishing
-- [ ] Integrate modules into seamless user experiences across web and mobile platforms
-- [ ] Enhance UI with smooth animations, transitions, and themed cosmetics for both platforms
-- [ ] Full documentation for users and developers including mobile setup
-- [ ] Final bug fixing and optimizations for web and mobile performance
-- [ ] Prepare demo video showcasing both web and mobile functionality
-- [ ] Package mobile app for App Store and Google Play Store distribution
-- [ ] Prepare all required assets for hackathon submissions _(relates to all requirements)_ame sessions, player progression, rewards _(relates to Req 1,5,6)_  
+- [x] Define TypeScript interfaces for game sessions, player progression, rewards _(relates to Req 1,5,6)_  
 - [x] Implement Redux store (or Vuex) for frontend state management  
-- [x] Set up WebSocket connection utilities for real-time notifications and updates  
+- [x] Set up WebSocket connection utilities for real-time notifications and updates    
 
 ### 2. Game Session Management  
 - [x] Build GameSessionManager class to orchestrate sessions, activity states  
@@ -30,14 +23,17 @@
 - [x] Implement video and audio recording components with full controls (start, pause, resume, cancel)  
 - [x] Develop MediaPreview component supporting playback of recorded media  
 - [x] Add client-side media compression pipeline before upload  
-- [x] **Implement video-only recording workflow with blob URL handling (backend upload optional)**
-- [x] **Integrate UploadProgress component with error handling for optional cloud upload**
-- [x] Implement robust error handling and retry logic for media recording 
-- [x] Write comprehensive unit and integration tests covering recording, preview, compression, and failure modes  
-- [x] Integrate media capture UI components into the Challenge Creation workflow
-- [x] Connect media capture state to Redux and unify with challenge submission logic
-- [x] Test media capture UI across supported browsers/devices to ensure usability and accessibility
+- [x] **Implement video-only recording workflow with blob URL handling (backend upload optional)**  
+- [x] **Integrate UploadProgress component with error handling for optional cloud upload**  
+- [x] Implement robust error handling and retry logic for media recording   
+- [x] Write comprehensive unit and integration tests covering recording, preview, compression, and failure modes    
+- [x] Integrate media capture UI components into the Challenge Creation workflow  
+- [x] Connect media capture state to Redux and unify with challenge submission logic  
+- [x] Test media capture UI across supported browsers/devices to ensure usability and accessibility  
 - [x] **Remove dependency on backend upload for core functionality - work with local blob URLs**
+- [ ] **Add mobile-specific camera integration using Expo Camera module with permissions management, real-time preview, and recording controls**  
+- [ ] **Implement mobile media capture error handling and platform-specific UI adaptations**  
+- [ ] **Write unit and integration tests verifying mobile media capture scenarios and permission flows**
 
 ### 5. Challenge Publishing and Moderation  
 - [x] Implement server-side APIs to receive/store challenges and media  
@@ -94,18 +90,23 @@
 - [ ] Prepare dashboards for tracking competition KPIs _(relates Req 2,5,6)_  
 
 ### 13. Mobile App Development and Cross-Platform Support
-- [x] Set up separate mobile project structure with Expo SDK 53 and React Native
-- [x] Establish sync-based code sharing architecture between web and mobile projects
-- [x] Implement mobile-specific Redux store configuration optimized for performance
-- [x] Create mobile navigation and screen structure (GameScreen, main interface)
-- [x] Integrate shared TypeScript interfaces and store slices via sync workflow
-- [x] Configure Metro bundler for React Native module resolution and offline development
-- [x] Test mobile app builds and Expo Go deployment workflow
-- [x] Document mobile development workflow and sync procedures _(relates to all requirements)_
+- [x] Set up separate mobile project structure with Expo SDK 53 and React Native  
+- [x] Establish sync-based code sharing architecture between web and mobile projects  
+- [x] Implement mobile-specific Redux store configuration optimized for performance  
+- [x] Create mobile navigation and screen structure (GameScreen, main interface)  
+- [x] Integrate shared TypeScript interfaces and store slices via sync workflow  
+- [x] Configure Metro bundler for React Native module resolution and offline development  
+- [x] Test mobile app builds and Expo Go deployment workflow  
+- [x] Document mobile development workflow and sync procedures _(relates to all requirements)_  
+- [ ] **Integrate Expo Camera based video/audio recording into mobile Challenge Creation screen**  
+- [ ] **Test actual camera recording, playback, and re-recording flows on devices**  
+- [ ] **Close sync loop between mobile media capture and Redux state/store for full challenge workflow**
 
 ### 14. Final Integration and Polishing  
-- [ ] Integrate modules into seamless user experiences  
-- [ ] Enhance UI with smooth animations, transitions, and themed cosmetics  
-- [ ] Full documentation for users and developers  
-- [ ] Final bug fixing and optimizations  
-- [ ] Prepare demo video and all required assets for hackathon submissions _(relates to all)_  
+- [ ] Integrate modules into seamless user experiences across web and mobile platforms  
+- [ ] Enhance UI with smooth animations, transitions, and themed cosmetics for both platforms  
+- [ ] Full documentation for users and developers including mobile setup and camera usage  
+- [ ] Final bug fixing and optimizations for web and mobile performance  
+- [ ] Prepare demo video showcasing both web and mobile functionality, including mobile media capture  
+- [ ] Package mobile app for App Store and Google Play Store distribution  
+- [ ] Prepare all required assets for hackathon submissions _(relates to all requirements)_  

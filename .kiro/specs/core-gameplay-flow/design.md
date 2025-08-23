@@ -1,4 +1,4 @@
-# Core Gameplay Flow - Design 
+# Core Gameplay Flow - Design
 
 ## Overview
 
@@ -77,13 +77,15 @@ Key methods: session lifecycle, progression, rewards, idle hint triggers.
 
 ### 2. Challenge Creation and Media Capture
 
-Manages entering three statements with lie selection and validation, plus video-only media capture:
+Manages entering three statements with lie selection and validation, plus video-only media capture with full mobile support:
 
-- **Video with audio is the required recording modality** - no text input or fallback options.
-- **Media capture UI components (RecordingControl, MediaPreview, UploadProgress) are integrated directly within the Challenge Creation screen, providing seamless user interaction throughout recording, preview, compression, and upload stages. State management (e.g., Redux) ensures synchronization between UI elements and overall challenge submission workflow.**  
+- **Video with audio is the required recording modality**—no text input or fallback options.
+- **Media capture UI components (RecordingControl, MediaPreview, UploadProgress) are integrated directly within the Challenge Creation screen, providing seamless user interaction throughout recording, preview, compression, and upload stages. State management (e.g., Redux) ensures synchronization between UI elements and overall challenge submission workflow.**
+- **Mobile camera integration is implemented using Expo Camera APIs with permission prompts, device error handling, real-time preview, and touch-optimized controls.**
 - Preview and re-record functionality for each statement.
-- Client-side compression for video optimization.
-- Local blob URL handling with optional cloud upload for production deployment.
+- Client-side compression optimized for mobile devices.
+- Local blob URL or secure file URI handling with optional cloud upload for production deployment.
+- State management syncs recording data between mobile and web platforms for consistent challenge creation experiences.
 
 ```typescript
 interface ChallengeCreation {
@@ -99,17 +101,17 @@ interface ChallengeCreation {
 
 ### 3. Challenge Publishing and Moderation
 
-API backend for receiving, storing challenges and media, content moderation, rate limiting, and validation.
+API backend for receiving, storing challenges and media, applying content moderation, rate limiting, and validation.
 
 ***
 
 ### 4. Guessing Engine and Gameplay
 
-Supports browsing challenges, guess submissions, realtime feedback, hints, and results animations.
+Supports browsing challenges, guess submissions, real-time feedback, hints, and results animations.
 
 ***
 
-### 5. Progression and Rewardsf
+### 5. Progression and Rewards
 
 Handles leveling, experience, badges, cosmetics, and leaderboards.
 
@@ -141,7 +143,7 @@ Real-time/batch AffectLink API integration for emotion scoring, overlays, and fa
 ## Testing Strategy
 
 - Unit/integration tests for logic, APIs, and media.
-- E2E tests covering full user flow.
+- E2E tests covering full user flow, including mobile device tests for media capture.
 - Accessibility and cross-platform compatibility.
 - AI scoring validation and fallback tests.
 - Performance and stress testing.
