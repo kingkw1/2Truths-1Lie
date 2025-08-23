@@ -13,6 +13,7 @@ import {
   BackHandler,
   Vibration,
 } from 'react-native';
+import * as Haptics from 'expo-haptics';
 import { CameraView, CameraType, useCameraPermissions } from 'expo-camera';
 import * as MediaLibrary from 'expo-media-library';
 import * as FileSystem from 'expo-file-system';
@@ -26,6 +27,7 @@ import {
   setStatementMedia,
   updateRecordingDuration,
 } from '../store/slices/challengeCreationSlice';
+import { mobileMediaIntegration } from '../services/mobileMediaIntegration';
 import { MediaCapture } from '../types';
 
 interface MobileCameraRecorderProps {
@@ -123,7 +125,8 @@ export const MobileCameraRecorder: React.FC<MobileCameraRecorderProps> = ({
       recordingTimer.current = setInterval(() => {
         const elapsed = Date.now() - startTime.current;
         setRecordingDuration(elapsed);
-        dispatch(updateRecordingDuration({ statementIndex, duration: elapsed }));
+        // Use integration service to update duration in Redux
+        mobileMediaIntegration.updateDuration(statementIndex, elapsed);
       }, 100);
     } else {
       if (recordingTimer.current) {
@@ -240,7 +243,7 @@ export const MobileCameraRecorder: React.FC<MobileCameraRecorderProps> = ({
 
     // Provide haptic feedback on error
     if (Platform.OS === 'ios') {
-      Vibration.vibrate([0, 200]);
+      Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
     } else {
       Vibration.vibrate(200);
     }
@@ -315,8 +318,9 @@ export const MobileCameraRecorder: React.FC<MobileCameraRecorderProps> = ({
       // Clear any previous errors
       setCurrentError(null);
       
-      // Start recording
-      dispatch(startMediaRecording({ statementIndex, mediaType: 'video' }));
+      // Use mobile media integration service to start recording
+      await mobileMediaIntegration.startRecording(statementIndex);
+      
       setIsRecording(true);
       setIsPaused(false);
       startTime.current = Date.now();
@@ -346,7 +350,7 @@ export const MobileCameraRecorder: React.FC<MobileCameraRecorderProps> = ({
 
       // Provide haptic feedback on start
       if (Platform.OS === 'ios') {
-        Vibration.vibrate([0, 100]);
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
       } else {
         Vibration.vibrate(100);
       }
@@ -405,7 +409,7 @@ export const MobileCameraRecorder: React.FC<MobileCameraRecorderProps> = ({
 
       // Provide haptic feedback on stop
       if (Platform.OS === 'ios') {
-        Vibration.vibrate([0, 100, 50, 100]);
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       } else {
         Vibration.vibrate([100, 50, 100]);
       }
@@ -492,7 +496,7 @@ export const MobileCameraRecorder: React.FC<MobileCameraRecorderProps> = ({
 
       // Success haptic feedback
       if (Platform.OS === 'ios') {
-        Vibration.vibrate([0, 100, 50, 100, 50, 100]);
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       } else {
         Vibration.vibrate([100, 50, 100, 50, 100]);
       }

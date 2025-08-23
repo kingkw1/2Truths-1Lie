@@ -57,9 +57,9 @@
 - [x] Configure Metro bundler for React Native module resolution and offline development  
 - [x] Test mobile app builds and Expo Go deployment workflow  
 - [x] Document mobile development workflow and sync procedures _(relates to all requirements)_  
-- [ ] **Integrate Expo Camera based video/audio recording into mobile Challenge Creation screen**  
-- [ ] **Test actual camera recording, playback, and re-recording flows on devices**  
-- [ ] **Close sync loop between mobile media capture and Redux state/store for full challenge workflow**
+- [x] **Integrate Expo Camera based video/audio recording into mobile Challenge Creation screen**  
+- [x] **Test actual camera recording, playback, and re-recording flows on devices**  
+- [x] **Close sync loop between mobile media capture and Redux state/store for full challenge workflow**
 
 ### 8. Emotion Analysis Integration (Optional MVP Feature)  
 - [ ] Connect to AffectLink API for real-time or batch emotion scoring  

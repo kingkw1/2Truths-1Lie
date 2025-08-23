@@ -27,6 +27,8 @@ const createMockStore = (initialState = {}) => {
         guessSubmitted: false,
         guessResult: null,
         timeRemaining: null,
+        currentStreak: 0, // Added to fix type error
+        showAnimatedFeedback: false, // Added to fix type error
         filters: {
           difficulty: 'all',
           sortBy: 'popularity',
