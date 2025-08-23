@@ -83,7 +83,7 @@ This document outlines the testing strategy, scope, tools, and schedule for the 
   Tests for backend APIs, content moderation pipeline, rate limiting, and validation services.
 
 - **Following Guessing Engine and Gameplay (Task 6) completion:**  
-  Integration and UI tests for challenge browsing, guessing interface, real-time feedback, hints, and animations.
+  Integration and UI tests for challenge browsing, guessing interface, real-time feedback, hints, and animations. Test the consolidated game flow without duplicate browse sections. Verify feedback animations on separate demo page.
 
 - **After User Authentication features are implemented:**  
   Unit and integration tests covering login/logout, registration flows, JWT handling, password reset, token refresh, and secure route protection.
@@ -104,7 +104,7 @@ This document outlines the testing strategy, scope, tools, and schedule for the 
   Testing network failure handling, offline mode behaviors, retry logic, graceful degradation, and user error messaging.
 
 - **During Comprehensive Testing Suite (Task 10):**  
-  Full end-to-end workflow tests, cross-browser and mobile device compatibility, accessibility validation, UI responsiveness, and fallback scenario tests.
+  Full end-to-end workflow tests, cross-browser and mobile device compatibility, accessibility validation, UI responsiveness, and fallback scenario tests. Include navigation testing between main game and demo pages.
 
 - **Throughout Analytics, Monitoring, and Reporting (Task 11):**  
   Verification of gameplay, retention, monetization event tracking, backend health monitoring, and privacy-compliant logging.
