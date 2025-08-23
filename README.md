@@ -1,10 +1,4 @@
-# 2Trut## Features
-- Record and post your "Two Truths and a Lie" challenge with video, audio, and text.
-- Guess lies posted by others and compete for leaderboard points.
-- Real-time emotion recognition overlays and lie/confidence scoring.
-- Cosmetic unlocks and premium analytics via in-app purchases.
-- **Cross-platform support:** Web browser and mobile app (iOS/Android via Expo).
-- Responsive design optimized for both desktop and mobile devices.e: Gamified Emotion AI Social Game
+# 2Truths-1Lie: Gamified Emotion AI Social Game
 
 ## Overview
 2Truths-1Lie is a fun, social game inspired by the classic icebreaker "Two Truths and a Lie," enhanced with AI-powered emotion recognition. Players post videos or audio clips stating two truths and one lie, while the community guesses the lie and interacts through points and playful feedback.
@@ -12,11 +6,12 @@
 This app is designed to be both entertaining and a data-generating platform for AffectLink, a multimodal emotion sensing model.
 
 ## Features
-- Record and post your “Two Truths and a Lie” challenge with video, audio, and text.
+- Record and post your "Two Truths and a Lie" challenge with video, audio, and text.
 - Guess lies posted by others and compete for leaderboard points.
 - Real-time emotion recognition overlays and lie/confidence scoring.
 - Cosmetic unlocks and premium analytics via in-app purchases.
-- Responsive design supporting mobile and web.
+- **Cross-platform support:** Web browser and mobile app (iOS/Android via Expo).
+- Responsive design optimized for both desktop and mobile devices.e: Gamified Emotion AI Social Game
 
 ## Getting Started
 
