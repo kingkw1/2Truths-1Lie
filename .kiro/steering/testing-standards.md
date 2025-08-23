@@ -28,7 +28,7 @@ pattern: "**/*.test.*"
 ## Build and Test Validation
 
 - Tests should be run in conjunction with build verification to ensure stable merges.
-- Developers and automation pipelines must run build commands (e.g., `npm run build`) prior to finalizing task completion.
+- Developers and automation pipelines must run build commands (e.g., `npm run build`) and type checking (`npm run type-check`) prior to finalizing task completion.
 - Test failures or build errors must prevent task closure until resolved.
 - Maintain CI integration to automate these checks on every push.
 
