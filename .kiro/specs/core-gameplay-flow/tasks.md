@@ -48,48 +48,7 @@
 - [x] Animate feedback for correct/incorrect guesses and streaks  
 - [x] Unit and integration tests covering gameplay logic _(relates Req 1,3,6)_  
 
-### 7. Emotion Analysis Integration (Optional MVP Feature)  
-- [ ] Connect to AffectLink API for real-time or batch emotion scoring  
-- [ ] Implement confidence/difficulty scoring for statements  
-- [ ] Visual overlays indicating emotional signals during gameplay  
-- [ ] Fallback modes for offline or API failure  
-- [ ] Tests for AI pipeline robustness _(relates Req 1,2,6)_  
-
-### 8. Progression and Rewards  
-- [ ] Design leveling, experience, and badge system  
-- [ ] Build cosmetic unlocks and inventory management  
-- [ ] Integrate leaderboard with real-time updates and periodic resets  
-- [ ] Implement points calculations and milestone triggers  
-- [ ] Tests for reward calculus and user stats _(relates Req 2,4)_  
-
-### 9. Error Handling and Resilience  
-- [ ] Network error retries with exponential backoff  
-- [ ] Offline mode with local queuing and sync-on-reconnect  
-- [ ] Graceful degradation when AI or media services fail  
-- [ ] User-friendly error messages and recovery options  
-- [ ] Validation and rate-limiting to prevent abuse _(relates Req 1,3)_  
-
-### 10. Performance and Optimization  
-- [ ] Client-side lazy loading and caching of assets and data  
-- [ ] Optimize rendering with memoization and throttling  
-- [ ] Server-side caching with Redis or equivalent, DB indexing  
-- [ ] CDN for media delivery  
-- [ ] Stress/load testing of concurrent gameplay _(relates Req 6)_  
-
-### 11. Comprehensive Testing Suite  
-- [ ] End-to-end workflow tests for typical game sessions  
-- [ ] Cross-browser and mobile device compatibility tests  
-- [ ] Integration tests for real-time and backend APIs  
-- [ ] Accessibility and UI responsiveness tests  
-- [ ] Tests for fallback behaviors and error scenarios _(relates Req 1,3,6)_  
-
-### 12. Analytics, Monitoring, and Reporting  
-- [ ] Implement gameplay, retention, and monetization event tracking  
-- [ ] Backend health and performance monitoring  
-- [ ] Privacy-compliant logging and data anonymization  
-- [ ] Prepare dashboards for tracking competition KPIs _(relates Req 2,5,6)_  
-
-### 13. Mobile App Development and Cross-Platform Support
+### 7. Mobile App Development and Cross-Platform Support
 - [x] Set up separate mobile project structure with Expo SDK 53 and React Native  
 - [x] Establish sync-based code sharing architecture between web and mobile projects  
 - [x] Implement mobile-specific Redux store configuration optimized for performance  
@@ -101,6 +60,47 @@
 - [ ] **Integrate Expo Camera based video/audio recording into mobile Challenge Creation screen**  
 - [ ] **Test actual camera recording, playback, and re-recording flows on devices**  
 - [ ] **Close sync loop between mobile media capture and Redux state/store for full challenge workflow**
+
+### 8. Emotion Analysis Integration (Optional MVP Feature)  
+- [ ] Connect to AffectLink API for real-time or batch emotion scoring  
+- [ ] Implement confidence/difficulty scoring for statements  
+- [ ] Visual overlays indicating emotional signals during gameplay  
+- [ ] Fallback modes for offline or API failure  
+- [ ] Tests for AI pipeline robustness _(relates Req 1,2,6)_  
+
+### 9. Progression and Rewards  
+- [ ] Design leveling, experience, and badge system  
+- [ ] Build cosmetic unlocks and inventory management  
+- [ ] Integrate leaderboard with real-time updates and periodic resets  
+- [ ] Implement points calculations and milestone triggers  
+- [ ] Tests for reward calculus and user stats _(relates Req 2,4)_  
+
+### 10. Error Handling and Resilience  
+- [ ] Network error retries with exponential backoff  
+- [ ] Offline mode with local queuing and sync-on-reconnect  
+- [ ] Graceful degradation when AI or media services fail  
+- [ ] User-friendly error messages and recovery options  
+- [ ] Validation and rate-limiting to prevent abuse _(relates Req 1,3)_  
+
+### 11. Performance and Optimization  
+- [ ] Client-side lazy loading and caching of assets and data  
+- [ ] Optimize rendering with memoization and throttling  
+- [ ] Server-side caching with Redis or equivalent, DB indexing  
+- [ ] CDN for media delivery  
+- [ ] Stress/load testing of concurrent gameplay _(relates Req 6)_  
+
+### 12. Comprehensive Testing Suite  
+- [ ] End-to-end workflow tests for typical game sessions  
+- [ ] Cross-browser and mobile device compatibility tests  
+- [ ] Integration tests for real-time and backend APIs  
+- [ ] Accessibility and UI responsiveness tests  
+- [ ] Tests for fallback behaviors and error scenarios _(relates Req 1,3,6)_  
+
+### 13. Analytics, Monitoring, and Reporting  
+- [ ] Implement gameplay, retention, and monetization event tracking  
+- [ ] Backend health and performance monitoring  
+- [ ] Privacy-compliant logging and data anonymization  
+- [ ] Prepare dashboards for tracking competition KPIs _(relates Req 2,5,6)_  
 
 ### 14. Final Integration and Polishing  
 - [ ] Integrate modules into seamless user experiences across web and mobile platforms  
