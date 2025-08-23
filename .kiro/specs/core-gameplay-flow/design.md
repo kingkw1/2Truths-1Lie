@@ -44,11 +44,13 @@ stateDiagram-v2
 
 ### Technology Stack Integration
 
-- **Frontend:** React with robust state management (Redux or Context API).
+- **Frontend Web:** React with Redux Toolkit for state management, React Scripts build system.
+- **Frontend Mobile:** React Native with Expo SDK 53, Metro bundler, simplified Redux store for performance.
 - **Backend:** FastAPI serving RESTful APIs for user, game, and media management.
-- **State Management:** Redux/Vuex for client game state and UI responsiveness.
+- **State Management:** Redux Toolkit with sync-based sharing between web and mobile projects.
 - **Real-time:** WebSockets for live notifications on guesses, leaderboard updates.
 - **AI Integration:** Modular AffectLink emotion recognition API service with fallback (optional MVP feature).
+- **Cross-Platform Development:** Sync workflow enabling shared business logic with platform-specific optimizations.
 
 ***
 

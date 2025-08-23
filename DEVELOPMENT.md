@@ -1,69 +1,132 @@
 # Development Setup - Optimized for Speed 🚀
 
 ## Overview
-This project supports both **web** and **mobile** development with shared code to maximize development speed.
+This project supports both **web** and **mobile** development with a **sync-based shared code architecture** to maximize development speed while maintaining platform-specific optimizations.
 
 ## Quick Start Commands
 
 ### Web Development
 ```bash
 npm start                 # Start web development server
-open http://localhost:3000
+# Open http://localhost:3000
 ```
 
-### Mobile Development  
+### Mobile Development (Manual Sync)
 ```bash
-npm run mobile           # Start mobile development server
+npm run sync              # Sync shared code to mobile project
+npm run mobile            # Start Expo development server
+# Scan QR code with Expo Go app on your phone
+```
+
+### Mobile Development (Auto-sync)
+```bash
+npm run dev:mobile        # Auto-sync + start mobile server
 # Scan QR code with Expo Go app on your phone
 ```
 
 ### Both Platforms
 ```bash
-npm start &              # Start web in background
-npm run mobile           # Start mobile (will use different port)
+npm start &               # Start web in background
+npm run dev:mobile        # Sync and start mobile (foreground)
 ```
 
-## Shared Code Structure
+## Project Architecture
+
+### 📁 **Directory Structure**
+```
+2Truths-1Lie/                  # Main web project
+├── src/
+│   ├── types/                 # 🔄 Shared TypeScript interfaces
+│   ├── store/                 # 🔄 Shared Redux store & slices
+│   ├── components/            # 🌐 Web-specific React components
+│   └── hooks/                 # 🌐 Web-specific hooks
+│
+└── 2Truths-1Lie-mobile/       # Separate mobile project
+    ├── src/
+    │   ├── types/             # 🔄 Synced from main project
+    │   ├── store/             # 🔄 Synced from main project
+    │   ├── screens/           # 📱 Mobile-specific screens
+    │   ├── components/        # 📱 Mobile-specific components
+    │   └── shared/            # 🔄 Selected shared components
+    └── package.json           # Independent mobile dependencies
+```
+
+### 🔄 **Sync-Based Code Sharing**
 
 **✅ Shared Between Web & Mobile:**
-- `src/types/` - All TypeScript interfaces
-- `src/store/` - Redux store and slices  
-- `src/shared/` - Shared components (symlinked)
+- `src/types/` - All TypeScript interfaces  
+- `src/store/` - Redux store and slices
+- Selected components (AnimatedFeedback, etc.)
 
 **📱 Mobile-Specific:**
-- `2Truths-1Lie-mobile/src/screens/` - Mobile screens
+- `2Truths-1Lie-mobile/src/screens/` - React Native screens
 - `2Truths-1Lie-mobile/src/components/` - Mobile-specific components
+- Expo configuration and mobile-optimized store setup
 
 **🌐 Web-Specific:**
 - `src/components/` - Web React components
-- `src/hooks/` - Web-specific hooks
+- `src/hooks/` - Web-specific hooks  
+- React Scripts configuration
 
-## Benefits of This Setup
+## Sync Workflow
 
-1. **⚡ Fast Development**: Changes to types/store automatically apply to both platforms
-2. **🔄 No Code Duplication**: Single source of truth for business logic
-3. **🐛 Easier Debugging**: One codebase for core logic
-4. **📦 Simple Deployment**: Web and mobile can be built independently
+### Manual Sync Process
+```bash
+npm run sync              # Run sync script manually
+# - Copies src/types/ → 2Truths-1Lie-mobile/src/types/
+# - Copies src/store/ → 2Truths-1Lie-mobile/src/store/
+# - Copies selected shared components
+```
 
-## File Changes Impact
+### When to Sync
+- ✅ After modifying TypeScript interfaces in `src/types/`
+- ✅ After updating Redux store/slices in `src/store/`
+- ✅ After changes to shared components
+- ✅ Before testing mobile functionality
 
-| File Changed | Web Impact | Mobile Impact |
-|--------------|------------|---------------|
-| `src/types/*` | ✅ Auto-reloads | ✅ Auto-reloads |
-| `src/store/*` | ✅ Auto-reloads | ✅ Auto-reloads |  
-| `src/components/*` | ✅ Web only | ❌ No impact |
-| `2Truths-1Lie-mobile/src/*` | ❌ No impact | ✅ Mobile only |
+## Benefits of This Architecture
 
-## Development Tips
+1. **⚡ Fast Development**: Manual sync when needed, no complex tooling
+2. **🔄 No Code Duplication**: Single source of truth for business logic  
+3. **🐛 Easier Debugging**: Shared core logic, platform-specific UI
+4. **📦 Simple Deployment**: Web and mobile built completely independently
+5. **🛠️ Platform Optimization**: Mobile-specific Redux configuration for performance
 
-- **Start both servers** during development for the fastest iteration
-- **Make type changes** in `src/types/` - they'll apply everywhere
-- **Test on mobile** frequently using Expo Go
-- **Use the web version** for rapid UI prototyping
+## Development Workflow
+
+### File Changes Impact
+
+| File Changed | Action Required | Web Impact | Mobile Impact |
+|--------------|----------------|------------|---------------|
+| `src/types/*` | `npm run sync` | ✅ Auto-reloads | ✅ After sync |
+| `src/store/*` | `npm run sync` | ✅ Auto-reloads | ✅ After sync |
+| `src/components/*` | None | ✅ Web only | ❌ No impact |
+| `2Truths-1Lie-mobile/src/*` | None | ❌ No impact | ✅ Mobile only |
+
+### Development Tips
+
+- **Use `npm run dev:mobile`** for the fastest mobile iteration (auto-sync + start)
+- **Make type/store changes** in the main `src/` directory, then sync
+- **Test on mobile frequently** using Expo Go QR code scanning  
+- **Use web version** for rapid UI prototyping of shared logic
+- **Mobile store is simplified** for performance - fewer slices than web version
 
 ## Production Builds
 
 ```bash
-npm run build            # Web production build
-cd 2Truths-1Lie-mobile && npx expo build:android  # Mobile build
+# Web production build
+npm run build
+
+# Mobile production build  
+cd 2Truths-1Lie-mobile
+npx expo build:android    # Android APK
+npx expo build:ios        # iOS IPA (requires Apple Developer account)
 ```
+
+## Mobile-Specific Notes
+
+- **Expo SDK 53** with React Native
+- **Simplified Redux store** for mobile performance
+- **Offline-first development** using `npx expo start --offline`
+- **Metro bundler** for React Native module resolution
+- **Mobile-optimized** component architecture

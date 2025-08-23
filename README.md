@@ -1,4 +1,10 @@
-# 2Truths-1Lie: Gamified Emotion AI Social Game
+# 2Trut## Features
+- Record and post your "Two Truths and a Lie" challenge with video, audio, and text.
+- Guess lies posted by others and compete for leaderboard points.
+- Real-time emotion recognition overlays and lie/confidence scoring.
+- Cosmetic unlocks and premium analytics via in-app purchases.
+- **Cross-platform support:** Web browser and mobile app (iOS/Android via Expo).
+- Responsive design optimized for both desktop and mobile devices.e: Gamified Emotion AI Social Game
 
 ## Overview
 2Truths-1Lie is a fun, social game inspired by the classic icebreaker "Two Truths and a Lie," enhanced with AI-powered emotion recognition. Players post videos or audio clips stating two truths and one lie, while the community guesses the lie and interacts through points and playful feedback.
@@ -29,14 +35,28 @@ pip install -r requirements.txt  # for backend (if applicable)
 ```
 
 ### Running the App  
-**Development mode:**  
-On frontend:  
+**Web Development:**  
+```bash
+npm start                 # Start web development server
+# Open http://localhost:3000
 ```
-npm run dev
-```  
-Backend:  
+
+**Mobile Development:**  
+```bash
+npm run dev:mobile        # Sync shared code and start Expo server
+# Scan QR code with Expo Go app on your phone
 ```
-uvicorn main:app --reload
+
+**Backend:**  
+```bash
+cd backend
+uvicorn main:app --reload # Start API server
+```
+
+**Both Platforms:**
+```bash
+npm start &               # Web (background)
+npm run dev:mobile        # Mobile (foreground)
 ```
 
 ### Testing
