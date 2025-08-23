@@ -1,0 +1,692 @@
+import React, { useState, useEffect } from 'react';
+import {
+  View,
+  Text,
+  StyleSheet,
+  ScrollView,
+  TouchableOpacity,
+  SafeAreaView,
+  Alert,
+  Modal,
+  Dimensions,
+} from 'react-native';
+import { useAppDispatch, useAppSelector } from '../store';
+import {
+  startNewChallenge,
+  setLieStatement,
+  validateChallenge,
+  startSubmission,
+  completeSubmission,
+  enterPreviewMode,
+  exitPreviewMode,
+} from '../store/slices/challengeCreationSlice';
+import { MobileCameraRecorder } from '../components/MobileCameraRecorder';
+import { MediaCapture } from '../types';
+
+interface ChallengeCreationScreenProps {
+  onComplete?: () => void;
+  onCancel?: () => void;
+}
+
+const { width: screenWidth } = Dimensions.get('window');
+
+export const ChallengeCreationScreen: React.FC<ChallengeCreationScreenProps> = ({
+  onComplete,
+  onCancel,
+}) => {
+  const dispatch = useAppDispatch();
+  const {
+    currentChallenge,
+    validationErrors,
+    isSubmitting,
+    submissionSuccess,
+    previewMode,
+    mediaRecordingState,
+  } = useAppSelector((state) => state.challengeCreation);
+
+  const [currentStep, setCurrentStep] = useState<'instructions' | 'recording' | 'lie-selection' | 'preview'>('instructions');
+  const [currentStatementIndex, setCurrentStatementIndex] = useState(0);
+  const [showCameraModal, setShowCameraModal] = useState(false);
+  const [selectedLieIndex, setSelectedLieIndex] = useState<number | null>(null);
+
+  // Initialize new challenge on mount
+  useEffect(() => {
+    dispatch(startNewChallenge());
+  }, [dispatch]);
+
+  // Handle submission success
+  useEffect(() => {
+    if (submissionSuccess) {
+      Alert.alert(
+        'Challenge Created!',
+        'Your challenge has been created successfully and is ready for others to play.',
+        [
+          {
+            text: 'Create Another',
+            onPress: () => {
+              dispatch(startNewChallenge());
+              setCurrentStep('instructions');
+              setCurrentStatementIndex(0);
+              setSelectedLieIndex(null);
+            },
+          },
+          {
+            text: 'Done',
+            onPress: onComplete,
+            style: 'default',
+          },
+        ]
+      );
+    }
+  }, [submissionSuccess, onComplete, dispatch]);
+
+  const handleStartRecording = () => {
+    setCurrentStep('recording');
+    setCurrentStatementIndex(0);
+    setShowCameraModal(true);
+  };
+
+  const handleRecordingComplete = (media: MediaCapture) => {
+    setShowCameraModal(false);
+    
+    // Move to next statement or lie selection
+    if (currentStatementIndex < 2) {
+      setCurrentStatementIndex(currentStatementIndex + 1);
+      setShowCameraModal(true);
+    } else {
+      setCurrentStep('lie-selection');
+    }
+  };
+
+  const handleRecordingError = (error: string) => {
+    // Enhanced error handling with more user-friendly messages
+    let title = 'Recording Error';
+    let message = error;
+
+    // Categorize errors for better user experience
+    if (error.includes('permission')) {
+      title = 'Permission Required';
+      message = 'Camera access is needed to record your video statements. Please check your device settings.';
+      Alert.alert(title, message, [
+        { text: 'Cancel', style: 'cancel' },
+        { 
+          text: 'Open Settings', 
+          onPress: () => {
+            // On real device, this would open settings
+            console.log('Would open device settings');
+          }
+        }
+      ]);
+    } else if (error.includes('storage') || error.includes('space')) {
+      title = 'Storage Full';
+      message = 'Not enough storage space to record video. Please free up some space and try again.';
+      Alert.alert(title, message, [{ text: 'OK', style: 'default' }]);
+    } else if (error.includes('hardware') || error.includes('camera')) {
+      title = 'Camera Unavailable';
+      message = 'Camera is currently unavailable. Please restart the app and try again.';
+      Alert.alert(title, message, [
+        { text: 'Cancel', style: 'cancel' },
+        { 
+          text: 'Retry', 
+          onPress: () => {
+            // Retry recording
+            setShowCameraModal(true);
+          }
+        }
+      ]);
+    } else {
+      Alert.alert(title, message, [{ text: 'OK', style: 'default' }]);
+    }
+  };
+
+  const handleLieSelection = (index: number) => {
+    setSelectedLieIndex(index);
+    dispatch(setLieStatement(index));
+  };
+
+  const handlePreview = () => {
+    dispatch(validateChallenge());
+    if (validationErrors.length === 0) {
+      dispatch(enterPreviewMode());
+      setCurrentStep('preview');
+    } else {
+      Alert.alert(
+        'Validation Error',
+        validationErrors.join('\n'),
+        [{ text: 'OK', style: 'default' }]
+      );
+    }
+  };
+
+  const handleSubmit = async () => {
+    try {
+      dispatch(startSubmission());
+      
+      // Simulate submission process
+      await new Promise(resolve => setTimeout(resolve, 2000));
+      
+      dispatch(completeSubmission({ success: true }));
+    } catch (error) {
+      dispatch(completeSubmission({ success: false }));
+      Alert.alert('Submission Error', 'Failed to create challenge. Please try again.');
+    }
+  };
+
+  const handleRetakeVideo = (statementIndex: number) => {
+    setCurrentStatementIndex(statementIndex);
+    setShowCameraModal(true);
+  };
+
+  const renderInstructions = () => (
+    <ScrollView style={styles.stepContainer}>
+      <Text style={styles.stepTitle}>Create Your Challenge</Text>
+      <Text style={styles.stepDescription}>
+        You'll record 3 video statements about yourself. Two should be true, and one should be a lie.
+        Other players will try to guess which statement is the lie!
+      </Text>
+      
+      <View style={styles.instructionsList}>
+        <View style={styles.instructionItem}>
+          <Text style={styles.instructionNumber}>1</Text>
+          <Text style={styles.instructionText}>
+            Record 3 video statements (each 10-60 seconds)
+          </Text>
+        </View>
+        <View style={styles.instructionItem}>
+          <Text style={styles.instructionNumber}>2</Text>
+          <Text style={styles.instructionText}>
+            Choose which statement is the lie
+          </Text>
+        </View>
+        <View style={styles.instructionItem}>
+          <Text style={styles.instructionNumber}>3</Text>
+          <Text style={styles.instructionText}>
+            Preview and submit your challenge
+          </Text>
+        </View>
+      </View>
+
+      <View style={styles.tipsContainer}>
+        <Text style={styles.tipsTitle}>💡 Tips for Great Challenges:</Text>
+        <Text style={styles.tipText}>• Make your lie believable but not obvious</Text>
+        <Text style={styles.tipText}>• Keep statements interesting and personal</Text>
+        <Text style={styles.tipText}>• Speak clearly and maintain good lighting</Text>
+        <Text style={styles.tipText}>• Have fun with it!</Text>
+      </View>
+
+      <TouchableOpacity
+        style={styles.primaryButton}
+        onPress={handleStartRecording}
+      >
+        <Text style={styles.primaryButtonText}>Start Recording</Text>
+      </TouchableOpacity>
+    </ScrollView>
+  );
+
+  const renderLieSelection = () => {
+    const hasAllRecordings = currentChallenge.mediaData && 
+      currentChallenge.mediaData.length >= 3 &&
+      currentChallenge.mediaData.every(media => media.type === 'video' && media.url);
+
+    return (
+      <ScrollView style={styles.stepContainer}>
+        <Text style={styles.stepTitle}>Select the Lie</Text>
+        <Text style={styles.stepDescription}>
+          Which of your three statements is the lie? Choose carefully!
+        </Text>
+
+        {hasAllRecordings ? (
+          <View style={styles.statementsContainer}>
+            {[0, 1, 2].map((index) => {
+              const media = currentChallenge.mediaData?.[index];
+              const isSelected = selectedLieIndex === index;
+              
+              return (
+                <TouchableOpacity
+                  key={index}
+                  style={[
+                    styles.statementCard,
+                    isSelected && styles.selectedStatementCard,
+                  ]}
+                  onPress={() => handleLieSelection(index)}
+                >
+                  <View style={styles.statementHeader}>
+                    <Text style={styles.statementNumber}>Statement {index + 1}</Text>
+                    <TouchableOpacity
+                      style={styles.retakeButton}
+                      onPress={() => handleRetakeVideo(index)}
+                    >
+                      <Text style={styles.retakeButtonText}>Retake</Text>
+                    </TouchableOpacity>
+                  </View>
+                  
+                  <View style={styles.videoPlaceholder}>
+                    <Text style={styles.videoPlaceholderText}>
+                      📹 Video Recorded
+                    </Text>
+                    <Text style={styles.videoDuration}>
+                      {media?.duration ? `${Math.round(media.duration / 1000)}s` : ''}
+                    </Text>
+                  </View>
+                  
+                  {isSelected && (
+                    <View style={styles.lieIndicator}>
+                      <Text style={styles.lieIndicatorText}>🤥 This is the lie</Text>
+                    </View>
+                  )}
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+        ) : (
+          <View style={styles.incompleteContainer}>
+            <Text style={styles.incompleteText}>
+              Please complete all video recordings first.
+            </Text>
+            <TouchableOpacity
+              style={styles.secondaryButton}
+              onPress={() => {
+                setCurrentStep('recording');
+                setShowCameraModal(true);
+              }}
+            >
+              <Text style={styles.secondaryButtonText}>Continue Recording</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+
+        {hasAllRecordings && selectedLieIndex !== null && (
+          <TouchableOpacity
+            style={styles.primaryButton}
+            onPress={handlePreview}
+          >
+            <Text style={styles.primaryButtonText}>Preview Challenge</Text>
+          </TouchableOpacity>
+        )}
+      </ScrollView>
+    );
+  };
+
+  const renderPreview = () => (
+    <ScrollView style={styles.stepContainer}>
+      <Text style={styles.stepTitle}>Preview Your Challenge</Text>
+      <Text style={styles.stepDescription}>
+        Review your challenge before submitting. Other players will see this.
+      </Text>
+
+      <View style={styles.previewContainer}>
+        <Text style={styles.previewTitle}>Your Challenge</Text>
+        
+        {[0, 1, 2].map((index) => {
+          const media = currentChallenge.mediaData?.[index];
+          const isLie = currentChallenge.statements?.[index]?.isLie;
+          
+          return (
+            <View key={index} style={styles.previewStatementCard}>
+              <View style={styles.previewStatementHeader}>
+                <Text style={styles.previewStatementNumber}>
+                  Statement {index + 1}
+                </Text>
+                {isLie && (
+                  <Text style={styles.previewLieTag}>(The Lie)</Text>
+                )}
+              </View>
+              
+              <View style={styles.previewVideoPlaceholder}>
+                <Text style={styles.previewVideoText}>📹 Video Statement</Text>
+                <Text style={styles.previewVideoDuration}>
+                  {media?.duration ? `${Math.round(media.duration / 1000)}s` : ''}
+                </Text>
+              </View>
+            </View>
+          );
+        })}
+      </View>
+
+      <View style={styles.previewActions}>
+        <TouchableOpacity
+          style={styles.secondaryButton}
+          onPress={() => {
+            dispatch(exitPreviewMode());
+            setCurrentStep('lie-selection');
+          }}
+        >
+          <Text style={styles.secondaryButtonText}>Edit</Text>
+        </TouchableOpacity>
+        
+        <TouchableOpacity
+          style={[styles.primaryButton, isSubmitting && styles.disabledButton]}
+          onPress={handleSubmit}
+          disabled={isSubmitting}
+        >
+          <Text style={styles.primaryButtonText}>
+            {isSubmitting ? 'Creating...' : 'Create Challenge'}
+          </Text>
+        </TouchableOpacity>
+      </View>
+    </ScrollView>
+  );
+
+  const renderCurrentStep = () => {
+    switch (currentStep) {
+      case 'instructions':
+        return renderInstructions();
+      case 'lie-selection':
+        return renderLieSelection();
+      case 'preview':
+        return renderPreview();
+      default:
+        return renderInstructions();
+    }
+  };
+
+  return (
+    <SafeAreaView style={styles.container}>
+      <View style={styles.header}>
+        <TouchableOpacity onPress={onCancel}>
+          <Text style={styles.cancelButton}>Cancel</Text>
+        </TouchableOpacity>
+        <Text style={styles.headerTitle}>Create Challenge</Text>
+        <View style={styles.headerSpacer} />
+      </View>
+
+      {renderCurrentStep()}
+
+      {/* Camera Recording Modal */}
+      <Modal
+        visible={showCameraModal}
+        animationType="slide"
+        presentationStyle="fullScreen"
+      >
+        <MobileCameraRecorder
+          statementIndex={currentStatementIndex}
+          onRecordingComplete={handleRecordingComplete}
+          onError={handleRecordingError}
+          onCancel={() => setShowCameraModal(false)}
+        />
+        <SafeAreaView style={styles.cameraModalControls}>
+          <TouchableOpacity
+            style={styles.cameraCloseButton}
+            onPress={() => setShowCameraModal(false)}
+          >
+            <Text style={styles.cameraCloseButtonText}>Close</Text>
+          </TouchableOpacity>
+        </SafeAreaView>
+      </Modal>
+    </SafeAreaView>
+  );
+};
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#f5f5f5',
+  },
+  header: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 20,
+    backgroundColor: '#4a90e2',
+  },
+  cancelButton: {
+    fontSize: 16,
+    color: 'white',
+  },
+  headerTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: 'white',
+  },
+  headerSpacer: {
+    width: 60,
+  },
+  stepContainer: {
+    flex: 1,
+    padding: 20,
+  },
+  stepTitle: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    textAlign: 'center',
+    marginBottom: 10,
+    color: '#333',
+  },
+  stepDescription: {
+    fontSize: 16,
+    textAlign: 'center',
+    marginBottom: 30,
+    color: '#666',
+    lineHeight: 22,
+  },
+  instructionsList: {
+    marginBottom: 30,
+  },
+  instructionItem: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    marginBottom: 15,
+  },
+  instructionNumber: {
+    width: 30,
+    height: 30,
+    borderRadius: 15,
+    backgroundColor: '#4a90e2',
+    color: 'white',
+    textAlign: 'center',
+    lineHeight: 30,
+    fontSize: 16,
+    fontWeight: 'bold',
+    marginRight: 15,
+  },
+  instructionText: {
+    flex: 1,
+    fontSize: 16,
+    color: '#333',
+    lineHeight: 22,
+  },
+  tipsContainer: {
+    backgroundColor: '#e8f5e8',
+    padding: 20,
+    borderRadius: 10,
+    marginBottom: 30,
+  },
+  tipsTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#2e7d32',
+    marginBottom: 10,
+  },
+  tipText: {
+    fontSize: 14,
+    color: '#388e3c',
+    marginBottom: 5,
+  },
+  statementsContainer: {
+    marginBottom: 30,
+  },
+  statementCard: {
+    backgroundColor: 'white',
+    padding: 20,
+    marginBottom: 15,
+    borderRadius: 10,
+    borderWidth: 2,
+    borderColor: 'transparent',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  selectedStatementCard: {
+    borderColor: '#4a90e2',
+    backgroundColor: '#e3f2fd',
+  },
+  statementHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 15,
+  },
+  statementNumber: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#333',
+  },
+  retakeButton: {
+    backgroundColor: '#ff9800',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 6,
+  },
+  retakeButtonText: {
+    color: 'white',
+    fontSize: 12,
+    fontWeight: 'bold',
+  },
+  videoPlaceholder: {
+    backgroundColor: '#f0f0f0',
+    padding: 20,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  videoPlaceholderText: {
+    fontSize: 16,
+    color: '#666',
+    marginBottom: 5,
+  },
+  videoDuration: {
+    fontSize: 14,
+    color: '#999',
+  },
+  lieIndicator: {
+    backgroundColor: '#ffeb3b',
+    padding: 10,
+    borderRadius: 8,
+    marginTop: 10,
+    alignItems: 'center',
+  },
+  lieIndicatorText: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    color: '#f57f17',
+  },
+  incompleteContainer: {
+    alignItems: 'center',
+    padding: 40,
+  },
+  incompleteText: {
+    fontSize: 16,
+    color: '#666',
+    textAlign: 'center',
+    marginBottom: 20,
+  },
+  previewContainer: {
+    backgroundColor: 'white',
+    padding: 20,
+    borderRadius: 10,
+    marginBottom: 30,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  previewTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#333',
+    marginBottom: 20,
+    textAlign: 'center',
+  },
+  previewStatementCard: {
+    marginBottom: 15,
+    paddingBottom: 15,
+    borderBottomWidth: 1,
+    borderBottomColor: '#eee',
+  },
+  previewStatementHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 10,
+  },
+  previewStatementNumber: {
+    fontSize: 14,
+    fontWeight: 'bold',
+    color: '#333',
+  },
+  previewLieTag: {
+    fontSize: 12,
+    color: '#f44336',
+    fontWeight: 'bold',
+  },
+  previewVideoPlaceholder: {
+    backgroundColor: '#f8f8f8',
+    padding: 15,
+    borderRadius: 6,
+    alignItems: 'center',
+  },
+  previewVideoText: {
+    fontSize: 14,
+    color: '#666',
+  },
+  previewVideoDuration: {
+    fontSize: 12,
+    color: '#999',
+    marginTop: 2,
+  },
+  previewActions: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: 15,
+  },
+  primaryButton: {
+    backgroundColor: '#4a90e2',
+    padding: 15,
+    borderRadius: 10,
+    alignItems: 'center',
+    flex: 1,
+  },
+  primaryButtonText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  secondaryButton: {
+    backgroundColor: '#f0f0f0',
+    padding: 15,
+    borderRadius: 10,
+    alignItems: 'center',
+    flex: 1,
+  },
+  secondaryButtonText: {
+    color: '#333',
+    fontSize: 16,
+    fontWeight: 'bold',
+  },
+  disabledButton: {
+    backgroundColor: '#ccc',
+  },
+  cameraModalControls: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    backgroundColor: 'transparent',
+    paddingTop: 50,
+    paddingHorizontal: 20,
+  },
+  cameraCloseButton: {
+    alignSelf: 'flex-end',
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    paddingHorizontal: 15,
+    paddingVertical: 8,
+    borderRadius: 20,
+  },
+  cameraCloseButtonText: {
+    color: 'white',
+    fontSize: 14,
+    fontWeight: 'bold',
+  },
+});
