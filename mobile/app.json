@@ -14,14 +14,15 @@
     },
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.yourcompany.twotruths"
+      "bundleIdentifier": "com.kingkw1.twotruths"
     },
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#4a90e2"
       },
-      "package": "com.yourcompany.twotruths",
+      "package": "com.kingkw1.twotruths",
+      "versionCode": 1,
       "edgeToEdgeEnabled": true,
       "permissions": [
         "CAMERA",
@@ -35,8 +36,9 @@
     },
     "extra": {
       "eas": {
-        "projectId": "your-project-id-here"
+        "projectId": "0a129dd1-4dd3-42b1-88d3-eb41e82ed513"
       }
-    }
+    },
+    "owner": "kingkw1"
   }
 }

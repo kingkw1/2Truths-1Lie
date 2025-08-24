@@ -1,0 +1,12 @@
+{
+  "expo": {
+    "extra": {
+      "eas": {
+        "projectId": "7f16a081-e340-4410-84c5-c30352022ead"
+      }
+    },
+    "android": {
+      "package": "com.kingkw1.twotruthsoneliegame"
+    }
+  }
+}
