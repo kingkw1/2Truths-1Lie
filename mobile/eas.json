@@ -1,7 +1,6 @@
 {
   "cli": {
-    "version": ">= 16.17.4",
-    "appVersionSource": "remote"
+    "version": ">= 16.17.4"
   },
   "build": {
     "development": {
@@ -12,9 +11,12 @@
       "distribution": "internal"
     },
     "production": {
+      "workflow": "managed",
+      "node": "18",
+      "yarn": "1.22.19",
       "autoIncrement": true,
       "android": {
-        "buildType": "aab"
+        "buildType": "app-bundle"
       }
     }
   },

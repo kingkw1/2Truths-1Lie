@@ -12,7 +12,9 @@
     "mobile": "cd mobile && npx expo start --offline",
     "mobile:install": "cd mobile && npm install",
     "sync": "./sync-to-mobile.sh",
-    "dev:mobile": "./sync-to-mobile.sh && npm run mobile"
+    "dev:mobile": "./sync-to-mobile.sh && npm run mobile",
+    "android": "expo run:android",
+    "ios": "expo run:ios"
   },
   "devDependencies": {
     "@testing-library/jest-dom": "^6.7.0",
@@ -30,11 +32,13 @@
   },
   "dependencies": {
     "@reduxjs/toolkit": "^1.9.0",
+    "expo": "^53.0.20",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "react-redux": "^8.1.0",
     "react-scripts": "5.0.1",
-    "web-vitals": "^2.1.4"
+    "web-vitals": "^2.1.4",
+    "react-native": "0.79.6"
   },
   "keywords": [
     "game",

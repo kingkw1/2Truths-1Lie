@@ -6,7 +6,6 @@
     "orientation": "portrait",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "light",
-    "newArchEnabled": true,
     "splash": {
       "image": "./assets/splash-icon.png",
       "resizeMode": "contain",
@@ -21,9 +20,8 @@
         "foregroundImage": "./assets/adaptive-icon.png",
         "backgroundColor": "#4a90e2"
       },
-      "package": "com.kingkw1.twotruths",
+      "package": "com.kingkw1.twotruthsoneliegame",
       "versionCode": 1,
-      "edgeToEdgeEnabled": true,
       "permissions": [
         "CAMERA",
         "RECORD_AUDIO",
@@ -36,7 +34,7 @@
     },
     "extra": {
       "eas": {
-        "projectId": "0a129dd1-4dd3-42b1-88d3-eb41e82ed513"
+        "projectId": "7f16a081-e340-4410-84c5-c30352022ead"
       }
     },
     "owner": "kingkw1"
