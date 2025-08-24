@@ -14,13 +14,13 @@ npm start                 # Start web development server
 ### Mobile Development (Manual Sync)
 ```bash
 npm run sync              # Sync shared code to mobile project
-npm run mobile            # Start Expo development server
+npm run mobile            # Start Expo development server (offline mode)
 # Scan QR code with Expo Go app on your phone
 ```
 
 ### Mobile Development (Auto-sync)
 ```bash
-npm run dev:mobile        # Auto-sync + start mobile server
+npm run dev:mobile        # Auto-sync + start mobile server (offline mode)
 # Scan QR code with Expo Go app on your phone
 ```
 
@@ -41,7 +41,7 @@ npm run dev:mobile        # Sync and start mobile (foreground)
 │   ├── components/            # 🌐 Web-specific React components
 │   └── hooks/                 # 🌐 Web-specific hooks
 │
-└── 2Truths-1Lie-mobile/       # Separate mobile project
+└── mobile/                    # Separate mobile project
     ├── src/
     │   ├── types/             # 🔄 Synced from main project
     │   ├── store/             # 🔄 Synced from main project
@@ -73,8 +73,8 @@ npm run dev:mobile        # Sync and start mobile (foreground)
 ### Manual Sync Process
 ```bash
 npm run sync              # Run sync script manually
-# - Copies src/types/ → 2Truths-1Lie-mobile/src/types/
-# - Copies src/store/ → 2Truths-1Lie-mobile/src/store/
+# - Copies src/types/ → mobile/src/types/
+# - Copies src/store/ → mobile/src/store/
 # - Copies selected shared components
 ```
 
@@ -101,7 +101,7 @@ npm run sync              # Run sync script manually
 | `src/types/*` | `npm run sync` | ✅ Auto-reloads | ✅ After sync |
 | `src/store/*` | `npm run sync` | ✅ Auto-reloads | ✅ After sync |
 | `src/components/*` | None | ✅ Web only | ❌ No impact |
-| `2Truths-1Lie-mobile/src/*` | None | ❌ No impact | ✅ Mobile only |
+| `mobile/src/*` | None | ❌ No impact | ✅ Mobile only |
 
 ### Development Tips
 
@@ -118,7 +118,7 @@ npm run sync              # Run sync script manually
 npm run build
 
 # Mobile production build  
-cd 2Truths-1Lie-mobile
+cd mobile
 npx expo build:android    # Android APK
 npx expo build:ios        # iOS IPA (requires Apple Developer account)
 ```
