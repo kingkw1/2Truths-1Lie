@@ -15,6 +15,7 @@ import {
 } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import { CameraView, CameraType, useCameraPermissions } from 'expo-camera';
+import { Audio } from 'expo-av';
 import * as MediaLibrary from 'expo-media-library';
 import * as FileSystem from 'expo-file-system';
 import { useAppDispatch, useAppSelector } from '../store';
@@ -71,6 +72,7 @@ export const MobileCameraRecorder: React.FC<MobileCameraRecorderProps> = ({
 
   const [cameraPermission, requestCameraPermission] = useCameraPermissions();
   const [mediaLibraryPermission, requestMediaLibraryPermission] = MediaLibrary.usePermissions();
+  const [microphonePermission, setMicrophonePermission] = useState<any>(null);
   const [facing, setFacing] = useState<CameraType>('front');
   const [isRecording, setIsRecording] = useState(false);
   const [recordingDuration, setRecordingDuration] = useState(0);
@@ -96,6 +98,11 @@ export const MobileCameraRecorder: React.FC<MobileCameraRecorderProps> = ({
     const handleAppStateChange = (nextAppState: AppStateStatus) => {
       if (nextAppState === 'background' && isRecording) {
         handleBackgroundInterruption();
+      } else if (nextAppState === 'active') {
+        // Refresh permissions when app becomes active again
+        setTimeout(() => {
+          initializeCamera();
+        }, 500);
       }
     };
 
@@ -145,6 +152,15 @@ export const MobileCameraRecorder: React.FC<MobileCameraRecorderProps> = ({
   const initializeCamera = useCallback(async () => {
     setIsLoading(true);
     try {
+      // Set audio mode for recording
+      await Audio.setAudioModeAsync({
+        allowsRecordingIOS: true,
+        staysActiveInBackground: true,
+        playsInSilentModeIOS: true,
+        shouldDuckAndroid: true,
+        playThroughEarpieceAndroid: false,
+      });
+      
       const hasPermissions = await checkPermissions();
       if (hasPermissions) {
         setCameraReady(true);
@@ -152,6 +168,7 @@ export const MobileCameraRecorder: React.FC<MobileCameraRecorderProps> = ({
         setRetryCount(0);
       }
     } catch (error) {
+      console.error('Camera initialization error:', error);
       handleCameraError(CameraErrorType.CAMERA_UNAVAILABLE, `Failed to initialize camera: ${error}`);
     } finally {
       setIsLoading(false);
@@ -160,36 +177,65 @@ export const MobileCameraRecorder: React.FC<MobileCameraRecorderProps> = ({
 
   const checkPermissions = async (): Promise<boolean> => {
     try {
+      console.log('=== Permission Check Debug ===');
+      console.log('Current camera permission:', cameraPermission);
+      console.log('Current media permission:', mediaLibraryPermission);
+      console.log('Current microphone permission:', microphonePermission);
+      
+      // Request fresh permissions every time to avoid stale state
+      console.log('Requesting fresh camera permission...');
+      const cameraStatus = await requestCameraPermission();
+      console.log('Camera permission result:', cameraStatus);
+
+      console.log('Requesting fresh microphone permission...');
+      const micStatus = await Audio.requestPermissionsAsync();
+      console.log('Microphone permission result:', micStatus);
+      setMicrophonePermission(micStatus);
+
+      console.log('Requesting fresh media permission...');
+      const mediaStatus = await requestMediaLibraryPermission();
+      console.log('Media permission result:', mediaStatus);
+
       // Check camera permission
-      if (!cameraPermission?.granted) {
-        const cameraResult = await requestCameraPermission();
-        if (!cameraResult.granted) {
-          handleCameraError(
-            CameraErrorType.PERMISSION_DENIED,
-            'Camera permission is required to record videos. Please enable it in your device settings.',
-            true,
-            () => requestCameraPermission()
-          );
-          return false;
-        }
+      if (!cameraStatus.granted) {
+        console.log('Camera permission denied');
+        handleCameraError(
+          CameraErrorType.PERMISSION_DENIED,
+          'Camera access is needed to record your video statements. Please check your device settings.',
+          true,
+          () => requestCameraPermission()
+        );
+        return false;
+      }
+
+      // Check microphone permission 
+      if (!micStatus.granted) {
+        console.log('Microphone permission denied');
+        handleCameraError(
+          CameraErrorType.PERMISSION_DENIED,
+          'Microphone access is needed to record audio with your video statements. Please check your device settings.',
+          true,
+          () => Audio.requestPermissionsAsync()
+        );
+        return false;
       }
 
       // Check media library permission
-      if (!mediaLibraryPermission?.granted) {
-        const mediaResult = await requestMediaLibraryPermission();
-        if (!mediaResult.granted) {
-          handleCameraError(
-            CameraErrorType.PERMISSION_DENIED,
-            'Media library permission is required to save recordings. Please enable it in your device settings.',
-            true,
-            () => requestMediaLibraryPermission()
-          );
-          return false;
-        }
+      if (!mediaStatus.granted) {
+        console.log('Media permission denied');
+        handleCameraError(
+          CameraErrorType.PERMISSION_DENIED,
+          'Media library permission is required to save recordings. Please enable it in your device settings.',
+          true,
+          () => requestMediaLibraryPermission()
+        );
+        return false;
       }
 
+      console.log('All permissions granted successfully');
       return true;
     } catch (error) {
+      console.error('Permission check error:', error);
       handleCameraError(CameraErrorType.PERMISSION_DENIED, `Permission error: ${error}`);
       return false;
     }
@@ -298,9 +344,16 @@ export const MobileCameraRecorder: React.FC<MobileCameraRecorderProps> = ({
     try {
       setIsLoading(true);
       
-      // Pre-flight checks
+      // Clear any previous errors first
+      setCurrentError(null);
+      
+      // Always check permissions fresh before recording
+      console.log('Checking permissions before recording...');
       const hasPermissions = await checkPermissions();
-      if (!hasPermissions) return;
+      if (!hasPermissions) {
+        console.log('Permissions check failed');
+        return;
+      }
 
       const hasStorage = await checkStorageSpace();
       if (!hasStorage) return;
@@ -315,8 +368,7 @@ export const MobileCameraRecorder: React.FC<MobileCameraRecorderProps> = ({
         return;
       }
 
-      // Clear any previous errors
-      setCurrentError(null);
+      console.log('Starting recording...');
       
       // Use mobile media integration service to start recording
       await mobileMediaIntegration.startRecording(statementIndex);
@@ -355,9 +407,11 @@ export const MobileCameraRecorder: React.FC<MobileCameraRecorderProps> = ({
         Vibration.vibrate(100);
       }
 
+      console.log('Starting camera recording with options:', recordingOptions);
       const recording = await cameraRef.current.recordAsync(recordingOptions);
       
       if (recording && recording.uri) {
+        console.log('Recording completed with URI:', recording.uri);
         await handleRecordingComplete(recording.uri);
       } else {
         throw new Error('Recording failed to produce a valid file');
@@ -369,7 +423,7 @@ export const MobileCameraRecorder: React.FC<MobileCameraRecorderProps> = ({
       let errorMessage = `Recording failed: ${error.message || error}`;
 
       // Categorize specific errors
-      if (error.message?.includes('permission')) {
+      if (error.message?.includes('permission') || error.message?.includes('denied')) {
         errorType = CameraErrorType.PERMISSION_DENIED;
         errorMessage = 'Camera permission was revoked during recording. Please grant permission and try again.';
       } else if (error.message?.includes('storage') || error.message?.includes('space')) {
@@ -383,7 +437,10 @@ export const MobileCameraRecorder: React.FC<MobileCameraRecorderProps> = ({
       handleCameraError(errorType, errorMessage, true, () => {
         setRetryCount(prev => prev + 1);
         if (retryCount < maxRetries) {
-          setTimeout(startRecording, 1000);
+          setTimeout(() => {
+            console.log(`Retrying recording (attempt ${retryCount + 1}/${maxRetries})`);
+            startRecording();
+          }, 1000);
         }
       });
 
@@ -552,19 +609,22 @@ export const MobileCameraRecorder: React.FC<MobileCameraRecorderProps> = ({
   }
 
   // Show permission request UI
-  if (!cameraPermission?.granted || !mediaLibraryPermission?.granted) {
+  if (!cameraPermission?.granted || !mediaLibraryPermission?.granted || !microphonePermission?.granted) {
     return (
       <View style={styles.permissionContainer}>
         <View style={styles.permissionIcon}>
-          <Text style={styles.permissionIconText}>📷</Text>
+          <Text style={styles.permissionIconText}>📷🎤</Text>
         </View>
-        <Text style={styles.permissionTitle}>Camera Access Required</Text>
+        <Text style={styles.permissionTitle}>Camera & Audio Access Required</Text>
         <Text style={styles.permissionText}>
-          To record your video statements, we need access to your camera and media library.
+          To record your video statements, we need access to your camera, microphone, and media library.
         </Text>
         <View style={styles.permissionDetails}>
           <Text style={styles.permissionDetailItem}>
             📹 Camera: Record video statements
+          </Text>
+          <Text style={styles.permissionDetailItem}>
+            🎤 Microphone: Record audio with your video
           </Text>
           <Text style={styles.permissionDetailItem}>
             💾 Media Library: Save your recordings
