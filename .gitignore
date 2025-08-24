@@ -62,6 +62,14 @@ ios/build/
 android/app/build/
 android/build/
 
+# Generated native directories (from expo prebuild)
+android/
+mobile/android/
+mobile/ios/
+
+# Build output files
+build-output/
+
 # Firebase or other SDK config history/cache
 firebase-debug.log
 .firebaserc
