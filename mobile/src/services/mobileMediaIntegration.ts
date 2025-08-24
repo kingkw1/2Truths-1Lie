@@ -190,7 +190,9 @@ export class MobileMediaIntegrationService {
       const compressedInfo = await FileSystem.getInfoAsync(finalUri);
       compressionMetadata = {
         originalSize: fileSize,
-        compressionRatio: compressedInfo.size ? compressedInfo.size / fileSize : 1,
+        compressionRatio: (compressedInfo.exists && 'size' in compressedInfo && compressedInfo.size) 
+          ? compressedInfo.size / fileSize 
+          : 1,
         compressionTime: Date.now(), // Simplified - in real app would track actual time
         compressionQuality: 0.8,
       };
@@ -247,7 +249,7 @@ export class MobileMediaIntegrationService {
       this.dispatch(setMediaCompression({
         statementIndex,
         isCompressing: false,
-        progress: null,
+        progress: undefined,
       }));
 
       return compressedUri;
@@ -255,7 +257,7 @@ export class MobileMediaIntegrationService {
       this.dispatch(setMediaCompression({
         statementIndex,
         isCompressing: false,
-        progress: null,
+        progress: undefined,
       }));
       throw new Error(`Compression failed: ${error.message}`);
     }
@@ -289,8 +291,8 @@ export class MobileMediaIntegrationService {
       throw new Error(`File size (${Math.round(fileSize / (1024 * 1024))}MB) exceeds maximum allowed (${Math.round(this.config.maxFileSize / (1024 * 1024))}MB)`);
     }
 
-    if (duration < 1000) {
-      throw new Error('Recording too short. Minimum duration is 1 second.');
+    if (duration < 500) { // Reduced to 0.5 seconds for more lenient validation
+      throw new Error('Recording too short. Minimum duration is 0.5 seconds.');
     }
 
     if (duration > this.config.maxDuration) {
