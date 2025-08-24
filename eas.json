@@ -9,9 +9,15 @@
       "distribution": "internal"
     },
     "preview": {
-      "distribution": "internal"
+      "distribution": "internal",
+      "android": {
+        "buildType": "app-bundle"
+      }
     },
     "production": {
+      "android": {
+        "buildType": "app-bundle"
+      },
       "autoIncrement": true
     }
   },

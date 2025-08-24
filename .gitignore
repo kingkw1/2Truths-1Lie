@@ -80,3 +80,12 @@ __pycache__/
 # Expo files
 .expo/
 .expo-shared/
+
+# Security - NEVER commit these!
+*.jks
+*.keystore
+*.p12
+*.key
+*.pem
+google-services.json
+GoogleService-Info.plist
