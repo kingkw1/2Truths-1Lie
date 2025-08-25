@@ -4,7 +4,8 @@
  */
 
 import React from 'react';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render } from '@testing-library/react';
+import { screen, fireEvent, waitFor } from '@testing-library/dom';
 import '@testing-library/jest-dom';
 import MediaPreview from '../MediaPreview';
 import { MediaCapture } from '../../types/challenge';

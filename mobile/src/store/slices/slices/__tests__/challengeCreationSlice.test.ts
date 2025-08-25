@@ -22,7 +22,7 @@ import challengeCreationReducer, {
   completeSubmission,
   clearValidationErrors,
 } from '../challengeCreationSlice';
-import { Statement, MediaCapture, EmotionScores } from '../../../types';
+import { Statement, MediaCapture, EmotionScores } from '../../../../types';
 
 describe('challengeCreationSlice', () => {
   let initialState: ChallengeCreationState;

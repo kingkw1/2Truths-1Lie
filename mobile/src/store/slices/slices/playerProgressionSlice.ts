@@ -4,7 +4,7 @@
  */
 
 import { createSlice, PayloadAction } from '@reduxjs/toolkit';
-import { PlayerProgression, Achievement } from '../../types';
+import { PlayerProgression, Achievement } from '../../../types';
 
 export interface PlayerProgressionState {
   progression: PlayerProgression | null;
@@ -86,7 +86,7 @@ const playerProgressionSlice = createSlice({
       if (!state.progression) return;
       
       const existingAchievement = state.progression.achievements.find(
-        a => a.id === action.payload.id
+        (a: Achievement) => a.id === action.payload.id
       );
       
       if (!existingAchievement) {

@@ -1,10 +1,11 @@
 /**
- * Unit tests for ChallengeCreationForm component
- * Tests statement input, lie selection, and validation functionality
+ * Comprehensive tests for ChallengeCreationForm component
+ * Tests form validation, media handling, and submission
  */
 
 import React from 'react';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render } from '@testing-library/react';
+import { screen, waitFor, fireEvent } from '@testing-library/dom';
 import { Provider } from 'react-redux';
 import { configureStore } from '@reduxjs/toolkit';
 import { ChallengeCreationForm } from '../ChallengeCreationForm';
@@ -111,7 +112,7 @@ describe('ChallengeCreationForm', () => {
     
     // Select a lie using a more specific selector
     const allButtons = screen.getAllByRole('button');
-    const lieButton = allButtons.find(button => button.textContent === 'Mark as lie');
+    const lieButton = allButtons.find((button: HTMLElement) => button.textContent === 'Mark as lie');
     if (lieButton) {
       fireEvent.click(lieButton);
     }
@@ -174,7 +175,7 @@ describe('ChallengeCreationForm', () => {
     
     // Select a lie
     const allButtons = screen.getAllByRole('button');
-    const lieButton = allButtons.find(button => button.textContent === 'Mark as lie');
+    const lieButton = allButtons.find((button: HTMLElement) => button.textContent === 'Mark as lie');
     if (lieButton) {
       fireEvent.click(lieButton);
     }
@@ -268,7 +269,7 @@ describe('ChallengeCreationForm', () => {
     
     // Select a lie
     const allButtons = screen.getAllByRole('button');
-    const lieButton = allButtons.find(button => button.textContent === 'Mark as lie');
+    const lieButton = allButtons.find((button: HTMLElement) => button.textContent === 'Mark as lie');
     if (lieButton) {
       fireEvent.click(lieButton);
     }

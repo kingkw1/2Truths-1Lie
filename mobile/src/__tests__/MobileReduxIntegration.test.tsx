@@ -63,7 +63,7 @@ describe('Mobile Redux Integration', () => {
       // First challenge
       store.dispatch(startNewChallenge());
       let state = store.getState().challengeCreation;
-      const firstChallengeId = state.currentChallenge.id;
+      const firstChallengeCreatorId = state.currentChallenge.creatorId;
 
       // Add some data to first challenge
       const mockMedia: MediaCapture = {
@@ -82,7 +82,7 @@ describe('Mobile Redux Integration', () => {
       state = store.getState().challengeCreation;
 
       // Should have new challenge with clean state
-      expect(state.currentChallenge.id).not.toBe(firstChallengeId);
+      expect(state.currentChallenge.creatorId).not.toBe(firstChallengeCreatorId);
       expect(state.currentChallenge.mediaData?.[0]).toBeUndefined();
       expect(state.currentChallenge.statements?.[0]?.isLie).toBe(false);
     });

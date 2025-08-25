@@ -226,7 +226,7 @@ describe('Device Camera Recording Flow Tests', () => {
     });
 
     it('handles camera facing toggle during recording setup', async () => {
-      const { getByTestId } = renderWithStore(
+      const { getByTestId, getByText } = renderWithStore(
         <MobileCameraRecorder {...mockProps} />
       );
 

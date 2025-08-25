@@ -4,7 +4,8 @@
  */
 
 import React from 'react';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render } from '@testing-library/react';
+import { screen, waitFor, fireEvent } from '@testing-library/dom';
 import { Provider } from 'react-redux';
 import { configureStore } from '@reduxjs/toolkit';
 import { ChallengeBrowser } from '../ChallengeBrowser';
@@ -30,8 +31,9 @@ const createMockStore = (initialState = {}) => {
         currentStreak: 0, // Added to fix type error
         showAnimatedFeedback: false, // Added to fix type error
         filters: {
-          difficulty: 'all',
-          sortBy: 'popularity',
+          difficulty: 'all' as const,
+          sortBy: 'popularity' as const,
+          minPopularity: 'all' as const,
         },
         ...initialState,
       },
