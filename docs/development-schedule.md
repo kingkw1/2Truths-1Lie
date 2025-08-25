@@ -8,7 +8,7 @@
 
 ***
 
-### 1. **Immediate Actions (Week of Aug 23 – Aug 29)**
+### 1. **Immediate Actions (Week of Aug 25 – Sept 01)**
 
 **Goal:** Lock in early Play Store deployment and stabilize core mobile features.
 
@@ -24,7 +24,7 @@
 
 ***
 
-### 2. **Feature Completion Sprint (Aug 30 – Sept 5)**
+### 2. **Feature Completion Sprint (Sept 01 – Sept 08)**
 
 **Goal:** Finalize core gameplay, polish mobile flow, and continue stabilizing published app.
 
@@ -40,7 +40,7 @@
 
 ***
 
-### 3. **Hardening and Submission Prep (Sept 6 – Sept 12)**
+### 3. **Hardening and Submission Prep (Sept 08 – Sept 15)**
 
 **Goal:** Submit to KiRo with top-notch MVP and solid demonstration.
 
@@ -56,7 +56,7 @@
 
 ***
 
-### 4. **Post-KiRo / Shipaton Focus (Sept 13 – Sept 29)**
+### 4. **Post-KiRo / Shipaton Focus (Sept 15 – Sept 29)**
 
 **Goal:** Deliver full production readiness for Shipaton submission & Play Store publication.
 
