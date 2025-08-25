@@ -1,9 +1,10 @@
 /**
- * Test for challenge switching state reset bug fix
+ * Tests for state reset when switching between challenges
  */
 
 import React from 'react';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render } from '@testing-library/react';
+import { screen, waitFor, fireEvent } from '@testing-library/dom';
 import { Provider } from 'react-redux';
 import { configureStore } from '@reduxjs/toolkit';
 import { ChallengeBrowserDemo } from '../ChallengeBrowserDemo';

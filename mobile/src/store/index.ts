@@ -6,6 +6,9 @@
 import { configureStore } from '@reduxjs/toolkit';
 import guessingGameReducer from './slices/guessingGameSlice';
 import challengeCreationReducer from './slices/challengeCreationSlice';
+import gameSessionReducer from './slices/gameSessionSlice';
+import playerProgressionReducer from './slices/playerProgressionSlice';
+import uiReducer from './slices/uiSlice';
 
 console.log('⚡ Configuring simplified mobile Redux store...');
 
@@ -13,6 +16,9 @@ const store = configureStore({
   reducer: {
     guessingGame: guessingGameReducer,
     challengeCreation: challengeCreationReducer,
+    gameSession: gameSessionReducer,
+    playerProgression: playerProgressionReducer,
+    ui: uiReducer,
   },
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware({

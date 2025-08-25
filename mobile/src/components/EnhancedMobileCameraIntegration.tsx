@@ -77,7 +77,7 @@ export const EnhancedMobileCameraIntegration: React.FC<EnhancedMobileCameraInteg
       // Show success message with processed media info
       Alert.alert(
         '✅ Recording Saved',
-        `Statement ${statementIndex + 1} has been recorded successfully!\n\nDuration: ${Math.round(processedMedia.duration / 1000)}s\nSize: ${processedMedia.fileSize ? (processedMedia.fileSize / (1024 * 1024)).toFixed(1) + 'MB' : 'Unknown'}${processedMedia.compressionRatio ? `\nCompressed: ${Math.round((1 - processedMedia.compressionRatio) * 100)}%` : ''}`,
+        `Statement ${statementIndex + 1} has been recorded successfully!\n\nDuration: ${processedMedia.duration ? Math.round(processedMedia.duration / 1000) : 'Unknown'}s\nSize: ${processedMedia.fileSize ? (processedMedia.fileSize / (1024 * 1024)).toFixed(1) + 'MB' : 'Unknown'}${processedMedia.compressionRatio ? `\nCompressed: ${Math.round((1 - processedMedia.compressionRatio) * 100)}%` : ''}`,
         [{ text: 'Continue', style: 'default' }],
         { cancelable: false }
       );

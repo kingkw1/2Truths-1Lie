@@ -22,38 +22,7 @@ const store = configureStore({
     guessingGame: guessingGameReducer,
     ui: uiReducer,
   },
-  // Temporarily disable custom middleware to isolate issues
-  middleware: (getDefaultMiddleware) =>
-    getDefaultMiddleware({
-      serializableCheck: {
-        // Ignore these action types for serialization checks
-        ignoredActions: ['persist/PERSIST', 'persist/REHYDRATE'],
-        // Ignore these field paths in all actions
-        ignoredActionsPaths: [
-          'meta.arg', 
-          'payload.timestamp', 
-          'payload.createdAt', 
-          'payload.lastUpdated',
-          'payload.startTime'
-        ],
-        // Ignore these paths in the state
-        ignoredPaths: [
-          'gameSession.startTime', 
-          'gameSession.lastActivity',
-          'gameSession.currentSession.startTime',
-          'gameSession.currentSession.lastActivity',
-          'playerProgression.progression.createdAt',
-          'playerProgression.progression.lastUpdated'
-        ],
-        // Ignore Date values in actions and state
-        isSerializable: (value: any) => {
-          // Allow Date objects to pass through
-          if (value instanceof Date) return true;
-          // Use default serialization check for everything else
-          return true;
-        }
-      },
-    }),
+  devTools: process.env.NODE_ENV !== 'production',
     // .concat(gameMiddleware)
     // .concat(websocketMiddleware),
 });

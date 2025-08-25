@@ -78,7 +78,7 @@ function initializeWebSocket(store: any, sessionData: any): void {
     setupWebSocketHandlers(store);
 
     // Connect to WebSocket
-    wsManager.connect().catch((error) => {
+    wsManager.connect().catch((error: any) => {
       console.error('Failed to connect to WebSocket:', error);
       store.dispatch(showNotification({
         type: 'warning',
@@ -107,7 +107,7 @@ function setupWebSocketHandlers(store: any): void {
     }));
   });
 
-  wsManager.subscribe('disconnected', (data) => {
+  wsManager.subscribe('disconnected', (data: any) => {
     store.dispatch(showNotification({
       type: 'warning',
       message: 'Lost connection to game server. Attempting to reconnect...',
@@ -115,7 +115,7 @@ function setupWebSocketHandlers(store: any): void {
     }));
   });
 
-  wsManager.subscribe('reconnecting', (data) => {
+  wsManager.subscribe('reconnecting', (data: any) => {
     store.dispatch(showNotification({
       type: 'info',
       message: `Reconnecting to server (attempt ${data.attempt})...`,
@@ -124,19 +124,19 @@ function setupWebSocketHandlers(store: any): void {
   });
 
   // Game events
-  wsManager.subscribe('guess_result', (data) => {
+  wsManager.subscribe('guess_result', (data: any) => {
     handleIncomingGuessResult(store, data);
   });
 
-  wsManager.subscribe('leaderboard_update', (data) => {
+  wsManager.subscribe('leaderboard_update', (data: any) => {
     handleLeaderboardUpdate(store, data);
   });
 
-  wsManager.subscribe('challenge_published', (data) => {
+  wsManager.subscribe('challenge_published', (data: any) => {
     handleChallengePublishedNotification(store, data);
   });
 
-  wsManager.subscribe('achievement_unlocked', (data) => {
+  wsManager.subscribe('achievement_unlocked', (data: any) => {
     store.dispatch(addAchievement(data));
     store.dispatch(openModal({
       id: 'achievement',
@@ -145,7 +145,7 @@ function setupWebSocketHandlers(store: any): void {
     }));
   });
 
-  wsManager.subscribe('player_joined', (data) => {
+  wsManager.subscribe('player_joined', (data: any) => {
     store.dispatch(showNotification({
       type: 'info',
       message: `${data.playerName} joined the game!`,
@@ -153,7 +153,7 @@ function setupWebSocketHandlers(store: any): void {
     }));
   });
 
-  wsManager.subscribe('system_message', (data) => {
+  wsManager.subscribe('system_message', (data: any) => {
     store.dispatch(showNotification({
       type: data.severity || 'info',
       message: data.message,
@@ -162,11 +162,11 @@ function setupWebSocketHandlers(store: any): void {
   });
 
   // Error handling
-  wsManager.subscribe('error', (data) => {
+  wsManager.subscribe('error', (data: any) => {
     console.error('WebSocket error:', data.error);
   });
 
-  wsManager.subscribe('auth_failed', (data) => {
+  wsManager.subscribe('auth_failed', (data: any) => {
     store.dispatch(showNotification({
       type: 'error',
       message: 'Authentication failed. Some features may not work.',
@@ -208,10 +208,10 @@ function handleGuessSubmission(guessData: any): void {
  */
 function handleChallengePublication(submissionData: any): void {
   if (wsManager && wsManager.isReady()) {
-    wsManager.notifyChallengePublished(
-      submissionData.challengeId,
-      submissionData.challengeData
-    );
+    wsManager.notifyChallengePublished({
+      challengeId: submissionData.challengeId,
+      challengeData: submissionData.challengeData
+    });
   }
 }
 
@@ -314,7 +314,8 @@ export function getWebSocketStatus(): { connected: boolean; authenticated: boole
  */
 export function requestLeaderboardUpdate(): boolean {
   if (wsManager && wsManager.isReady()) {
-    return wsManager.requestLeaderboardUpdate();
+    wsManager.requestLeaderboardUpdate();
+    return true;
   }
   return false;
 }
@@ -324,7 +325,8 @@ export function requestLeaderboardUpdate(): boolean {
  */
 export function joinGameRoom(roomId: string): boolean {
   if (wsManager && wsManager.isReady()) {
-    return wsManager.joinGameRoom(roomId);
+    wsManager.joinGameRoom(roomId);
+    return true;
   }
   return false;
 }
@@ -334,7 +336,8 @@ export function joinGameRoom(roomId: string): boolean {
  */
 export function leaveGameRoom(roomId: string): boolean {
   if (wsManager && wsManager.isReady()) {
-    return wsManager.leaveGameRoom(roomId);
+    wsManager.leaveGameRoom(roomId);
+    return true;
   }
   return false;
 }

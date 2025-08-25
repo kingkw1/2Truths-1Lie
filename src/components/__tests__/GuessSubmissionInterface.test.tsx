@@ -4,7 +4,8 @@
  */
 
 import React from 'react';
-import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
+import { render, act } from '@testing-library/react';
+import { screen, fireEvent, waitFor } from '@testing-library/dom';
 import { Provider } from 'react-redux';
 import { configureStore } from '@reduxjs/toolkit';
 import { GuessSubmissionInterface } from '../GuessSubmissionInterface';
@@ -89,9 +90,9 @@ const createTestStore = (initialState = {}) => {
         currentStreak: 0, // Added to fix type error
         showAnimatedFeedback: false, // Added to fix type error
         filters: {
-          difficulty: 'all',
-          sortBy: 'popularity',
-          minPopularity: 'all'
+          difficulty: 'all' as const,
+          sortBy: 'popularity' as const,
+          minPopularity: 'all' as const
         },
         ...initialState
       }

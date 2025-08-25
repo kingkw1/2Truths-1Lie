@@ -37,6 +37,10 @@
         "projectId": "7f16a081-e340-4410-84c5-c30352022ead"
       }
     },
-    "owner": "kingkw1"
+    "owner": "kingkw1",
+    "plugins": [
+      "expo-asset",
+      "expo-web-browser"
+    ]
   }
 }
