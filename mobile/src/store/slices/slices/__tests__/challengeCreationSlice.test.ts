@@ -22,7 +22,7 @@ import challengeCreationReducer, {
   completeSubmission,
   clearValidationErrors,
 } from '../challengeCreationSlice';
-import { Statement, MediaCapture, EmotionScores } from '../../../types';
+import { Statement, MediaCapture, EmotionScores } from '../../../../types';
 
 describe('challengeCreationSlice', () => {
   let initialState: ChallengeCreationState;
@@ -322,7 +322,7 @@ describe('challengeCreationSlice', () => {
 
       const newState = challengeCreationReducer(stateWithEmptyStatements, validateChallenge());
 
-      expect(newState.validationErrors).toContain('All statements must have text (text serves as fallback when video recording is unavailable)');
+      expect(newState.validationErrors).toContain('All statements must have video recordings');
     });
 
     test('validateChallenge passes with valid challenge', () => {
@@ -334,6 +334,11 @@ describe('challengeCreationSlice', () => {
             { id: '1', text: 'I have traveled to 15 countries', isLie: false },
             { id: '2', text: 'I can speak 4 languages fluently', isLie: true },
             { id: '3', text: 'I have never broken a bone', isLie: false },
+          ],
+          mediaData: [
+            { type: 'video' as const, url: 'blob:video1', fileSize: 1000 },
+            { type: 'video' as const, url: 'blob:video2', fileSize: 1000 },
+            { type: 'video' as const, url: 'blob:video3', fileSize: 1000 },
           ],
         },
       };
@@ -398,6 +403,20 @@ describe('challengeCreationSlice', () => {
         statement: { id: '3', text: 'Statement 3', isLie: false }
       }));
       state = challengeCreationReducer(state, setLieStatement(1));
+      
+      // Add media data to make validation pass
+      state = {
+        ...state,
+        currentChallenge: {
+          ...state.currentChallenge,
+          mediaData: [
+            { type: 'video' as const, url: 'blob:video1', fileSize: 1000 },
+            { type: 'video' as const, url: 'blob:video2', fileSize: 1000 },
+            { type: 'video' as const, url: 'blob:video3', fileSize: 1000 },
+          ],
+        },
+      };
+      
       state = challengeCreationReducer(state, validateChallenge());
 
       expect(state.currentChallenge.statements).toHaveLength(3);

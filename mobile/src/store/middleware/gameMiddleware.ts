@@ -4,6 +4,7 @@
  */
 
 import { Middleware } from '@reduxjs/toolkit';
+import { storage } from '../../utils/storage';
 import { 
   addExperience, 
   addAchievement, 
@@ -168,7 +169,7 @@ export const gameMiddleware: Middleware = (store) => (next) => (action: any) => 
     }
   }
 
-  // Auto-save game state to localStorage
+  // Auto-save game state to platform-agnostic storage
   if (action.type.includes('gameSession/') || action.type.includes('playerProgression/')) {
     try {
       const gameState = {
@@ -176,7 +177,7 @@ export const gameMiddleware: Middleware = (store) => (next) => (action: any) => 
         playerProgression: state.playerProgression,
         timestamp: Date.now(),
       };
-      localStorage.setItem('gameState', JSON.stringify(gameState));
+      storage.setItem('gameState', JSON.stringify(gameState));
     } catch (error) {
       console.warn('Failed to save game state:', error);
     }
@@ -186,9 +187,9 @@ export const gameMiddleware: Middleware = (store) => (next) => (action: any) => 
 };
 
 // Helper function to load saved game state
-export const loadSavedGameState = () => {
+export const loadSavedGameState = async () => {
   try {
-    const savedState = localStorage.getItem('gameState');
+    const savedState = await storage.getItem('gameState');
     if (savedState) {
       const parsed = JSON.parse(savedState);
       // Only load if saved within last 7 days

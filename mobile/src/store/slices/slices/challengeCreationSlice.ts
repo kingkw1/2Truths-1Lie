@@ -4,7 +4,7 @@
  */
 
 import { createSlice, PayloadAction } from '@reduxjs/toolkit';
-import { ChallengeCreation, Statement, MediaCapture, EmotionScores } from '../../types';
+import { ChallengeCreation, Statement, MediaCapture, EmotionScores } from '../../../types';
 
 export interface ChallengeCreationState {
   currentChallenge: Partial<ChallengeCreation>;
