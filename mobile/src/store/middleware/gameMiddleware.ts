@@ -4,7 +4,7 @@
  */
 
 import { Middleware } from '@reduxjs/toolkit';
-import { storage } from '../../utils/storage';
+import storage from '../../utils/storage';
 import { 
   addExperience, 
   addAchievement, 

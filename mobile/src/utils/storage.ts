@@ -1,93 +1,93 @@
 /**
- * Platform-agnostic storage abstraction
- * Automatically uses the correct storage implementation based on platform
- * - React Native: AsyncStorage
- * - Web: localStorage (for future web implementation)
+ * Platform-agnostic storage utility for React Native
+ * Uses AsyncStorage for persistent data storage
  */
 
-import { Platform } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
-interface StorageInterface {
-  getItem(key: string): Promise<string | null>;
+export interface StorageInterface {
   setItem(key: string, value: string): Promise<void>;
+  getItem(key: string): Promise<string | null>;
   removeItem(key: string): Promise<void>;
   clear(): Promise<void>;
 }
 
-// Web storage implementation (for future use)
-class WebStorage implements StorageInterface {
+class ReactNativeStorage implements StorageInterface {
+  async setItem(key: string, value: string): Promise<void> {
+    try {
+      await AsyncStorage.setItem(key, value);
+    } catch (error) {
+      console.error('Storage setItem error:', error);
+      throw error;
+    }
+  }
+
   async getItem(key: string): Promise<string | null> {
-    if (typeof localStorage === 'undefined') {
-      console.warn('localStorage not available');
+    try {
+      return await AsyncStorage.getItem(key);
+    } catch (error) {
+      console.error('Storage getItem error:', error);
       return null;
     }
-    return localStorage.getItem(key);
-  }
-
-  async setItem(key: string, value: string): Promise<void> {
-    if (typeof localStorage === 'undefined') {
-      console.warn('localStorage not available');
-      return;
-    }
-    localStorage.setItem(key, value);
   }
 
   async removeItem(key: string): Promise<void> {
-    if (typeof localStorage === 'undefined') {
-      console.warn('localStorage not available');
-      return;
+    try {
+      await AsyncStorage.removeItem(key);
+    } catch (error) {
+      console.error('Storage removeItem error:', error);
+      throw error;
     }
-    localStorage.removeItem(key);
   }
 
   async clear(): Promise<void> {
-    if (typeof localStorage === 'undefined') {
-      console.warn('localStorage not available');
-      return;
+    try {
+      await AsyncStorage.clear();
+    } catch (error) {
+      console.error('Storage clear error:', error);
+      throw error;
     }
-    localStorage.clear();
   }
 }
 
-// Mobile storage implementation (current)
-class MobileStorage implements StorageInterface {
-  async getItem(key: string): Promise<string | null> {
-    return AsyncStorage.getItem(key);
-  }
+// Export a singleton instance
+const storage = new ReactNativeStorage();
 
-  async setItem(key: string, value: string): Promise<void> {
-    return AsyncStorage.setItem(key, value);
-  }
+export default storage;
 
-  async removeItem(key: string): Promise<void> {
-    return AsyncStorage.removeItem(key);
+// Convenience functions for common operations
+export const saveGameState = async (gameState: any): Promise<void> => {
+  try {
+    await storage.setItem('gameState', JSON.stringify(gameState));
+  } catch (error) {
+    console.error('Failed to save game state:', error);
   }
-
-  async clear(): Promise<void> {
-    return AsyncStorage.clear();
-  }
-}
-
-// Platform-specific storage instance
-const createStorage = (): StorageInterface => {
-  // For React Native (current deployment)
-  if (Platform.OS === 'ios' || Platform.OS === 'android') {
-    return new MobileStorage();
-  }
-  
-  // For web (future implementation)
-  if (Platform.OS === 'web') {
-    return new WebStorage();
-  }
-  
-  // Fallback to mobile storage
-  return new MobileStorage();
 };
 
-// Export the storage instance
-export const storage = createStorage();
+export const loadGameState = async (): Promise<any | null> => {
+  try {
+    const savedState = await storage.getItem('gameState');
+    return savedState ? JSON.parse(savedState) : null;
+  } catch (error) {
+    console.error('Failed to load game state:', error);
+    return null;
+  }
+};
 
-// Export types for future use
-export type { StorageInterface };
-export { WebStorage, MobileStorage };
+export const savePlayerProfile = async (profile: any): Promise<void> => {
+  try {
+    await storage.setItem('playerProfile', JSON.stringify(profile));
+  } catch (error) {
+    console.error('Failed to save player profile:', error);
+  }
+};
+
+export const loadPlayerProfile = async (): Promise<any | null> => {
+  try {
+    const savedProfile = await storage.getItem('playerProfile');
+    return savedProfile ? JSON.parse(savedProfile) : null;
+  } catch (error) {
+    console.error('Failed to load player profile:', error);
+    return null;
+  }
+};
