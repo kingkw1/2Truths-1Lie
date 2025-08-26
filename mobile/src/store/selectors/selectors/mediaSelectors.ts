@@ -1,9 +1,10 @@
 /**
- * Selectors for media recording state
+ * Memoized selectors for media recording state
+ * Prevents unnecessary re-renders by memoizing complex state selections
  */
 
 import { createSelector } from '@reduxjs/toolkit';
-import { RootState } from '../../index';
+import { RootState } from '../index';
 
 // Base selectors
 const selectChallengeCreation = (state: RootState) => state.challengeCreation;

@@ -4,7 +4,7 @@
  */
 
 import { createSlice, PayloadAction } from '@reduxjs/toolkit';
-import { ChallengeCreation, Statement, MediaCapture, EmotionScores } from '../../../types';
+import { ChallengeCreation, Statement, MediaCapture, EmotionScores } from '../../types';
 
 export interface ChallengeCreationState {
   currentChallenge: Partial<ChallengeCreation>;
@@ -104,7 +104,7 @@ const challengeCreationSlice = createSlice({
       if (!state.currentChallenge.statements || state.currentChallenge.statements.length === 0) return;
       
       // Reset all statements to not be lies
-      state.currentChallenge.statements.forEach((stmt: Statement) => {
+      state.currentChallenge.statements.forEach(stmt => {
         stmt.isLie = false;
       });
       
@@ -184,7 +184,7 @@ const challengeCreationSlice = createSlice({
       }
       
       if (state.currentChallenge.statements) {
-        const hasLie = state.currentChallenge.statements.some((stmt: Statement) => stmt.isLie);
+        const hasLie = state.currentChallenge.statements.some(stmt => stmt.isLie);
         if (!hasLie) {
           errors.push('Must select one statement as the lie');
         }

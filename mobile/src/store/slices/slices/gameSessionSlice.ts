@@ -4,7 +4,7 @@
  */
 
 import { createSlice, PayloadAction } from '@reduxjs/toolkit';
-import { GameSession } from '../../../types';
+import { GameSession } from '../../types';
 
 export interface GameSessionState {
   currentSession: GameSession | null;
