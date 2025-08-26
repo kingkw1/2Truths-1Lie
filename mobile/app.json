@@ -21,7 +21,7 @@
         "backgroundColor": "#4a90e2"
       },
       "package": "com.kingkw1.twotruthsoneliegame",
-      "versionCode": 17,
+      "versionCode": 18,
       "permissions": [
         "CAMERA",
         "RECORD_AUDIO",
@@ -40,7 +40,20 @@
     "owner": "kingkw1",
     "plugins": [
       "expo-asset",
-      "expo-web-browser"
+      "expo-web-browser",
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "minifyEnabled": true,
+            "shrinkResources": true,
+            "proguardFiles": [
+              "proguard-android-optimize.txt",
+              "proguard-rules.pro"
+            ]
+          }
+        }
+      ]
     ]
   }
 }
