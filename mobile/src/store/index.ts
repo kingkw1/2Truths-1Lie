@@ -10,7 +10,9 @@ import gameSessionReducer from './slices/gameSessionSlice';
 import playerProgressionReducer from './slices/playerProgressionSlice';
 import uiReducer from './slices/uiSlice';
 
-console.log('⚡ Configuring simplified mobile Redux store...');
+if (__DEV__) {
+  console.log('⚡ Configuring simplified mobile Redux store...');
+}
 
 const store = configureStore({
   reducer: {
@@ -31,7 +33,9 @@ const store = configureStore({
   devTools: process.env.NODE_ENV !== 'production',
 });
 
-console.log('✅ Redux store configured successfully');
+if (__DEV__) {
+  console.log('✅ Redux store configured successfully');
+}
 
 export { store };
 export type RootState = ReturnType<typeof store.getState>;
