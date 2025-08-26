@@ -4,7 +4,7 @@
  */
 
 import { createSlice, PayloadAction } from '@reduxjs/toolkit';
-import { GuessingSession, AnalyzedStatement, GuessResult, EnhancedChallenge } from '../../../types';
+import { GuessingSession, AnalyzedStatement, GuessResult, EnhancedChallenge } from '../../types';
 
 export interface GuessingGameState {
   currentSession: GuessingSession | null;

@@ -11,7 +11,7 @@ import guessingGameReducer, {
   hideAnimatedFeedback,
   GuessingGameState,
 } from '../guessingGameSlice';
-import { EnhancedChallenge, GuessResult } from '../../../../types/challenge';
+import { EnhancedChallenge, GuessResult } from '../../../types/challenge';
 
 const mockChallenges: EnhancedChallenge[] = [
   {
