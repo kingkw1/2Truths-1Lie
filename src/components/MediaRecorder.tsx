@@ -186,8 +186,8 @@ export const MediaRecorder: React.FC<MediaRecorderProps> = ({
         </p>
       </div>
 
-      {/* Primary Video Recording Button */}
-      {!isRecording && !isCompressing && !mediaType && allowedTypes.includes('video') && (
+      {/* Primary Video Recording Button - Always show (video-first approach) */}
+      {!isRecording && !isCompressing && !mediaType && (
         <div style={styles.primaryRecordingSection}>
           <button
             onClick={() => startRecording("video")}
@@ -212,23 +212,6 @@ export const MediaRecorder: React.FC<MediaRecorderProps> = ({
               <span>Use Text Only</span>
             </button>
           </div>
-        </div>
-      )}
-
-      {/* Text-Only Mode (when video is not allowed) */}
-      {!isRecording && !isCompressing && !mediaType && !allowedTypes.includes('video') && allowedTypes.includes('text') && (
-        <div style={styles.primaryRecordingSection}>
-          <button
-            onClick={() => startRecording("text")}
-            style={styles.primaryVideoButton}
-            disabled={disabled}
-          >
-            <span style={styles.primaryVideoIcon}>📝</span>
-            <div style={styles.primaryVideoText}>
-              <span style={styles.primaryVideoTitle}>Use Text Only</span>
-              <span style={styles.primaryVideoSubtitle}>Type your statement</span>
-            </div>
-          </button>
         </div>
       )}
 

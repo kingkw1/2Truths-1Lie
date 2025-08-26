@@ -188,8 +188,7 @@ export const MediaPreview: React.FC<MediaPreviewProps> = ({
   useEffect(() => {
     return () => {
       if (mediaData.url && mediaData.url.startsWith("blob:")) {
-        // Don't revoke here - let the blob URL manager handle it
-        // The URL might still be needed by other components
+        URL.revokeObjectURL(mediaData.url);
       }
     };
   }, [mediaData.url]);

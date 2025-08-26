@@ -17,9 +17,26 @@ jest.mock('expo-file-system', () => ({
   getInfoAsync: jest.fn(),
 }));
 
-jest.mock('expo-permissions', () => ({
-  askAsync: jest.fn(),
-  getAsync: jest.fn(),
+// Mock expo-camera permissions (replaces deprecated expo-permissions)
+jest.mock('expo-camera', () => ({
+  CameraView: jest.fn(() => null),
+  useCameraPermissions: jest.fn(() => [
+    { status: 'granted', granted: true, canAskAgain: true },
+    jest.fn()
+  ]),
+  Camera: {
+    Constants: {
+      Type: {
+        back: 'back',
+        front: 'front',
+      },
+      FlashMode: {
+        on: 'on',
+        off: 'off',
+        auto: 'auto',
+      },
+    },
+  },
 }));
 
 // Mock React Native modules
