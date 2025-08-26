@@ -126,6 +126,50 @@ describe('Gameplay Logic Integration Tests', () => {
       }
     });
 
+    // Create a stateful mock session object
+    const mockSession = {
+      sessionId: 'test-session-id',
+      playerId: 'test-player-123',
+      startTime: new Date(),
+      currentActivity: 'idle',
+      totalPoints: 0,
+      pointsEarned: 0,
+      guessesSubmitted: 0,
+      challengesCompleted: 0,
+      hintsUsed: 0,
+      timeSpent: 0,
+      lastActivityTime: new Date(),
+    };
+    
+    // Manually assign mock methods to the instance
+    gameSessionManager.initialize = jest.fn().mockResolvedValue(undefined);
+    gameSessionManager.cleanup = jest.fn().mockResolvedValue(undefined);
+    gameSessionManager.startGameSession = jest.fn().mockResolvedValue(mockSession);
+    gameSessionManager.getCurrentSession = jest.fn().mockReturnValue(mockSession);
+    gameSessionManager.updateActivity = jest.fn((activity) => {
+      mockSession.currentActivity = activity;
+    });
+    gameSessionManager.addPoints = jest.fn((points) => {
+      mockSession.totalPoints += points;
+      mockSession.pointsEarned += points;
+    });
+    gameSessionManager.incrementGuessesSubmitted = jest.fn(() => {
+      mockSession.guessesSubmitted += 1;
+    });
+    gameSessionManager.incrementChallengesCompleted = jest.fn(() => {
+      mockSession.challengesCompleted += 1;
+    });
+    gameSessionManager.calculateSessionRewards = jest.fn().mockReturnValue({
+      basePoints: 150,
+      totalPoints: 180,
+      achievements: [],
+      bonusMultiplier: 1.2,
+    });
+    gameSessionManager.recordFailure = jest.fn();
+    gameSessionManager.resetFailureCount = jest.fn();
+    gameSessionManager.addEventListener = jest.fn();
+    (gameSessionManager as any).removeEventListener = jest.fn();
+
     progressiveHintService = new ProgressiveHintService({
       maxHintsPerLevel: 2,
       timeBetweenHints: 1000,

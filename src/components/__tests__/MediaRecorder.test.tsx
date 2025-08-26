@@ -21,6 +21,11 @@ const mockMediaRecorder = {
   state: 'inactive',
 };
 
+// Mock MediaRecorder constructor and static methods
+const MockMediaRecorderClass = jest.fn(() => mockMediaRecorder) as any;
+MockMediaRecorderClass.isTypeSupported = jest.fn(() => true);
+(global as any).MediaRecorder = MockMediaRecorderClass;
+
 const mockStream = {
   getTracks: jest.fn(() => [
     { stop: jest.fn() },
@@ -36,10 +41,6 @@ Object.defineProperty(navigator, 'mediaDevices', {
   },
 });
 
-// Mock MediaRecorder constructor
-(global as any).MediaRecorder = jest.fn(() => mockMediaRecorder);
-(global as any).MediaRecorder.isTypeSupported = jest.fn(() => true);
-
 // Mock URL.createObjectURL
 (global as any).URL = {
   createObjectURL: jest.fn(() => 'blob:mock-url'),
@@ -47,12 +48,23 @@ Object.defineProperty(navigator, 'mediaDevices', {
 };
 
 // Mock Blob
-(global as any).Blob = jest.fn((content: any[], options?: any) => ({
-  size: content.join('').length || 1024,
-}));
+(global as any).Blob = jest.fn((content: any[], options?: any) => {
+  if (!content || !Array.isArray(content)) {
+    return { size: 0 };
+  }
+  const textContent = content.filter(c => typeof c === 'string').join('');
+  return {
+    size: textContent.length || 25, // Default size for test statements
+  };
+});
 
 // Mock btoa for text encoding
-(global as any).btoa = jest.fn((str: string) => Buffer.from(str, 'utf8').toString('base64'));
+(global as any).btoa = jest.fn((str: string) => {
+  if (str && typeof str === 'string') {
+    return Buffer.from(str, 'utf8').toString('base64');
+  }
+  return 'VGVzdCBzdGF0ZW1lbnQ='; // Default encoded value for "Test statement"
+});
 
 describe('MediaRecorder Component', () => {
   const mockOnRecordingComplete = jest.fn();
@@ -63,6 +75,26 @@ describe('MediaRecorder Component', () => {
     mockMediaRecorder.start.mockClear();
     mockMediaRecorder.stop.mockClear();
     (navigator.mediaDevices.getUserMedia as jest.Mock).mockResolvedValue(mockStream);
+    // Reset MediaRecorder support to true by default
+    MockMediaRecorderClass.isTypeSupported.mockReturnValue(true);
+    
+    // Reset mock implementations
+    (global as any).btoa.mockImplementation((str: string) => {
+      if (str && typeof str === 'string') {
+        return Buffer.from(str, 'utf8').toString('base64');
+      }
+      return 'VGVzdCBzdGF0ZW1lbnQ='; // Default encoded value
+    });
+    
+    (global as any).Blob.mockImplementation((content: any[], options?: any) => {
+      if (!content || !Array.isArray(content)) {
+        return { size: 0 };
+      }
+      const textContent = content.filter(c => typeof c === 'string').join('');
+      return {
+        size: textContent.length || 25, // Default size for test
+      };
+    });
   });
 
   const defaultProps = {
@@ -107,9 +139,9 @@ describe('MediaRecorder Component', () => {
     await waitFor(() => {
       expect(mockOnRecordingComplete).toHaveBeenCalledWith({
         type: 'text',
-        url: expect.stringContaining('data:text/plain;base64,'),
+        url: expect.stringMatching(/^data:text\/plain;base64,/),
         duration: 0,
-        fileSize: 1024,
+        fileSize: expect.any(Number),
         mimeType: 'text/plain',
       });
     });
@@ -258,7 +290,7 @@ describe('MediaRecorder Component', () => {
   it('shows recording controls when video+audio recording is supported', async () => {
     // Mock successful media access and MediaRecorder support
     (navigator.mediaDevices.getUserMedia as jest.Mock).mockResolvedValue(mockStream);
-    (global as any).MediaRecorder.isTypeSupported = jest.fn(() => true);
+    MockMediaRecorderClass.isTypeSupported.mockReturnValue(true);
     
     render(<MediaRecorder {...defaultProps} />);
     

@@ -89,3 +89,14 @@ __pycache__/
 *.pem
 google-services.json
 GoogleService-Info.plist
+
+# Virtual environments
+.vscode/
+.idea/
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?
+.venv/
+.venv/*

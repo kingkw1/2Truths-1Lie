@@ -132,7 +132,7 @@ describe('Complete Media Workflow Integration Tests', () => {
       );
 
       // Start text recording
-      fireEvent.click(screen.getByText('Text Only'));
+      fireEvent.click(screen.getByText('Use Text Only'));
 
       // Enter text
       const textInput = screen.getByPlaceholderText(/Type your statement here/);
@@ -173,7 +173,7 @@ describe('Complete Media Workflow Integration Tests', () => {
       );
 
       // Should show video option
-      expect(screen.getByText('Video')).toBeInTheDocument();
+      expect(screen.getByText('Start Video Recording')).toBeInTheDocument();
       
       // The component should handle the full workflow internally
       expect(screen.getByText('Record Your Statement')).toBeInTheDocument();
@@ -198,7 +198,7 @@ describe('Complete Media Workflow Integration Tests', () => {
       );
 
       // Try to start video recording
-      fireEvent.click(screen.getByText('Video'));
+      fireEvent.click(screen.getByText('Start Video Recording'));
 
       // Should fall back to text mode
       await waitFor(() => {
@@ -558,7 +558,7 @@ describe('Complete Media Workflow Integration Tests', () => {
       );
 
       // Should fall back to text mode
-      fireEvent.click(screen.getByText('Video'));
+      fireEvent.click(screen.getByText('Start Video Recording'));
 
       await waitFor(() => {
         expect(screen.getByPlaceholderText(/Type your statement here/)).toBeInTheDocument();
@@ -615,12 +615,10 @@ describe('Complete Media Workflow Integration Tests', () => {
       );
 
       // Check for accessible buttons
-      const videoButton = screen.getByText('Video').closest('button');
-      const audioButton = screen.getByText('Audio').closest('button');
-      const textButton = screen.getByText('Text Only').closest('button');
+      const videoButton = screen.getByText('Start Video Recording').closest('button');
+      const textButton = screen.getByText('Use Text Only').closest('button');
 
       expect(videoButton).toBeInTheDocument();
-      expect(audioButton).toBeInTheDocument();
       expect(textButton).toBeInTheDocument();
     });
 
