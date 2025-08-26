@@ -1,13 +1,13 @@
 {
   "expo": {
     "name": "Two Truths & a Lie",
-    "slug": "two-truths-one-lie",
-    "version": "1.0.0",
+    "slug": "two-truths-one-lie-game",
+    "version": "1.0.1",
     "orientation": "portrait",
-    "icon": "./assets/icon.png",
+    "icon": "./assets/app_icon_scaled.png",
     "userInterfaceStyle": "light",
     "splash": {
-      "image": "./assets/splash-icon.png",
+      "image": "./assets/app_icon_scaled.png",
       "resizeMode": "contain",
       "backgroundColor": "#4a90e2"
     },
@@ -17,11 +17,11 @@
     },
     "android": {
       "adaptiveIcon": {
-        "foregroundImage": "./assets/adaptive-icon.png",
+        "foregroundImage": "./assets/app_icon_scaled.png",
         "backgroundColor": "#4a90e2"
       },
       "package": "com.kingkw1.twotruthsoneliegame",
-      "versionCode": 1,
+      "versionCode": 17,
       "permissions": [
         "CAMERA",
         "RECORD_AUDIO",
