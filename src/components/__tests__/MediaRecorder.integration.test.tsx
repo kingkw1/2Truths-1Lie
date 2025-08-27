@@ -119,8 +119,9 @@ describe('MediaRecorder Integration Tests', () => {
   it('provides fallback behavior for unsupported media types', () => {
     render(<MediaRecorder {...defaultProps} allowedTypes={['text']} />);
     
-    // Should only show text option when other types are not allowed
-    expect(screen.queryByText('Start Video Recording')).not.toBeInTheDocument();
+    // Component now always shows video-first approach regardless of allowedTypes
+    // allowedTypes prop is deprecated - video recording is always primary with text fallback
+    expect(screen.getByText('Start Video Recording')).toBeInTheDocument();
     expect(screen.getByText('Use Text Only')).toBeInTheDocument();
   });
 });

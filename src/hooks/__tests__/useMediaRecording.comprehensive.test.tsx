@@ -66,32 +66,51 @@ const mockStream = {
   getAudioTracks: jest.fn(() => [mockAudioTrack]),
 };
 
-// Mock MediaRecorder with realistic behavior
+// Mock MediaRecorder with realistic behavior (using pattern from MediaRecorder.test.tsx)
 const mockMediaRecorder = {
-  start: jest.fn(function(this: any) {
+  start: jest.fn(function(this: any, timeslice?: number) {
+    console.log('Mock MediaRecorder.start() called with timeslice:', timeslice);
     this.state = 'recording';
-    if (this.onstart) {
-      setTimeout(() => this.onstart(new Event('start')), 0);
-    }
+    setTimeout(() => {
+      console.log('Mock MediaRecorder firing onstart event');
+      if (this.onstart) {
+        this.onstart(new Event('start'));
+      }
+    }, 0);
   }),
   stop: jest.fn(function(this: any) {
+    console.log('Mock MediaRecorder.stop() called');
     this.state = 'inactive';
-    if (this.onstop) {
-      setTimeout(() => this.onstop(new Event('stop')), 0);
-    }
+    setTimeout(() => {
+      if (this.ondataavailable) {
+        this.ondataavailable({
+          data: new Blob(['mock-video-data'], { type: 'video/webm' })
+        });
+      }
+      if (this.onstop) {
+        this.onstop(new Event('stop'));
+      }
+    }, 0);
   }),
   pause: jest.fn(function(this: any) {
+    console.log('Mock MediaRecorder.pause() called');
     this.state = 'paused';
-    if (this.onpause) {
-      setTimeout(() => this.onpause(new Event('pause')), 0);
-    }
+    setTimeout(() => {
+      if (this.onpause) {
+        this.onpause(new Event('pause'));
+      }
+    }, 0);
   }),
   resume: jest.fn(function(this: any) {
+    console.log('Mock MediaRecorder.resume() called');
     this.state = 'recording';
-    if (this.onresume) {
-      setTimeout(() => this.onresume(new Event('resume')), 0);
-    }
+    setTimeout(() => {
+      if (this.onresume) {
+        this.onresume(new Event('resume'));
+      }
+    }, 0);
   }),
+  requestData: jest.fn(),
   state: 'inactive',
   addEventListener: jest.fn(),
   removeEventListener: jest.fn(),
@@ -105,69 +124,22 @@ const mockMediaRecorder = {
   stream: mockStream,
   audioBitsPerSecond: 128000,
   videoBitsPerSecond: 2500000,
-  requestData: jest.fn(),
 };
 
-// Mock global MediaRecorder constructor
-(global as any).MediaRecorder = jest.fn().mockImplementation((stream, options) => {
-  const instance = {
-    start: jest.fn(function(this: any, timeslice?: number) {
-      this.state = 'recording';
-      setTimeout(() => {
-        if (this.onstart) {
-          this.onstart(new Event('start'));
-        }
-      }, 0);
-    }),
-    stop: jest.fn(function(this: any) {
-      this.state = 'inactive';
-      setTimeout(() => {
-        if (this.ondataavailable) {
-          this.ondataavailable({
-            data: new Blob(['mock-video-data'], { type: 'video/webm' })
-          });
-        }
-        if (this.onstop) {
-          this.onstop(new Event('stop'));
-        }
-      }, 0);
-    }),
-    pause: jest.fn(function(this: any) {
-      this.state = 'paused';
-      setTimeout(() => {
-        if (this.onpause) {
-          this.onpause(new Event('pause'));
-        }
-      }, 0);
-    }),
-    resume: jest.fn(function(this: any) {
-      this.state = 'recording';
-      setTimeout(() => {
-        if (this.onresume) {
-          this.onresume(new Event('resume'));
-        }
-      }, 0);
-    }),
-    state: 'inactive',
-    addEventListener: jest.fn(),
-    removeEventListener: jest.fn(),
-    ondataavailable: null,
-    onstop: null,
-    onerror: null,
-    onstart: null,
-    onpause: null,
-    onresume: null,
-    mimeType: options?.mimeType || 'video/webm',
-    stream: stream,
-    audioBitsPerSecond: options?.audioBitsPerSecond || 128000,
-    videoBitsPerSecond: options?.videoBitsPerSecond || 2500000,
-    requestData: jest.fn(),
-  };
-  return instance;
-});
+// Mock MediaRecorder constructor and static methods
+const MockMediaRecorderClass = jest.fn((stream, options) => {
+  console.log('🎬 MockMediaRecorderClass called with:', stream, options);
+  console.log('🎬 Returning mockMediaRecorder:', mockMediaRecorder);
+  return mockMediaRecorder;
+}) as any;
+MockMediaRecorderClass.isTypeSupported = jest.fn(() => true);
+(global as any).MediaRecorder = MockMediaRecorderClass;
 
-// Add isTypeSupported static method
-(global as any).MediaRecorder.isTypeSupported = jest.fn().mockReturnValue(true);
+// Ensure the mock is actually being called correctly
+console.log('MediaRecorder mock setup:', {
+  isTypeSupported: typeof (global as any).MediaRecorder.isTypeSupported,
+  isTypeSupportedTest: (global as any).MediaRecorder.isTypeSupported('video/webm')
+});
 
 // Mock navigator.mediaDevices
 Object.defineProperty(navigator, 'mediaDevices', {
@@ -218,6 +190,24 @@ const createWrapper = () => {
 };
 
 describe('useMediaRecording Hook - Comprehensive Tests', () => {
+  
+  beforeEach(() => {
+    // Ensure MediaRecorder mock is properly set up for each test
+    (global as any).MediaRecorder = MockMediaRecorderClass;
+    
+    // Clear all mocks
+    jest.clearAllMocks();
+    
+    // Reset the mock MediaRecorder instance
+    mockMediaRecorder.start.mockClear();
+    mockMediaRecorder.stop.mockClear();
+    mockMediaRecorder.pause.mockClear();
+    mockMediaRecorder.resume.mockClear();
+    mockMediaRecorder.state = 'inactive';
+    
+    // Ensure isTypeSupported returns true
+    MockMediaRecorderClass.isTypeSupported.mockReturnValue(true);
+  });
   beforeEach(() => {
     jest.clearAllMocks();
     
@@ -406,9 +396,12 @@ describe('useMediaRecording Hook - Comprehensive Tests', () => {
         await result.current.startRecording('video');
       });
 
+      // Get reference to patched mock functions
+      const patchedMocks = (global as any).mockMediaRecorderPatched;
+
       // Simulate recording state after starting
       act(() => {
-        mockMediaRecorder.state = 'recording';
+        // Note: state is managed by our patched functions
       });
 
       // Pause recording
@@ -416,15 +409,14 @@ describe('useMediaRecording Hook - Comprehensive Tests', () => {
         result.current.togglePause();
       });
 
-      expect(mockMediaRecorder.pause).toHaveBeenCalled();
+      expect(patchedMocks.pause).toHaveBeenCalled();
 
       // Resume recording  
       act(() => {
-        mockMediaRecorder.state = 'paused';
         result.current.togglePause();
       });
 
-      expect(mockMediaRecorder.resume).toHaveBeenCalled();
+      expect(patchedMocks.resume).toHaveBeenCalled();
     });
   });
 

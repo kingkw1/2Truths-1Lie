@@ -9,6 +9,11 @@ module.exports = {
   transform: {
     '^.+\\.(ts|tsx)$': 'ts-jest'
   },
+  moduleNameMapper: {
+    '^react-native$': 'react-native-web',
+    '^react-native/(.*)$': 'react-native-web/$1',
+    '^expo-haptics$': '<rootDir>/src/__mocks__/expo-haptics.js'
+  },
   collectCoverageFrom: [
     'src/**/*.{ts,tsx}',
     '!src/**/*.d.ts',

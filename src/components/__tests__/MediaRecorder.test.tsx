@@ -24,7 +24,10 @@ const mockMediaRecorder = {
 // Mock MediaRecorder constructor and static methods
 const MockMediaRecorderClass = jest.fn(() => mockMediaRecorder) as any;
 MockMediaRecorderClass.isTypeSupported = jest.fn(() => true);
+
+// Properly assign MediaRecorder to global scope for typeof checks
 (global as any).MediaRecorder = MockMediaRecorderClass;
+global.MediaRecorder = MockMediaRecorderClass;
 
 const mockStream = {
   getTracks: jest.fn(() => [
@@ -75,6 +78,10 @@ describe('MediaRecorder Component', () => {
     mockMediaRecorder.start.mockClear();
     mockMediaRecorder.stop.mockClear();
     (navigator.mediaDevices.getUserMedia as jest.Mock).mockResolvedValue(mockStream);
+    
+    // Ensure MediaRecorder is available for typeof checks
+    (window as any).MediaRecorder = MockMediaRecorderClass;
+    global.MediaRecorder = MockMediaRecorderClass;
     // Reset MediaRecorder support to true by default
     MockMediaRecorderClass.isTypeSupported.mockReturnValue(true);
     
