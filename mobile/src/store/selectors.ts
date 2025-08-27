@@ -15,7 +15,7 @@ export const selectSessionDuration = createSelector(
   [selectCurrentSession],
   (session) => {
     if (!session) return 0;
-    return Date.now() - session.startTime.getTime();
+    return Date.now() - session.startTime;
   }
 );
 

@@ -21,8 +21,8 @@ export interface GameSession {
   sessionId: string;
   playerId: string;
   currentActivity: GameActivity;
-  startTime: Date;
-  lastActivity: Date;
+  startTime: number; // timestamp in milliseconds
+  lastActivity: number; // timestamp in milliseconds
   pointsEarned: number;
   challengesCompleted: number;
   guessesSubmitted: number;

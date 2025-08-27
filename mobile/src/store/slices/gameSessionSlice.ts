@@ -9,7 +9,7 @@ import { GameSession } from '../../types';
 export interface GameSessionState {
   currentSession: GameSession | null;
   isActive: boolean;
-  lastActivity: Date | null;
+  lastActivity: number | null; // timestamp in milliseconds
   sessionHistory: GameSession[];
 }
 
@@ -29,8 +29,8 @@ const gameSessionSlice = createSlice({
         sessionId: `session_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
         playerId: action.payload.playerId,
         currentActivity: 'idle',
-        startTime: new Date(),
-        lastActivity: new Date(),
+        startTime: Date.now(),
+        lastActivity: Date.now(),
         pointsEarned: 0,
         challengesCompleted: 0,
         guessesSubmitted: 0,
@@ -40,27 +40,27 @@ const gameSessionSlice = createSlice({
       
       state.currentSession = newSession;
       state.isActive = true;
-      state.lastActivity = new Date();
+      state.lastActivity = Date.now();
     },
 
     updateActivity: (state, action: PayloadAction<GameSession['currentActivity']>) => {
       if (state.currentSession) {
         state.currentSession.currentActivity = action.payload;
-        state.lastActivity = new Date();
+        state.lastActivity = Date.now();
       }
     },
 
     addPoints: (state, action: PayloadAction<number>) => {
       if (state.currentSession) {
         state.currentSession.pointsEarned += action.payload;
-        state.lastActivity = new Date();
+        state.lastActivity = Date.now();
       }
     },
 
     incrementChallengesCompleted: (state) => {
       if (state.currentSession) {
         state.currentSession.challengesCompleted += 1;
-        state.lastActivity = new Date();
+        state.lastActivity = Date.now();
       }
     },
 
@@ -77,11 +77,11 @@ const gameSessionSlice = createSlice({
       
       state.currentSession = null;
       state.isActive = false;
-      state.lastActivity = new Date();
+      state.lastActivity = Date.now();
     },
 
     updateLastActivity: (state) => {
-      state.lastActivity = new Date();
+      state.lastActivity = Date.now();
     },
 
     // Handle session timeout/idle state
