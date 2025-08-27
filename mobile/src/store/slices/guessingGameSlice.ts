@@ -149,6 +149,11 @@ const guessingGameSlice = createSlice({
       state.showAnimatedFeedback = false;
     },
 
+    clearGuessResult: (state) => {
+      state.guessResult = null;
+      state.showAnimatedFeedback = false;
+    },
+
     updateFilters: (state, action: PayloadAction<Partial<GuessingGameState['filters']>>) => {
       state.filters = { ...state.filters, ...action.payload };
     },
@@ -220,6 +225,7 @@ export const {
   updateFilters,
   applyFilters,
   hideAnimatedFeedback,
+  clearGuessResult,
 } = guessingGameSlice.actions;
 
 export default guessingGameSlice.reducer;

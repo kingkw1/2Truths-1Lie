@@ -1,10 +1,12 @@
 /**
- * Animated Feedback Component
+ * Animated Feedback Component - React Native Version
  * Provides visual feedback animations for correct/incorrect guesses and streaks
  * Relates to Requirements 1, 2, 4: Core Game Loop, Progress Feedback, Social Interaction
  */
 
 import React, { useState, useEffect, useRef } from 'react';
+import { View, Text, StyleSheet, Animated, Dimensions, Platform } from 'react-native';
+import * as Haptics from 'expo-haptics';
 import { GuessResult } from '../types';
 
 interface AnimatedFeedbackProps {
@@ -14,6 +16,8 @@ interface AnimatedFeedbackProps {
   currentStreak?: number;
 }
 
+const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
+
 export const AnimatedFeedback: React.FC<AnimatedFeedbackProps> = ({
   result,
   onAnimationComplete,
@@ -21,10 +25,17 @@ export const AnimatedFeedback: React.FC<AnimatedFeedbackProps> = ({
   currentStreak = 0
 }) => {
   const [animationPhase, setAnimationPhase] = useState<'initial' | 'result' | 'score' | 'streak' | 'complete'>('initial');
-  const [showParticles, setShowParticles] = useState(false);
   const [scoreCounter, setScoreCounter] = useState(0);
   const animationStartedRef = useRef(false);
   const stableResultRef = useRef(result);
+
+  // Animated values
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const scaleAnim = useRef(new Animated.Value(0.3)).current;
+  const slideAnim = useRef(new Animated.Value(50)).current;
+  const scoreScaleAnim = useRef(new Animated.Value(0.8)).current;
+  const shakeAnim = useRef(new Animated.Value(0)).current;
+  const particleAnims = useRef(Array.from({length: 8}, () => new Animated.Value(0))).current;
 
   // Lock in the result when animation first starts
   useEffect(() => {
@@ -39,27 +50,76 @@ export const AnimatedFeedback: React.FC<AnimatedFeedbackProps> = ({
 
   useEffect(() => {
     const sequence = async () => {
-      // Phase 1: Initial reveal (500ms)
-      setTimeout(() => setAnimationPhase('result'), 100);
-      
-      // Phase 2: Show result with particles (1000ms)
+      // Haptic feedback
+      if (Platform.OS === 'ios') {
+        if (stableResult.wasCorrect) {
+          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+        } else {
+          Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
+        }
+      }
+
+      // Phase 1: Fade in background
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 300,
+        useNativeDriver: true,
+      }).start();
+
+      // Phase 2: Bounce in icon (100ms delay)
       setTimeout(() => {
-        setShowParticles(true);
+        setAnimationPhase('result');
+        Animated.parallel([
+          Animated.spring(scaleAnim, {
+            toValue: 1,
+            tension: 100,
+            friction: 6,
+            useNativeDriver: true,
+          }),
+          Animated.timing(slideAnim, {
+            toValue: 0,
+            duration: 500,
+            useNativeDriver: true,
+          })
+        ]).start();
+
+        // Shake animation for incorrect answers
+        if (!stableResult.wasCorrect) {
+          Animated.sequence([
+            Animated.timing(shakeAnim, { toValue: 10, duration: 100, useNativeDriver: true }),
+            Animated.timing(shakeAnim, { toValue: -10, duration: 100, useNativeDriver: true }),
+            Animated.timing(shakeAnim, { toValue: 10, duration: 100, useNativeDriver: true }),
+            Animated.timing(shakeAnim, { toValue: 0, duration: 100, useNativeDriver: true }),
+          ]).start();
+        }
+      }, 100);
+
+      // Phase 3: Show score (600ms)
+      setTimeout(() => {
         setAnimationPhase('score');
-      }, 600);
-      
-      // Phase 3: Animate score counter (1500ms)
-      setTimeout(() => {
         animateScore();
-      }, 1100);
-      
-      // Phase 4: Show streak animation if applicable (1000ms)
+        
+        // Animate score scale
+        Animated.spring(scoreScaleAnim, {
+          toValue: 1,
+          tension: 100,
+          friction: 6,
+          useNativeDriver: true,
+        }).start();
+
+        // Particle effects for correct answers
+        if (stableResult.wasCorrect) {
+          animateParticles();
+        }
+      }, 600);
+
+      // Phase 4: Show streak animation if applicable (2600ms)
       if (showStreakAnimation && currentStreak > 1) {
         setTimeout(() => {
           setAnimationPhase('streak');
         }, 2600);
       }
-      
+
       // Phase 5: Complete animation
       setTimeout(() => {
         setAnimationPhase('complete');
@@ -87,15 +147,26 @@ export const AnimatedFeedback: React.FC<AnimatedFeedbackProps> = ({
     }, duration / steps);
   };
 
+  const animateParticles = () => {
+    const animations = particleAnims.map((anim, index) => 
+      Animated.sequence([
+        Animated.delay(index * 100),
+        Animated.timing(anim, {
+          toValue: 1,
+          duration: 1000,
+          useNativeDriver: true,
+        })
+      ])
+    );
+    
+    Animated.parallel(animations).start();
+  };
+
   const getResultIcon = () => {
     if (stableResult.wasCorrect) {
       return currentStreak > 1 ? '🔥' : '🎉';
     }
     return '🤔';
-  };
-
-  const getResultColor = () => {
-    return stableResult.wasCorrect ? '#059669' : '#DC2626';
   };
 
   const getResultMessage = () => {
@@ -108,347 +179,270 @@ export const AnimatedFeedback: React.FC<AnimatedFeedbackProps> = ({
     return 'Not quite!';
   };
 
+  const getResultColor = () => {
+    return stableResult.wasCorrect ? '#059669' : '#DC2626';
+  };
+
   return (
-    <>
-      <style>
-        {`
-          @keyframes bounceIn {
-            0% { 
-              opacity: 0; 
-              transform: scale(0.3) translateY(-50px); 
-            }
-            50% { 
-              opacity: 1; 
-              transform: scale(1.1) translateY(-10px); 
-            }
-            100% { 
-              opacity: 1; 
-              transform: scale(1) translateY(0); 
-            }
+    <Animated.View style={[styles.container, { opacity: fadeAnim }]}>
+      <View style={styles.content}>
+        {/* Result Icon */}
+        <Animated.View style={[
+          styles.iconContainer,
+          {
+            transform: [
+              { scale: scaleAnim },
+              { translateY: slideAnim },
+              { translateX: shakeAnim }
+            ]
           }
-          
-          @keyframes slideUp {
-            0% { 
-              opacity: 0; 
-              transform: translateY(30px); 
-            }
-            100% { 
-              opacity: 1; 
-              transform: translateY(0); 
-            }
-          }
-          
-          @keyframes pulse {
-            0%, 100% { 
-              transform: scale(1); 
-            }
-            50% { 
-              transform: scale(1.05); 
-            }
-          }
-          
-          @keyframes shake {
-            0%, 100% { transform: translateX(0); }
-            10%, 30%, 50%, 70%, 90% { transform: translateX(-5px); }
-            20%, 40%, 60%, 80% { transform: translateX(5px); }
-          }
-          
-          @keyframes streakFlash {
-            0%, 100% { 
-              background: linear-gradient(45deg, #FF6B6B, #4ECDC4, #45B7D1, #96CEB4, #FFEAA7);
-              background-size: 400% 400%;
-              background-position: 0% 50%;
-            }
-            50% { 
-              background-position: 100% 50%;
-            }
-          }
-          
-          @keyframes particle {
-            0% {
-              opacity: 1;
-              transform: translateY(0) scale(1);
-            }
-            100% {
-              opacity: 0;
-              transform: translateY(-100px) scale(0);
-            }
-          }
-          
-          @keyframes scoreCount {
-            0% { 
-              transform: scale(0.8);
-              opacity: 0.8;
-            }
-            100% { 
-              transform: scale(1);
-              opacity: 1;
-            }
-          }
-          
-          .feedback-container {
-            position: fixed;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: rgba(0, 0, 0, 0.8);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            z-index: 1000;
-            backdrop-filter: blur(4px);
-          }
-          
-          .feedback-content {
-            text-align: center;
-            color: white;
-            max-width: 500px;
-            padding: 40px;
-          }
-          
-          .result-icon {
-            font-size: 80px;
-            margin-bottom: 20px;
-            display: block;
-            animation: bounceIn 0.6s cubic-bezier(0.68, -0.55, 0.265, 1.55);
-          }
-          
-          .result-message {
-            font-size: 36px;
-            font-weight: 700;
-            margin-bottom: 20px;
-            animation: slideUp 0.5s ease-out 0.3s both;
-            transition: opacity 0.3s ease-out;
-          }
-          
-          .score-display {
-            font-size: 48px;
-            font-weight: 800;
-            margin: 20px 0;
-            animation: slideUp 0.5s ease-out 0.6s both;
-            transition: opacity 0.3s ease-out;
-            font-family: 'Courier New', 'Monaco', monospace; /* Consistent character width */
-          }
-          
-          .score-breakdown {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
-            gap: 15px;
-            margin: 20px 0;
-            animation: slideUp 0.5s ease-out 0.9s both;
-            transition: opacity 0.3s ease-out;
-          }
-          
-          .score-item {
-            background: rgba(255, 255, 255, 0.1);
-            padding: 10px;
-            border-radius: 8px;
-            backdrop-filter: blur(10px);
-          }
-          
-          .score-label {
-            font-size: 12px;
-            opacity: 0.8;
-            margin-bottom: 5px;
-          }
-          
-          .score-value {
-            font-size: 18px;
-            font-weight: 600;
-          }
-          
-          .streak-animation {
-            animation: streakFlash 2s ease-in-out infinite;
-            background-clip: text;
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            font-size: 28px;
-            font-weight: 800;
-            margin: 20px 0;
-            padding: 10px;
-            border-radius: 10px;
-          }
-          
-          .particles {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            pointer-events: none;
-          }
-          
-          .particle {
-            position: absolute;
-            width: 8px;
-            height: 8px;
-            background: #FFD700;
-            border-radius: 50%;
-            animation: particle 2s ease-out forwards;
-          }
-          
-          .incorrect-shake {
-            animation: shake 0.5s ease-in-out;
-          }
-          
-          .score-counter {
-            animation: scoreCount 0.1s ease-out;
-          }
-        `}
-      </style>
-      
-      <div className="feedback-container">
-        <div className="feedback-content">
-          {/* Result Icon */}
-          <span 
-            className={`result-icon ${!stableResult.wasCorrect ? 'incorrect-shake' : ''}`}
-            style={{ 
-              animationDelay: animationPhase === 'initial' ? '0s' : '0s'
-            }}
-          >
-            {getResultIcon()}
-          </span>
-          
-          {/* Result Message */}
-          <div 
-            className="result-message"
-            style={{ 
-              color: getResultColor(),
-              opacity: animationPhase !== 'initial' ? 1 : 0,
-              visibility: animationPhase !== 'initial' ? 'visible' : 'hidden',
-              height: '50px', // Reserve fixed height to prevent layout shift
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center'
-            }}
-          >
-            {getResultMessage()}
-          </div>
-          
-          {/* Score Display */}
-          <div 
-            className="score-display score-counter"
-            style={{ 
-              opacity: (animationPhase === 'score' || animationPhase === 'streak' || animationPhase === 'complete') ? 1 : 0,
-              visibility: (animationPhase === 'score' || animationPhase === 'streak' || animationPhase === 'complete') ? 'visible' : 'hidden',
-              height: '58px', // Reserve fixed height to prevent layout shift
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center'
-            }}
-          >
-            +{scoreCounter.toLocaleString()} points
-          </div>
-          
-          {/* Score Breakdown */}
-          <div 
-            className="score-breakdown"
-            style={{ 
-              opacity: (animationPhase === 'score' || animationPhase === 'streak' || animationPhase === 'complete') ? 1 : 0,
-              visibility: (animationPhase === 'score' || animationPhase === 'streak' || animationPhase === 'complete') ? 'visible' : 'hidden',
-              minHeight: '80px' // Reserve fixed height to prevent layout shift
-            }}
-          >
-            <div className="score-item">
-              <div className="score-label">Base</div>
-              <div className="score-value">+{stableResult.pointsEarned}</div>
-            </div>
-            <div className="score-item">
-              <div className="score-label">Time</div>
-              <div className="score-value">+{stableResult.timeBonus}</div>
-            </div>
-            <div className="score-item">
-              <div className="score-label">Accuracy</div>
-              <div className="score-value">+{stableResult.accuracyBonus}</div>
-            </div>
-            {stableResult.streakBonus > 0 && (
-              <div className="score-item">
-                <div className="score-label">Streak</div>
-                <div className="score-value">+{stableResult.streakBonus}</div>
-              </div>
-            )}
-          </div>
-          
-          {/* Streak Animation */}
-          {animationPhase === 'streak' && showStreakAnimation && currentStreak > 1 && (
-            <div className="streak-animation">
-              🔥 {currentStreak} STREAK! 🔥
-            </div>
-          )}
-          
-          {/* Achievement Notifications */}
-          {stableResult.newAchievements.length > 0 && (animationPhase === 'complete' || animationPhase === 'streak') && (
-            <div style={{
-              marginTop: '20px',
-              animation: 'slideUp 0.5s ease-out'
-            }}>
-              <div style={{
-                fontSize: '18px',
-                fontWeight: '600',
-                marginBottom: '10px',
-                color: '#FFD700'
-              }}>
-                🏆 New Achievement{stableResult.newAchievements.length > 1 ? 's' : ''}!
-              </div>
-              {stableResult.newAchievements.map((achievement, index) => (
-                <div 
-                  key={achievement}
-                  style={{
-                    fontSize: '14px',
-                    margin: '5px 0',
-                    padding: '5px 10px',
-                    background: 'rgba(255, 215, 0, 0.2)',
-                    borderRadius: '15px',
-                    animation: `slideUp 0.5s ease-out ${0.2 * index}s both`
-                  }}
-                >
-                  ✨ {achievement.replace(/_/g, ' ').toUpperCase()}
-                </div>
-              ))}
-            </div>
-          )}
-          
-          {/* Level Up Animation */}
-          {stableResult.levelUp && (animationPhase === 'complete' || animationPhase === 'streak') && (
-            <div style={{
-              marginTop: '20px',
-              padding: '15px',
-              background: 'linear-gradient(45deg, #667eea 0%, #764ba2 100%)',
-              borderRadius: '10px',
-              animation: 'bounceIn 0.8s ease-out'
-            }}>
-              <div style={{
-                fontSize: '24px',
-                fontWeight: '700',
-                marginBottom: '5px'
-              }}>
-                🎊 LEVEL UP! 🎊
-              </div>
-              <div style={{ fontSize: '16px' }}>
-                Level {stableResult.levelUp.oldLevel} → {stableResult.levelUp.newLevel}
-              </div>
-            </div>
-          )}
-        </div>
-        
-        {/* Particle Effects */}
-        {showParticles && stableResult.wasCorrect && (
-          <div className="particles">
-            {Array.from({ length: 12 }, (_, i) => (
-              <div
-                key={i}
-                className="particle"
-                style={{
-                  left: `${Math.cos((i * 30) * Math.PI / 180) * 60}px`,
-                  top: `${Math.sin((i * 30) * Math.PI / 180) * 60}px`,
-                  animationDelay: `${i * 0.1}s`,
-                  background: i % 3 === 0 ? '#FFD700' : i % 3 === 1 ? '#FF6B6B' : '#4ECDC4'
-                }}
-              />
-            ))}
-          </div>
+        ]}>
+          <Text style={styles.resultIcon}>{getResultIcon()}</Text>
+        </Animated.View>
+
+        {/* Result Message */}
+        {animationPhase !== 'initial' && (
+          <Animated.View style={[
+            styles.messageContainer,
+            { transform: [{ translateY: slideAnim }] }
+          ]}>
+            <Text style={[styles.resultMessage, { color: getResultColor() }]}>
+              {getResultMessage()}
+            </Text>
+          </Animated.View>
         )}
-      </div>
-    </>
+
+        {/* Score Display */}
+        {(animationPhase === 'score' || animationPhase === 'streak' || animationPhase === 'complete') && (
+          <Animated.View style={[
+            styles.scoreContainer,
+            { transform: [{ scale: scoreScaleAnim }] }
+          ]}>
+            <Text style={styles.scoreDisplay}>
+              +{scoreCounter.toLocaleString()} points
+            </Text>
+            
+            {/* Score Breakdown */}
+            <View style={styles.scoreBreakdown}>
+              <View style={styles.scoreItem}>
+                <Text style={styles.scoreLabel}>Base</Text>
+                <Text style={styles.scoreValue}>+{stableResult.pointsEarned}</Text>
+              </View>
+              <View style={styles.scoreItem}>
+                <Text style={styles.scoreLabel}>Time</Text>
+                <Text style={styles.scoreValue}>+{stableResult.timeBonus}</Text>
+              </View>
+              <View style={styles.scoreItem}>
+                <Text style={styles.scoreLabel}>Accuracy</Text>
+                <Text style={styles.scoreValue}>+{stableResult.accuracyBonus}</Text>
+              </View>
+              {stableResult.streakBonus > 0 && (
+                <View style={styles.scoreItem}>
+                  <Text style={styles.scoreLabel}>Streak</Text>
+                  <Text style={styles.scoreValue}>+{stableResult.streakBonus}</Text>
+                </View>
+              )}
+            </View>
+          </Animated.View>
+        )}
+
+        {/* Streak Animation */}
+        {animationPhase === 'streak' && showStreakAnimation && currentStreak > 1 && (
+          <View style={styles.streakContainer}>
+            <Text style={styles.streakText}>
+              🔥 {currentStreak} STREAK! 🔥
+            </Text>
+          </View>
+        )}
+
+        {/* Achievement Notifications */}
+        {stableResult.newAchievements && stableResult.newAchievements.length > 0 && 
+         (animationPhase === 'complete' || animationPhase === 'streak') && (
+          <View style={styles.achievementContainer}>
+            <Text style={styles.achievementTitle}>
+              🏆 New Achievement{stableResult.newAchievements.length > 1 ? 's' : ''}!
+            </Text>
+            {stableResult.newAchievements.map((achievement, index) => (
+              <View key={achievement} style={styles.achievementItem}>
+                <Text style={styles.achievementText}>
+                  ✨ {achievement.replace(/_/g, ' ').toUpperCase()}
+                </Text>
+              </View>
+            ))}
+          </View>
+        )}
+
+        {/* Level Up Animation */}
+        {stableResult.levelUp && (animationPhase === 'complete' || animationPhase === 'streak') && (
+          <View style={styles.levelUpContainer}>
+            <Text style={styles.levelUpTitle}>🎊 LEVEL UP! 🎊</Text>
+            <Text style={styles.levelUpText}>
+              Level {stableResult.levelUp.oldLevel} → {stableResult.levelUp.newLevel}
+            </Text>
+          </View>
+        )}
+
+        {/* Particle Effects */}
+        {stableResult.wasCorrect && particleAnims.map((anim, index) => (
+          <Animated.View
+            key={index}
+            style={[
+              styles.particle,
+              {
+                transform: [
+                  {
+                    translateX: anim.interpolate({
+                      inputRange: [0, 1],
+                      outputRange: [0, Math.cos((index * 45) * Math.PI / 180) * 100],
+                    }),
+                  },
+                  {
+                    translateY: anim.interpolate({
+                      inputRange: [0, 1],
+                      outputRange: [0, Math.sin((index * 45) * Math.PI / 180) * 100],
+                    }),
+                  },
+                  { scale: anim },
+                ],
+                opacity: anim.interpolate({
+                  inputRange: [0, 0.5, 1],
+                  outputRange: [1, 1, 0],
+                }),
+              },
+            ]}
+          />
+        ))}
+      </View>
+    </Animated.View>
   );
 };
+
+const styles = StyleSheet.create({
+  container: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0, 0, 0, 0.8)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 1000,
+  },
+  content: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    maxWidth: screenWidth * 0.8,
+    padding: 40,
+  },
+  iconContainer: {
+    marginBottom: 20,
+  },
+  resultIcon: {
+    fontSize: 80,
+    textAlign: 'center',
+  },
+  messageContainer: {
+    marginBottom: 20,
+  },
+  resultMessage: {
+    fontSize: 36,
+    fontWeight: '700',
+    textAlign: 'center',
+  },
+  scoreContainer: {
+    alignItems: 'center',
+    marginVertical: 20,
+  },
+  scoreDisplay: {
+    fontSize: 48,
+    fontWeight: '800',
+    color: 'white',
+    textAlign: 'center',
+    marginBottom: 20,
+    fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace',
+  },
+  scoreBreakdown: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    justifyContent: 'center',
+    gap: 15,
+  },
+  scoreItem: {
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    padding: 10,
+    borderRadius: 8,
+    minWidth: 80,
+    alignItems: 'center',
+  },
+  scoreLabel: {
+    fontSize: 12,
+    color: 'rgba(255, 255, 255, 0.8)',
+    marginBottom: 5,
+  },
+  scoreValue: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: 'white',
+  },
+  streakContainer: {
+    marginVertical: 20,
+    padding: 15,
+    borderRadius: 10,
+    backgroundColor: 'rgba(255, 107, 107, 0.2)',
+  },
+  streakText: {
+    fontSize: 28,
+    fontWeight: '800',
+    color: '#FF6B6B',
+    textAlign: 'center',
+  },
+  achievementContainer: {
+    marginTop: 20,
+    alignItems: 'center',
+  },
+  achievementTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#FFD700',
+    marginBottom: 10,
+    textAlign: 'center',
+  },
+  achievementItem: {
+    marginVertical: 5,
+    padding: 8,
+    backgroundColor: 'rgba(255, 215, 0, 0.2)',
+    borderRadius: 15,
+  },
+  achievementText: {
+    fontSize: 14,
+    color: 'white',
+    textAlign: 'center',
+  },
+  levelUpContainer: {
+    marginTop: 20,
+    padding: 15,
+    backgroundColor: 'rgba(102, 126, 234, 0.3)',
+    borderRadius: 10,
+    alignItems: 'center',
+  },
+  levelUpTitle: {
+    fontSize: 24,
+    fontWeight: '700',
+    color: 'white',
+    marginBottom: 5,
+    textAlign: 'center',
+  },
+  levelUpText: {
+    fontSize: 16,
+    color: 'white',
+    textAlign: 'center',
+  },
+  particle: {
+    position: 'absolute',
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: '#FFD700',
+  },
+});

@@ -16,10 +16,12 @@ import {
   startGuessingSession,
   submitGuess,
   setGuessResult,
+  clearGuessResult,
   endGuessingSession,
 } from '../store/slices/guessingGameSlice';
 import { EnhancedChallenge, GuessResult } from '../types';
 import { ChallengeCreationScreen } from './ChallengeCreationScreen';
+import AnimatedFeedback from '../shared/AnimatedFeedback';
 
 // Mock challenges for testing
 const mockChallenges: EnhancedChallenge[] = [
@@ -124,6 +126,7 @@ export const GameScreen: React.FC = () => {
 
   const [selectedStatement, setSelectedStatement] = useState<number | null>(null);
   const [showChallengeCreation, setShowChallengeCreation] = useState(false);
+  const [currentStreak, setCurrentStreak] = useState(0);
 
   useEffect(() => {
     // Load mock challenges when component mounts
@@ -281,6 +284,19 @@ export const GameScreen: React.FC = () => {
           onCancel={() => setShowChallengeCreation(false)}
         />
       </Modal>
+
+      {/* Animated Feedback */}
+      {guessResult && (
+        <AnimatedFeedback
+          result={guessResult}
+          currentStreak={currentStreak}
+          showStreakAnimation={currentStreak > 1}
+          onAnimationComplete={() => {
+            console.log('✅ Animation completed, clearing result');
+            dispatch(clearGuessResult());
+          }}
+        />
+      )}
     </SafeAreaView>
   );
 };
