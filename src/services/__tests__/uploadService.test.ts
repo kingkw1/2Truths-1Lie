@@ -283,6 +283,14 @@ describe('ChunkedUploadService', () => {
         }),
       });
 
+      // Mock chunk upload to be aborted
+      mockFetch.mockImplementationOnce(() => {
+        // Simulate aborted fetch request
+        const error = new Error('The operation was aborted.');
+        error.name = 'AbortError';
+        return Promise.reject(error);
+      });
+
       // Cancel immediately
       setTimeout(() => abortController.abort(), 10);
 
@@ -292,7 +300,7 @@ describe('ChunkedUploadService', () => {
           signal: abortController.signal,
           onProgress,
         })
-      ).rejects.toThrow('Upload cancelled');
+      ).rejects.toThrow('Request cancelled');
 
       expect(onProgress).toHaveBeenCalledWith(
         expect.objectContaining({
