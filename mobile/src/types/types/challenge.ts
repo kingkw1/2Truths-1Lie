@@ -120,8 +120,8 @@ export interface GuessingSession {
   confidenceScores: number[]; // player's confidence in each statement
   hintsUsed: number;
   timeSpent: number; // in milliseconds
-  startTime: Date;
-  endTime?: Date;
+  startTime: number; // timestamp in milliseconds
+  endTime?: number; // timestamp in milliseconds
   isCompleted: boolean;
   wasCorrect?: boolean;
 }

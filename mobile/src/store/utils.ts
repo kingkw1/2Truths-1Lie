@@ -214,7 +214,7 @@ export const getGameStatistics = () => {
     achievements: state.playerProgression.progression?.achievements || [],
     sessionActive: state.gameSession.isActive,
     sessionDuration: state.gameSession.currentSession ? 
-      Date.now() - state.gameSession.currentSession.startTime.getTime() : 0,
+      Date.now() - state.gameSession.currentSession.startTime : 0,
   };
 };
 

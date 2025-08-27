@@ -58,7 +58,7 @@ const guessingGameSlice = createSlice({
         confidenceScores: statements.map(() => 0),
         hintsUsed: 0,
         timeSpent: 0,
-        startTime: new Date(),
+        startTime: Date.now(),
         isCompleted: false,
       };
       
