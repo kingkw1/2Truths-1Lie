@@ -70,6 +70,10 @@ export const MobileCameraRecorder: React.FC<MobileCameraRecorderProps> = ({
     (state) => state.challengeCreation.mediaRecordingState[statementIndex]
   );
 
+    // Use Redux state directly instead of local state for recording status
+  const isRecordingFromRedux = recordingState?.isRecording || false;
+  const isPausedFromRedux = recordingState?.isPaused || false;
+
   const [cameraPermission, requestCameraPermission] = useCameraPermissions();
   const [mediaLibraryPermission, requestMediaLibraryPermission] = MediaLibrary.usePermissions();
   const [microphonePermission, setMicrophonePermission] = useState<any>(null);
@@ -89,21 +93,46 @@ export const MobileCameraRecorder: React.FC<MobileCameraRecorderProps> = ({
   const startTime = useRef<number>(0);
   const maxRetries = 3;
   const recordingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const initializationRef = useRef(false);
+  const isInitializing = useRef(false);
+
+  // Debug effect to track Redux state changes
+  useEffect(() => {
+    console.log('🔄 Redux state changed:', {
+      statementIndex,
+      isRecording: isRecordingFromRedux,
+      isPaused: isPausedFromRedux,
+      isLoading,
+      recordingState
+    });
+  }, [isRecordingFromRedux, isPausedFromRedux, isLoading, statementIndex]);
 
   // Initialize component and check permissions
   useEffect(() => {
-    initializeCamera();
-    checkStorageSpace();
+    // Only initialize if we haven't already initialized
+    if (!initializationRef.current && !isInitializing.current) {
+      initializeCamera();
+      checkStorageSpace();
+    }
+    
+    // Safety timeout to ensure camera gets marked as ready
+    const cameraReadyTimeout = setTimeout(() => {
+      console.log('⚠️ Camera ready timeout - forcing ready state and clearing loading');
+      setCameraReady(true);
+      setIsLoading(false); // Force loading to false
+    }, 5000); // Increased to 5 seconds
     
     // Handle app state changes (backgrounding)
     const handleAppStateChange = (nextAppState: AppStateStatus) => {
-      if (nextAppState === 'background' && isRecording) {
+      if (nextAppState === 'background' && isRecordingFromRedux) {
         handleBackgroundInterruption();
       } else if (nextAppState === 'active') {
-        // Refresh permissions when app becomes active again
-        setTimeout(() => {
-          initializeCamera();
-        }, 500);
+        // Only reinitialize if camera is not ready or there's an error, and not already initializing
+        if ((!cameraReady || currentError) && !isInitializing.current) {
+          setTimeout(() => {
+            initializeCamera();
+          }, 500);
+        }
       }
     };
 
@@ -113,6 +142,7 @@ export const MobileCameraRecorder: React.FC<MobileCameraRecorderProps> = ({
     const backHandler = BackHandler.addEventListener('hardwareBackPress', handleBackPress);
 
     return () => {
+      clearTimeout(cameraReadyTimeout);
       subscription?.remove();
       backHandler.remove();
       cleanup();
@@ -121,15 +151,15 @@ export const MobileCameraRecorder: React.FC<MobileCameraRecorderProps> = ({
 
   // Monitor storage space during recording
   useEffect(() => {
-    if (isRecording) {
+    if (isRecordingFromRedux) {
       const storageCheckInterval = setInterval(checkStorageSpace, 5000);
       return () => clearInterval(storageCheckInterval);
     }
-  }, [isRecording]);
+  }, [isRecordingFromRedux]);
 
   // Update recording duration
   useEffect(() => {
-    if (isRecording && !isPaused) {
+    if (isRecordingFromRedux && !isPausedFromRedux) {
       recordingTimer.current = setInterval(() => {
         const elapsed = Date.now() - startTime.current;
         setRecordingDuration(elapsed);
@@ -139,9 +169,9 @@ export const MobileCameraRecorder: React.FC<MobileCameraRecorderProps> = ({
         // Debug log component state every 5 seconds
         if (elapsed % 5000 < 100) {
           console.log('🎬 Recording state debug:', {
-            isRecording,
+            isRecordingFromRedux,
             isLoading,
-            isPaused,
+            isPausedFromRedux,
             elapsed: Math.round(elapsed / 1000) + 's',
             cameraReady
           });
@@ -159,11 +189,21 @@ export const MobileCameraRecorder: React.FC<MobileCameraRecorderProps> = ({
         clearInterval(recordingTimer.current);
       }
     };
-  }, [isRecording, isPaused, dispatch, statementIndex]);
+  }, [isRecordingFromRedux, isPausedFromRedux, dispatch, statementIndex]);
 
   const initializeCamera = useCallback(async () => {
+    // Prevent multiple simultaneous initializations
+    if (isInitializing.current) {
+      console.log('🚫 Camera initialization already in progress, skipping');
+      return;
+    }
+    
+    console.log('🎬 Initializing camera... setting loading=true');
+    isInitializing.current = true;
     setIsLoading(true);
+    
     try {
+      console.log('Setting audio mode...');
       // Set audio mode for recording
       await Audio.setAudioModeAsync({
         allowsRecordingIOS: true,
@@ -172,18 +212,39 @@ export const MobileCameraRecorder: React.FC<MobileCameraRecorderProps> = ({
         shouldDuckAndroid: true,
         playThroughEarpieceAndroid: false,
       });
+      console.log('Audio mode set successfully');
       
-      const hasPermissions = await checkPermissions();
-      if (hasPermissions) {
+      console.log('Requesting permissions...');
+      // Simple permission check - don't overcomplicate it
+      const cameraStatus = await requestCameraPermission();
+      console.log('Camera permission result:', cameraStatus);
+      
+      const micStatus = await Audio.requestPermissionsAsync();
+      console.log('Mic permission result:', micStatus);
+      
+      const mediaStatus = await requestMediaLibraryPermission();
+      console.log('Media permission result:', mediaStatus);
+      
+      setMicrophonePermission(micStatus);
+      
+      if (cameraStatus.granted && micStatus.granted && mediaStatus.granted) {
+        console.log('✅ All permissions granted, camera ready');
         setCameraReady(true);
         setCurrentError(null);
         setRetryCount(0);
+        initializationRef.current = true;
+      } else {
+        console.log('❌ Some permissions denied');
+        setCameraReady(false);
       }
+      console.log('About to set loading=false in finally block');
     } catch (error) {
       console.error('Camera initialization error:', error);
-      handleCameraError(CameraErrorType.CAMERA_UNAVAILABLE, `Failed to initialize camera: ${error}`);
+      setCameraReady(false);
     } finally {
+      console.log('🔧 Finally block: setting loading=false');
       setIsLoading(false);
+      isInitializing.current = false;
     }
   }, []);
 
@@ -308,7 +369,7 @@ export const MobileCameraRecorder: React.FC<MobileCameraRecorderProps> = ({
   }, [dispatch, statementIndex, onError]);
 
   const handleBackgroundInterruption = useCallback(() => {
-    if (isRecording) {
+    if (isRecordingFromRedux) {
       stopRecording();
       handleCameraError(
         CameraErrorType.BACKGROUND_INTERRUPTED,
@@ -320,7 +381,7 @@ export const MobileCameraRecorder: React.FC<MobileCameraRecorderProps> = ({
   }, [isRecording]);
 
   const handleBackPress = useCallback(() => {
-    if (isRecording) {
+    if (isRecordingFromRedux) {
       Alert.alert(
         'Stop Recording?',
         'You are currently recording. Do you want to stop and discard the recording?',
@@ -355,90 +416,48 @@ export const MobileCameraRecorder: React.FC<MobileCameraRecorderProps> = ({
 
   const startRecording = async () => {
     try {
-      setIsLoading(true);
+      console.log('🎬 Start recording requested for statement', statementIndex);
+      
+      // Early validation 
+      if (isRecordingFromRedux) {
+        console.log('Already recording, skipping');
+        return;
+      }
+      
+      if (!cameraReady) {
+        console.log('Camera not ready yet, cameraReady:', cameraReady);
+        return;
+      }
+      
+      if (!cameraRef.current) {
+        console.log('Camera ref not available');
+        return;
+      }
       
       // Clear any previous errors first
       setCurrentError(null);
       
-      // Always check permissions fresh before recording
-      console.log('Checking permissions before recording...');
-      const hasPermissions = await checkPermissions();
-      if (!hasPermissions) {
-        console.log('Permissions check failed');
-        return;
-      }
-
-      const hasStorage = await checkStorageSpace();
-      if (!hasStorage) return;
-
-      if (!cameraRef.current) {
-        handleCameraError(CameraErrorType.CAMERA_UNAVAILABLE, 'Camera not ready. Please try again.');
-        return;
-      }
-
-      if (!cameraReady) {
-        handleCameraError(CameraErrorType.CAMERA_UNAVAILABLE, 'Camera is still initializing. Please wait a moment.');
-        return;
-      }
-
-      console.log('Starting recording...');
+      console.log('Starting recording process...');
       
-      // Use mobile media integration service to start recording
+      // Start recording immediately - Redux will handle state
       await mobileMediaIntegration.startRecording(statementIndex);
       
-      setIsRecording(true);
-      setIsPaused(false);
-      startTime.current = Date.now();
-      setRecordingDuration(0);
-
-      // Set recording timeout (65 seconds to allow for 60s max + buffer)
-      recordingTimeoutRef.current = setTimeout(() => {
-        if (isRecording) {
-          stopRecording();
-          handleCameraError(
-            CameraErrorType.TIMEOUT_ERROR,
-            'Recording stopped automatically after reaching maximum duration.',
-            true,
-            () => setCurrentError(null)
-          );
-        }
-      }, 65000);
-
+      // Start actual camera recording
       const recordingOptions = {
-        quality: Platform.select({
-          ios: '720p' as const,
-          android: '720p' as const,
-        }),
+        quality: '720p' as const,
         maxDuration: 60, // 60 seconds max
-        mute: false,
+        maxFileSize: 50 * 1024 * 1024, // 50MB max
       };
-
-      // Provide haptic feedback on start
-      if (Platform.OS === 'ios') {
-        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
-      } else {
-        Vibration.vibrate(100);
-      }
-
-      console.log('Starting camera recording with options:', recordingOptions);
       
-      // Start recording and store the promise so we can stop it
+      console.log('📹 Starting camera recording with options:', recordingOptions);
       const recordingPromise = cameraRef.current.recordAsync(recordingOptions);
       setActiveRecording(recordingPromise);
+      console.log('🎬 Set activeRecording promise');
       
-      // Recording has started successfully, enable controls
-      setIsLoading(false);
-      console.log('🎬 Recording started - controls enabled');
+      startTime.current = Date.now();
+      setRecordingDuration(0);
       
-      // Wait for recording to complete (either by user stopping or timeout)
-      const recording = await recordingPromise;
-      
-      if (recording && recording.uri) {
-        console.log('Recording completed with URI:', recording.uri);
-        await handleRecordingComplete(recording.uri);
-      } else {
-        throw new Error('Recording failed to produce a valid file');
-      }
+      console.log('✅ Recording started successfully');
     } catch (error: any) {
       // Check if this was a manual stop (not an error)
       if (error.message?.includes('Recording stopped') || error.message?.includes('cancelled')) {
@@ -476,7 +495,97 @@ export const MobileCameraRecorder: React.FC<MobileCameraRecorderProps> = ({
       setIsRecording(false);
       setIsPaused(false);
     } finally {
-      setActiveRecording(null);
+      // Don't clear activeRecording here - it needs to be available for stopRecording
+      setIsLoading(false);
+    }
+  };
+
+  const handleRecordingFinish = async (recording: any) => {
+    try {
+      console.log('🎬 Recording finished, processing...', { uri: recording.uri });
+      setIsLoading(true);
+
+      if (!recording || !recording.uri) {
+        throw new Error('No recording data received');
+      }
+
+      const uri = recording.uri;
+
+      // Validate file exists and get info
+      const fileInfo = await FileSystem.getInfoAsync(uri);
+      if (!fileInfo.exists) {
+        throw new Error('Recording file was not saved properly');
+      }
+
+      // Get file size and validate it's not empty
+      const fileSize = fileInfo.size || 0;
+      if (fileSize === 0) {
+        throw new Error('Recording file is empty');
+      }
+
+      // Calculate actual recording duration from start time
+      const actualDuration = Date.now() - startTime.current;
+      console.log(`Recording duration check: timer=${recordingDuration}ms, actual=${actualDuration}ms`);
+      
+      // Use the larger of the two duration calculations and validate minimum duration
+      const finalDuration = Math.max(recordingDuration, actualDuration);
+      if (finalDuration < 500) { // Reduced to 0.5 seconds for more lenient validation
+        throw new Error('Recording is too short. Please record for at least 0.5 seconds.');
+      }
+
+      const mediaCapture: MediaCapture = {
+        type: 'video',
+        url: uri,
+        duration: finalDuration, // Use the calculated final duration
+        fileSize,
+        mimeType: Platform.select({
+          ios: 'video/quicktime',
+          android: 'video/mp4',
+        }) || 'video/mp4',
+      };
+
+      // Update Redux state
+      dispatch(setStatementMedia({ index: statementIndex, media: mediaCapture }));
+      
+      // Call callback to progress to next statement
+      console.log('🎬 Calling onRecordingComplete callback');
+      onRecordingComplete?.(mediaCapture);
+
+      // Show success feedback with platform-specific styling
+      const durationText = Math.round(finalDuration / 1000);
+      const sizeText = (fileSize / (1024 * 1024)).toFixed(1);
+      
+      Alert.alert(
+        '✅ Recording Complete',
+        `Video recorded successfully!\n\nDuration: ${durationText}s\nSize: ${sizeText}MB`,
+        [{ text: 'OK', style: 'default' }],
+        { cancelable: false }
+      );
+
+      // Success haptic feedback
+      if (Platform.OS === 'ios') {
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+      } else {
+        Vibration.vibrate([100, 50, 100, 50, 100]);
+      }
+    } catch (error: any) {
+      console.error('Recording processing error:', error);
+      
+      let errorMessage = `Processing recording failed: ${error.message || error}`;
+      let errorType = CameraErrorType.RECORDING_FAILED;
+
+      if (error.message?.includes('storage') || error.message?.includes('space')) {
+        errorType = CameraErrorType.STORAGE_FULL;
+        errorMessage = 'Failed to save recording due to insufficient storage space.';
+      } else if (error.message?.includes('permission')) {
+        errorType = CameraErrorType.PERMISSION_DENIED;
+        errorMessage = 'Failed to save recording due to permission issues.';
+      }
+
+      handleCameraError(errorType, errorMessage, true, () => {
+        setCurrentError(null);
+      });
+    } finally {
       setIsLoading(false);
     }
   };
@@ -485,8 +594,11 @@ export const MobileCameraRecorder: React.FC<MobileCameraRecorderProps> = ({
     try {
       console.log('Stop recording button pressed');
       
-      if (!cameraRef.current || !isRecording) {
-        console.log('Cannot stop: camera not ready or not recording');
+      if (!cameraRef.current || !isRecordingFromRedux) {
+        console.log('Cannot stop: camera not ready or not recording', { 
+          cameraReady: !!cameraRef.current, 
+          isRecordingFromRedux 
+        });
         return;
       }
 
@@ -495,7 +607,29 @@ export const MobileCameraRecorder: React.FC<MobileCameraRecorderProps> = ({
       console.log('Stopping camera recording...');
 
       // Stop the camera recording
+      console.log('Calling cameraRef.current.stopRecording()');
       await cameraRef.current.stopRecording();
+      
+      // Wait for the active recording promise to resolve with the result
+      console.log('🎬 Checking activeRecording:', !!activeRecording);
+      if (activeRecording) {
+        console.log('Waiting for active recording promise to resolve...');
+        try {
+          const recordingResult = await activeRecording;
+          console.log('Recording result:', recordingResult);
+          
+          if (recordingResult && recordingResult.uri) {
+            await handleRecordingFinish(recordingResult);
+          } else {
+            console.log('No valid recording result received');
+          }
+        } catch (recordingError) {
+          console.log('Recording promise rejected (likely due to manual stop):', recordingError);
+          // This is expected when we manually stop recording
+        }
+      } else {
+        console.log('No active recording to process');
+      }
       
       // Update state
       dispatch(stopMediaRecording({ statementIndex }));
@@ -512,6 +646,8 @@ export const MobileCameraRecorder: React.FC<MobileCameraRecorderProps> = ({
       }
 
       console.log('Recording stopped successfully');
+      
+      // Note: The actual media processing happens in handleRecordingFinish callback
     } catch (error: any) {
       console.error('Stop recording error:', error);
       
@@ -858,28 +994,31 @@ export const MobileCameraRecorder: React.FC<MobileCameraRecorderProps> = ({
         Platform.OS === 'android' && styles.bottomControlsAndroid
       ]} pointerEvents="box-none">
         <Text style={styles.instructionText}>
-          Statement {statementIndex + 1}: Record your video
+          Statement {statementIndex + 1}: Record your video (Debug: ready={cameraReady.toString()}, loading={isLoading.toString()})
         </Text>
         
         {/* Recording tips */}
-        {!isRecording && (
+        {!isRecordingFromRedux && (
           <Text style={styles.tipsText}>
             💡 {Platform.OS === 'ios' ? 'Tap and hold for best results' : 'Keep your device steady'}
           </Text>
         )}
         
         <View style={styles.recordingControls} pointerEvents="box-none">
-          {!isRecording ? (
+          {!isRecordingFromRedux ? (
             <TouchableOpacity
               style={[
                 styles.recordButton,
-                isLoading && styles.recordButtonDisabled
+                (!cameraReady || isLoading) && styles.recordButtonDisabled
               ]}
-              onPress={startRecording}
-              disabled={isLoading || !cameraReady}
+              onPress={() => {
+                console.log('🎬 Record button pressed! cameraReady:', cameraReady, 'isLoading:', isLoading);
+                startRecording();
+              }}
+              disabled={!cameraReady || isLoading}
               activeOpacity={0.8}
             >
-              {isLoading ? (
+              {!cameraReady ? (
                 <ActivityIndicator size="large" color="white" />
               ) : (
                 <View style={styles.recordButtonInner} />
@@ -911,7 +1050,7 @@ export const MobileCameraRecorder: React.FC<MobileCameraRecorderProps> = ({
                   isLoading && styles.controlButtonDisabled
                 ]}
                 onPress={() => {
-                  console.log('Stop button pressed - isLoading:', isLoading, 'isRecording:', isRecording);
+                  console.log('Stop button pressed - isLoading:', isLoading, 'isRecording (local):', isRecording, 'isRecordingFromRedux:', isRecordingFromRedux);
                   if (!isLoading) {
                     console.log('Stop button: calling stopRecording()');
                     stopRecording();
