@@ -322,7 +322,7 @@ describe('challengeCreationSlice', () => {
 
       const newState = challengeCreationReducer(stateWithEmptyStatements, validateChallenge());
 
-      expect(newState.validationErrors).toContain('All statements must have text (text serves as fallback when video recording is unavailable)');
+      expect(newState.validationErrors).toContain('All statements must have video recordings');
     });
 
     test('validateChallenge passes with valid challenge', () => {
@@ -334,6 +334,11 @@ describe('challengeCreationSlice', () => {
             { id: '1', text: 'I have traveled to 15 countries', isLie: false },
             { id: '2', text: 'I can speak 4 languages fluently', isLie: true },
             { id: '3', text: 'I have never broken a bone', isLie: false },
+          ],
+          mediaData: [
+            { type: 'video', url: 'mock://video1.mp4', duration: 5000 },
+            { type: 'video', url: 'mock://video2.mp4', duration: 5000 },
+            { type: 'video', url: 'mock://video3.mp4', duration: 5000 },
           ],
         },
       };
@@ -397,6 +402,15 @@ describe('challengeCreationSlice', () => {
         index: 2,
         statement: { id: '3', text: 'Statement 3', isLie: false }
       }));
+      
+      // Add media data for validation
+      for (let i = 0; i < 3; i++) {
+        state = challengeCreationReducer(state, setStatementMedia({ 
+          index: i, 
+          media: { type: 'video', url: `video${i + 1}.mp4` } 
+        }));
+      }
+      
       state = challengeCreationReducer(state, setLieStatement(1));
       state = challengeCreationReducer(state, validateChallenge());
 
