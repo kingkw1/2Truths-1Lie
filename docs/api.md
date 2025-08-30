@@ -1,15 +1,38 @@
-# API Documentation for 2Truths-1Lie
+# API Documentation for 2Truths-1Lie Mobile App
 
-## Base URL
-`https://api.2truths1lie.app/v1`
+## Base URL### POST `/statements`
+Submit a new "Two Truths and a Lie" record from mobile app.
+
+**Request Body:**
+```json
+{
+  "userId": "string",
+  "statements": [
+    {"text": "string", "isLie": false},
+    {"text": "string", "isLie": false},
+    {"text": "string", "isLie": true}
+  ],
+  "mediaUrl": "string (optional)",
+  "mediaType": "video" | "audio" | "none",
+  "deviceInfo": {
+    "platform": "ios" | "android",
+    "version": "string",
+    "model": "string"
+  }
+}
+```ruths1lie.app/v1`
 
 ---
+
+## Mobile App Architecture
+
+This API serves the **mobile-only** React Native/Expo application. All endpoints are optimized for mobile usage patterns including offline-first capabilities, efficient data transfer, and native mobile features.
 
 ## Redux Store Structure
 
 ### Challenge Creation Slice
 
-The `challengeCreationSlice` manages the state during the challenge creation workflow.
+The `challengeCreationSlice` manages the state during the challenge creation workflow on mobile devices.
 
 **State Interface:**
 ```typescript
@@ -35,12 +58,20 @@ interface ChallengeCreationState {
 - `startNewChallenge()` - Reset to initial state
 - `updateStatement(index, statement)` - Update a specific statement
 - `setLieStatement(index)` - Mark a statement as the lie
-- `startRecording(type)` / `stopRecording()` - Control media recording
-- `setMediaData(media)` - Add media capture data
+- `startRecording(type)` / `stopRecording()` - Control native mobile media recording
+- `setMediaData(media)` - Add media capture data from device camera/microphone
 - `setStatementMedia(index, media)` - Associate media with a statement
 - `validateChallenge()` - Validate current challenge state
 - `enterPreviewMode()` / `exitPreviewMode()` - Toggle preview mode
 - `startSubmission()` / `completeSubmission(success)` - Handle submission flow
+
+## Mobile-Specific Considerations
+
+### Media Upload
+- **Native Recording**: All media captured using Expo Camera and Audio APIs
+- **Compression**: Client-side video/audio compression before upload
+- **Offline Support**: Media stored locally until network available
+- **Format Support**: Optimized for mobile formats (MP4, AAC)
 
 ---
 
@@ -123,29 +154,34 @@ Submit a guess for a game’s lie.
 
 ## Authentication
 - Requests require Bearer JWT token in header: `Authorization: Bearer {token}`
-- Obtain tokens via `/auth/login` (not documented here for brevity)
+- Optimized for mobile: Token refresh handled automatically by mobile client
+- Offline support: Cached authentication for temporary network loss
 
----
-
-## Error Codes
-- 400: Bad Request – Invalid input data
-- 401: Unauthorized – Missing or invalid token
-- 404: Not Found – Non-existing resource accessed
-- 500: Internal Server Error
-
----
+## Mobile App Integration Notes
+- All endpoints support mobile-specific headers for device identification
+- Rate limiting adjusted for mobile usage patterns
+- Response payloads optimized for mobile data usage
+- Support for background sync when app returns to foreground
 
 ---
 
 ## Recent Updates
 
-### Challenge Creation State Initialization (Latest)
-- **Change**: Modified initial state to pre-populate 3 empty statements
-- **Impact**: Eliminates need for dynamic statement array initialization in components
+### Mobile-Only Migration (Latest)
+- **Change**: Removed web-specific endpoints and headers
+- **Impact**: API now exclusively serves mobile React Native app
 - **Benefits**: 
-  - Consistent UI state on component mount
-  - Simplified form handling logic
-  - Better UX with pre-structured statement inputs
+  - Simplified authentication flow for mobile
+  - Optimized response formats for mobile consumption
+  - Native mobile media handling integration
+
+### Challenge Creation State Initialization
+- **Change**: Modified initial state to pre-populate 3 empty statements
+- **Impact**: Eliminates need for dynamic statement array initialization in mobile components
+- **Benefits**: 
+  - Consistent mobile UI state on component mount
+  - Simplified form handling logic for touch interfaces
+  - Better mobile UX with pre-structured statement inputs
 
 ---
 

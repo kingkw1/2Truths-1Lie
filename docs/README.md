@@ -1,33 +1,41 @@
-# Documentation Index
+# Documentation Index - Mobile App Development
 
 ## 📱 Mobile Development & Deployment
 
 ### Android Build & Deployment
-- **[Android Build & Deployment Guide](android-build-deployment-guide.md)** - Complete guide for building and deploying Android apps
-- **[Android Build Quick Reference](android-build-quick-reference.md)** - Quick commands and troubleshooting
+- **[Android Build & Deployment Guide](android-build-deployment-guide.md)** - Complete guide for building and deploying React Native/Expo Android apps
+- **[Android Build Quick Reference](android-build-quick-reference.md)** - Quick EAS build commands and troubleshooting
+
+### iOS Build & Deployment
+- **[Mobile Testing Guide](mobile-testing.md)** - Comprehensive iOS and Android testing approaches with Expo Go and simulators
 
 ## 🧪 Testing & QA
 
-- **[Testing Plan](testing-plan.md)** - Comprehensive testing strategy
-- **[Mobile Testing](mobile-testing.md)** - Mobile-specific testing approaches
-- **[Advanced Testing QA Spec](advanced-testing-qa-spec.md)** - Advanced QA specifications
+- **[Testing Plan](testing-plan.md)** - Mobile-focused testing strategy for React Native/Expo
+- **[Mobile Testing](mobile-testing.md)** - Native mobile testing approaches and device validation
+- **[Advanced Testing QA Spec](advanced-testing-qa-spec.md)** - Advanced mobile QA specifications for app store deployment
 
 ## 🔧 Development & API
 
-- **[API Documentation](api.md)** - Backend API specifications
-- **[Development Schedule](development-schedule.md)** - Project timeline and milestones
+- **[API Documentation](api.md)** - Mobile-optimized backend API specifications
+- **[Development Schedule](development-schedule.md)** - Mobile app development timeline and hackathon milestones
 
-## 🤖 AI Fixes
+## 📱 Mobile App Features
 
-- **[AI Fixes](ai_fixes/)** - Collection of AI-assisted bug fixes and improvements
+- **Native camera and microphone recording**
+- **Offline-first mobile experience**
+- **iOS and Android app store deployment**
+- **React Native/Expo optimized performance**
+- **Mobile-specific UI/UX patterns**
 
 ---
 
-## Quick Start for New Developers
+## Quick Start for New Mobile Developers
 
-1. **Read**: [Android Build & Deployment Guide](android-build-deployment-guide.md)
-2. **Reference**: [Android Build Quick Reference](android-build-quick-reference.md) for commands
-3. **Test**: Follow the [Testing Plan](testing-plan.md)
+1. **Setup**: Follow [Mobile Testing Guide](mobile-testing.md) for Expo Go setup
+2. **Build**: Reference [Android Build Quick Reference](android-build-quick-reference.md) for deployment
+3. **Test**: Use [Testing Plan](testing-plan.md) for mobile testing workflows
+4. **Deploy**: Follow [Android Build & Deployment Guide](android-build-deployment-guide.md) for app store submission
 
 ## Contributing
 

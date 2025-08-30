@@ -1,23 +1,25 @@
-# Advanced Testing & Quality Assurance Specification
+# Advanced Mobile Testing & Quality Assurance Specification
 
 ## Overview
-This specification outlines comprehensive testing and quality assurance measures to be implemented **after core gameplay functionality is complete and mobile-deployed**. This builds upon the existing solid testing foundation to create enterprise-grade quality assurance.
+This specification outlines comprehensive testing and quality assurance measures for the **mobile-only** 2Truths-1Lie React Native/Expo application to be implemented **after core mobile gameplay functionality is complete and app store deployed**. This builds upon the existing mobile testing foundation to create enterprise-grade mobile quality assurance.
 
-**Implementation Note**: This document provides strategic guidance and planning context. The actual implementation is defined in the **Kiro AI specification** located at `.kiro/specs/advanced-testing/` which contains detailed requirements, design, and tasks for AI-powered automatic implementation.
+**Implementation Note**: This document provides strategic guidance for mobile-first development. The actual implementation leverages mobile-specific testing frameworks and is optimized for React Native/Expo applications targeting iOS and Android app stores.
 
 ---
 
 ## Prerequisites 
-- ✅ Core gameplay flow (Tasks 6-8) completed and working
-- ✅ Basic mobile app deployment successful  
-- ✅ Basic backend API testing in place (already complete)
-- ✅ Initial user feedback collected from MVP
+- ✅ Core mobile gameplay flow completed and working on devices
+- ✅ Mobile app successfully deployed to TestFlight/Play Console
+- ✅ Basic mobile API testing in place
+- ✅ Initial user feedback collected from mobile MVP
+- ✅ Native camera and media recording features validated
 
-## AI Implementation Ready
-The detailed technical specification for automatic implementation is available in:
-- **Requirements**: `.kiro/specs/advanced-testing/requirements.md` (5 detailed requirements with acceptance criteria)
-- **Design**: `.kiro/specs/advanced-testing/design.md` (Technical architecture and component interfaces)  
-- **Tasks**: `.kiro/specs/advanced-testing/tasks.md` (20+ implementation tasks across 5 phases)
+## Mobile-Specific Testing Architecture
+The testing framework focuses exclusively on:
+- **React Native/Expo** component testing
+- **Native mobile features** (camera, storage, permissions)
+- **iOS and Android** platform-specific behaviors
+- **App store compliance** and performance requirements
 
 ---
 
@@ -56,93 +58,99 @@ The detailed technical specification for automatic implementation is available i
 
 ---
 
-## Phase 2: End-to-End User Journey Testing
+## Phase 2: End-to-End Mobile User Journey Testing
 
-### 2.1 Complete User Workflow Automation
-**Objective**: Automated testing of complete user journeys
+### 2.1 Complete Mobile User Workflow Automation
+**Objective**: Automated testing of complete mobile user journeys
 
-**Implementation with Cypress/Playwright**:
-- **Challenge Creator Journey**:
-  1. User registration/login
-  2. Video recording (3 statements)
-  3. Challenge submission and moderation  
-  4. Challenge publishing
-  5. Challenge sharing
+**Implementation with Maestro/Detox for React Native**:
+- **Mobile Challenge Creator Journey**:
+  1. User registration/login with biometric auth
+  2. Mobile camera permission requests
+  3. Native video recording workflow
+  4. Mobile media preview and editing
+  5. Mobile challenge sharing via native share sheet
 
-- **Challenge Guesser Journey**:
-  1. Browse available challenges
-  2. Watch video statements
-  3. Submit guess with confidence rating
-  4. Receive scoring feedback
-  5. View leaderboard position
+- **Mobile Challenge Guesser Journey**:
+  1. Browse available challenges with mobile-optimized scrolling
+  2. Native video playback controls
+  3. Touch-optimized guessing interface
+  4. Mobile haptic feedback and animations
+  5. View mobile leaderboard with native navigation
 
-- **Social Interaction Journey**:
-  1. Share challenge on social media
-  2. Invite friends to guess
-  3. Comment on challenges
-  4. Report inappropriate content
+- **Mobile Social Interaction Journey**:
+  1. Share challenge via native iOS/Android share APIs
+  2. Mobile push notification handling
+  3. Native mobile deep linking
+  4. Mobile-optimized content reporting
 
 **Success Criteria**:
-- 100% of critical user paths automated
-- E2E tests run in < 5 minutes
-- Tests pass on iOS Safari, Android Chrome, Desktop browsers
+- 100% of critical mobile user paths automated
+- E2E tests run in < 3 minutes on simulators
+- Tests pass on iOS Safari, Android Chrome, and native mobile views
+- Native mobile features (camera, sharing, notifications) validated
 
-### 2.2 Cross-Platform Mobile Testing
-**Objective**: Ensure consistent experience across mobile devices
+### 2.2 Cross-Platform Mobile Device Testing
+**Objective**: Ensure consistent experience across mobile devices and OS versions
 
 **Implementation**:
-- Real device testing on iOS (iPhone 12+, iPad)
-- Real device testing on Android (Samsung Galaxy, Google Pixel)  
-- Network condition testing (3G, 4G, WiFi, offline)
-- Battery usage and performance profiling
-- Camera/microphone permission workflows
+- Real device testing matrix:
+  - **iOS**: iPhone 12+, iPhone SE, iPad, various iOS versions
+  - **Android**: Samsung Galaxy S21+, Google Pixel, various Android versions
+- Network condition testing (3G, 4G, 5G, WiFi, airplane mode)
+- Battery usage and mobile performance profiling
+- Camera/microphone permission workflows across OS versions
+- App store compliance testing (iOS App Store, Google Play Store)
 
 **Success Criteria**:
-- Feature parity across iOS/Android platforms
-- < 3 second app startup time on mid-range devices
-- Graceful offline mode degradation
-- Camera recording works on 95%+ of target devices
+- Feature parity across iOS 14+ and Android 8+ platforms
+- < 2 second app startup time on mid-range mobile devices
+- Graceful offline mode with local storage
+- Camera recording works on 98%+ of target mobile devices
+- App store review guidelines compliance verified
 
 ---
 
-## Phase 3: Performance & Load Testing
+## Phase 3: Mobile Performance & Load Testing
 
-### 3.1 Backend API Load Testing
-**Objective**: Validate system performance under realistic load
+### 3.1 Mobile Backend API Load Testing
+**Objective**: Validate system performance under mobile-specific load patterns
 
 **Implementation with Artillery/JMeter**:
-- **Challenge Submission Load Test**:
-  - 50 concurrent users creating challenges
-  - 500 concurrent users guessing on challenges
-  - Database query performance under load
-  - Media upload stress testing (video files)
+- **Mobile Challenge Submission Load Test**:
+  - 50 concurrent mobile users creating challenges
+  - Large mobile video file upload stress testing
+  - Mobile-specific API endpoint load testing
 
-- **Rate Limiting Stress Test**:
-  - Burst traffic simulation (1000 requests/second)
-  - Distributed attack simulation from multiple IPs
-  - Rate limit recovery testing
-  - User notification accuracy under limits
+- **Mobile Rate Limiting Stress Test**:
+  - Mobile burst traffic simulation (typical mobile usage patterns)
+  - Mobile push notification load testing
+  - Mobile authentication token refresh under load
 
 **Success Criteria**:
-- API response time < 200ms for 95% of requests under normal load
-- System handles 5x expected traffic without errors
-- Rate limiting blocks 100% of abuse attempts
-- Zero data corruption under concurrent access
+- Mobile API response time < 150ms for 95% of requests
+- System handles 10x expected mobile traffic without errors
+- Mobile rate limiting blocks 100% of abuse attempts
+- Zero data corruption under concurrent mobile access
+- Mobile push notifications delivered within 5 seconds
 
-### 3.2 Frontend Performance Testing  
-**Objective**: Ensure smooth user experience across devices
+### 3.2 Mobile App Performance Testing  
+**Objective**: Ensure smooth mobile user experience across devices
 
 **Implementation**:
-- Lighthouse performance auditing (target score 90+)
-- Real User Monitoring (RUM) implementation
-- Core Web Vitals optimization (LCP, FID, CLS)
-- Memory leak testing during extended sessions
-- Video playback performance across device capabilities
+- React Native Performance monitoring with Flipper
+- Mobile-specific Core Web Vitals in WebView components
+- Native mobile memory leak testing during extended sessions
+- Mobile video playback performance across device capabilities
+- Mobile battery usage optimization testing
+- iOS and Android specific performance profiling
 
 **Success Criteria**:
-- Lighthouse Performance Score > 90
-- First Contentful Paint < 1.5 seconds
-- Video playback smooth on devices with 2GB+ RAM
+- Mobile app startup time < 2 seconds on mid-range devices
+- Video recording and playback smooth on devices with 3GB+ RAM
+- Battery usage optimized for 4+ hours of active gameplay
+- Memory usage stable during extended mobile sessions
+- Native mobile animations run at 60fps on target devices
 - No memory leaks during 30+ minute sessions
 
 ---
