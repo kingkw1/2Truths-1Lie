@@ -1,17 +1,19 @@
 {
   "enabled": true,
-  "name": "Auto-generate Test Stubs on Component/File Creation",
-  "description": "Automatically generates or updates test files with basic test placeholders when new React component files or backend API files are created",
+  "name": "Auto-generate Mobile Test Stubs on Component/File Creation",
+  "description": "Automatically generates or updates React Native test files with mobile-specific test placeholders when new mobile components or service files are created",
   "version": "1",
   "when": {
     "type": "fileCreated",
     "patterns": [
-      "src/components/**/*.tsx",
-      "src/api/**/*.ts"
+      "mobile/src/components/**/*.tsx",
+      "mobile/src/screens/**/*.tsx",
+      "mobile/src/services/**/*.ts",
+      "backend/**/*.py"
     ]
   },
   "then": {
     "type": "askAgent",
-    "prompt": "For the newly created file, create a Jest test file next to it with a basic test skeleton.  \nInclude imports and a placeholder test case for the default export or main function.  \nIf a test file already exists, do not overwrite."
+    "prompt": "For the newly created mobile file, create a Jest test file with React Native Testing Library setup.  \nInclude mobile-specific imports and placeholder test cases for the default export or main function.  \nFor React Native components, include rendering tests and mobile interaction testing.  \nFor Python backend files, include mobile API endpoint testing.  \nIf a test file already exists, do not overwrite."
   }
 }

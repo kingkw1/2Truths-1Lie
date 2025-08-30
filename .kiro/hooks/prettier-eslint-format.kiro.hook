@@ -1,18 +1,19 @@
 {
   "enabled": true,
-  "name": "Auto-format and Lint on File Save",
-  "description": "Automatically runs Prettier and ESLint fixes on JavaScript and TypeScript files when saved",
+  "name": "Auto-format and Lint Mobile Code on File Save",
+  "description": "Automatically runs Prettier and ESLint fixes on React Native TypeScript files and Python backend files when saved",
   "version": "1",
   "when": {
     "type": "fileEdited",
     "patterns": [
-      "src/**/*.js",
-      "src/**/*.ts",
-      "src/**/*.tsx"
+      "mobile/src/**/*.js",
+      "mobile/src/**/*.ts", 
+      "mobile/src/**/*.tsx",
+      "backend/**/*.py"
     ]
   },
   "then": {
     "type": "askAgent",
-    "prompt": "Run Prettier to format the file.  \nThen run ESLint with autofix enabled, and save the file again if modifications were made.\n"
+    "prompt": "For TypeScript/JavaScript files: Run Prettier to format the mobile code with React Native formatting rules.  \nThen run ESLint with React Native and mobile-specific autofix rules, and save the file if modifications were made.  \nFor Python files: Run Black formatter and flake8 linting for backend code."
   }
 }

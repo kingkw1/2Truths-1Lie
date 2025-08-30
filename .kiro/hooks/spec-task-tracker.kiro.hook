@@ -1,5 +1,25 @@
 {
   "enabled": true,
+  "name": "Update Mobile Task Status on File Changes",
+  "description": "Automatically marks mobile development tasks as 'In Progress' when files related to mobile specification tasks are saved in mobile/src/ or backend/ directories",
+  "version": "1",
+  "when": {
+    "type": "fileEdited",
+    "patterns": [
+      "mobile/src/components/**/*",
+      "mobile/src/screens/**/*",
+      "mobile/src/store/**/*",
+      "mobile/src/services/**/*",
+      "mobile/src/types/**/*",
+      "mobile/src/hooks/**/*",
+      "backend/**/*"
+    ]
+  },
+  "then": {
+    "type": "askAgent",
+    "prompt": "Detect which mobile spec task corresponds to the saved file based on mobile task descriptions or mobile file naming patterns.  \nUpdate that task's status to 'In Progress' in the spec's tasks.md file.  \nFocus on mobile-specific development tasks including React Native components, mobile services, and mobile backend APIs."
+  }
+}
   "name": "Update Task Status on File Changes",
   "description": "Automatically marks associated tasks as 'In Progress' when files related to specification tasks are saved in src/game/, src/components/, or other relevant directories",
   "version": "1",

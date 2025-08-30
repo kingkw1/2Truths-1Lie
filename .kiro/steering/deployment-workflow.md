@@ -2,34 +2,50 @@
 include: always
 ---
 
-# Deployment Process
+# Mobile App Deployment Process
 
-## Development and Staging
-- Use separate environments for development, staging, and production.
-- Staging environment mirrors production setup for reliable pre-release testing.
-- Use environment variables for secrets; do not hard-code keys or credentials.
+## Development and Testing Environments
+- Use Expo Go for rapid development and real-device testing
+- EAS Build for staging and production builds
+- Use environment variables for API endpoints and secrets; never hard-code credentials in mobile app
+- Test on both iOS Simulator and Android Emulator plus real devices
 
-## Continuous Integration/Continuous Deployment (CI/CD)
-- Use GitHub Actions or similar to automate:
-  - Running tests on every push
-  - Running lint and static analysis
-  - Building front-end and backend Docker images or artifacts
-  - Deploying to staging and production environments after passing checks
+## Mobile CI/CD Pipeline
+- Use GitHub Actions or EAS to automate:
+  - Running mobile tests on every push
+  - Running lint and TypeScript checks for mobile code
+  - Building Android APK/AAB and iOS IPA files
+  - Deploying test builds to internal testing tracks
+  - Publishing to app stores after approval
 
-## Build Processes
-- Frontend: Bundle with Webpack or similar; minify for production.
-- Backend: Use Docker for consistent environment; deploy containers using managed services (Render, Railway).
-  
-## Rollback and Recovery
-- Maintain previous successful builds/releases to allow rollback if deployment fails.
-- Monitor app health during and after deployment to identify regressions quickly.
+## Mobile Build Processes
+- **Development**: Expo Go for instant preview and iteration
+- **Preview Builds**: EAS Build for internal testing and stakeholder review
+- **Production**: EAS Build with app store optimization and code signing
+- **Backend**: Docker containers deployed to mobile-optimized cloud services
 
-## Monitoring & Alerts
-- Integrate application monitoring tools (Datadog, NewRelic).
-- Set up alerts for failed deployments, downtime, or critical errors.
+## App Store Deployment
+- **Android**: Google Play Console with staged rollout capability
+- **iOS**: App Store Connect with TestFlight for beta testing
+- **Version Management**: Semantic versioning with automatic versionCode increments
+- **Store Assets**: Screenshots, descriptions, and metadata optimized for mobile app stores
 
-## Documentation & Configuration Management
-- Keep deployment scripts and environment documentation version controlled.
-- Document manual deployment steps for emergency scenarios.
+## Mobile-Specific Rollback and Recovery
+- Maintain previous successful mobile builds for emergency rollback
+- Use app store rollback features if critical mobile bugs are discovered
+- Monitor mobile app crash reporting and performance metrics
+- Backend rollback procedures to maintain mobile API compatibility
+
+## Mobile Monitoring & Analytics
+- Integrate mobile-specific monitoring (Bugsnag, Sentry for mobile crash reporting)
+- App store analytics and user feedback monitoring
+- Set up alerts for mobile app crashes, API failures, and performance issues
+- Track mobile-specific metrics (app launches, screen navigation, game completion rates)
+
+## Configuration Management
+- Keep EAS configuration and mobile deployment scripts version controlled
+- Document manual app store submission steps for emergency releases
+- Maintain mobile app signing certificates and provisioning profiles securely
+- Backend deployment docs focused on mobile API requirements
 
 ---

@@ -1,25 +1,25 @@
-# Emotion Analysis - Requirements
+# Mobile Emotion Analysis - Requirements
 
-## User Story 1: Real-Time Emotion Scoring
+## User Story 1: Real-Time Mobile Emotion Scoring
 
-WHEN a player records and submits media  
-THE SYSTEM SHALL process the media using the AffectLink API or equivalent to generate emotion embeddings and confidence scores  
-AND return scores within a user-acceptable latency (e.g., < 5 seconds)
+WHEN a mobile player records video using device camera  
+THE SYSTEM SHALL process the mobile video using optimized on-device ML models or mobile-efficient cloud APIs  
+AND return emotion scores within mobile-acceptable latency (< 3 seconds) without draining device battery
 
-## User Story 2: Emotion-Based Gameplay Feedback
+## User Story 2: Mobile Emotion-Based Gameplay Feedback
 
-WHEN emotion analysis completes  
-THE SYSTEM SHALL display visual indicators or overlays that reflect detected emotions and clue players about potential deception  
-AND provide confidence levels on emotional signals and the likelihood of lie detection
+WHEN mobile emotion analysis completes  
+THE SYSTEM SHALL display native mobile visual indicators with haptic feedback that reflect detected emotions  
+AND provide mobile-optimized confidence indicators and lie detection probability with touch-friendly interaction
 
-## User Story 3: Graceful Degradation
+## User Story 3: Mobile Network Graceful Degradation
 
-WHEN AI services are unavailable or fail to respond  
-THE SYSTEM SHALL degrade gracefully by disabling emotion-based feedback and continuing game operation with minimal disruption  
-AND notify users of limitations transparently
+WHEN mobile network is poor or AI services are unavailable  
+THE SYSTEM SHALL use cached on-device models or degrade gracefully by continuing mobile gameplay without emotion features  
+AND notify mobile users of limitations with native mobile notifications and retry options
 
-## User Story 4: Data Privacy and User Consent
+## User Story 4: Mobile Data Privacy and Device Security
 
-WHEN media is processed for emotion analysis  
-THE SYSTEM SHALL ensure user consent for data usage is obtained and recorded  
-AND anonymize or securely handle emotion data in line with privacy regulations
+WHEN mobile video is processed for emotion analysis  
+THE SYSTEM SHALL ensure user consent through native mobile permission dialogs and secure on-device processing where possible  
+AND handle emotion data using mobile platform security features (secure enclave, biometric authentication) in compliance with mobile privacy standards

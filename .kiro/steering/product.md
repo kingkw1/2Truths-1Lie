@@ -4,25 +4,28 @@ include: always
 
 # Product Overview
 
-## 2Truths-1Lie: Gamified Emotion AI Social App
+## 2Truths-1Lie: Mobile-First Emotion AI Social Game
 
 **Purpose:**  
-Create an engaging, social, gamified mobile and web application based on the classic icebreaker game "Two Truths and a Lie." This app leverages multimodal emotion recognition (face, voice, text) to provide players and the community with real-time emotion and lie-detection feedback, enhancing gameplay and user insight.
+Create an engaging, social, gamified **mobile application** based on the classic icebreaker game "Two Truths and a Lie." This React Native/Expo app leverages native mobile features and multimodal emotion recognition (face, voice, text) to provide players with real-time emotion and lie-detection feedback, enhancing mobile gameplay and user engagement.
 
 **Target Users:**  
-- Social groups seeking fun icebreaker activities  
-- Online communities and multiplayer social platforms  
-- Teams and organizations using engagement and trust-building tools  
-- Early adopters of AI-driven games and emotion analytics  
+- Mobile users seeking fun social gaming experiences
+- Social groups and communities using mobile-first platforms
+- Early adopters of AI-driven mobile games and emotion analytics
+- Mobile app enthusiasts interested in native camera and recording features
 
 **Key Features:**  
-- Async social gameplay: users post 3 statements (2 truths, 1 lie) with video recordings.  
-- Community guesses the lie; points awarded for correct guesses and deceptive skill.  
-- Real-time emotion analysis drives feedback overlays and scoring metrics.  
-- Monetization via cosmetic unlocks (voice changers, avatars), premium analytics, and additional game features.  
-- Leveraging open source and AI SDKs for emotion inference with data privacy and consent.  
+- **Native mobile gameplay**: Users create challenges using device camera and microphone
+- **Mobile-optimized UI**: Touch-first interface designed for iOS and Android
+- **Real-time mobile emotion analysis**: Native processing with camera-based emotion detection
+- **App store distribution**: Full iOS App Store and Google Play Store deployment
+- **Offline-first mobile experience**: Local storage and sync when connectivity returns
+- **Mobile monetization**: In-app purchases, subscriptions, and premium mobile features
+- **Native mobile features**: Haptic feedback, push notifications, device storage integration
 
 **Business Goals:**  
-- Build a popular, viral app that attracts significant user engagement and data for AffectLink model training.  
-- Win prizes in hackathons (Kiro & RevenueCat Shipaton) by showcasing AI integration and monetization.  
-- Maintain open-source core for hackathon eligibility, retain flexibility for commercial feature rollouts.
+- Build a viral mobile app optimized for app store success and user retention
+- Win hackathon prizes (Kiro & RevenueCat Shipaton) showcasing mobile AI integration
+- Leverage mobile-specific monetization strategies (IAP, subscriptions)
+- Maintain streamlined mobile codebase for faster AI-assisted development
