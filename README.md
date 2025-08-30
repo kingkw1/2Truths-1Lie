@@ -1,19 +1,52 @@
-# 2Truths-1Lie: Mobile Emotion AI Social Game
+# 🎭 2Truths-1Lie: AI-Powered Mobile Social Game
 
-## Overview
-2Truths-1Lie is a mobile social game inspired by the classic icebreaker "Two Truths and a Lie," enhanced with AI-powered emotion recognition. Players post videos or audio clips stating two truths and one lie, while the community guesses the lie and interacts through points and playful feedback.
+<div align="center">
 
-This mobile app is designed to be both entertaining and a data-generating platform for AffectLink, a multimodal emotion sensing model.
+![App Icon](assets/app_icon_scaled.png)
 
-## Features
-- Record and post your "Two Truths and a Lie" challenge with video, audio, and text
-- Guess lies posted by others and compete for leaderboard points
-- Real-time emotion recognition overlays and lie/confidence scoring
-- Cosmetic unlocks and premium analytics via in-app purchases
-- **Native mobile app** for iOS and Android via Expo/React Native
-- Optimized mobile experience with native device features
+[![React Native](https://img.shields.io/badge/React%20Native-0.74-blue.svg)](https://reactnative.dev/)
+[![Expo](https://img.shields.io/badge/Expo-53.0-purple.svg)](https://expo.dev/)
+[![Python](https://img.shields.io/badge/Python-3.12-green.svg)](https://python.org/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5.0-blue.svg)](https://typescriptlang.org/)
 
-## Getting Started
+**🏆 Built for Hackathons | 🚀 Production-Ready Mobile App | 🤖 AI-Powered**
+
+</div>
+
+## 🌟 Project Highlights
+
+> **The classic icebreaker game reimagined with cutting-edge AI emotion recognition technology**
+
+2Truths-1Lie transforms the beloved social game into an engaging mobile experience where players create video challenges and AI helps detect deception through real-time emotion analysis. Perfect blend of entertainment and innovative technology.
+
+### 🎯 **Key Innovations**
+- **🎥 Native Mobile Video Recording** - Seamless camera integration for authentic storytelling
+- **🧠 Real-time Emotion AI** - Advanced emotion recognition during video playback
+- **📱 Mobile-First Design** - Optimized for iOS and Android with native performance
+- **🎮 Gamified Social Experience** - Points, achievements, and community leaderboards
+- **🔒 Privacy-Focused** - On-device processing with optional cloud enhancement
+
+## ✨ Features
+
+### 🎬 **Core Gameplay**
+- Record and post your "Two Truths and a Lie" video challenges
+- Guess lies in other players' videos with AI assistance
+- Real-time emotion recognition overlays during video playback
+- Community voting and scoring system
+
+### 📱 **Mobile Experience**
+- **Native iOS & Android apps** built with React Native/Expo
+- Seamless camera and microphone integration
+- Touch-optimized UI with haptic feedback
+- Offline-capable with cloud synchronization
+
+### 🤖 **AI & Analytics**
+- Advanced emotion detection during video recording and playback
+- Confidence scoring for lie detection assistance
+- Optional premium analytics for content creators
+- Privacy-first approach with on-device processing options
+
+## 🚀 Getting Started
 
 ### Prerequisites
 - Node.js >=18

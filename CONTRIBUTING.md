@@ -1,21 +1,40 @@
-# Contributing to 2Truths-1Lie
+# 🤝 Contributing to 2Truths-1Lie
 
-Thank you for your interest in contributing! We welcome bug fixes, improvements, feature requests, and documentation updates.
+Thank you for your interest in contributing to our AI-powered mobile social game! We welcome bug fixes, feature improvements, mobile optimizations, and AI enhancements.
 
-## How to Contribute
+## 🚀 Quick Start for Contributors
 
-### Reporting Issues
-- Please search existing issues before opening a new one.
-- Provide a clear description, steps to reproduce, and any relevant screenshots or logs.
+### Prerequisites
+- Node.js 18+ and npm
+- Expo CLI (`npm install -g @expo/cli`)
+- Python 3.12+ for backend development
+- Android Studio or iOS development setup
+
+### Development Setup
+```bash
+# Clone and setup
+git clone https://github.com/kingkw1/2Truths-1Lie.git
+cd 2Truths-1Lie
+npm run demo  # Quick setup for all dependencies
+
+# Start development
+npm run start:dev  # Launches both mobile and backend
+```
+
+## 📱 Mobile Development
 
 ### Code Contributions
-- Fork the repository and create your branch from `main`:
+- Fork the repository and create your branch from `feat/mobile-only`:
+```bash
+git checkout -b feature/mobile-enhancement
+```
 
-git checkout -b feature/my-feature
+- Follow mobile-first coding standards in `.kiro/steering/code-conventions.md`
+- Focus on React Native/Expo best practices and native performance
+- Write mobile-specific tests with React Native Testing Library
+- Test on both iOS and Android platforms where possible
 
-text
-- Follow the coding style described in our docs (see `.kiro/steering/code-conventions.md`).
-- Write clear, testable code and add tests where applicable.
+### Mobile-Specific Guidelines
 - Commit your changes with descriptive messages.
 - Submit a pull request explaining what you’ve changed and why.
 
