@@ -1,9 +1,10 @@
 #!/bin/bash
 
-# Sync script to keep mobile and web projects in sync
+# Mobile-only project setup script
+# Since the web app has been archived, this script now focuses on mobile development
 # Usage: ./sync-to-mobile.sh
 
-echo "🔄 Syncing shared code from web to mobile..."
+echo "� Setting up mobile development environment..."
 
 # Ensure mobile directory exists
 MOBILE_DIR="mobile"
@@ -12,92 +13,27 @@ if [ ! -d "$MOBILE_DIR" ]; then
     exit 1
 fi
 
-# Copy types
-echo "📄 Syncing types..."
-if [ -d "src/types/" ]; then
-    cp -r src/types/ $MOBILE_DIR/src/types/
-    echo "   ✓ Types synced"
+echo "✅ Mobile directory confirmed"
+
+# Install mobile dependencies if needed
+echo "📦 Checking mobile dependencies..."
+if [ ! -d "$MOBILE_DIR/node_modules" ]; then
+    echo "   Installing mobile dependencies..."
+    cd $MOBILE_DIR && npm install && cd ..
+    echo "   ✓ Mobile dependencies installed"
 else
-    echo "   ⚠️  Types directory not found"
+    echo "   ✓ Mobile dependencies already installed"
 fi
 
-# Copy store (excluding mobile-specific configurations)
-echo "🏪 Syncing Redux store..."
-if [ -d "src/store/" ]; then
-    # Create temporary directory for selective sync
-    mkdir -p temp_store_sync
-    
-    # Copy store structure but preserve mobile-specific files
-    cp -r src/store/* temp_store_sync/
-    
-    # Remove web-specific middleware that might not work on mobile
-    if [ -f "temp_store_sync/middleware/websocketMiddleware.ts" ]; then
-        echo "   ⚠️  Skipping websocket middleware (web-specific)"
-        rm temp_store_sync/middleware/websocketMiddleware.ts
-    fi
-    
-    # Sync slices (these should be identical)
-    if [ -d "temp_store_sync/slices/" ]; then
-        cp -r temp_store_sync/slices/ $MOBILE_DIR/src/store/slices/
-        echo "   ✓ Store slices synced"
-    fi
-    
-    # Sync selectors
-    if [ -d "temp_store_sync/selectors/" ]; then
-        cp -r temp_store_sync/selectors/ $MOBILE_DIR/src/store/selectors/
-        echo "   ✓ Store selectors synced"
-    fi
-    
-    # Sync hooks (should be identical)
-    if [ -f "temp_store_sync/hooks.ts" ]; then
-        cp temp_store_sync/hooks.ts $MOBILE_DIR/src/store/hooks.ts
-        echo "   ✓ Store hooks synced"
-    fi
-    
-    # Sync utils
-    if [ -f "temp_store_sync/utils.ts" ]; then
-        cp temp_store_sync/utils.ts $MOBILE_DIR/src/store/utils.ts
-        echo "   ✓ Store utils synced"
-    fi
-    
-    # Clean up
-    rm -rf temp_store_sync
-    
-    echo "   ✓ Redux store synced (mobile-optimized)"
-else
-    echo "   ⚠️  Store directory not found"
-fi
-
-# Copy selected shared components if they exist
-echo "🧩 Syncing shared components..."
-mkdir -p $MOBILE_DIR/src/shared/
-
-if [ -f "src/components/AnimatedFeedback.tsx" ]; then
-    cp src/components/AnimatedFeedback.tsx $MOBILE_DIR/src/shared/AnimatedFeedback.tsx
-    echo "   ✓ AnimatedFeedback component synced"
-fi
-
-# Sync validation utilities that are platform-agnostic
-if [ -f "src/utils/qualityAssessment.ts" ]; then
-    mkdir -p $MOBILE_DIR/src/utils/
-    cp src/utils/qualityAssessment.ts $MOBILE_DIR/src/utils/qualityAssessment.ts
-    echo "   ✓ Quality assessment utils synced"
-fi
-
-# Sync media compression utilities (mobile-compatible)
-if [ -f "src/utils/mediaCompression.ts" ]; then
-    mkdir -p $MOBILE_DIR/src/utils/
-    cp src/utils/mediaCompression.ts $MOBILE_DIR/src/utils/mediaCompression.ts
-    echo "   ✓ Media compression utils synced"
-fi
-
-# Verify critical files exist in mobile
+# Verify critical mobile files exist
 echo ""
-echo "🔍 Verifying sync integrity..."
+echo "🔍 Verifying mobile project structure..."
 
 CRITICAL_FILES=(
+    "$MOBILE_DIR/package.json"
+    "$MOBILE_DIR/App.tsx"
+    "$MOBILE_DIR/index.ts"
     "$MOBILE_DIR/src/types/index.ts"
-    "$MOBILE_DIR/src/store/slices/challengeCreationSlice.ts"
     "$MOBILE_DIR/src/store/hooks.ts"
 )
 
@@ -113,26 +49,29 @@ done
 
 if [ "$ALL_GOOD" = true ]; then
     echo ""
-    echo "✅ Sync complete! Mobile project updated with latest shared code."
+    echo "✅ Mobile project is ready for development!"
     echo ""
-    echo "📱 Mobile Redux Integration Status:"
-    echo "   ✓ Challenge creation state management"
-    echo "   ✓ Media recording state tracking"
-    echo "   ✓ Cross-platform type definitions"
-    echo "   ✓ Shared validation logic"
+    echo "📱 Mobile Features Status:"
+    echo "   ✓ React Native with Expo"
+    echo "   ✓ TypeScript configuration"
+    echo "   ✓ Redux state management"
+    echo "   ✓ Native camera and media recording"
+    echo "   ✓ Cross-platform iOS/Android support"
     echo ""
-    echo "💡 Run this script whenever you:"
-    echo "   - Update types in src/types/"
-    echo "   - Modify Redux store slices in src/store/slices/"
-    echo "   - Update shared validation or utility functions"
-    echo "   - Want to ensure mobile-web state consistency"
+    echo "� Next steps to start development:"
+    echo "   1. Start development server: npm start"
+    echo "   2. Open Expo Go app on your phone"
+    echo "   3. Scan QR code to run the app"
+    echo "   4. For simulators: npm run android OR npm run ios"
     echo ""
-    echo "🚀 Next steps:"
-    echo "   1. Restart mobile development server: npm run mobile"
-    echo "   2. Test challenge creation workflow on mobile"
-    echo "   3. Verify Redux DevTools show consistent state"
+    echo "� Development commands:"
+    echo "   npm start          - Start Expo dev server"
+    echo "   npm run android    - Run on Android simulator"
+    echo "   npm run ios        - Run on iOS simulator"
+    echo "   npm run build:android - Build Android APK"
+    echo "   npm run build:ios  - Build iOS IPA"
 else
     echo ""
-    echo "❌ Sync completed with errors. Please check missing files."
+    echo "❌ Mobile project setup incomplete. Please check missing files."
     exit 1
 fi

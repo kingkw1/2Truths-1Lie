@@ -10,6 +10,9 @@ build/
 out/
 *.aab
 
+# Archived web app (mobile-only project now)
+archive/web-app/
+
 # Environment variables
 .env
 .env.local
