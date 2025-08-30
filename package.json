@@ -2,64 +2,40 @@
   "name": "two-truths-one-lie-game",
   "version": "1.0.0",
   "description": "Two Truths and a Lie game with emotion analysis",
-  "main": "src/lib.ts",
+  "main": "mobile/index.ts",
   "scripts": {
-    "start": "react-scripts start",
-    "build": "react-scripts build",
-    "test": "react-scripts test",
-    "eject": "react-scripts eject",
-    "type-check": "tsc --noEmit",
+    "start": "cd mobile && npx expo start",
     "mobile": "cd mobile && npx expo start --offline",
     "mobile:install": "cd mobile && npm install",
     "sync": "./sync-to-mobile.sh",
     "dev:mobile": "./sync-to-mobile.sh && npm run mobile",
-    "android": "expo run:android",
-    "ios": "expo run:ios"
+    "android": "cd mobile && expo run:android",
+    "ios": "cd mobile && expo run:ios",
+    "build:android": "cd mobile && eas build --platform android",
+    "build:ios": "cd mobile && eas build --platform ios"
   },
   "devDependencies": {
-    "@testing-library/dom": "^10.4.1",
-    "@testing-library/jest-dom": "^6.7.0",
-    "@testing-library/react": "^16.3.0",
-    "@testing-library/user-event": "^14.6.1",
     "@types/babel__core": "^7.20.5",
     "@types/jest": "^27.5.2",
-    "@types/jest-axe": "^3.5.9",
     "@types/node": "^16.18.0",
     "@types/react": "~19.0.10",
-    "@types/react-dom": "^18.2.0",
-    "@types/react-redux": "^7.1.25",
-    "jest-axe": "^10.0.0",
-    "react-native-web": "^0.21.1",
     "typescript": "~5.8.3"
   },
   "dependencies": {
     "@reduxjs/toolkit": "^2.8.2",
     "expo": "53.0.22",
     "react": "19.0.0",
-    "react-dom": "19.0.0",
     "react-native": "0.79.5",
-    "react-redux": "^8.1.0",
-    "react-scripts": "5.0.1",
-    "web-vitals": "^2.1.4"
+    "react-redux": "^8.1.0"
   },
   "keywords": [
-    "game",
+    "mobile-game",
+    "react-native",
+    "expo",
     "typescript",
     "emotion-analysis",
     "social"
   ],
   "author": "",
-  "license": "MIT",
-  "browserslist": {
-    "production": [
-      ">0.2%",
-      "not dead",
-      "not op_mini all"
-    ],
-    "development": [
-      "last 1 chrome version",
-      "last 1 firefox version",
-      "last 1 safari version"
-    ]
-  }
+  "license": "MIT"
 }

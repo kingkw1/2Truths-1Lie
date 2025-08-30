@@ -1,29 +1,41 @@
-## **A. Progressive Web App (PWA) Approach (Quick Browser Testing)**
+# Mobile App Testing Guide
 
-If you just want to test your standard React app on Android via Chrome (no app store submission):
+This guide covers testing the native mobile app built with Expo/React Native. The project now focuses exclusively on mobile development.
 
-1. **Start your development server:**
-   ```bash
-   npm start
-   ```
-   This should usually start the app at `http://localhost:3000`.
+## **Prerequisites**
 
-2. **Find your computer’s local IP address.**
-   - Run `ipconfig` (Windows) or `ifconfig` / `ip addr` (Mac/Linux) to find something like `192.168.x.x`.
+- Node.js >=18
+- Expo CLI (`npm install -g @expo/cli`)
+- Android device with Expo Go app OR Android Studio simulator
+- iOS device with Expo Go app OR Xcode simulator (macOS only)
 
-3. **Open up your firewall for port 3000 (if needed).**
+## **Development Testing with Expo Go**
 
-4. **On your Android device, open Chrome and visit:**
-   ```
-   http://[your_local_ip]:3000
-   ```
+### 1. **Start the Development Server**
+```bash
+cd mobile
+npm start
+# or from root directory:
+npm start
+```
 
-5. **You can add the site to your home screen for a pseudo-app experience:**
-   - Tap the 3-dot menu > “Add to Home screen”.
+### 2. **Test on Physical Device**
+- **Install Expo Go** from App Store (iOS) or Play Store (Android)
+- **Scan QR code** displayed in terminal/browser with:
+  - Camera app (iOS)
+  - Expo Go app (Android)
 
-_This is quick for testing, but does **not** allow for any native device features, nor will it pass for publishing in Shipaton/Play Store._
+### 3. **Test on Simulators**
 
-***
+**Android Simulator:**
+```bash
+npm run android
+```
+
+**iOS Simulator (macOS only):**
+```bash
+npm run ios
+```
 
 ## **B. Expo/React Native Approach (Recommended for Shipaton/Store Submission)**
 

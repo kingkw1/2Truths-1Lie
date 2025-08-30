@@ -19,7 +19,9 @@
   - Integrate Expo Camera for real device video + audio recording.
   - Implement permissions handling, error fallback, and intuitive UI on mobile.
 - Stabilize **mobile navigation and state management sync** (Redux integration).
-- Begin **comprehensive unit and integration testing** targeting media capture and gameplay flows.
+- ✅ **Mobile app successfully running on Android device** (version 1.1.0 with versionCode 20)
+- ✅ **Web app code archived** and project converted to mobile-only focus  
+- 🔧 **IN PROGRESS: Comprehensive unit and integration testing** targeting media capture and gameplay flows - fixing Jest configuration and mocking issues
 - Start lightweight **documentation of mobile workflows** for team and judges.
 
 ***
