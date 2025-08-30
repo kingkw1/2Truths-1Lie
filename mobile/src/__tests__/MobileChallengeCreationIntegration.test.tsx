@@ -20,25 +20,28 @@ import challengeCreationReducer from '../store/slices/challengeCreationSlice';
 
 // Mock the MobileCameraRecorder component
 const mockMobileCameraRecorder = jest.fn();
-jest.mock('../components/MobileCameraRecorder', () => ({
-  MobileCameraRecorder: (props: any) => {
-    mockMobileCameraRecorder(props);
-    return React.createElement('div', {
-      testID: 'mobile-camera-recorder',
-      onClick: () => {
-        // Simulate successful recording
-        const mockMedia = {
-          type: 'video' as const,
-          url: 'mock://video.mp4',
-          duration: 15000,
-          fileSize: 2048,
-          mimeType: 'video/mp4',
-        };
-        props.onRecordingComplete?.(mockMedia);
-      },
-    }, 'Mock Camera Recorder');
-  },
-}));
+jest.mock('../components/MobileCameraRecorder', () => {
+  const mockReact = require('react');
+  return {
+    MobileCameraRecorder: (props: any) => {
+      mockMobileCameraRecorder(props);
+      return mockReact.createElement('div', {
+        testID: 'mobile-camera-recorder',
+        onClick: () => {
+          // Simulate successful recording
+          const mockMedia = {
+            type: 'video' as const,
+            url: 'mock://video.mp4',
+            duration: 15000,
+            fileSize: 2048,
+            mimeType: 'video/mp4',
+          };
+          props.onRecordingComplete?.(mockMedia);
+        },
+      }, 'Mock Camera Recorder');
+    },
+  };
+});
 
 // Mock React Native components
 jest.mock('react-native', () => ({

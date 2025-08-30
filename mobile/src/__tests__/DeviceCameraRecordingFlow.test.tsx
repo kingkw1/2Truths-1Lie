@@ -23,56 +23,59 @@ jest.mock('expo-haptics', () => ({
   },
 }));
 
-jest.mock('expo-camera', () => ({
-  CameraView: React.forwardRef(({ children, onCameraReady }: any, ref: any) => {
-    React.useImperativeHandle(ref, () => ({
-      recordAsync: jest.fn().mockImplementation(async (options) => {
-        // Simulate realistic recording behavior
-        await new Promise(resolve => setTimeout(resolve, 100));
-        
-        // Simulate different recording outcomes based on test scenarios
-        const testScenario = global.__TEST_SCENARIO__;
-        
-        if (testScenario === 'STORAGE_FULL') {
-          throw new Error('Not enough storage space available');
-        }
-        
-        if (testScenario === 'PERMISSION_DENIED') {
-          throw new Error('Camera permission denied');
-        }
-        
-        if (testScenario === 'HARDWARE_ERROR') {
-          throw new Error('Camera hardware unavailable');
-        }
-        
-        if (testScenario === 'RECORDING_TIMEOUT') {
-          // Simulate long recording that should timeout
-          await new Promise(resolve => setTimeout(resolve, 66000));
-        }
-        
-        return {
-          uri: `file://test-recording-${Date.now()}.mp4`,
-        };
-      }),
-      stopRecording: jest.fn(),
-    }));
-    
-    // Trigger onCameraReady after mount
-    React.useEffect(() => {
-      setTimeout(() => onCameraReady?.(), 50);
-    }, [onCameraReady]);
-    
-    return children;
-  }),
-  useCameraPermissions: () => [
-    { granted: global.__CAMERA_PERMISSION_GRANTED__ !== false },
-    jest.fn().mockResolvedValue({ granted: global.__CAMERA_PERMISSION_GRANTED__ !== false }),
-  ],
-  CameraType: {
-    front: 'front',
-    back: 'back',
-  },
-}));
+jest.mock('expo-camera', () => {
+  const mockReact = require('react');
+  return {
+    CameraView: mockReact.forwardRef(({ children, onCameraReady }: any, ref: any) => {
+      mockReact.useImperativeHandle(ref, () => ({
+        recordAsync: jest.fn().mockImplementation(async (options) => {
+          // Simulate realistic recording behavior
+          await new Promise(resolve => setTimeout(resolve, 100));
+          
+          // Simulate different recording outcomes based on test scenarios
+          const testScenario = global.__TEST_SCENARIO__;
+          
+          if (testScenario === 'STORAGE_FULL') {
+            throw new Error('Not enough storage space available');
+          }
+          
+          if (testScenario === 'PERMISSION_DENIED') {
+            throw new Error('Camera permission denied');
+          }
+          
+          if (testScenario === 'HARDWARE_ERROR') {
+            throw new Error('Camera hardware unavailable');
+          }
+          
+          if (testScenario === 'RECORDING_TIMEOUT') {
+            // Simulate long recording that should timeout
+            await new Promise(resolve => setTimeout(resolve, 66000));
+          }
+          
+          return {
+            uri: `file://test-recording-${Date.now()}.mp4`,
+          };
+        }),
+        stopRecording: jest.fn(),
+      }));
+      
+      // Trigger onCameraReady after mount
+      mockReact.useEffect(() => {
+        setTimeout(() => onCameraReady?.(), 50);
+      }, [onCameraReady]);
+      
+      return children;
+    }),
+    useCameraPermissions: jest.fn(() => [
+      { granted: global.__CAMERA_PERMISSION_GRANTED__ !== false },
+      jest.fn().mockResolvedValue({ granted: global.__CAMERA_PERMISSION_GRANTED__ !== false }),
+    ]),
+    CameraType: {
+      front: 'front',
+      back: 'back',
+    },
+  };
+});
 
 jest.mock('expo-media-library', () => ({
   usePermissions: () => [
