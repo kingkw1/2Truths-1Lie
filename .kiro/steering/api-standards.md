@@ -1,48 +1,64 @@
 ---
 include: conditional
-pattern: "src/api/**/*"
+pattern: "backend/**/*"
 ---
 
-# API Standards
+# Mobile API Standards
 
 ## General Principles
-- All backend routes follow RESTful conventions using appropriate HTTP verbs:
-  - `GET` for fetching data
-  - `POST` for creating resources or executing actions
-  - `PUT`/`PATCH` for updates
+- All backend routes follow RESTful conventions optimized for mobile clients:
+  - `GET` for fetching data with efficient mobile payload sizes
+  - `POST` for creating resources or executing actions (mobile game submissions)
+  - `PUT`/`PATCH` for updates with minimal data transfer
   - `DELETE` for removal
 
-## URL Naming
-- Use plural nouns for resource names: e.g., `/games`, `/users`, `/sessions`
-- Nest URIs logically when accessing sub-resources: e.g., `/users/{userId}/games`
+## Mobile-Optimized URL Naming
+- Use plural nouns for resource names: e.g., `/mobile/v1/games`, `/mobile/v1/users`, `/mobile/v1/sessions`
+- Nest URIs logically for mobile navigation: e.g., `/mobile/v1/users/{userId}/games`
+- Include mobile-specific endpoints for efficient data loading
 
-## Requests & Responses
-- All responses use JSON format.
-- Standardize response structure:
-  
+## Mobile Requests & Responses
+- All responses use JSON format optimized for mobile bandwidth
+- Standardize mobile response structure:
 
+```json
 {
-"success": true,
-"data": {...},
-"error": null
+  "success": true,
+  "data": {...},
+  "error": null,
+  "meta": {
+    "timestamp": "2024-01-01T00:00:00Z",
+    "version": "mobile/v1"
+  }
 }
+```
 
-text
-- On error, provide meaningful HTTP status codes (400, 401, 404, 500) and clear error messages.
-- Validate all client inputs server-side; reject invalid or missing parameters with 400 status.
+- On error, provide meaningful HTTP status codes (400, 401, 404, 500) with mobile-friendly error messages
+- Validate all mobile client inputs server-side; handle offline/network retry scenarios
+- Implement request compression and response caching for mobile performance
 
-## Authentication & Authorization
-- Use JWT tokens for user authentication, passed in `Authorization` headers.
-- Protect sensitive routes; ensure only authorized users access or mutate data.
-- Include middleware to verify token validity.
+## Mobile Authentication & Authorization
+- Use JWT tokens optimized for mobile storage and security
+- Support mobile-specific auth flows (biometric, device-based authentication)
+- Include middleware for mobile token refresh and validation
+- Handle mobile app backgrounding and token expiration gracefully
 
-## Versioning & Deprecation
-- Include API version in base route (e.g., `/api/v1/`).
-- Deprecate older versions with clear communication.
+## Mobile API Versioning & Compatibility
+- Include mobile API version in base route (e.g., `/mobile/v1/`)
+- Maintain backward compatibility for mobile app store approval cycles
+- Support graceful degradation for older mobile app versions
 
-## Example Endpoints
-- `POST /api/v1/statements` - Submit a new set of 2 truths and a lie
-- `GET /api/v1/games/{gameId}` - Retrieve game data and guesses
-- `POST /api/v1/games/{gameId}/guess` - Submit a guess on a statement
+## Mobile-Specific Endpoints
+- `POST /mobile/v1/statements` - Submit new statements with mobile media uploads
+- `GET /mobile/v1/games/{gameId}` - Retrieve mobile-optimized game data
+- `POST /mobile/v1/games/{gameId}/guess` - Submit mobile game guesses with device context
+- `POST /mobile/v1/media/upload` - Handle mobile camera/video uploads efficiently
+- `GET /mobile/v1/health` - Mobile app health check and feature flags
+
+## Mobile Performance Considerations
+- Implement pagination for list endpoints to reduce mobile data usage
+- Use efficient media encoding for mobile video/image uploads
+- Support offline-first patterns with eventual consistency
+- Include request/response compression for mobile bandwidth optimization
 
 ---

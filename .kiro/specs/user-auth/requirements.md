@@ -1,24 +1,24 @@
-# User Authentication - Requirements
+# Mobile User Authentication - Requirements
 
-## User Story 1: Secure Login and Logout
+## User Story 1: Native Mobile Login and Logout
 
-WHEN a user attempts to access the app  
-THE SYSTEM SHALL provide a secure login interface with email/password authentication  
-AND allow secure logout terminating the session
+WHEN a mobile user attempts to access the app  
+THE SYSTEM SHALL provide native mobile authentication with biometric options (Touch ID, Face ID, fingerprint)  
+AND allow secure logout with mobile-specific session cleanup and device token revocation
 
-## User Story 2: Account Registration and Password Recovery
+## User Story 2: Mobile Account Registration and Recovery
 
-THE SYSTEM SHALL allow users to create new accounts with email verification  
-AND provide password reset functionality through secure email links
+THE SYSTEM SHALL allow mobile users to create accounts with email verification optimized for mobile devices  
+AND provide mobile-friendly password reset through secure links and native mobile browser integration
 
-## User Story 3: Session Management and Security
+## User Story 3: Mobile Session Management and Device Security
 
-THE SYSTEM SHALL use JWT tokens or equivalent for stateless session management  
-AND tokens SHALL expire and refresh securely  
-THE SYSTEM SHALL prevent unauthorized access to user data and game sessions
+THE SYSTEM SHALL use mobile-optimized JWT tokens stored in device secure storage (iOS Keychain, Android Keystore)  
+AND tokens SHALL refresh seamlessly during mobile app backgrounding/foregrounding  
+THE SYSTEM SHALL prevent unauthorized access using device-specific security features and detect rooted/jailbroken devices
 
-## User Story 4: Profile Management and Data Privacy
+## User Story 4: Mobile Profile Management and Privacy
 
-WHEN logged in  
-THE SYSTEM SHALL allow users to view and update profile information securely  
-AND enforce data privacy and protection policies on all personal data
+WHEN logged in on mobile device  
+THE SYSTEM SHALL allow users to view and update profile information through native mobile UI  
+AND enforce mobile privacy policies with granular permissions for camera, microphone, and storage access

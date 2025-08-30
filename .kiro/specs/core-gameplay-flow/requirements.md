@@ -1,33 +1,33 @@
-# Core Gameplay Flow - Requirements
+# Mobile Core Gameplay Flow - Requirements
 
 ## Introduction
 
-Defines game mechanics and progression driving engagement: core loop, challenge creation with media, guessing, feedback, progression, and optional emotion recognition.
+Defines mobile game mechanics and progression driving mobile engagement: core loop, mobile video challenge creation, native mobile guessing experience, mobile-optimized feedback, progression, and mobile emotion recognition.
 
 ***
 
 ## Requirements
 
-### Requirement 1: Intuitive Core Game Loop (MVP Mandatory)
+### Requirement 1: Native Mobile Game Loop (MVP Mandatory)
 
-- Present UI for lie selection among three video statements.
-- **Require video with audio recording for all statements** - no text input or fallback options.
-- Immediate visual/audio feedback on core actions.
-- Helpful guidance on invalid input or missing recordings.
-- Subtle hints on player idle after 30 seconds.
-
-***
-
-### Requirement 2: Progress and Achievement Feedback
-
-- Real-time progress and achievement updates.
-- Celebrations and unlockable cosmetics.
-- Progress screen with level and goals.
-- Highlight personal bests.
+- Present native mobile UI for lie selection among three video statements on mobile screens
+- **Require native mobile video with audio recording for all statements** - leveraging device camera and microphone
+- Immediate native mobile visual/haptic feedback on core actions using device capabilities
+- Mobile-friendly guidance on invalid input or missing camera/microphone permissions
+- Mobile-appropriate idle detection and re-engagement after 30 seconds with push notifications
 
 ***
 
-### Requirement 3: Game Difficulty and Engagement
+### Requirement 2: Mobile Progress and Achievement Feedback
+
+- Real-time mobile progress updates with native notifications and badges
+- Mobile celebration animations and unlockable mobile-specific cosmetics
+- Native mobile progress screen optimized for touch interaction and portrait/landscape modes
+- Highlight personal bests with mobile sharing capabilities (social media integration)
+
+***
+
+### Requirement 3: Mobile Game Difficulty and Engagement
 
 - Progressive difficulty increase over rounds.
 - New game elements for advanced players.

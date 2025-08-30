@@ -2,39 +2,58 @@
 include: always
 ---
 
-# Security Guidelines
+# Mobile Security Guidelines
 
-## Authentication and Authorization
-- Use secure JWT-based authentication with short expiration times.
-- Store sensitive tokens securely and never expose them in logs or UI.
-- Verify user permissions on all API requests before data retrieval or modification.
+## Mobile Authentication and Authorization
+- Use secure JWT-based authentication optimized for mobile app lifecycles
+- Implement biometric authentication (Touch ID, Face ID, fingerprint) where appropriate
+- Store sensitive tokens in mobile secure storage (iOS Keychain, Android Keystore)
+- Never expose authentication tokens in mobile app logs or debugging tools
+- Verify user permissions on all mobile API requests with device context validation
 
-## Data Validation & Sanitization
-- Sanitize all user inputs server-side to prevent injection attacks.
-- Use strict schema validation (e.g., Joi, Yup) on API inputs.
-- Enforce length and format constraints especially on uploaded media and text fields.
+## Mobile Data Validation & Sanitization
+- Sanitize all user inputs both client-side (mobile app) and server-side
+- Use strict schema validation for mobile API inputs with mobile-specific constraints
+- Enforce mobile-appropriate limits on uploaded media (file size, resolution, duration)
+- Validate camera and microphone permissions before accessing device features
 
-## Transport Security
-- Use HTTPS for all client-server communication.
-- Enforce HSTS headers on backend and application server responses.
+## Mobile Transport Security
+- Use HTTPS/TLS for all mobile-to-server communication
+- Implement certificate pinning in mobile app to prevent man-in-the-middle attacks
+- Use secure WebSocket connections for real-time mobile features
+- Encrypt sensitive data in transit with mobile-optimized encryption protocols
 
-## Data Privacy
-- Store personal and biometric data encrypted at rest.
-- Transmit sensitive files and tokens encrypted using TLS.
-- Implement data retention and purge policies, especially for uploaded user videos/audio.
-- Ensure all stored data complies with applicable laws (HIPAA, GDPR if possible).
+## Mobile Data Privacy & Storage
+- Store personal and biometric data encrypted using mobile platform secure storage
+- Implement on-device encryption for sensitive cached data
+- Use platform-specific privacy frameworks (iOS Privacy Framework, Android Privacy APIs)
+- Handle mobile app backgrounding securely (clear sensitive data from memory)
+- Implement mobile-specific data retention policies for cached content
 
-## Rate Limiting & Brute Force Protection
-- Rate limit API endpoints to prevent abuse.
-- Implement account lockout or captcha after repeated failed login or suspicious behavior.
+## Mobile-Specific Security Considerations
+- Request minimal necessary device permissions (camera, microphone, storage)
+- Handle mobile app installation and update security (code signing, app store verification)
+- Implement mobile app integrity checks to prevent tampering
+- Secure mobile deep links and URL schemes from malicious redirects
+- Protect against mobile-specific attacks (SMS interception, SIM swapping)
 
-## Dependency & Vulnerability Management
-- Regularly audit and update dependencies using tools like npm audit or Snyk.
-- Avoid using deprecated or vulnerable packages.
+## Mobile Rate Limiting & Abuse Protection
+- Implement mobile-aware rate limiting based on device ID and user patterns
+- Protect against mobile-specific abuse (automated app interactions, device farming)
+- Use device fingerprinting and behavioral analytics for mobile fraud detection
+- Implement progressive mobile app lockout for suspicious activity
 
-## Logging & Monitoring
-- Log authentication and critical actions for security audits.
-- Avoid logging sensitive user content or tokens.
-- Use error tracking tools (Sentry, Rollbar) for anomaly detection.
+## Mobile Dependency & Vulnerability Management
+- Regularly audit React Native and Expo dependencies for mobile security vulnerabilities
+- Monitor mobile platform security updates and apply promptly
+- Use mobile-specific security scanning tools for native dependencies
+- Implement mobile app security testing in CI/CD pipeline
+
+## Mobile Logging & Monitoring
+- Log mobile-specific security events (permission requests, biometric auth attempts)
+- Implement mobile crash reporting with privacy-safe data collection
+- Use mobile analytics to detect unusual app usage patterns
+- Avoid logging sensitive mobile data (device IDs, biometric data, camera content)
+- Implement mobile-specific error tracking and security incident response
 
 ---

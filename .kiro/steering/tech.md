@@ -2,36 +2,44 @@
 include: always
 ---
 
-# Technology Stack
+# Technology Stack - Mobile-First
 
 ## Overview  
-We use a modern and pragmatic stack emphasizing speed of development, cross-platform capability, maintainability, and scalability. Prioritize tools that enable rapid iteration and Kiro integration.
+We use a mobile-first React Native/Expo stack emphasizing native mobile performance, rapid development, and optimal AI-assisted coding with Kiro. The web app has been archived to focus exclusively on mobile development.
 
-## Frontend  
-- Framework: React (or React Native for mobile) with TypeScript for reliability  
-- UI: Component-driven architecture; styled with CSS-in-JS or Tailwind CSS  
-- Real-time / Multiplayer: Socket.IO or WebSocket where needed for synchronous gameplay  
-- Media: Browser Media APIs for webcam/mic capture and playback; fallbacks as necessary  
+## Mobile Frontend  
+- **Framework**: React Native with Expo SDK 53+ for maximum native compatibility
+- **Language**: TypeScript for reliability and better AI code suggestions
+- **UI**: Native mobile components with Expo styling and React Native best practices
+- **Navigation**: React Navigation for native mobile navigation patterns
+- **State Management**: Redux Toolkit optimized for mobile performance
+- **Media**: Expo Camera and Audio APIs for native device recording capabilities
+- **Offline**: AsyncStorage and SQLite for offline-first mobile experience
 
 ## Backend  
-- Runtime: Node.js with Express or Fastify, or Python with FastAPI for REST APIs  
-- Database: SQLite for development; PostgreSQL planned for production-scale  
-- Storage: Firebase Storage or Supabase (start free-tier) for storing uploaded videos/audio securely  
-- Hosting: Vercel/Netlify for frontend, Railway or Render for backend services  
+- **Runtime**: Python with FastAPI for REST APIs (mobile-optimized endpoints)
+- **Database**: SQLite for development; PostgreSQL for production-scale mobile users
+- **Storage**: Cloud storage (S3/Firebase) optimized for mobile media uploads
+- **Hosting**: Railway or Render for mobile-optimized backend services
+- **API Design**: Mobile-first API patterns with efficient data transfer and offline sync
 
-## Development & Tools  
-- Code Quality: ESLint + Prettier, TypeScript type checking  
-- Testing: Jest + React Testing Library for unit and integration tests  
-- Deployment: GitHub Actions or similar CI/CD pipelines for automated testing and deployment  
-- Documentation: API specs and game design documented clearly in `docs/` folder
+## Mobile Development & Tools  
+- **Development**: Expo Go for rapid mobile iteration and testing
+- **Testing**: Jest + React Native Testing Library for mobile component testing
+- **Device Testing**: iOS Simulator, Android Emulator, and real device testing
+- **Build**: EAS Build for production iOS and Android app builds
+- **Deployment**: App Store Connect and Google Play Console deployment pipelines
+- **Performance**: Flipper and React Native performance monitoring
 
-## AI & Emotion Analytics  
-- Open-source libraries (DeepFace, Vosk) or lightweight ML model embeddings for prototype  
-- Ship kit credits for cloud API exploration (ElevenLabs, Bloom, A0.dev)  
-- Emotion recognition to be modular and abstracted for easy replacement or enhancement  
+## Mobile AI & Emotion Analytics  
+- **On-Device Processing**: Optimized ML models for mobile emotion recognition
+- **Camera Integration**: Real-time emotion analysis during native video recording
+- **Mobile SDKs**: Lightweight mobile-specific AI libraries
+- **Privacy**: On-device processing to maintain user privacy on mobile devices
 
-## Constraints  
-- Keep dependencies minimal at first  
-- Prioritize native-like performance for mobile platforms  
-- Abstain from costly commercial AI APIs until monetization validated  
-- Architect for easy Kiro agent and spec-driven code support  
+## Mobile-Specific Constraints  
+- **Native Performance**: Prioritize 60fps animations and smooth mobile UX
+- **Battery Optimization**: Efficient background processing and camera usage
+- **App Store Compliance**: Follow iOS and Android app store guidelines
+- **Mobile-Only APIs**: Focus on native mobile capabilities (camera, storage, notifications)
+- **AI Integration**: Optimized for mobile AI assistant development with Kiro  

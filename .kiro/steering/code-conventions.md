@@ -2,47 +2,62 @@
 include: always
 ---
 
-# Code Conventions
+# Mobile Code Conventions
 
-## Naming
-- Use **camelCase** for variables and functions: `calculateScore()`
-- Use **PascalCase** for React components: `GameBoard`
-- Use **kebab-case** for folder names: `game-logic/`
-- Use meaningful, descriptive names; avoid abbreviations unless widely understood.
+## Mobile Naming
+- Use **camelCase** for variables and functions: `calculateMobileScore()`
+- Use **PascalCase** for React Native components: `GameScreen`, `CameraView`
+- Use **kebab-case** for folder names: `game-logic/`, `mobile-utils/`
+- Screen components suffixed with "Screen": `GameScreen.tsx`, `HomeScreen.tsx`
+- Use meaningful, descriptive names; avoid abbreviations unless widely understood in mobile context
 
-## File Organization
-- Keep one primary React or JS component/function per file.
-- Separate utilities into `src/utils/`
-- API logic only in `src/api/`
-- Core game rules and mechanics confined to `src/game/`
-- Avoid large files: refactor into smaller reusable modules.
+## Mobile File Organization
+- Keep one primary React Native component per file in `mobile/src/components/`
+- Separate mobile utilities into `mobile/src/utils/`
+- Mobile API client logic in `mobile/src/services/`
+- Core game rules and mechanics in `mobile/src/game/` (mobile-optimized)
+- Screen components in `mobile/src/screens/`
+- Navigation configuration in dedicated navigation files
+- Avoid large mobile files: refactor into smaller reusable modules optimized for mobile
 
-## Style & Formatting
-- Use Prettier with 2-space indentation.
-- Always include type annotations if using TypeScript.
-- Use ESLint with recommended rules to enforce code quality.
-- Comment complex logic with docstrings and inline comments.
+## Mobile Style & Formatting
+- Use Prettier with 2-space indentation for React Native code
+- Always include TypeScript type annotations for mobile props and state
+- Use ESLint with React Native recommended rules for mobile code quality
+- Comment mobile-specific logic (camera handling, navigation, platform differences)
 
-## React Patterns
-- Use functional components and React Hooks.
-- Avoid class-based components.
-- Prefer local state for UI state; lift state up only when necessary.
-- Use context or global state only for app-wide data.
+## React Native Patterns
+- Use functional components with React Native hooks
+- Use React Navigation for mobile screen navigation
+- Prefer React Native's StyleSheet for styling over inline styles
+- Use React Native's Dimensions API for responsive mobile layouts
+- Handle platform differences with Platform.OS conditionals
+- Optimize for mobile performance with React.memo and useCallback where appropriate
 
-## Error Handling
-- Gracefully handle unexpected user inputs and API errors.
-- Display user-friendly error messages.
+## Mobile Error Handling
+- Gracefully handle mobile-specific errors (camera permissions, network connectivity)
+- Display mobile-friendly error messages with appropriate UI feedback
+- Handle app backgrounding and foregrounding states
+- Implement offline error states for mobile network issues
 
-## Code Quality and Build Compliance
+## Mobile Code Quality and Build Compliance
+- All mobile code changes must compile successfully with Expo CLI and React Native
+- The mobile app should run correctly with `npm run start:mobile` or `expo start`
+- TypeScript checking must pass for mobile code: `npm run type-check:mobile`
+- Mobile builds must succeed: EAS Build for Android/iOS without errors
+- React Native Metro bundler must complete without errors
+- Mobile-specific tests must pass before completing tasks
+- Failed mobile builds must trigger immediate fixes for native compilation issues
 
-- All code changes must ensure the project compiles successfully with zero build errors.
-- The application should run correctly with `npm run start` or equivalent without runtime errors.
-- TypeScript type checking must pass. Before completing a task, run `npm run type-check` and ensure there are no errors.
-- Tasks are not considered complete until the build passes and no compilation issues exist.
-- Automated test suites covering new or modified features must pass before merging code.
-- Failed builds or tests must trigger immediate fixes rather than partial or broken implementations.
-- Developers and automation (e.g., Kiro) should respect these quality gates and prioritize compilation success.
+## Mobile Platform Considerations
+- Test on both iOS and Android platforms for compatibility
+- Use React Native's Platform module for platform-specific code
+- Follow platform-specific UI guidelines (iOS Human Interface, Material Design)
+- Handle different screen sizes and orientations appropriately
+- Optimize for mobile performance and battery usage
 
-## Commit Messages
-- Use clear, imperative style: `Add game board component`  
+## Mobile Commit Messages
+- Use clear, mobile-focused imperative style: `Add camera permission handling to GameScreen`
+- Include platform context when relevant: `Fix Android navigation bar spacing`
+
 ---
