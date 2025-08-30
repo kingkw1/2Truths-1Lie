@@ -5,6 +5,10 @@
   "main": "mobile/index.ts",
   "scripts": {
     "start": "cd mobile && npx expo start",
+    "start:mobile": "cd mobile && expo start",
+    "start:backend": "cd backend && python main.py",
+    "start:dev": "concurrently \"npm run start:backend\" \"npm run start:mobile\"",
+    "demo": "./demo-setup.sh",
     "mobile": "cd mobile && npx expo start --offline",
     "mobile:install": "cd mobile && npm install",
     "sync": "./sync-to-mobile.sh",
@@ -12,7 +16,13 @@
     "android": "cd mobile && expo run:android",
     "ios": "cd mobile && expo run:ios",
     "build:android": "cd mobile && eas build --platform android",
-    "build:ios": "cd mobile && eas build --platform ios"
+    "build:ios": "cd mobile && eas build --platform ios",
+    "test:mobile": "cd mobile && npm test",
+    "test:backend": "cd backend && python -m pytest",
+    "test:all": "npm run test:mobile && npm run test:backend",
+    "lint:mobile": "cd mobile && npx eslint src --ext .ts,.tsx",
+    "format:mobile": "cd mobile && npx prettier --write src",
+    "type-check:mobile": "cd mobile && npx tsc --noEmit"
   },
   "devDependencies": {
     "@types/babel__core": "^7.20.5",
