@@ -1,14 +1,16 @@
 # Media Upload – Implementation Tasks
 
-- [ ] Design and implement backend API endpoint(s) for secure video upload and retrieval  
-- [ ] Integrate cloud storage provider (e.g., AWS S3, Firebase, or equivalent) for durable video storage  
-- [ ] Update client to upload video media (Blob) to backend after recording and compression  
-- [ ] Refactor client and challenge data model to store and reference server URL after upload  
-- [ ] Implement frontend upload progress UI, cancel, retry, and error states  
-- [ ] Enforce file type, size, and duration validation before/after upload  
-- [ ] Ensure uploaded videos are accessible cross-device and post-restart  
-- [ ] Handle authentication and authorization for upload/download requests  
-- [ ] Add migration logic for converting legacy blob URLs to persistent server URLs  
-- [ ] Write unit and integration tests for uploading, error handling, and persistence  
-- [ ] Update documentation to reflect persistent upload workflow  
-- [ ] (Optional) Integrate CDN or signed URL support for scalable playback/delivery
+- [ ] Design and implement backend API endpoints for secure video upload and streaming retrieval  
+- [ ] Integrate cloud storage provider (AWS S3, Firebase, or equivalent) for persistent, scalable media storage  
+- [ ] Update client logic to record, compress, and upload video to backend with progress feedback  
+- [ ] Refactor challenge data model to store persistent server URLs post-upload  
+- [ ] Implement robust frontend upload UI (progress, cancel, retry, error states)  
+- [ ] Enforce strict server/client validation (file format, size, duration) before acceptance  
+- [ ] Ensure cross-device accessibility for uploaded videos (iOS/Android, multi-login)  
+- [ ] Add secure authentication/authorization flow to uploads and downloads  
+- [ ] Provide migration for legacy blob/video references to new URLs  
+- [ ] Write complete unit/integration/regression tests for upload process and error handling  
+- [ ] Update developer and user documentation to describe persistent media workflow  
+- [ ] (Optional) Integrate CDN and signed URL support for global scalable delivery
+
+***

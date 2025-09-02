@@ -2,30 +2,34 @@
 
 ## Architecture
 
-- After challenge media recording and compression, the app initiates upload to a backend API (e.g., FastAPI endpoint)
-- Server receives and validates video media, stores it in a managed cloud storage bucket with user association
-- Backend returns a persistent URL (public or authenticated) for the file upon successful upload
-- Client stores only the server URL (never the blob URL) for persistent challenge playback and metadata
-- Challenge publishing is blocked until successful upload; upload resumes in background if interrupted
+- App compresses and prepares video after challenge recording; upload initiated via backend API (e.g., FastAPI `POST /api/upload`)
+- Backend receives, authenticates, and validates each upload, storing video securely in cloud storage (e.g., S3, Firebase), linked to user/challenge
+- Upon success, backend returns a streaming URL or signed access URL for client reference
+- Challenge remains unpublished until upload is complete and verified
+- Uploads can resume automatically if interrupted and support backgrounding
 
 ## Data Flow
 
-1. User records video in challenge creation form  
-2. App compresses video and initializes upload (shows progress UI)  
-3. API receives video file, performs MIME/size/duration validation  
-4. Video stored in cloud storage and associated with user/challenge  
-5. Backend returns video URL; client updates challenge with this URL  
-6. Challenge is eligible for publishing/guessing
+1. User records/compresses challenge video  
+2. App initiates secured upload, showing progress  
+3. API validates file, processes metadata  
+4. Video stored in cloud, URL returned to app  
+5. Challenge updated with server URL, enabling cross-device access and playback  
+6. Playback uses mobile native player and adaptive streaming
 
 ## Interfaces
 
-- `POST /api/upload` (authenticated): Accepts video file, returns video URL  
-- `GET /api/media/:id` (authenticated/public): Streams/serves uploaded video  
-- Cloud provider SDK configuration and server file management  
-- Redux or context state update for media URLs
+- `POST /api/upload` (auth required): Accepts video; returns durable URL  
+- `GET /api/media/:id` (auth/public): Streams/retrieves video content  
+- Client-side progress tracking and upload management  
+- Backend file management with cloud provider SDK/config and secure access policies  
+- Redux/context updates for uploaded media URLs
 
-## Security & Performance Considerations
+## Security & Performance
 
-- All uploads authenticated and rate-limited; files scanned for compliance (if needed)
-- Use resumable upload (multipart/chunked) for large files or poor connectivity  
-- Serve videos with proper caching headers; support CDN/edge distribution in scale scenarios
+- All uploads rate-limited, authenticated, and scanned for safety  
+- Use resumable/multipart uploads for connection resilience  
+- Serve media with cache-control and CDN integration for optimized delivery  
+- Strict validation (format, duration, resolution, file size) per device/os
+
+***
