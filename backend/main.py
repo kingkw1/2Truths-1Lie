@@ -28,6 +28,8 @@ from services.challenge_service import ChallengeService, ChallengeServiceError
 from services.auth_service import get_current_user
 from services.rate_limiter import RateLimiter, RateLimitExceeded
 from services.validation_service import gameplay_validator, integrity_validator
+from api.media_endpoints import router as media_router
+from api.auth_endpoints import router as auth_router
 from config import settings
 
 app = FastAPI(
@@ -35,6 +37,10 @@ app = FastAPI(
     description="Backend API for chunked media uploads and game management",
     version="1.0.0"
 )
+
+# Include routers
+app.include_router(media_router)
+app.include_router(auth_router)
 
 # CORS middleware for frontend integration
 app.add_middleware(

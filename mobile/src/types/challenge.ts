@@ -28,7 +28,8 @@ export type MediaType = 'video' | 'audio' | 'text';
  */
 export interface MediaCapture {
   type: MediaType;
-  url?: string;
+  url?: string; // Local blob URL for preview (temporary)
+  streamingUrl?: string; // Persistent server URL for playback
   duration?: number; // in milliseconds
   fileSize?: number; // in bytes
   mimeType?: string;
@@ -38,6 +39,13 @@ export interface MediaCapture {
   compressionRatio?: number; // ratio of compression (originalSize / compressedSize)
   compressionTime?: number; // time taken to compress in milliseconds
   compressionQuality?: number; // quality setting used (0-1)
+  // Upload metadata
+  mediaId?: string; // server-assigned media ID
+  uploadTime?: number; // time taken to upload in milliseconds
+  storageType?: 'local' | 'cloud' | 'cloud_fallback'; // where the media is stored
+  cloudStorageKey?: string; // Cloud storage key for direct access
+  uploadSessionId?: string; // Upload session ID for tracking
+  isUploaded?: boolean; // Whether media has been successfully uploaded to server
 }
 
 /**

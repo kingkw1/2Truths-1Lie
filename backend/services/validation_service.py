@@ -34,13 +34,34 @@ class GameplayValidationService:
     # Video requirements based on Requirement 1
     MIN_VIDEO_DURATION = 3.0  # seconds
     MAX_VIDEO_DURATION = 60.0  # seconds
-    REQUIRED_VIDEO_TYPES = ["video/mp4", "video/webm", "video/quicktime"]
+    REQUIRED_VIDEO_TYPES = ["video/mp4", "video/webm", "video/quicktime", "video/mov"]
     MAX_FILE_SIZE = 50 * 1024 * 1024  # 50MB
+    MIN_FILE_SIZE = 100 * 1024  # 100KB minimum
+    
+    # Video quality requirements
+    MIN_VIDEO_WIDTH = 320  # pixels
+    MIN_VIDEO_HEIGHT = 240  # pixels
+    MAX_VIDEO_WIDTH = 1920  # pixels
+    MAX_VIDEO_HEIGHT = 1080  # pixels
+    REQUIRED_VIDEO_CODECS = ["h264", "vp8", "vp9"]
+    REQUIRED_AUDIO_CODECS = ["aac", "opus", "vorbis"]
     
     # Challenge requirements
     REQUIRED_STATEMENTS_COUNT = 3
     REQUIRED_TRUTH_COUNT = 2
     REQUIRED_LIE_COUNT = 1
+    
+    # File validation patterns
+    DANGEROUS_EXTENSIONS = {'.exe', '.bat', '.cmd', '.scr', '.pif', '.com', '.jar'}
+    ALLOWED_EXTENSIONS = {'.mp4', '.webm', '.mov', '.ogg'}
+    
+    # Content validation
+    MAX_FILENAME_LENGTH = 255
+    FORBIDDEN_FILENAME_CHARS = {'<', '>', ':', '"', '|', '?', '*', '\0'}
+    
+    # Rate limiting for validation
+    MAX_VALIDATIONS_PER_MINUTE = 60
+    MAX_VALIDATIONS_PER_HOUR = 1000
     
     def __init__(self):
         self.validation_history: List[ValidationResult] = []
@@ -202,13 +223,25 @@ class GameplayValidationService:
                 {"mime_type": upload_session.mime_type, "supported": self.REQUIRED_VIDEO_TYPES}
             )
         
-        # Check file size
+        # Check file size bounds
         if upload_session.file_size > self.MAX_FILE_SIZE:
             return ValidationResult(
                 False,
                 f"Video file too large: {upload_session.file_size} bytes (max: {self.MAX_FILE_SIZE})",
                 {"file_size": upload_session.file_size, "max_size": self.MAX_FILE_SIZE}
             )
+        
+        if upload_session.file_size < self.MIN_FILE_SIZE:
+            return ValidationResult(
+                False,
+                f"Video file too small: {upload_session.file_size} bytes (min: {self.MIN_FILE_SIZE})",
+                {"file_size": upload_session.file_size, "min_size": self.MIN_FILE_SIZE}
+            )
+        
+        # Validate filename security
+        filename_validation = self._validate_filename_security(upload_session.filename)
+        if not filename_validation.is_valid:
+            return filename_validation
         
         # Check duration if provided
         duration = statement_data.get('duration_seconds', 0)
@@ -227,15 +260,141 @@ class GameplayValidationService:
                     {"duration": duration, "max_duration": self.MAX_VIDEO_DURATION}
                 )
         
+        # Validate video metadata if available
+        metadata_validation = self._validate_video_metadata(upload_session, statement_data)
+        if not metadata_validation.is_valid:
+            return metadata_validation
+        
         return ValidationResult(
             True,
             "Video requirements satisfied",
             {
                 "mime_type": upload_session.mime_type,
                 "file_size": upload_session.file_size,
-                "duration": duration
+                "duration": duration,
+                "filename": upload_session.filename
             }
         )
+    
+    def _validate_filename_security(self, filename: str) -> ValidationResult:
+        """Validate filename for security issues"""
+        
+        # Check filename length
+        if len(filename) > self.MAX_FILENAME_LENGTH:
+            return ValidationResult(
+                False,
+                f"Filename too long: {len(filename)} chars (max: {self.MAX_FILENAME_LENGTH})",
+                {"filename_length": len(filename), "max_length": self.MAX_FILENAME_LENGTH}
+            )
+        
+        # Check for forbidden characters
+        forbidden_chars = self.FORBIDDEN_FILENAME_CHARS.intersection(set(filename))
+        if forbidden_chars:
+            return ValidationResult(
+                False,
+                f"Filename contains forbidden characters: {forbidden_chars}",
+                {"forbidden_chars": list(forbidden_chars)}
+            )
+        
+        # Check file extension
+        file_ext = Path(filename).suffix.lower()
+        if file_ext in self.DANGEROUS_EXTENSIONS:
+            return ValidationResult(
+                False,
+                f"Dangerous file extension: {file_ext}",
+                {"extension": file_ext, "dangerous_extensions": list(self.DANGEROUS_EXTENSIONS)}
+            )
+        
+        if file_ext not in self.ALLOWED_EXTENSIONS:
+            return ValidationResult(
+                False,
+                f"Invalid file extension: {file_ext}",
+                {"extension": file_ext, "allowed_extensions": list(self.ALLOWED_EXTENSIONS)}
+            )
+        
+        # Check for path traversal attempts
+        if '..' in filename or filename.startswith('/') or '\\' in filename:
+            return ValidationResult(
+                False,
+                "Filename contains path traversal patterns",
+                {"filename": filename}
+            )
+        
+        return ValidationResult(True, "Filename is secure", {"filename": filename})
+    
+    def _validate_video_metadata(self, upload_session: UploadSession, statement_data: Dict[str, Any]) -> ValidationResult:
+        """Validate video metadata and technical specifications"""
+        
+        metadata = upload_session.metadata or {}
+        
+        # Check for required metadata fields
+        required_fields = ['duration_seconds']
+        missing_fields = [field for field in required_fields if field not in statement_data]
+        if missing_fields:
+            return ValidationResult(
+                False,
+                f"Missing required metadata fields: {missing_fields}",
+                {"missing_fields": missing_fields}
+            )
+        
+        # Validate video dimensions if available
+        width = metadata.get('video_width')
+        height = metadata.get('video_height')
+        
+        if width and height:
+            if width < self.MIN_VIDEO_WIDTH or height < self.MIN_VIDEO_HEIGHT:
+                return ValidationResult(
+                    False,
+                    f"Video resolution too low: {width}x{height} (min: {self.MIN_VIDEO_WIDTH}x{self.MIN_VIDEO_HEIGHT})",
+                    {"width": width, "height": height, "min_width": self.MIN_VIDEO_WIDTH, "min_height": self.MIN_VIDEO_HEIGHT}
+                )
+            
+            if width > self.MAX_VIDEO_WIDTH or height > self.MAX_VIDEO_HEIGHT:
+                return ValidationResult(
+                    False,
+                    f"Video resolution too high: {width}x{height} (max: {self.MAX_VIDEO_WIDTH}x{self.MAX_VIDEO_HEIGHT})",
+                    {"width": width, "height": height, "max_width": self.MAX_VIDEO_WIDTH, "max_height": self.MAX_VIDEO_HEIGHT}
+                )
+        
+        # Validate codecs if available
+        video_codec = metadata.get('video_codec', '').lower()
+        audio_codec = metadata.get('audio_codec', '').lower()
+        
+        if video_codec and video_codec not in self.REQUIRED_VIDEO_CODECS:
+            return ValidationResult(
+                False,
+                f"Unsupported video codec: {video_codec}",
+                {"video_codec": video_codec, "supported_codecs": self.REQUIRED_VIDEO_CODECS}
+            )
+        
+        if audio_codec and audio_codec not in self.REQUIRED_AUDIO_CODECS:
+            return ValidationResult(
+                False,
+                f"Unsupported audio codec: {audio_codec}",
+                {"audio_codec": audio_codec, "supported_codecs": self.REQUIRED_AUDIO_CODECS}
+            )
+        
+        # Check bitrate if available
+        bitrate = metadata.get('bitrate')
+        if bitrate:
+            min_bitrate = 100_000  # 100 kbps
+            max_bitrate = 10_000_000  # 10 Mbps
+            
+            if bitrate < min_bitrate:
+                return ValidationResult(
+                    False,
+                    f"Video bitrate too low: {bitrate} bps (min: {min_bitrate})",
+                    {"bitrate": bitrate, "min_bitrate": min_bitrate}
+                )
+            
+            if bitrate > max_bitrate:
+                return ValidationResult(
+                    False,
+                    f"Video bitrate too high: {bitrate} bps (max: {max_bitrate})",
+                    {"bitrate": bitrate, "max_bitrate": max_bitrate}
+                )
+        
+        return ValidationResult(True, "Video metadata is valid", {"metadata": metadata})
     
     async def validate_challenge_structure(self, challenge: Challenge) -> ValidationResult:
         """Validate challenge has correct structure (2 truths, 1 lie)"""
@@ -423,6 +582,129 @@ class GameplayValidationService:
     def clear_validation_history(self):
         """Clear validation history (for testing)"""
         self.validation_history.clear()
+    
+    async def validate_file_before_upload(
+        self, 
+        filename: str, 
+        file_size: int, 
+        mime_type: str,
+        duration_seconds: Optional[float] = None,
+        additional_metadata: Optional[Dict[str, Any]] = None
+    ) -> ValidationResult:
+        """Comprehensive pre-upload file validation"""
+        
+        try:
+            # Basic filename security validation
+            filename_validation = self._validate_filename_security(filename)
+            if not filename_validation.is_valid:
+                return filename_validation
+            
+            # MIME type validation
+            if not mime_type.startswith('video/'):
+                return ValidationResult(
+                    False,
+                    f"Only video files are allowed, got {mime_type}",
+                    {"mime_type": mime_type, "required": "video/*"}
+                )
+            
+            if mime_type not in self.REQUIRED_VIDEO_TYPES:
+                return ValidationResult(
+                    False,
+                    f"Unsupported video format: {mime_type}",
+                    {"mime_type": mime_type, "supported": self.REQUIRED_VIDEO_TYPES}
+                )
+            
+            # File size validation
+            if file_size > self.MAX_FILE_SIZE:
+                return ValidationResult(
+                    False,
+                    f"File too large: {file_size} bytes (max: {self.MAX_FILE_SIZE})",
+                    {"file_size": file_size, "max_size": self.MAX_FILE_SIZE}
+                )
+            
+            if file_size < self.MIN_FILE_SIZE:
+                return ValidationResult(
+                    False,
+                    f"File too small: {file_size} bytes (min: {self.MIN_FILE_SIZE})",
+                    {"file_size": file_size, "min_size": self.MIN_FILE_SIZE}
+                )
+            
+            # Duration validation if provided
+            if duration_seconds is not None:
+                if duration_seconds < self.MIN_VIDEO_DURATION:
+                    return ValidationResult(
+                        False,
+                        f"Video too short: {duration_seconds}s (min: {self.MIN_VIDEO_DURATION}s)",
+                        {"duration": duration_seconds, "min_duration": self.MIN_VIDEO_DURATION}
+                    )
+                
+                if duration_seconds > self.MAX_VIDEO_DURATION:
+                    return ValidationResult(
+                        False,
+                        f"Video too long: {duration_seconds}s (max: {self.MAX_VIDEO_DURATION}s)",
+                        {"duration": duration_seconds, "max_duration": self.MAX_VIDEO_DURATION}
+                    )
+            
+            # Additional metadata validation
+            if additional_metadata:
+                metadata_validation = self._validate_additional_metadata(additional_metadata)
+                if not metadata_validation.is_valid:
+                    return metadata_validation
+            
+            return ValidationResult(
+                True,
+                "File validation passed",
+                {
+                    "filename": filename,
+                    "file_size": file_size,
+                    "mime_type": mime_type,
+                    "duration": duration_seconds,
+                    "metadata": additional_metadata or {}
+                }
+            )
+            
+        except Exception as e:
+            logger.error(f"Error during file validation: {e}")
+            return ValidationResult(
+                False,
+                f"Validation error: {str(e)}",
+                {"error_type": type(e).__name__}
+            )
+    
+    def _validate_additional_metadata(self, metadata: Dict[str, Any]) -> ValidationResult:
+        """Validate additional metadata fields"""
+        
+        # Check for suspicious metadata
+        suspicious_keys = {'script', 'executable', 'command', 'shell'}
+        found_suspicious = [key for key in metadata.keys() if any(sus in key.lower() for sus in suspicious_keys)]
+        
+        if found_suspicious:
+            return ValidationResult(
+                False,
+                f"Suspicious metadata keys found: {found_suspicious}",
+                {"suspicious_keys": found_suspicious}
+            )
+        
+        # Validate specific metadata fields
+        if 'user_agent' in metadata:
+            user_agent = metadata['user_agent']
+            if len(user_agent) > 500:  # Reasonable user agent length
+                return ValidationResult(
+                    False,
+                    f"User agent too long: {len(user_agent)} chars",
+                    {"user_agent_length": len(user_agent)}
+                )
+        
+        # Check for metadata size limits
+        metadata_str = str(metadata)
+        if len(metadata_str) > 10000:  # 10KB metadata limit
+            return ValidationResult(
+                False,
+                f"Metadata too large: {len(metadata_str)} chars",
+                {"metadata_size": len(metadata_str)}
+            )
+        
+        return ValidationResult(True, "Metadata validation passed", {"metadata": metadata})
 
 class ChallengeIntegrityValidator:
     """Validator for challenge data integrity and consistency"""

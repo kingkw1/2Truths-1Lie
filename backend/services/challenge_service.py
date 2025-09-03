@@ -138,12 +138,40 @@ class ChallengeService:
             if upload_session.status != "completed":
                 raise ChallengeServiceError(f"Upload session {media_file_id} is not completed")
             
-            # Create statement
+            # Get media info from media upload service to get persistent URLs
+            from services.media_upload_service import MediaUploadService
+            media_service = MediaUploadService()
+            
+            # Complete the upload to get persistent URLs
+            try:
+                completion_result = await media_service.complete_video_upload(
+                    session_id=media_file_id,
+                    user_id=creator_id
+                )
+                
+                # Use the persistent streaming URL
+                media_url = completion_result.get('streaming_url', f"/api/v1/media/stream/{completion_result['media_id']}")
+                streaming_url = completion_result.get('streaming_url')
+                cloud_storage_key = completion_result.get('cloud_key')
+                storage_type = completion_result.get('storage_type', 'local')
+                
+            except Exception as e:
+                logger.warning(f"Failed to complete media upload for {media_file_id}: {e}")
+                # Fallback to legacy URL format
+                media_url = f"/api/v1/files/{media_file_id}_{upload_session.filename}"
+                streaming_url = None
+                cloud_storage_key = None
+                storage_type = "local"
+            
+            # Create statement with persistent URLs
             statement = Statement(
                 statement_id=statement_id,
                 statement_type=statement_type,
-                media_url=f"/api/v1/files/{media_file_id}_{upload_session.filename}",
+                media_url=media_url,
                 media_file_id=media_file_id,
+                streaming_url=streaming_url,
+                cloud_storage_key=cloud_storage_key,
+                storage_type=storage_type,
                 duration_seconds=stmt_data.get('duration_seconds', 0.0),
                 created_at=datetime.utcnow()
             )
@@ -510,3 +538,21 @@ class ChallengeService:
         page_challenges = filtered_challenges[start_idx:end_idx]
         
         return page_challenges, total_count
+    
+    async def get_all_challenges(self) -> List[Challenge]:
+        """Get all challenges for migration purposes"""
+        return list(self.challenges.values())
+    
+    async def update_challenge(self, challenge_id: str, updated_challenge: Challenge) -> Challenge:
+        """Update an existing challenge"""
+        if challenge_id not in self.challenges:
+            raise ChallengeServiceError(f"Challenge {challenge_id} not found")
+        
+        # Update the challenge
+        self.challenges[challenge_id] = updated_challenge
+        
+        # Save to disk
+        await self._save_challenges()
+        
+        logger.info(f"Updated challenge {challenge_id}")
+        return updated_challenge

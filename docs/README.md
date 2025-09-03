@@ -18,6 +18,8 @@
 ## 🔧 Development & API
 
 - **[API Documentation](api.md)** - Mobile-optimized backend API specifications
+- **[Persistent Media Workflow](PERSISTENT_MEDIA_WORKFLOW.md)** - Complete developer guide for video upload and streaming workflow
+- **[Media Upload Quick Reference](MEDIA_UPLOAD_QUICK_REFERENCE.md)** - Quick reference for developers working with media uploads
 - **[Development Schedule](development-schedule.md)** - Mobile app development timeline and hackathon milestones
 
 ## 📱 Mobile App Features
@@ -27,6 +29,10 @@
 - **iOS and Android app store deployment**
 - **React Native/Expo optimized performance**
 - **Mobile-specific UI/UX patterns**
+
+## 👥 User Guides
+
+- **[User Media Guide](USER_MEDIA_GUIDE.md)** - Complete user guide for creating and sharing video challenges
 
 ---
 

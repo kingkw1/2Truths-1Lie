@@ -30,6 +30,7 @@ import {
 } from '../store/slices/challengeCreationSlice';
 import { mobileMediaIntegration } from '../services/mobileMediaIntegration';
 import { MediaCapture } from '../types';
+import UploadProgressIndicator from './UploadProgressIndicator';
 
 interface MobileCameraRecorderProps {
   statementIndex: number;
@@ -533,19 +534,12 @@ export const MobileCameraRecorder: React.FC<MobileCameraRecorderProps> = ({
         throw new Error('Recording is too short. Please record for at least 0.5 seconds.');
       }
 
-      const mediaCapture: MediaCapture = {
-        type: 'video',
-        url: uri,
-        duration: finalDuration, // Use the calculated final duration
-        fileSize,
-        mimeType: Platform.select({
-          ios: 'video/quicktime',
-          android: 'video/mp4',
-        }) || 'video/mp4',
-      };
-
-      // Update Redux state
-      dispatch(setStatementMedia({ index: statementIndex, media: mediaCapture }));
+      // Process recording with upload through mobile media integration
+      const mediaCapture = await mobileMediaIntegration.stopRecording(
+        statementIndex,
+        uri,
+        finalDuration
+      );
       
       // Call callback to progress to next statement
       console.log('🎬 Calling onRecordingComplete callback');
@@ -553,11 +547,12 @@ export const MobileCameraRecorder: React.FC<MobileCameraRecorderProps> = ({
 
       // Show success feedback with platform-specific styling
       const durationText = Math.round(finalDuration / 1000);
-      const sizeText = (fileSize / (1024 * 1024)).toFixed(1);
+      const sizeText = (mediaCapture.fileSize! / (1024 * 1024)).toFixed(1);
+      const storageType = mediaCapture.storageType || 'local';
       
       Alert.alert(
         '✅ Recording Complete',
-        `Video recorded successfully!\n\nDuration: ${durationText}s\nSize: ${sizeText}MB`,
+        `Video ${storageType === 'cloud' ? 'uploaded' : 'recorded'} successfully!\n\nDuration: ${durationText}s\nSize: ${sizeText}MB${mediaCapture.compressionRatio ? `\nCompression: ${Math.round((1 - mediaCapture.compressionRatio) * 100)}%` : ''}`,
         [{ text: 'OK', style: 'default' }],
         { cancelable: false }
       );
@@ -580,6 +575,9 @@ export const MobileCameraRecorder: React.FC<MobileCameraRecorderProps> = ({
       } else if (error.message?.includes('permission')) {
         errorType = CameraErrorType.PERMISSION_DENIED;
         errorMessage = 'Failed to save recording due to permission issues.';
+      } else if (error.message?.includes('upload') || error.message?.includes('network')) {
+        errorType = CameraErrorType.NETWORK_ERROR;
+        errorMessage = 'Failed to upload recording. Please check your internet connection and try again.';
       }
 
       handleCameraError(errorType, errorMessage, true, () => {
@@ -1122,6 +1120,12 @@ export const MobileCameraRecorder: React.FC<MobileCameraRecorderProps> = ({
           </View>
         )}
       </View>
+      
+      {/* Upload Progress Indicator */}
+      <UploadProgressIndicator 
+        statementIndex={statementIndex}
+        visible={true}
+      />
     </View>
   );
 };

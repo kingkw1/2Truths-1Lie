@@ -3,6 +3,7 @@ Configuration settings for the backend
 """
 import os
 from pathlib import Path
+from typing import Optional
 from pydantic_settings import BaseSettings
 
 class Settings(BaseSettings):
@@ -37,6 +38,34 @@ class Settings(BaseSettings):
     
     # Rate limiting
     UPLOAD_RATE_LIMIT: int = 5  # uploads per hour per user
+    
+    # Video-specific settings
+    MAX_VIDEO_DURATION_SECONDS: int = 300  # 5 minutes max
+    MAX_USER_UPLOADS: int = 10  # Max concurrent uploads per user
+    
+    # Cloud storage settings
+    CLOUD_STORAGE_PROVIDER: str = "s3"  # s3, firebase, etc.
+    USE_CLOUD_STORAGE: bool = True  # Set to False to use local storage
+    
+    # AWS S3 settings
+    AWS_S3_BUCKET_NAME: str = "twotruthsalie-media"
+    AWS_S3_REGION: str = "us-east-1"
+    AWS_ACCESS_KEY_ID: Optional[str] = None  # Will use IAM role if not provided
+    AWS_SECRET_ACCESS_KEY: Optional[str] = None  # Will use IAM role if not provided
+    AWS_S3_ENDPOINT_URL: Optional[str] = None  # For S3-compatible services
+    
+    # CDN settings (optional)
+    CDN_BASE_URL: Optional[str] = None  # CloudFront or other CDN URL
+    CDN_DISTRIBUTION_ID: Optional[str] = None  # CloudFront distribution ID for signed URLs
+    CDN_PRIVATE_KEY_PATH: Optional[str] = None  # Path to CloudFront private key
+    CDN_KEY_PAIR_ID: Optional[str] = None  # CloudFront key pair ID
+    SIGNED_URL_EXPIRY: int = 3600  # 1 hour for signed URLs
+    CDN_SIGNED_URL_EXPIRY: int = 7200  # 2 hours for CDN signed URLs
+    
+    # Global delivery settings
+    ENABLE_GLOBAL_CDN: bool = False  # Enable global CDN delivery
+    CDN_CACHE_CONTROL: str = "public, max-age=86400"  # 24 hours default cache
+    CDN_EDGE_LOCATIONS: list = ["us-east-1", "eu-west-1", "ap-southeast-1"]  # Primary edge locations
     
     class Config:
         env_file = ".env"

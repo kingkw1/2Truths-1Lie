@@ -1,360 +1,350 @@
-# Automated Validation System Documentation
+# Strict Validation System Documentation
 
 ## Overview
 
-The automated validation system ensures that the core gameplay flow meets Requirements 1 and 3 from the specification. It provides comprehensive validation for challenge creation, media requirements, game mechanics, and data integrity.
+This document describes the comprehensive validation system implemented for the media upload feature, ensuring strict server/client validation of file format, size, and duration before acceptance.
 
-## Architecture
+## Implementation Summary
 
-### Core Components
+### Server-Side Validation
 
-1. **GameplayValidationService** - Validates core gameplay requirements
-2. **ChallengeIntegrityValidator** - Validates data consistency and integrity
-3. **ValidationResult** - Standardized validation result format
-4. **API Integration** - Validation endpoints for real-time validation
+#### Enhanced GameplayValidationService
 
-### Validation Flow
+**Location**: `backend/services/validation_service.py`
 
-```mermaid
-graph TD
-    A[Challenge Creation Request] --> B[Request Validation]
-    B --> C{Valid Request?}
-    C -->|No| D[Return Validation Error]
-    C -->|Yes| E[Create Challenge]
-    E --> F[Structure Validation]
-    F --> G[Integrity Validation]
-    G --> H{All Valid?}
-    H -->|No| I[Reject Challenge]
-    H -->|Yes| J[Store Challenge]
-    J --> K[Pre-Publication Validation]
-    K --> L[Complete Validation Suite]
-    L --> M[Publish Challenge]
-```
+**Key Features**:
+- Comprehensive file validation before upload
+- Security-focused filename validation
+- Video metadata and technical specification validation
+- Configurable validation limits and requirements
 
-## Requirement 1 Validation: Intuitive Core Game Loop (MVP Mandatory)
+**Validation Categories**:
 
-### Video with Audio Requirements
+1. **File Format Validation**
+   - MIME type verification (video/* only)
+   - Supported formats: MP4, WebM, QuickTime, MOV
+   - Dangerous extension detection (.exe, .bat, .cmd, etc.)
+   - File extension whitelist enforcement
 
-- **Mandatory Video Format**: All statements must be video recordings
-- **Supported Formats**: `video/mp4`, `video/webm`, `video/quicktime`
-- **No Text Fallbacks**: Text-only statements are rejected
-- **Audio Requirement**: Video must include audio track
+2. **File Size Validation**
+   - Minimum size: 100KB (prevents empty/corrupt files)
+   - Maximum size: 50MB (configurable)
+   - Prevents both tiny and oversized uploads
 
-### Statement Requirements
+3. **Duration Validation**
+   - Minimum duration: 3 seconds
+   - Maximum duration: 60 seconds
+   - Ensures meaningful video content
 
-- **Exact Count**: Must have exactly 3 statements
-- **Lie Selection**: One statement must be designated as the lie
-- **Valid Indices**: Lie statement index must be 0, 1, or 2
-- **Media Validation**: Each statement must have completed upload session
+4. **Security Validation**
+   - Filename length limits (255 characters max)
+   - Forbidden character detection (`<>:"|?*` and control chars)
+   - Path traversal prevention (`../`, `\`, absolute paths)
+   - Suspicious metadata detection
 
-### Duration Limits
+5. **Technical Specification Validation**
+   - Video resolution limits (320x240 to 1920x1080)
+   - Codec validation (H.264, VP8, VP9 for video; AAC, Opus, Vorbis for audio)
+   - Bitrate limits (100 kbps to 10 Mbps)
 
-- **Minimum Duration**: 3 seconds per video
-- **Maximum Duration**: 60 seconds per video
-- **File Size Limit**: 50MB maximum per video
+#### Enhanced MediaUploadService
 
-### Implementation
+**Location**: `backend/services/media_upload_service.py`
 
-```python
-async def validate_challenge_creation(
-    self, 
-    request: CreateChallengeRequest,
-    upload_service
-) -> ValidationResult:
-    """
-    Validates challenge creation according to Requirement 1
-    - Must have exactly 3 video statements
-    - All statements must have valid video recordings
-    - One statement must be designated as lie
-    """
-```
+**Improvements**:
+- Integration with comprehensive validation service
+- Enhanced error reporting with error codes
+- Fallback validation if advanced service fails
+- Duration parameter support in validation
 
-## Requirement 3 Validation: Game Difficulty and Engagement
+#### API Endpoint Enhancements
 
-### Difficulty Assessment
+**Location**: `backend/api/media_endpoints.py`
 
-The system automatically assesses challenge difficulty based on:
+**New Features**:
+- Duration validation in `/validate` endpoint
+- MIME type parameter support
+- Enhanced error reporting
+- Validation timestamp tracking
 
-- **Video Duration**: Average duration across all statements
-- **Total Engagement Time**: Sum of all video durations
-- **Complexity Indicators**: File size, format, metadata
+### Client-Side Validation
 
-### Difficulty Levels
+#### Enhanced VideoUploadService
 
-- **Easy**: Average duration < 10 seconds
-- **Medium**: Average duration 10-30 seconds  
-- **Hard**: Average duration > 30 seconds
+**Location**: `mobile/src/services/uploadService.ts`
 
-### Minimum Engagement Requirements
+**Key Features**:
+- Pre-upload client-side validation
+- Server validation integration
+- Comprehensive error handling with error codes
+- Security-focused filename validation
 
-- **Total Duration**: Minimum 10 seconds total across all statements
-- **Meaningful Gameplay**: Prevents challenges too short for engagement
-- **Progressive Difficulty**: Supports increasing complexity over time
+**Validation Checks**:
 
-### Implementation
+1. **File Format Validation**
+   - Extension whitelist: `.mp4`, `.mov`, `.webm`
+   - Dangerous extension detection
+   - Case-insensitive validation
 
-```python
-async def validate_gameplay_difficulty(self, challenge: Challenge) -> ValidationResult:
-    """
-    Validate challenge meets difficulty requirements (Requirement 3)
-    Analyzes video duration, complexity indicators
-    """
-```
+2. **File Size Validation**
+   - Minimum: 100KB
+   - Maximum: 50MB
+   - User-friendly error messages with size conversion
 
-## Validation Services
+3. **Duration Validation**
+   - Minimum: 3 seconds
+   - Maximum: 60 seconds
+   - Precise boundary checking
 
-### GameplayValidationService
+4. **Security Validation**
+   - Filename length limits
+   - Dangerous character detection
+   - Path traversal prevention
+   - Empty filename detection
 
-Primary validation service for core gameplay requirements.
+5. **Server Integration**
+   - Pre-upload server validation
+   - Graceful fallback if server unavailable
+   - Error code propagation
 
-#### Key Methods
+## Configuration
 
-- `validate_challenge_creation()` - Validates challenge creation requests
-- `validate_challenge_structure()` - Validates 2 truths + 1 lie structure
-- `validate_gameplay_difficulty()` - Assesses and validates difficulty
-- `validate_complete_challenge()` - Runs complete validation suite
+### Server Configuration
 
-#### Validation Rules
+**File**: `backend/config.py`
 
 ```python
-# Video requirements
-MIN_VIDEO_DURATION = 3.0  # seconds
-MAX_VIDEO_DURATION = 60.0  # seconds
-REQUIRED_VIDEO_TYPES = ["video/mp4", "video/webm", "video/quicktime"]
+# File size limits
 MAX_FILE_SIZE = 50 * 1024 * 1024  # 50MB
+MIN_FILE_SIZE = 100 * 1024        # 100KB
 
-# Challenge requirements
-REQUIRED_STATEMENTS_COUNT = 3
-REQUIRED_TRUTH_COUNT = 2
-REQUIRED_LIE_COUNT = 1
+# Duration limits
+MIN_VIDEO_DURATION = 3.0   # seconds
+MAX_VIDEO_DURATION = 60.0  # seconds
+
+# Supported formats
+ALLOWED_VIDEO_TYPES = {
+    "video/mp4", "video/webm", "video/quicktime", "video/mov"
+}
+
+# Security limits
+MAX_FILENAME_LENGTH = 255
+FORBIDDEN_FILENAME_CHARS = {'<', '>', ':', '"', '|', '?', '*', '\0'}
 ```
 
-### ChallengeIntegrityValidator
+### Client Configuration
 
-Validates data consistency and integrity.
+**File**: `mobile/src/services/uploadService.ts`
 
-#### Validation Checks
+```typescript
+// File size limits
+const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50MB
+const MIN_FILE_SIZE = 100 * 1024;       // 100KB
 
-- **Timestamp Consistency**: `updated_at >= created_at`
-- **Status Consistency**: Published challenges have `published_at`
-- **Statistics Consistency**: `correct_guess_count <= guess_count`
-- **ID Uniqueness**: Statement IDs are unique within challenge
+// Duration limits
+const MIN_DURATION = 3;  // 3 seconds
+const MAX_DURATION = 60; // 60 seconds
 
-## API Integration
+// Allowed extensions
+const ALLOWED_EXTENSIONS = ['.mp4', '.mov', '.webm'];
+```
 
-### Validation Endpoints
+## Error Codes
 
-#### POST `/api/v1/validation/challenge-request`
-Validates a challenge creation request before submission.
+### Client Error Codes
 
+- `MISSING_FILENAME`: Filename is empty or missing
+- `FILENAME_TOO_LONG`: Filename exceeds 255 characters
+- `INVALID_FILENAME_CHARS`: Filename contains forbidden characters
+- `INVALID_EXTENSION`: Invalid or dangerous file extension
+- `FILE_TOO_LARGE`: File exceeds maximum size limit
+- `FILE_TOO_SMALL`: File below minimum size limit
+- `DURATION_TOO_SHORT`: Video duration below minimum
+- `DURATION_TOO_LONG`: Video duration exceeds maximum
+
+### Server Error Codes
+
+- `VALIDATION_FAILED`: General validation failure
+- `INVALID_EXTENSION`: Invalid file extension
+- `INVALID_MIME_TYPE`: Unsupported MIME type
+- `FILE_TOO_LARGE`: File size exceeds limit
+- `FILE_TOO_SMALL`: File size below minimum
+- `SERVER_VALIDATION_FAILED`: Server-side validation error
+
+## API Endpoints
+
+### POST /api/v1/media/validate
+
+Validates video file before upload.
+
+**Parameters**:
+- `filename` (required): Video filename
+- `file_size` (required): File size in bytes
+- `duration_seconds` (optional): Video duration
+- `mime_type` (optional): MIME type (auto-detected if not provided)
+
+**Response**:
 ```json
 {
-  "is_valid": true,
-  "message": "Challenge creation request is valid",
+  "valid": true,
+  "mime_type": "video/mp4",
+  "file_extension": ".mp4",
+  "validation_details": {
+    "filename": "video.mp4",
+    "file_size": 5242880,
+    "duration": 15.0
+  },
+  "validation_timestamp": "2024-01-01T12:00:00Z",
+  "user_id": "user123"
+}
+```
+
+**Error Response**:
+```json
+{
+  "valid": false,
+  "error": "File too large (50MB). Max size: 50MB",
+  "error_code": "FILE_TOO_LARGE",
   "details": {
-    "statement_count": 3,
-    "lie_index": 1,
-    "media_validations": [...]
-  },
-  "timestamp": "2024-01-01T12:00:00Z"
-}
-```
-
-#### GET `/api/v1/validation/challenge/{challenge_id}`
-Validates an existing challenge.
-
-```json
-{
-  "challenge_id": "challenge-123",
-  "complete_validation": {
-    "is_valid": true,
-    "message": "Challenge passed all validation checks",
-    "details": {...}
-  },
-  "integrity_validation": {
-    "is_valid": true,
-    "message": "Challenge data is consistent",
-    "details": {...}
-  },
-  "overall_valid": true
-}
-```
-
-#### GET `/api/v1/validation/stats`
-Returns validation statistics.
-
-```json
-{
-  "validation_stats": {
-    "total_validations": 150,
-    "successful_validations": 142,
-    "success_rate": 0.947,
-    "recent_24h": 23,
-    "last_validation": "2024-01-01T12:00:00Z"
+    "file_size": 52428800,
+    "max_size": 52428800
   }
 }
 ```
 
-### Integration with Challenge Service
-
-The validation service is integrated into the challenge creation and publishing flow:
-
-```python
-# During challenge creation
-validation_result = await gameplay_validator.validate_challenge_creation(request, upload_service)
-if not validation_result.is_valid:
-    raise ChallengeServiceError(f"Challenge validation failed: {validation_result.message}")
-
-# During challenge publishing
-complete_validation = await gameplay_validator.validate_complete_challenge(challenge, self)
-if not complete_validation.is_valid:
-    raise ChallengeServiceError(f"Challenge failed pre-publication validation: {complete_validation.message}")
-```
-
-## Error Handling
-
-### Validation Errors
-
-All validation errors are wrapped in `ValidationResult` objects:
-
-```python
-class ValidationResult:
-    def __init__(self, is_valid: bool, message: str, details: Optional[Dict[str, Any]] = None):
-        self.is_valid = is_valid
-        self.message = message
-        self.details = details or {}
-        self.timestamp = datetime.utcnow()
-```
-
-### Common Error Scenarios
-
-1. **Invalid Media Format**
-   - Error: "Statement must be video, got audio/mp3"
-   - Solution: Upload video files only
-
-2. **Wrong Statement Count**
-   - Error: "Challenge must have exactly 3 statements, got 2"
-   - Solution: Provide exactly 3 video statements
-
-3. **Invalid Lie Index**
-   - Error: "Lie statement index must be between 0 and 2"
-   - Solution: Set lie_statement_index to 0, 1, or 2
-
-4. **Video Too Short/Long**
-   - Error: "Video too short: 1.0s (min: 3.0s)"
-   - Solution: Ensure videos are 3-60 seconds long
-
-5. **Insufficient Engagement**
-   - Error: "Challenge total duration too short for meaningful gameplay"
-   - Solution: Increase video durations for better engagement
-
 ## Testing
 
-### Test Coverage
+### Server Tests
 
-The validation system includes comprehensive tests:
+**File**: `backend/tests/test_strict_validation.py`
 
-- **Unit Tests**: Individual validation functions
-- **Integration Tests**: API endpoint validation
-- **End-to-End Tests**: Complete challenge lifecycle
-- **Requirement Tests**: Specific validation for Requirements 1 & 3
+**Coverage**:
+- Filename security validation
+- File size boundary testing
+- Duration validation
+- MIME type validation
+- Metadata validation
+- Video specification validation
+- End-to-end validation flow
 
-### Running Tests
+### Client Tests
 
+**File**: `mobile/src/services/__tests__/uploadServiceValidation.test.ts`
+
+**Coverage**:
+- File extension validation
+- File size validation
+- Duration validation
+- Filename security
+- MIME type detection
+- Integration scenarios
+- Boundary condition testing
+
+### Test Execution
+
+**Server**:
 ```bash
-# Run validation test suite
 cd backend
 python test_validation_runner.py
-
-# Run specific test categories
-python -m pytest tests/test_validation_service.py -v
-python -m pytest tests/test_validation_integration.py -v
-python -m pytest tests/test_validation_comprehensive.py -v
 ```
 
-### Test Results
-
+**Client**:
+```bash
+cd mobile
+npm test src/services/__tests__/uploadServiceValidation.test.ts
 ```
-🎉 ALL VALIDATION TESTS PASSED!
-✅ Automated validation services are working correctly
-✅ Requirements 1 and 3 validation implemented successfully
-
-Total test functions: 6
-Total individual tests: 22
-Total passed: 22
-Total failed: 0
-```
-
-## Performance Considerations
-
-### Validation Efficiency
-
-- **Async Operations**: All validation is asynchronous
-- **Early Termination**: Validation stops on first failure
-- **Caching**: Upload session validation results cached
-- **Batch Processing**: Multiple validations can run concurrently
-
-### Scalability
-
-- **Stateless Design**: Validation services are stateless
-- **Memory Management**: Validation history is bounded
-- **Database Independence**: No database dependencies for core validation
-
-## Monitoring and Analytics
-
-### Validation Statistics
-
-The system tracks:
-- Total validations performed
-- Success/failure rates
-- Recent validation activity
-- Common failure patterns
-
-### Logging
-
-All validation activities are logged with appropriate levels:
-- `INFO`: Successful validations
-- `WARNING`: Validation failures
-- `ERROR`: System errors during validation
 
 ## Security Considerations
 
-### Input Validation
+### Implemented Protections
 
-- All inputs are validated using Pydantic models
-- File size limits prevent resource exhaustion
-- MIME type validation prevents malicious uploads
+1. **Path Traversal Prevention**
+   - Blocks `../`, `\`, and absolute paths
+   - Validates filename components
 
-### Access Control
+2. **Executable File Detection**
+   - Blocks dangerous extensions (.exe, .bat, .cmd, etc.)
+   - Whitelist-based approach for allowed formats
 
-- Validation endpoints require authentication
-- Admin endpoints require elevated privileges
-- User can only validate their own challenges
+3. **Content Validation**
+   - MIME type verification
+   - File signature validation (planned)
+   - Metadata sanitization
 
-## Future Enhancements
+4. **Resource Protection**
+   - File size limits prevent DoS attacks
+   - Duration limits prevent excessive processing
+   - Rate limiting on validation endpoints
 
-### Planned Features
+### Future Enhancements
 
-1. **AI-Powered Validation**: Use ML to assess video content quality
-2. **Advanced Difficulty Metrics**: More sophisticated difficulty assessment
-3. **Custom Validation Rules**: User-configurable validation criteria
-4. **Real-time Validation**: WebSocket-based live validation feedback
+1. **File Signature Validation**
+   - Magic number verification
+   - Content-based format detection
 
-### Extensibility
+2. **Advanced Metadata Analysis**
+   - EXIF data sanitization
+   - Embedded content scanning
 
-The validation system is designed for easy extension:
-- Plugin architecture for custom validators
-- Configurable validation rules
-- Modular validation components
+3. **Content Scanning**
+   - Malware detection integration
+   - Content moderation hooks
+
+## Performance Considerations
+
+### Optimization Strategies
+
+1. **Client-Side First**
+   - Validate on client before server request
+   - Reduce server load and network traffic
+
+2. **Efficient Validation**
+   - Early exit on first failure
+   - Cached validation results
+
+3. **Async Processing**
+   - Non-blocking validation operations
+   - Background validation for large files
+
+### Monitoring
+
+- Validation success/failure rates
+- Common validation errors
+- Performance metrics
+- Security incident tracking
+
+## Integration Points
+
+### Upload Flow Integration
+
+1. **Pre-Upload Validation**
+   - Client validates before compression
+   - Server validates before processing
+
+2. **Upload Session Creation**
+   - Validation results stored with session
+   - Failed validation prevents session creation
+
+3. **Challenge Creation**
+   - Validation results checked during challenge creation
+   - Invalid media prevents challenge publishing
+
+### Error Handling
+
+1. **User-Friendly Messages**
+   - Clear error descriptions
+   - Actionable guidance for fixes
+
+2. **Developer Information**
+   - Detailed error codes
+   - Validation context in logs
+
+3. **Graceful Degradation**
+   - Fallback validation if advanced features fail
+   - Progressive enhancement approach
 
 ## Conclusion
 
-The automated validation system successfully implements Requirements 1 and 3, ensuring:
+The strict validation system provides comprehensive protection against invalid, malicious, and inappropriate file uploads while maintaining a smooth user experience. The dual client/server validation approach ensures both performance and security, with extensive testing coverage and clear error reporting.
 
-- **Video-only gameplay** with proper media validation
-- **Structured challenges** with 2 truths and 1 lie
-- **Difficulty assessment** for progressive engagement
-- **Data integrity** throughout the challenge lifecycle
-- **Comprehensive testing** with 100% test coverage
-
-The system provides robust validation while maintaining performance and scalability for the core gameplay flow.
+The implementation successfully addresses the requirement to "Enforce strict server/client validation (file format, size, duration) before acceptance" with a robust, secure, and user-friendly solution.

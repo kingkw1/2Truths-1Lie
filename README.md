@@ -91,8 +91,14 @@ cd mobile
 npm test                 # Run mobile app tests
 ```
 
-## API Documentation
-See [docs/api.md](docs/api.md) for full REST endpoint specs and usage examples.
+## Documentation
+
+### For Users
+- **[User Media Guide](docs/USER_MEDIA_GUIDE.md)** - Complete guide for creating and sharing video challenges
+
+### For Developers  
+- **[API Documentation](docs/api.md)** - Full REST endpoint specs and usage examples
+- **[Persistent Media Workflow](docs/PERSISTENT_MEDIA_WORKFLOW.md)** - Complete developer guide for video upload and streaming
 
 ## Hackathon Participation
 This project leverages AI-assisted development tools, primarily the Kiro agent, to accelerate and guide the build process.  

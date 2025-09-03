@@ -398,17 +398,32 @@ const challengeCreationSlice = createSlice({
     completeUpload: (state, action: PayloadAction<{
       statementIndex: number;
       fileUrl: string;
+      mediaCapture?: MediaCapture;
     }>) => {
-      const { statementIndex, fileUrl } = action.payload;
+      const { statementIndex, fileUrl, mediaCapture } = action.payload;
       if (state.uploadState[statementIndex]) {
         state.uploadState[statementIndex].isUploading = false;
         state.uploadState[statementIndex].uploadProgress = 100;
         state.uploadState[statementIndex].uploadError = null;
       }
       
-      // Update the media data with the final URL
+      // Update the media data with persistent URLs and metadata
       if (state.currentChallenge.mediaData && state.currentChallenge.mediaData[statementIndex]) {
-        state.currentChallenge.mediaData[statementIndex].url = fileUrl;
+        if (mediaCapture) {
+          // Update with full media capture data including persistent URLs
+          state.currentChallenge.mediaData[statementIndex] = {
+            ...state.currentChallenge.mediaData[statementIndex],
+            ...mediaCapture,
+            url: fileUrl, // Keep for backward compatibility
+            streamingUrl: mediaCapture.streamingUrl || fileUrl,
+            isUploaded: true,
+          };
+        } else {
+          // Fallback to just updating the URL
+          state.currentChallenge.mediaData[statementIndex].url = fileUrl;
+          state.currentChallenge.mediaData[statementIndex].streamingUrl = fileUrl;
+          state.currentChallenge.mediaData[statementIndex].isUploaded = true;
+        }
       }
     },
 
@@ -430,6 +445,38 @@ const challengeCreationSlice = createSlice({
         state.uploadState[statementIndex].uploadProgress = 0;
         state.uploadState[statementIndex].uploadError = null;
         state.uploadState[statementIndex].sessionId = null;
+      }
+    },
+
+    setMediaUploadProgress: (state, action: PayloadAction<{
+      statementIndex: number;
+      progress?: {
+        stage: 'preparing' | 'compressing' | 'uploading' | 'finalizing';
+        progress: number;
+        bytesUploaded?: number;
+        totalBytes?: number;
+        currentChunk?: number;
+        totalChunks?: number;
+      };
+    }>) => {
+      const { statementIndex, progress } = action.payload;
+      if (!state.uploadState[statementIndex]) {
+        state.uploadState[statementIndex] = {
+          isUploading: false,
+          uploadProgress: 0,
+          uploadError: null,
+          sessionId: null,
+        };
+      }
+      
+      if (progress) {
+        state.uploadState[statementIndex].isUploading = true;
+        state.uploadState[statementIndex].uploadProgress = progress.progress;
+        state.uploadState[statementIndex].uploadError = null;
+      } else {
+        // Clear progress when undefined (upload complete)
+        state.uploadState[statementIndex].isUploading = false;
+        state.uploadState[statementIndex].uploadProgress = 0;
       }
     },
 
@@ -482,6 +529,7 @@ export const {
   completeUpload,
   setUploadError,
   cancelUpload,
+  setMediaUploadProgress,
   resetMediaState,
 } = challengeCreationSlice.actions;
 

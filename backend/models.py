@@ -117,8 +117,11 @@ class Statement(BaseModel):
     """Individual statement within a challenge"""
     statement_id: str = Field(..., description="Unique statement identifier")
     statement_type: StatementType = Field(..., description="Whether this is a truth or lie")
-    media_url: str = Field(..., description="URL to the video recording")
+    media_url: str = Field(..., description="Persistent server URL for video streaming")
     media_file_id: str = Field(..., description="File ID from upload service")
+    streaming_url: Optional[str] = Field(None, description="Optimized streaming URL (CDN or signed URL)")
+    cloud_storage_key: Optional[str] = Field(None, description="Cloud storage key for direct access")
+    storage_type: str = Field(default="local", description="Storage type: local, cloud, or cloud_fallback")
     duration_seconds: float = Field(..., gt=0, description="Duration of the video in seconds")
     created_at: datetime = Field(default_factory=datetime.utcnow)
     

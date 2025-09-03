@@ -17,8 +17,11 @@ import {
   stopMediaRecording,
   updateRecordingDuration,
   setMediaRecordingState,
+  setMediaUploadProgress,
 } from '../store/slices/challengeCreationSlice';
 import { MediaCapture } from '../types';
+import { videoUploadService, UploadProgress, UploadOptions } from './uploadService';
+import { crossDeviceMediaService } from './crossDeviceMediaService';
 
 export interface MobileMediaIntegrationConfig {
   maxFileSize: number; // in bytes
@@ -77,8 +80,12 @@ export class MobileMediaIntegrationService {
   /**
    * Initialize the service with Redux dispatch
    */
-  public initialize(dispatch: Dispatch): void {
+  public async initialize(dispatch: Dispatch): Promise<void> {
     this.dispatch = dispatch;
+    
+    // Initialize cross-device media service
+    await crossDeviceMediaService.initialize();
+    
     console.log('📱 Mobile Media Integration Service initialized');
   }
 
@@ -123,8 +130,8 @@ export class MobileMediaIntegrationService {
       // Stop recording in Redux
       this.dispatch(stopMediaRecording({ statementIndex }));
 
-      // Process the recorded media
-      const mediaCapture = await this.processRecordedMedia(
+      // Process the recorded media with upload
+      const mediaCapture = await this.processRecordedMediaWithUpload(
         recordingUri,
         duration,
         statementIndex
@@ -161,7 +168,106 @@ export class MobileMediaIntegrationService {
   }
 
   /**
-   * Process recorded media with compression and validation
+   * Process recorded media with upload to backend
+   */
+  private async processRecordedMediaWithUpload(
+    uri: string,
+    duration: number,
+    statementIndex: number
+  ): Promise<MediaCapture> {
+    // Validate file exists
+    const fileInfo = await FileSystem.getInfoAsync(uri);
+    if (!fileInfo.exists) {
+      throw new Error('Recording file not found');
+    }
+
+    const fileSize = fileInfo.size || 0;
+
+    // Validate file size and duration
+    this.validateMediaFile(fileSize, duration);
+
+    // Generate filename
+    const timestamp = Date.now();
+    const filename = `statement_${statementIndex}_${timestamp}.mp4`;
+
+    // Configure upload options
+    const uploadOptions: UploadOptions = {
+      compress: fileSize > this.config.compressionThreshold,
+      compressionQuality: 0.8,
+      maxFileSize: this.config.maxFileSize,
+      retryAttempts: 3,
+      timeout: 60000, // 60 seconds
+    };
+
+    // Upload video with progress tracking
+    const uploadResult = await videoUploadService.uploadVideo(
+      uri,
+      filename,
+      duration / 1000, // Convert to seconds
+      uploadOptions,
+      (progress: UploadProgress) => {
+        if (this.dispatch) {
+          this.dispatch(setMediaUploadProgress({
+            statementIndex,
+            progress: {
+              stage: progress.stage,
+              progress: progress.progress,
+              bytesUploaded: progress.bytesUploaded,
+              totalBytes: progress.totalBytes,
+              currentChunk: progress.currentChunk,
+              totalChunks: progress.totalChunks,
+            },
+          }));
+        }
+      }
+    );
+
+    if (!uploadResult.success) {
+      throw new Error(uploadResult.error || 'Upload failed');
+    }
+
+    // Verify cross-device accessibility
+    let optimizedStreamingUrl = uploadResult.streamingUrl!;
+    if (uploadResult.mediaId) {
+      try {
+        const accessibilityCheck = await crossDeviceMediaService.verifyMediaAccessibility(uploadResult.mediaId);
+        if (accessibilityCheck.accessible && accessibilityCheck.streamingUrl) {
+          optimizedStreamingUrl = accessibilityCheck.streamingUrl;
+        }
+      } catch (error) {
+        console.warn('Failed to verify media accessibility:', error);
+      }
+    }
+
+    // Create MediaCapture object with server URL and cross-device compatibility
+    const mediaCapture: MediaCapture = {
+      type: 'video',
+      url: optimizedStreamingUrl, // Keep for backward compatibility
+      streamingUrl: optimizedStreamingUrl,
+      duration,
+      fileSize: uploadResult.fileSize || fileSize,
+      mimeType: this.getMimeType(),
+      mediaId: uploadResult.mediaId,
+      cloudStorageKey: uploadResult.cloudStorageKey,
+      storageType: uploadResult.storageType || 'cloud',
+      isUploaded: true,
+      compressionRatio: uploadResult.compressionRatio,
+      uploadTime: uploadResult.uploadTime,
+    };
+
+    // Clear upload progress
+    if (this.dispatch) {
+      this.dispatch(setMediaUploadProgress({
+        statementIndex,
+        progress: undefined,
+      }));
+    }
+
+    return mediaCapture;
+  }
+
+  /**
+   * Process recorded media with compression and validation (legacy method for local storage)
    */
   private async processRecordedMedia(
     uri: string,
@@ -372,6 +478,97 @@ export class MobileMediaIntegrationService {
   }
 
   /**
+   * Sync media library across devices
+   */
+  public async syncMediaLibrary(): Promise<void> {
+    try {
+      console.log('🔄 Syncing media library across devices...');
+      await crossDeviceMediaService.syncMediaLibrary();
+    } catch (error) {
+      console.error('Failed to sync media library:', error);
+    }
+  }
+
+  /**
+   * Get user's media library with cross-device access
+   */
+  public async getMediaLibrary(page: number = 1, limit: number = 50) {
+    try {
+      return await crossDeviceMediaService.getMediaLibrary(page, limit);
+    } catch (error) {
+      console.error('Failed to get media library:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Verify media accessibility for playback
+   */
+  public async verifyMediaForPlayback(mediaId: string): Promise<{
+    canPlay: boolean;
+    streamingUrl?: string;
+    error?: string;
+  }> {
+    try {
+      const verification = await crossDeviceMediaService.verifyMediaAccessibility(mediaId);
+      
+      if (!verification.accessible) {
+        return {
+          canPlay: false,
+          error: 'Media not accessible on this device',
+        };
+      }
+
+      if (!verification.deviceCompatible) {
+        return {
+          canPlay: false,
+          error: `Media format not supported on ${Platform.OS}`,
+        };
+      }
+
+      const streamingUrl = await crossDeviceMediaService.getOptimizedStreamingUrl(mediaId);
+      
+      return {
+        canPlay: !!streamingUrl,
+        streamingUrl: streamingUrl || undefined,
+        error: streamingUrl ? undefined : 'Failed to get streaming URL',
+      };
+
+    } catch (error: any) {
+      return {
+        canPlay: false,
+        error: error.message,
+      };
+    }
+  }
+
+  /**
+   * Handle user authentication changes
+   */
+  public async onUserLogin(): Promise<void> {
+    await crossDeviceMediaService.onUserLogin();
+  }
+
+  public async onUserLogout(): Promise<void> {
+    await crossDeviceMediaService.onUserLogout();
+  }
+
+  /**
+   * Get device compatibility info
+   */
+  public getDeviceCompatibilityInfo(): {
+    platform: string;
+    supportedFormats: string[];
+    preferences: any;
+  } {
+    return {
+      platform: Platform.OS,
+      supportedFormats: this.config.supportedFormats,
+      preferences: crossDeviceMediaService.getDeviceMediaPreferences(),
+    };
+  }
+
+  /**
    * Get recording statistics for debugging
    */
   public getRecordingStats(): {
@@ -380,6 +577,7 @@ export class MobileMediaIntegrationService {
     maxFileSize: string;
     maxDuration: string;
     compressionThreshold: string;
+    crossDeviceSync: any;
   } {
     return {
       platform: Platform.OS,
@@ -387,6 +585,7 @@ export class MobileMediaIntegrationService {
       maxFileSize: `${Math.round(this.config.maxFileSize / (1024 * 1024))}MB`,
       maxDuration: `${this.config.maxDuration / 1000}s`,
       compressionThreshold: `${Math.round(this.config.compressionThreshold / (1024 * 1024))}MB`,
+      crossDeviceSync: crossDeviceMediaService.getSyncStatus(),
     };
   }
 }

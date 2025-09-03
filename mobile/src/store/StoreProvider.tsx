@@ -11,6 +11,9 @@ import { loadSavedGameState } from './middleware/gameMiddleware';
 import { initializeProgression } from './slices/playerProgressionSlice';
 import { startGameSession } from './slices/gameSessionSlice';
 import { PlayerProgression } from '../types';
+import { mobileMediaIntegration } from '../services/mobileMediaIntegration';
+import { authService } from '../services/authService';
+import { videoUploadService } from '../services/uploadService';
 
 interface StoreProviderProps {
   children: React.ReactNode;
@@ -64,6 +67,16 @@ export const StoreProvider: React.FC<StoreProviderProps> = ({ children }) => {
         
         // Load any saved game state
         loadSavedGameState();
+        
+        // Initialize mobile media integration service with Redux dispatch
+        mobileMediaIntegration.initialize(store.dispatch);
+        
+        // Initialize auth service and set token for upload service
+        await authService.initialize();
+        const authToken = authService.getAuthToken();
+        if (authToken) {
+          videoUploadService.setAuthToken(authToken);
+        }
       } catch (error) {
         console.error('StoreProvider initialization error:', error);
       }
