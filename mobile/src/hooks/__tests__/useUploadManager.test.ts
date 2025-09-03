@@ -4,7 +4,7 @@
  */
 
 import React from 'react';
-import { renderHook } from '@testing-library/react-hooks';
+import { renderHook } from '@testing-library/react-native';
 import { Provider } from 'react-redux';
 import { configureStore } from '@reduxjs/toolkit';
 import { useUploadManager } from '../useUploadManager';
@@ -34,15 +34,27 @@ describe('useUploadManager', () => {
   beforeEach(() => {
     store = configureStore({
       reducer: {
-        challengeCreation: challengeCreationSlice.reducer,
+        challengeCreation: challengeCreationReducer,
       },
       preloadedState: {
         challengeCreation: {
           currentChallenge: {
             id: 'test-challenge',
-            statements: ['Statement 1', 'Statement 2', 'Statement 3'],
-            mediaData: {},
+            statements: [
+              { id: 'stmt_1', text: 'Statement 1', isLie: false, confidence: 0 },
+              { id: 'stmt_2', text: 'Statement 2', isLie: false, confidence: 0 },
+              { id: 'stmt_3', text: 'Statement 3', isLie: false, confidence: 0 },
+            ],
+            mediaData: [],
+            isPublic: true,
+            creatorId: '',
           },
+          isRecording: false,
+          recordingType: null,
+          currentStatementIndex: 0,
+          validationErrors: [],
+          isSubmitting: false,
+          submissionSuccess: false,
           uploadState: {},
           mediaRecordingState: {},
           previewMode: false,
@@ -53,9 +65,9 @@ describe('useUploadManager', () => {
     jest.clearAllMocks();
   });
 
-  const wrapper = ({ children }: { children: React.ReactNode }) => (
-    <Provider store={store}>{children}</Provider>
-  );
+  const wrapper = ({ children }: { children: React.ReactNode }) => {
+    return React.createElement(Provider, { store, children });
+  };
 
   const renderUploadManager = (statementIndex = 0, options = {}) => {
     return renderHook(() => useUploadManager(statementIndex, options), { wrapper });
@@ -99,6 +111,16 @@ describe('useUploadManager', () => {
     });
 
     it('should reflect upload progress', () => {
+      // First set up upload state
+      store.dispatch({
+        type: 'challengeCreation/setUploadState',
+        payload: { 
+          statementIndex: 0, 
+          state: { isUploading: true, uploadProgress: 0, uploadError: null, sessionId: 'test' }
+        },
+      });
+      
+      // Then update progress
       store.dispatch({
         type: 'challengeCreation/updateUploadProgress',
         payload: { statementIndex: 0, progress: 50 },
@@ -110,6 +132,16 @@ describe('useUploadManager', () => {
     });
 
     it('should reflect upload errors', () => {
+      // First set up upload state
+      store.dispatch({
+        type: 'challengeCreation/setUploadState',
+        payload: { 
+          statementIndex: 0, 
+          state: { isUploading: true, uploadProgress: 0, uploadError: null, sessionId: 'test' }
+        },
+      });
+      
+      // Then set error
       store.dispatch({
         type: 'challengeCreation/setUploadError',
         payload: { statementIndex: 0, error: 'Upload failed' },

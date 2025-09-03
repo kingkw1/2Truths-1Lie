@@ -80,9 +80,21 @@ describe('EnhancedUploadUI', () => {
         challengeCreation: {
           currentChallenge: {
             id: 'test-challenge',
-            statements: ['Statement 1', 'Statement 2', 'Statement 3'],
-            mediaData: {},
+            statements: [
+              { id: 'stmt_1', text: 'Statement 1', isLie: false, confidence: 0 },
+              { id: 'stmt_2', text: 'Statement 2', isLie: false, confidence: 0 },
+              { id: 'stmt_3', text: 'Statement 3', isLie: false, confidence: 0 },
+            ],
+            mediaData: [],
+            isPublic: true,
+            creatorId: '',
           },
+          isRecording: false,
+          recordingType: null,
+          currentStatementIndex: 0,
+          validationErrors: [],
+          isSubmitting: false,
+          submissionSuccess: false,
           uploadState: {},
           mediaRecordingState: {},
           previewMode: false,

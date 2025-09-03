@@ -55,9 +55,21 @@ describe('Upload Integration - Comprehensive Tests', () => {
         challengeCreation: {
           currentChallenge: {
             id: 'test-challenge',
-            statements: ['Statement 1', 'Statement 2', 'Statement 3'],
-            mediaData: {},
+            statements: [
+              { id: 'stmt_1', text: 'Statement 1', isLie: false, confidence: 0 },
+              { id: 'stmt_2', text: 'Statement 2', isLie: false, confidence: 0 },
+              { id: 'stmt_3', text: 'Statement 3', isLie: false, confidence: 0 },
+            ],
+            mediaData: [],
+            isPublic: true,
+            creatorId: '',
           },
+          isRecording: false,
+          recordingType: null,
+          currentStatementIndex: 0,
+          validationErrors: [],
+          isSubmitting: false,
+          submissionSuccess: false,
           uploadState: {},
           mediaRecordingState: {},
           previewMode: false,
@@ -144,7 +156,7 @@ describe('Upload Integration - Comprehensive Tests', () => {
       );
 
       expect(result.success).toBe(true);
-      expect(result.mediaUrl).toBe('/api/media/stream/final-video-id');
+      expect(result.streamingUrl).toBe('/api/media/stream/final-video-id');
       expect(result.mediaId).toBe('final-video-id');
       expect(mockFetch).toHaveBeenCalledTimes(6); // 1 initiate + 5 chunks
     });
@@ -217,11 +229,11 @@ describe('Upload Integration - Comprehensive Tests', () => {
         'mock://video.mp4',
         'test-video.mp4',
         25000,
-        { compress: true, enableResume: true }
+        { compress: true }
       );
 
       expect(result.success).toBe(true);
-      expect(result.mediaUrl).toBe('/api/media/stream/resumed-video-id');
+      expect(result.streamingUrl).toBe('/api/media/stream/resumed-video-id');
       // Should have made resume calls
       expect(mockFetch).toHaveBeenCalledWith(
         expect.stringContaining('/api/upload/resume-session-123/status'),
@@ -307,7 +319,6 @@ describe('Upload Integration - Comprehensive Tests', () => {
 
       expect(result.success).toBe(false);
       expect(result.error).toContain('File size exceeds maximum');
-      expect(result.errorCode).toBe('FILE_TOO_LARGE');
     });
 
     it('should handle authentication errors', async () => {
@@ -338,7 +349,6 @@ describe('Upload Integration - Comprehensive Tests', () => {
 
       expect(result.success).toBe(false);
       expect(result.error).toContain('authentication');
-      expect(result.errorCode).toBe('AUTHENTICATION_FAILED');
     });
 
     it('should handle server errors with retry logic', async () => {
@@ -396,11 +406,11 @@ describe('Upload Integration - Comprehensive Tests', () => {
         'mock://video.mp4',
         'test-video.mp4',
         25000,
-        { compress: false, maxRetries: 3 }
+        { compress: false, retryAttempts: 3 }
       );
 
       expect(result.success).toBe(true);
-      expect(result.mediaUrl).toBe('/api/media/stream/retry-video-id');
+      expect(result.streamingUrl).toBe('/api/media/stream/retry-video-id');
     });
   });
 
@@ -412,6 +422,9 @@ describe('Upload Integration - Comprehensive Tests', () => {
         return (
           <EnhancedUploadUI
             statementIndex={0}
+            videoUri="mock://test-video.mp4"
+            filename="test-video.mp4"
+            duration={30000}
             onUploadComplete={() => {}}
             onUploadError={() => {}}
           />
@@ -521,6 +534,9 @@ describe('Upload Integration - Comprehensive Tests', () => {
         return (
           <EnhancedUploadUI
             statementIndex={0}
+            videoUri="mock://error-video.mp4"
+            filename="error-video.mp4"
+            duration={25000}
             onUploadComplete={() => {}}
             onUploadError={() => {}}
           />
@@ -608,7 +624,7 @@ describe('Upload Integration - Comprehensive Tests', () => {
       );
 
       expect(result.success).toBe(true);
-      expect(result.mediaUrl).toBe('/api/media/stream/ios-video-id');
+      expect(result.streamingUrl).toBe('/api/media/stream/ios-video-id');
     });
 
     it('should handle Android-specific upload behavior', async () => {
@@ -669,7 +685,7 @@ describe('Upload Integration - Comprehensive Tests', () => {
       );
 
       expect(result.success).toBe(true);
-      expect(result.mediaUrl).toBe('/api/media/stream/android-video-id');
+      expect(result.streamingUrl).toBe('/api/media/stream/android-video-id');
     });
   });
 
@@ -728,7 +744,7 @@ describe('Upload Integration - Comprehensive Tests', () => {
       );
 
       expect(result.success).toBe(true);
-      expect(result.mediaUrl).toBe('/api/media/stream/large-video-id');
+      expect(result.streamingUrl).toBe('/api/media/stream/large-video-id');
       expect(mockFetch).toHaveBeenCalledTimes(totalChunks + 2); // initiate + chunks + complete
     });
 

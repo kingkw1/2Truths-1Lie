@@ -12,7 +12,9 @@
     "postinstall": "expo --version",
     "test": "jest",
     "test:watch": "jest --watch",
-    "test:coverage": "jest --coverage"
+    "test:coverage": "jest --coverage",
+    "test:working": "jest --config=jest.config.working.js",
+    "test:working:watch": "jest --config=jest.config.working.js --watch"
   },
   "dependencies": {
     "@expo/metro-runtime": "~5.0.4",
