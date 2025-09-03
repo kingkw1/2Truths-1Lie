@@ -218,20 +218,23 @@ async def get_current_user_with_permissions(
     payload = verify_token(credentials.credentials)
     return payload
 
-async def require_permission(
-    permission: str,
-    credentials: HTTPAuthorizationCredentials = Depends(security)
-) -> str:
-    """Require specific permission for endpoint access"""
-    payload = verify_token(credentials.credentials)
+def require_permission(permission: str):
+    """Factory function to create permission-based dependency"""
+    async def _check_permission(
+        credentials: HTTPAuthorizationCredentials = Depends(security)
+    ) -> str:
+        """Check specific permission for endpoint access"""
+        payload = verify_token(credentials.credentials)
+        
+        if not auth_service.check_permission(payload, permission):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=f"Insufficient permissions. Required: {permission}"
+            )
+        
+        return payload.get("sub")
     
-    if not auth_service.check_permission(payload, permission):
-        raise HTTPException(
-            status_code=status.HTTP_403_FORBIDDEN,
-            detail=f"Insufficient permissions. Required: {permission}"
-        )
-    
-    return payload.get("sub")
+    return _check_permission
 
 async def check_upload_rate_limit(
     request: Request,

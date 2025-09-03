@@ -30,17 +30,19 @@ from services.rate_limiter import RateLimiter, RateLimitExceeded
 from services.validation_service import gameplay_validator, integrity_validator
 from api.media_endpoints import router as media_router
 from api.auth_endpoints import router as auth_router
+from api.s3_media_endpoints import router as s3_media_router
 from config import settings
 
 app = FastAPI(
     title="2Truths-1Lie API",
-    description="Backend API for chunked media uploads and game management",
+    description="Backend API for chunked media uploads and game management with AWS S3 integration",
     version="1.0.0"
 )
 
 # Include routers
 app.include_router(media_router)
 app.include_router(auth_router)
+app.include_router(s3_media_router)
 
 # CORS middleware for frontend integration
 app.add_middleware(
