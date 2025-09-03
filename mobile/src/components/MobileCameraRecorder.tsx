@@ -270,47 +270,22 @@ export const MobileCameraRecorder: React.FC<MobileCameraRecorderProps> = ({
       const mediaStatus = await requestMediaLibraryPermission();
       console.log('Media permission result:', mediaStatus);
 
-      // Check camera permission
-      if (!cameraStatus.granted) {
-        console.log('Camera permission denied');
-        handleCameraError(
-          CameraErrorType.PERMISSION_DENIED,
-          'Camera access is needed to record your video statements. Please check your device settings.',
-          true,
-          () => requestCameraPermission()
-        );
-        return false;
+      // Simple boolean check - let the system handle permission dialogs
+      const allGranted = cameraStatus.granted && micStatus.granted && mediaStatus.granted;
+      
+      if (allGranted) {
+        console.log('✅ All permissions granted successfully');
+      } else {
+        console.log('❌ Some permissions not granted:', {
+          camera: cameraStatus.granted,
+          microphone: micStatus.granted,
+          media: mediaStatus.granted
+        });
       }
-
-      // Check microphone permission 
-      if (!micStatus.granted) {
-        console.log('Microphone permission denied');
-        handleCameraError(
-          CameraErrorType.PERMISSION_DENIED,
-          'Microphone access is needed to record audio with your video statements. Please check your device settings.',
-          true,
-          () => Audio.requestPermissionsAsync()
-        );
-        return false;
-      }
-
-      // Check media library permission
-      if (!mediaStatus.granted) {
-        console.log('Media permission denied');
-        handleCameraError(
-          CameraErrorType.PERMISSION_DENIED,
-          'Media library permission is required to save recordings. Please enable it in your device settings.',
-          true,
-          () => requestMediaLibraryPermission()
-        );
-        return false;
-      }
-
-      console.log('All permissions granted successfully');
-      return true;
+      
+      return allGranted;
     } catch (error) {
       console.error('Permission check error:', error);
-      handleCameraError(CameraErrorType.PERMISSION_DENIED, `Permission error: ${error}`);
       return false;
     }
   };

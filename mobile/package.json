@@ -26,7 +26,6 @@
     "expo-build-properties": "~0.14.8",
     "expo-camera": "~16.1.11",
     "expo-constants": "~17.1.7",
-    "expo-dev-client": "~5.2.4",
     "expo-device": "~7.1.4",
     "expo-file-system": "~18.1.11",
     "expo-haptics": "~14.1.4",
