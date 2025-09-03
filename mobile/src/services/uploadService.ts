@@ -56,7 +56,7 @@ export class VideoUploadService {
   private constructor() {
     // In production, this would come from your app config
     this.baseUrl = __DEV__ 
-      ? 'http://localhost:8000' 
+      ? 'http://192.168.50.111:8001' 
       : 'https://your-production-api.com';
   }
 

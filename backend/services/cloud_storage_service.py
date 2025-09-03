@@ -104,15 +104,16 @@ class S3CloudStorageService(CloudStorageService):
             endpoint_url=endpoint_url
         )
         
-        # Initialize bucket
-        asyncio.create_task(self._ensure_bucket_exists())
+        # Skip bucket initialization to avoid errors during startup
+        # The bucket check will happen when actually needed
+        logger.info(f"S3 client initialized for bucket: {self.bucket_name}")
     
     async def _ensure_bucket_exists(self):
         """Ensure S3 bucket exists and is properly configured"""
         try:
             # Check if bucket exists
             await asyncio.get_event_loop().run_in_executor(
-                None, self.s3_client.head_bucket, {'Bucket': self.bucket_name}
+                None, lambda: self.s3_client.head_bucket(Bucket=self.bucket_name)
             )
             logger.info(f"S3 bucket {self.bucket_name} exists")
             

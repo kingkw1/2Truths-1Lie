@@ -9,6 +9,7 @@ import {
   Alert,
   Platform,
   Dimensions,
+  Linking,
 } from 'react-native';
 import { useAppDispatch, useAppSelector } from '../store';
 import {
@@ -23,6 +24,28 @@ import {
 import { MobileCameraRecorder } from '../components/MobileCameraRecorder';
 import { EnhancedMobileCameraIntegration } from '../components/EnhancedMobileCameraIntegration';
 import { MediaCapture } from '../types';
+
+/**
+ * Opens device settings for the app
+ */
+const openAppSettings = async (): Promise<void> => {
+  try {
+    if (Platform.OS === 'ios') {
+      await Linking.openURL('app-settings:');
+    } else {
+      // Android - open app-specific settings
+      await Linking.openSettings();
+    }
+  } catch (error) {
+    console.warn('Failed to open app settings:', error);
+    // Fallback to showing instructions
+    Alert.alert(
+      'Open Settings', 
+      'Please go to:\nSettings > Apps > Expo Go > Permissions\n\nThen enable Camera, Microphone, and Storage permissions.',
+      [{ text: 'OK' }]
+    );
+  }
+};
 
 interface ChallengeCreationScreenProps {
   onComplete?: () => void;
@@ -130,9 +153,9 @@ export const ChallengeCreationScreen: React.FC<ChallengeCreationScreenProps> = (
         { text: 'Cancel', style: 'cancel' },
         { 
           text: 'Open Settings', 
-          onPress: () => {
-            // On real device, this would open settings
-            console.log('Would open device settings');
+          onPress: async () => {
+            console.log('Opening device settings for permissions');
+            await openAppSettings();
           }
         }
       ]);

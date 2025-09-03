@@ -1,6 +1,10 @@
 """
 FastAPI backend for 2Truths-1Lie game with chunked upload support
 """
+from dotenv import load_dotenv
+# Load environment variables from .env file
+load_dotenv()
+
 from fastapi import FastAPI, HTTPException, Depends, UploadFile, File, Form, Header
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, FileResponse

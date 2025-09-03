@@ -10,6 +10,7 @@ import {
   TouchableOpacity,
   Dimensions,
   ActivityIndicator,
+  Linking,
 } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import { useAppDispatch, useAppSelector } from '../store';
@@ -22,6 +23,28 @@ import {
 import { MobileCameraRecorder } from './MobileCameraRecorder';
 import { mobileMediaIntegration } from '../services/mobileMediaIntegration';
 import { MediaCapture } from '../types';
+
+/**
+ * Opens device settings for the app
+ */
+const openAppSettings = async (): Promise<void> => {
+  try {
+    if (Platform.OS === 'ios') {
+      await Linking.openURL('app-settings:');
+    } else {
+      // Android - open app-specific settings
+      await Linking.openSettings();
+    }
+  } catch (error) {
+    console.warn('Failed to open app settings:', error);
+    // Fallback to showing instructions
+    Alert.alert(
+      'Open Settings', 
+      'Please go to:\nSettings > Apps > Expo Go > Permissions\n\nThen enable Camera, Microphone, and Storage permissions.',
+      [{ text: 'OK' }]
+    );
+  }
+};
 
 interface EnhancedMobileCameraIntegrationProps {
   statementIndex: number;
@@ -129,9 +152,9 @@ export const EnhancedMobileCameraIntegration: React.FC<EnhancedMobileCameraInteg
         { text: 'Cancel', style: 'cancel', onPress: onCancel },
         { 
           text: 'Open Settings', 
-          onPress: () => {
-            // In a real app, this would open device settings
-            console.log('Would open device settings for permissions');
+          onPress: async () => {
+            console.log('Opening device settings for permissions');
+            await openAppSettings();
           }
         }
       ];

@@ -241,13 +241,22 @@ export class AuthService {
       const data = await response.json();
       this.authToken = data.access_token;
 
+      if (!this.authToken) {
+        throw new Error('No access token received from server');
+      }
+
       await AsyncStorage.setItem('authToken', this.authToken);
       return this.authToken;
     } catch (error) {
       console.warn('Token refresh failed, creating new guest session:', error);
       // Fallback to creating new guest session
       await this.createGuestUser();
-      return this.authToken!;
+      
+      if (!this.authToken) {
+        throw new Error('Failed to create authentication token');
+      }
+      
+      return this.authToken;
     }
   }
 
@@ -257,7 +266,7 @@ export class AuthService {
   private getApiBaseUrl(): string {
     // In production, this would come from your app config
     return __DEV__ 
-      ? 'http://localhost:8000' 
+      ? 'http://192.168.50.111:8001' 
       : 'https://your-production-api.com';
   }
 
@@ -293,7 +302,12 @@ export class AuthService {
     }
 
     try {
-      const response = await fetch(`${this.getApiBaseUrl()}/api/v1/auth/permissions`, {
+      // If this is a guest token (local fallback), return guest permissions
+      if (this.authToken.startsWith('guest_token_')) {
+        return ['media:read', 'media:upload'];
+      }
+
+      const response = await fetch(`${this.getApiBaseUrl()}/api/v1/auth/me`, {
         method: 'GET',
         headers: {
           'Authorization': `Bearer ${this.authToken}`,
@@ -301,14 +315,17 @@ export class AuthService {
       });
 
       if (!response.ok) {
-        return [];
+        // If we can't get permissions from backend, assume guest permissions
+        console.warn('Failed to get user permissions from backend, using guest permissions');
+        return ['media:read', 'media:upload'];
       }
 
       const data = await response.json();
-      return data.permissions || [];
+      return data.permissions || ['media:read', 'media:upload'];
     } catch (error) {
       console.warn('Failed to get user permissions:', error);
-      return [];
+      // Fallback to guest permissions for any error
+      return ['media:read', 'media:upload'];
     }
   }
 

@@ -27,7 +27,7 @@ class S3MediaService:
         if not all([self.aws_access_key_id, self.aws_secret_access_key, self.bucket_name]):
             raise ValueError(
                 "Missing required AWS environment variables: "
-                "AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, S3_BUCKET_NAME"
+                "AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, AWS_S3_BUCKET_NAME"
             )
         
         # Configure S3 client with proper authentication
