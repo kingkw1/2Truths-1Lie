@@ -278,9 +278,51 @@ export class VideoUploadService {
   }
 
   /**
-   * Upload video directly to S3 endpoint
+   * Upload video with retry logic
    */
   public async uploadVideo(
+    videoUri: string,
+    filename: string,
+    duration: number,
+    options: UploadOptions = {},
+    onProgress?: (progress: UploadProgress) => void
+  ): Promise<UploadResult> {
+    const maxRetries = options.retryAttempts ?? 2;
+    let lastError: Error;
+
+    for (let attempt = 0; attempt <= maxRetries; attempt++) {
+      try {
+        if (attempt > 0) {
+          console.log(`🔄 UPLOAD: Retry attempt ${attempt}/${maxRetries}`);
+          // Wait before retry with exponential backoff
+          const delay = Math.min(1000 * Math.pow(2, attempt - 1), 5000);
+          await new Promise(resolve => setTimeout(resolve, delay));
+        }
+
+        return await this._uploadVideoAttempt(videoUri, filename, duration, options, onProgress);
+      } catch (error: any) {
+        lastError = error;
+        console.warn(`❌ UPLOAD: Attempt ${attempt + 1} failed:`, error.message);
+        
+        // Don't retry on certain errors
+        if (error.name === 'AbortError' || error.message.includes('401') || error.message.includes('403')) {
+          throw error;
+        }
+        
+        // If this was the last attempt, throw the error
+        if (attempt === maxRetries) {
+          throw error;
+        }
+      }
+    }
+
+    throw lastError!;
+  }
+
+  /**
+   * Single upload attempt (internal method)
+   */
+  private async _uploadVideoAttempt(
     videoUri: string,
     filename: string,
     duration: number,
@@ -308,6 +350,12 @@ export class VideoUploadService {
         } else {
           throw new Error('Failed to acquire authentication token for upload');
         }
+      }
+
+      // Test network connectivity before starting upload
+      const isConnected = await this.testNetworkConnectivity();
+      if (!isConnected) {
+        throw new Error('Network connection failed - please check your internet connection');
       }
       
       // Create abort controller for this upload
@@ -352,14 +400,32 @@ export class VideoUploadService {
       const uploadUrl = `${this.baseUrl}/api/v1/s3-media/upload`;
       console.log('🌐 UPLOAD: Upload URL:', uploadUrl);
 
-      // Upload directly to S3 endpoint
+      // Upload directly to S3 endpoint with timeout
       console.log('🌐 UPLOAD: Making fetch request...');
-      const response = await fetch(uploadUrl, {
-        method: 'POST',
-        headers: authHeaders,
-        body: formData,
-        signal: abortController.signal,
+      
+      // Create timeout promise
+      const timeoutMs = options?.timeout || 60000; // 60 second default timeout
+      const timeoutPromise = new Promise((_, reject) => {
+        const timeoutId = setTimeout(() => {
+          reject(new Error(`Upload timeout after ${timeoutMs}ms`));
+        }, timeoutMs);
+        
+        // Clear timeout if aborted
+        abortController.signal.addEventListener('abort', () => {
+          clearTimeout(timeoutId);
+        });
       });
+
+      // Race between fetch and timeout
+      const response = await Promise.race([
+        fetch(uploadUrl, {
+          method: 'POST',
+          headers: authHeaders,
+          body: formData,
+          signal: abortController.signal,
+        }),
+        timeoutPromise
+      ]) as Response;
 
       console.log('📡 UPLOAD: Response received - Status:', response.status);
       console.log('📡 UPLOAD: Response headers:', Object.fromEntries(response.headers.entries()));
@@ -409,10 +475,20 @@ export class VideoUploadService {
         message: error.message,
         stack: error.stack
       });
+
+      // Provide more specific error messages for better user feedback
+      let errorMessage = error.message || 'Upload failed';
+      if (error.message?.includes('timeout')) {
+        errorMessage = 'Upload timed out - please check your internet connection and try again';
+      } else if (error.message?.includes('Network request failed')) {
+        errorMessage = 'Network connection failed - please check your internet connection';
+      } else if (error.message?.includes('Failed to fetch')) {
+        errorMessage = 'Unable to connect to server - please check your network connection';
+      }
       
       return {
         success: false,
-        error: error.message || 'Upload failed',
+        error: errorMessage,
       };
     }
   }
@@ -438,6 +514,32 @@ export class VideoUploadService {
       controller.abort();
     }
     this.activeUploads.clear();
+  }
+
+  /**
+   * Test network connectivity before upload
+   */
+  private async testNetworkConnectivity(): Promise<boolean> {
+    try {
+      console.log('🔍 UPLOAD: Testing network connectivity...');
+      const testUrl = `${this.baseUrl}/api/v1/auth/guest`;
+      const controller = new AbortController();
+      
+      // Set a 5 second timeout for connectivity test
+      setTimeout(() => controller.abort(), 5000);
+      
+      const response = await fetch(testUrl, {
+        method: 'HEAD',
+        signal: controller.signal,
+      });
+      
+      const isConnected = response.status < 500; // Accept any non-server error
+      console.log(isConnected ? '✅ UPLOAD: Network connectivity OK' : '❌ UPLOAD: Network connectivity failed');
+      return isConnected;
+    } catch (error: any) {
+      console.warn('⚠️ UPLOAD: Network connectivity test failed:', error.message);
+      return false;
+    }
   }
 
   /**
