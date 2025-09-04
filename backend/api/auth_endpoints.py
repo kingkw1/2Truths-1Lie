@@ -82,7 +82,7 @@ async def create_guest_session(request: Request):
             data={
                 "sub": guest_id,
                 "type": "guest",
-                "permissions": ["media:read", "media:upload"]  # No delete for guests
+                "permissions": ["media:read", "media:upload", "challenge:create", "challenge:read", "challenge:play"]  # Allow full game functionality for guests
             }
         )
         refresh_token = auth_service.create_refresh_token(guest_id)
@@ -91,7 +91,7 @@ async def create_guest_session(request: Request):
             access_token=access_token,
             refresh_token=refresh_token,
             expires_in=1800,
-            permissions=["media:read", "media:upload"]
+            permissions=["media:read", "media:upload", "challenge:create", "challenge:read", "challenge:play"]
         )
         
     except Exception as e:

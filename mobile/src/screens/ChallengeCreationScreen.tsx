@@ -24,6 +24,7 @@ import {
 import { MobileCameraRecorder } from '../components/MobileCameraRecorder';
 import { EnhancedMobileCameraIntegration } from '../components/EnhancedMobileCameraIntegration';
 import { MediaCapture } from '../types';
+import { realChallengeAPI } from '../services/realChallengeAPI';
 
 /**
  * Opens device settings for the app
@@ -182,16 +183,23 @@ export const ChallengeCreationScreen: React.FC<ChallengeCreationScreenProps> = (
   };
 
   const handleLieSelection = (index: number) => {
+    console.log('🎯 LIE_SELECTION: Lie selected at index:', index);
     setSelectedLieIndex(index);
     dispatch(setLieStatement(index));
   };
 
   const handlePreview = () => {
+    console.log('🎯 PREVIEW: Attempting to enter preview mode...');
+    console.log('🎯 PREVIEW: Current validation errors:', validationErrors);
+    console.log('🎯 PREVIEW: Current challenge state:', JSON.stringify(currentChallenge, null, 2));
+    
     dispatch(validateChallenge());
     if (validationErrors.length === 0) {
+      console.log('✅ PREVIEW: Validation passed, entering preview mode');
       dispatch(enterPreviewMode());
       setCurrentStep('preview');
     } else {
+      console.log('❌ PREVIEW: Validation failed:', validationErrors);
       Alert.alert(
         'Validation Error',
         validationErrors.join('\n'),
@@ -201,16 +209,89 @@ export const ChallengeCreationScreen: React.FC<ChallengeCreationScreenProps> = (
   };
 
   const handleSubmit = async () => {
+    console.log('🚨🚨🚨 SUBMIT BUTTON PRESSED! 🚨🚨🚨');
+    console.log('🚨 This should definitely appear in logs if button is working');
+    
     try {
+      console.log('🎯 CHALLENGE: Starting challenge submission...');
       dispatch(startSubmission());
       
-      // Simulate submission process
-      await new Promise(resolve => setTimeout(resolve, 2000));
+      // Use the currentChallenge from component state (already available from useAppSelector above)
+      console.log('🎯 CHALLENGE: Using currentChallenge from component state');
       
-      dispatch(completeSubmission({ success: true }));
-    } catch (error) {
+      // Validate we have all required data
+      if (!currentChallenge?.statements || currentChallenge.statements.length !== 3) {
+        throw new Error('Challenge must have exactly 3 statements');
+      }
+      
+      // Find which statement is marked as the lie
+      const lieStatementIndex = currentChallenge.statements.findIndex(stmt => stmt.isLie);
+      if (lieStatementIndex === -1) {
+        throw new Error('You must select which statement is the lie');
+      }
+      
+      if (!currentChallenge.mediaData || currentChallenge.mediaData.length !== 3) {
+        throw new Error('All 3 statements must have video recordings');
+      }
+      
+      // Check that all media has been uploaded and has mediaId
+      const missingUploads = currentChallenge.mediaData.filter(media => !media.mediaId || !media.isUploaded);
+      if (missingUploads.length > 0) {
+        throw new Error('All videos must be uploaded before creating the challenge. Please wait for uploads to complete.');
+      }
+      
+      // Prepare the challenge request for the backend
+      const challengeRequest = {
+        statements: currentChallenge.statements.map((statement, index) => ({
+          text: statement.text || `Statement ${index + 1}`, // Use statement text or default
+          media_file_id: currentChallenge.mediaData![index].mediaId!,
+        })),
+        lie_statement_index: lieStatementIndex,
+        tags: ['mobile-game', '2truths1lie'], // Default tags
+      };
+      
+      console.log('🎯 CHALLENGE: Submitting request:', JSON.stringify(challengeRequest, null, 2));
+      
+      // Submit to backend
+      const response = await realChallengeAPI.createChallenge(challengeRequest);
+      
+      if (response.success && response.data) {
+        console.log('✅ CHALLENGE: Successfully created challenge:', response.data.id);
+        dispatch(completeSubmission({ success: true }));
+        
+        Alert.alert(
+          '🎉 Challenge Created!',
+          `Your challenge "${response.data.id}" has been created successfully! Other players can now guess which statement is the lie.`,
+          [
+            {
+              text: 'Create Another',
+              onPress: () => {
+                dispatch(startNewChallenge());
+                setCurrentStep('instructions');
+              }
+            },
+            {
+              text: 'Done',
+              style: 'cancel',
+              onPress: () => {
+                // Navigate back or to challenges list
+                // navigation.goBack();
+              }
+            }
+          ]
+        );
+      } else {
+        throw new Error(response.error || 'Failed to create challenge');
+      }
+      
+    } catch (error: any) {
+      console.error('❌ CHALLENGE: Submission failed:', error);
       dispatch(completeSubmission({ success: false }));
-      Alert.alert('Submission Error', 'Failed to create challenge. Please try again.');
+      Alert.alert(
+        'Challenge Creation Failed', 
+        error.message || 'Failed to create challenge. Please try again.',
+        [{ text: 'OK', style: 'default' }]
+      );
     }
   };
 
@@ -266,9 +347,16 @@ export const ChallengeCreationScreen: React.FC<ChallengeCreationScreenProps> = (
   );
 
   const renderLieSelection = () => {
+    console.log('🎯 LIE_SELECTION: Rendering lie selection screen');
+    console.log('🎯 LIE_SELECTION: currentChallenge.mediaData:', JSON.stringify(currentChallenge.mediaData, null, 2));
+    
     const hasAllRecordings = currentChallenge.mediaData && 
       currentChallenge.mediaData.length >= 3 &&
       currentChallenge.mediaData.every(media => media.type === 'video' && media.url);
+
+    console.log('🎯 LIE_SELECTION: hasAllRecordings:', hasAllRecordings);
+    console.log('🎯 LIE_SELECTION: selectedLieIndex:', selectedLieIndex);
+    console.log('🎯 LIE_SELECTION: Will show preview button:', hasAllRecordings && selectedLieIndex !== null);
 
     return (
       <ScrollView style={styles.stepContainer}>
@@ -397,12 +485,16 @@ export const ChallengeCreationScreen: React.FC<ChallengeCreationScreenProps> = (
         </TouchableOpacity>
         
         <TouchableOpacity
-          style={[styles.primaryButton, isSubmitting && styles.disabledButton]}
-          onPress={handleSubmit}
-          disabled={isSubmitting}
+          style={styles.primaryButton}
+          onPress={() => {
+            console.log('🎯 BUTTON: Submit button pressed!');
+            console.log('🎯 BUTTON: isSubmitting:', isSubmitting);
+            console.log('🎯 BUTTON: currentChallenge:', JSON.stringify(currentChallenge, null, 2));
+            handleSubmit();
+          }}
         >
           <Text style={styles.primaryButtonText}>
-            {isSubmitting ? 'Creating...' : 'Create Challenge'}
+            Create Challenge (Debug)
           </Text>
         </TouchableOpacity>
       </View>

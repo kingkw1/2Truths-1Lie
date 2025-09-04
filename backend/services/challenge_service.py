@@ -556,3 +556,7 @@ class ChallengeService:
         
         logger.info(f"Updated challenge {challenge_id}")
         return updated_challenge
+
+
+# Create singleton instance
+challenge_service = ChallengeService()

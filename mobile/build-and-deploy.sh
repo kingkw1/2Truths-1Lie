@@ -15,7 +15,7 @@ cp dist/_expo/static/js/android/index-*.hbc android/app/src/main/assets/index.an
 
 # Step 3: Build APK
 echo "🔨 Building Android APK..."
-./android/gradlew -p android assembleDebug
+cd android && ./gradlew assembleDebug && cd ..
 
 # Step 4: Check if device is connected
 echo "📱 Checking for connected devices..."
