@@ -238,6 +238,12 @@ export const MobileMediaUtils = {
    * Validate file for mobile processing
    */
   validateMediaFile(uri: string, maxSize: number = 50 * 1024 * 1024): Promise<boolean> {
+    // Skip validation for remote URLs (HTTP/HTTPS) as they can't be accessed via FileSystem
+    if (uri.startsWith('http://') || uri.startsWith('https://')) {
+      console.log('Skipping file validation for remote URL:', uri);
+      return Promise.resolve(true);
+    }
+    
     return FileSystem.getInfoAsync(uri).then(info => {
       return (info.exists && (info.size || 0) <= maxSize);
     }).catch(() => false);

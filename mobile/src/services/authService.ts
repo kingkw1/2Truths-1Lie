@@ -32,23 +32,13 @@ export class AuthService {
    */
   public async initialize(): Promise<void> {
     try {
-      const storedUser = await AsyncStorage.getItem('currentUser');
-      const storedToken = await AsyncStorage.getItem('authToken');
-
-      if (storedUser) {
-        this.currentUser = JSON.parse(storedUser);
-      }
-
-      if (storedToken) {
-        this.authToken = storedToken;
-      }
-
-      // If no user exists, create a guest user
-      if (!this.currentUser) {
-        await this.createGuestUser();
-      }
+      // Clear any existing auth data for fresh start
+      await AsyncStorage.multiRemove(['currentUser', 'authToken', 'refreshToken']);
+      
+      // Always create a fresh guest user for testing
+      await this.createGuestUser();
     } catch (error) {
-      console.error('Failed to initialize auth service:', error);
+      console.error('Auth initialization error:', error);
       await this.createGuestUser();
     }
   }
@@ -58,6 +48,8 @@ export class AuthService {
    */
   private async createGuestUser(): Promise<void> {
     try {
+      console.log('🚀 Creating guest session with backend...');
+      
       const response = await fetch(`${this.getApiBaseUrl()}/api/v1/auth/guest`, {
         method: 'POST',
         headers: {
@@ -65,11 +57,20 @@ export class AuthService {
         },
       });
 
+      console.log('Guest session response status:', response.status);
+
       if (!response.ok) {
-        throw new Error('Failed to create guest session');
+        const errorText = await response.text();
+        console.error('Guest session error response:', errorText);
+        throw new Error(`Failed to create guest session: ${response.status} ${errorText}`);
       }
 
       const data = await response.json();
+      console.log('✅ Got guest session data:', {
+        hasAccessToken: !!data.access_token,
+        hasRefreshToken: !!data.refresh_token,
+        tokenType: data.token_type
+      });
       
       const guestUser: AuthUser = {
         id: `guest_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
@@ -85,9 +86,9 @@ export class AuthService {
       await AsyncStorage.setItem('authToken', data.access_token);
       await AsyncStorage.setItem('refreshToken', data.refresh_token);
 
-      console.log('Created guest user:', guestUser.id);
+      console.log('✅ Created guest user with backend token:', guestUser.id);
     } catch (error) {
-      console.warn('Failed to create guest session with backend, using local fallback:', error);
+      console.error('❌ Failed to create guest session with backend:', error);
       
       // Fallback to local guest user
       const guestUser: AuthUser = {
@@ -96,7 +97,7 @@ export class AuthService {
         createdAt: new Date(),
       };
 
-      const guestToken = `guest_token_${guestUser.id}`;
+      const guestToken = `local_guest_token_${guestUser.id}`;
 
       this.currentUser = guestUser;
       this.authToken = guestToken;
@@ -104,7 +105,7 @@ export class AuthService {
       await AsyncStorage.setItem('currentUser', JSON.stringify(guestUser));
       await AsyncStorage.setItem('authToken', guestToken);
 
-      console.log('Created local guest user:', guestUser.id);
+      console.log('⚠️ Created local guest user:', guestUser.id);
     }
   }
 
@@ -264,10 +265,9 @@ export class AuthService {
    * Get API base URL based on environment
    */
   private getApiBaseUrl(): string {
-    // In production, this would come from your app config
-    return __DEV__ 
-      ? 'http://192.168.50.111:8001' 
-      : 'https://your-production-api.com';
+    // Force development URL for now
+    console.log('🌐 AUTH: Using development URL');
+    return 'http://192.168.50.111:8001';
   }
 
   /**

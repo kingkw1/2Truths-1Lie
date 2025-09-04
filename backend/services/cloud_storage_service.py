@@ -340,10 +340,10 @@ class S3CloudStorageService(CloudStorageService):
         """Check if file exists in S3"""
         try:
             await asyncio.get_event_loop().run_in_executor(
-                None, self.s3_client.head_object, {
-                    'Bucket': self.bucket_name,
-                    'Key': key
-                }
+                None, lambda: self.s3_client.head_object(
+                    Bucket=self.bucket_name,
+                    Key=key
+                )
             )
             return True
             
@@ -357,10 +357,10 @@ class S3CloudStorageService(CloudStorageService):
         """Get S3 object metadata"""
         try:
             response = await asyncio.get_event_loop().run_in_executor(
-                None, self.s3_client.head_object, {
-                    'Bucket': self.bucket_name,
-                    'Key': key
-                }
+                None, lambda: self.s3_client.head_object(
+                    Bucket=self.bucket_name,
+                    Key=key
+                )
             )
             
             return {

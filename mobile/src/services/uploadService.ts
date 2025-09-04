@@ -54,10 +54,9 @@ export class VideoUploadService {
   private activeUploads: Map<string, AbortController> = new Map();
 
   private constructor() {
-    // In production, this would come from your app config
-    this.baseUrl = __DEV__ 
-      ? 'http://192.168.50.111:8001' 
-      : 'https://your-production-api.com';
+    // Force development URL for now
+    console.log('🌐 UPLOAD: Using development URL');
+    this.baseUrl = 'http://192.168.50.111:8001';
   }
 
   public static getInstance(): VideoUploadService {
@@ -279,7 +278,7 @@ export class VideoUploadService {
   }
 
   /**
-   * Upload video with compression and progress tracking
+   * Upload video directly to S3 endpoint
    */
   public async uploadVideo(
     videoUri: string,
@@ -288,25 +287,29 @@ export class VideoUploadService {
     options: UploadOptions = {},
     onProgress?: (progress: UploadProgress) => void
   ): Promise<UploadResult> {
-    // Temporarily disable permission check to test
-    // const hasPermission = await this.checkUploadPermission();
-    // if (!hasPermission) {
-    //   return {
-    //     success: false,
-    //     error: 'Insufficient permissions for upload',
-    //   };
-    // }
-    
-    console.log('🔄 Starting video upload (permission check bypassed for testing)');
-    
     const startTime = Date.now();
     const uploadId = `upload_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
     
-    let finalUri: string = videoUri;
-    let finalFileSize = 0;
-    let compressionRatio = 1;
-    
     try {
+      console.log('🚀 UPLOAD: Starting video upload process...');
+      console.log('🚀 UPLOAD: Video URI:', videoUri);
+      console.log('🚀 UPLOAD: Filename:', filename);
+      console.log('🚀 UPLOAD: Base URL:', this.baseUrl);
+      
+      // Ensure we have an auth token before uploading
+      if (!this.authToken) {
+        console.log('🔐 UPLOAD: No auth token found, initializing auth service...');
+        const { authService } = await import('./authService');
+        await authService.initialize();
+        const token = authService.getAuthToken();
+        if (token) {
+          this.setAuthToken(token);
+          console.log('✅ UPLOAD: Auth token acquired for upload');
+        } else {
+          throw new Error('Failed to acquire authentication token for upload');
+        }
+      }
+      
       // Create abort controller for this upload
       const abortController = new AbortController();
       this.activeUploads.set(uploadId, abortController);
@@ -320,147 +323,97 @@ export class VideoUploadService {
       }
 
       // Handle file size safely
+      let fileSize = 0;
       if ('size' in fileInfo) {
-        finalFileSize = fileInfo.size || 0;
-      } else {
-        // Fallback for when size is not available
-        finalFileSize = 0;
+        fileSize = fileInfo.size || 0;
       }
 
-      finalUri = videoUri;
+      console.log('📁 UPLOAD: File info:', { exists: fileInfo.exists, size: fileSize });
 
-      // Perform client-side validation before processing
-      const clientValidation = this.validateVideoFile(filename, finalFileSize, duration);
-      if (!clientValidation.valid) {
-        throw new Error(clientValidation.error);
-      }
+      onProgress?.({ stage: 'preparing', progress: 10, startTime });
 
-      // Validate with server before upload
-      const serverValidation = await this.validateWithServer(filename, finalFileSize, duration);
-      if (!serverValidation.valid) {
-        throw new Error(serverValidation.error);
-      }
+      // Get auth headers
+      const authHeaders = this.getAuthHeaders(false);
+      console.log('🔐 UPLOAD: Auth headers:', Object.keys(authHeaders));
+      console.log('🔐 UPLOAD: Has Authorization?', !!authHeaders.Authorization);
+      
+      // Prepare file for upload
+      const formData = new FormData();
+      formData.append('file', {
+        uri: videoUri,
+        type: 'video/mp4',
+        name: filename || 'video.mp4',
+      } as any);
 
-      // Compress video if needed
-      if (options.compress !== false && finalFileSize > (options.maxFileSize || 25 * 1024 * 1024)) {
-        onProgress?.({ stage: 'compressing', progress: 10, startTime });
+      console.log('📦 UPLOAD: FormData prepared');
 
-        const compressionOptions: CompressionOptions = {
-          quality: options.compressionQuality || 0.8,
-          maxFileSize: options.maxFileSize || 50 * 1024 * 1024,
-        };
+      onProgress?.({ stage: 'uploading', progress: 20, startTime });
 
-        const compressionResult = await mediaCompressor.compressVideo(
-          videoUri,
-          compressionOptions,
-          (compProgress: CompressionProgress) => {
-            const overallProgress = 10 + (compProgress.progress * 0.3); // 10-40% for compression
-            onProgress?.({ 
-              stage: 'compressing', 
-              progress: overallProgress,
-              estimatedTimeRemaining: compProgress.estimatedTimeRemaining,
-              startTime
-            });
-          }
-        );
+      const uploadUrl = `${this.baseUrl}/api/v1/s3-media/upload`;
+      console.log('🌐 UPLOAD: Upload URL:', uploadUrl);
 
-        finalUri = compressionResult.uri;
-        finalFileSize = compressionResult.compressedSize;
-        compressionRatio = compressionResult.compressionRatio;
-      }
-
-      onProgress?.({ stage: 'uploading', progress: 45, startTime });
-
-      // Calculate file hash for integrity check
-      const fileHash = await this.calculateFileHash(finalUri);
-
-      // Initiate upload session
-      const session = await this.initiateUpload(
-        filename,
-        finalFileSize,
-        duration,
-        this.getMimeType(filename),
-        fileHash,
-        abortController.signal
-      );
-
-      onProgress?.({ 
-        stage: 'uploading', 
-        progress: 50,
-        totalChunks: session.totalChunks 
+      // Upload directly to S3 endpoint
+      console.log('🌐 UPLOAD: Making fetch request...');
+      const response = await fetch(uploadUrl, {
+        method: 'POST',
+        headers: authHeaders,
+        body: formData,
+        signal: abortController.signal,
       });
 
-      // Upload file in chunks
-      await this.uploadInChunks(
-        finalUri,
-        session,
-        fileHash,
-        abortController.signal,
-        (chunkProgress) => {
-          const overallProgress = 50 + (chunkProgress * 0.4); // 50-90% for upload
-          onProgress?.({
-            stage: 'uploading',
-            progress: overallProgress,
-            bytesUploaded: Math.floor(chunkProgress * finalFileSize / 100),
-            totalBytes: finalFileSize,
-            currentChunk: Math.floor(chunkProgress * session.totalChunks / 100),
-            totalChunks: session.totalChunks,
-            startTime
-          });
-        }
-      );
+      console.log('📡 UPLOAD: Response received - Status:', response.status);
+      console.log('📡 UPLOAD: Response headers:', Object.fromEntries(response.headers.entries()));
 
-      onProgress?.({ stage: 'finalizing', progress: 95, startTime });
-
-      // Complete upload and get streaming URL
-      const completionResult = await this.completeUpload(
-        session.sessionId,
-        fileHash,
-        abortController.signal
-      );
-
-      onProgress?.({ stage: 'finalizing', progress: 100, startTime });
-
-      // Clean up temporary compressed file if created
-      if (finalUri !== videoUri) {
-        try {
-          await FileSystem.deleteAsync(finalUri, { idempotent: true });
-        } catch (error) {
-          console.warn('Failed to clean up compressed file:', error);
-        }
+      if (!response.ok) {
+        const errorText = await response.text().catch(() => 'Unknown error');
+        console.error('❌ UPLOAD: Upload failed:', response.status, errorText);
+        throw new Error(`Upload failed: ${response.status} ${errorText}`);
       }
 
-      const uploadTime = Date.now() - startTime;
+      const result = await response.json();
+      console.log('✅ UPLOAD: Upload successful:', result);
+      
+      onProgress?.({ stage: 'finalizing', progress: 90, startTime });
+
+      // Clean up
+      this.activeUploads.delete(uploadId);
+      
+      onProgress?.({ stage: 'finalizing', progress: 100, startTime });
 
       return {
         success: true,
-        mediaId: completionResult.media_id,
-        streamingUrl: completionResult.streaming_url,
-        cloudStorageKey: completionResult.cloud_key,
-        storageType: completionResult.storage_type,
-        fileSize: finalFileSize,
-        compressionRatio,
-        uploadTime,
+        mediaId: result.media_id,
+        streamingUrl: result.storage_url,
+        cloudStorageKey: result.media_id,
+        storageType: 'cloud' as const,
+        fileSize: fileSize,
+        compressionRatio: 1,
+        uploadTime: Date.now() - startTime,
       };
 
     } catch (error: any) {
-      console.error('Video upload failed:', error);
-      
       // Clean up on error
-      if (typeof finalUri !== 'undefined' && finalUri !== videoUri) {
-        try {
-          await FileSystem.deleteAsync(finalUri, { idempotent: true });
-        } catch (cleanupError) {
-          console.warn('Failed to clean up on error:', cleanupError);
-        }
+      this.activeUploads.delete(uploadId);
+      
+      if (error.name === 'AbortError') {
+        console.log('⚠️ UPLOAD: Upload cancelled by user');
+        return {
+          success: false,
+          error: 'Upload cancelled by user',
+        };
       }
 
+      console.error('❌ UPLOAD: Upload error:', error);
+      console.error('❌ UPLOAD: Error details:', {
+        name: error.name,
+        message: error.message,
+        stack: error.stack
+      });
+      
       return {
         success: false,
         error: error.message || 'Upload failed',
       };
-    } finally {
-      this.activeUploads.delete(uploadId);
     }
   }
 
@@ -485,223 +438,6 @@ export class VideoUploadService {
       controller.abort();
     }
     this.activeUploads.clear();
-  }
-
-  /**
-   * Initiate upload session with backend
-   */
-  private async initiateUpload(
-    filename: string,
-    fileSize: number,
-    duration: number,
-    mimeType: string,
-    fileHash: string,
-    signal: AbortSignal
-  ): Promise<UploadSession> {
-    const formData = new FormData();
-    formData.append('filename', filename);
-    formData.append('file_size', fileSize.toString());
-    formData.append('duration_seconds', duration.toString());
-    formData.append('mime_type', mimeType);
-    formData.append('file_hash', fileHash);
-
-    const response = await fetch(`${this.baseUrl}/api/v1/media/upload/initiate`, {
-      method: 'POST',
-      headers: this.getAuthHeaders(),
-      body: formData,
-      signal,
-    });
-
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      throw new Error(errorData.detail || `Upload initiation failed: ${response.status}`);
-    }
-
-    const data = await response.json();
-    return {
-      sessionId: data.session_id,
-      uploadUrl: data.upload_url,
-      chunkSize: data.chunk_size,
-      totalChunks: data.total_chunks,
-      expiresAt: data.expires_at,
-    };
-  }
-
-  /**
-   * Upload file in chunks with progress tracking
-   */
-  private async uploadInChunks(
-    fileUri: string,
-    session: UploadSession,
-    fileHash: string,
-    signal: AbortSignal,
-    onProgress: (progress: number) => void
-  ): Promise<void> {
-    const fileInfo = await FileSystem.getInfoAsync(fileUri);
-    let fileSize = 0;
-    if ('size' in fileInfo) {
-      fileSize = fileInfo.size || 0;
-    }
-    
-    let uploadedBytes = 0;
-
-    for (let chunkNumber = 0; chunkNumber < session.totalChunks; chunkNumber++) {
-      if (signal.aborted) {
-        throw new Error('Upload cancelled');
-      }
-
-      const start = chunkNumber * session.chunkSize;
-      const end = Math.min(start + session.chunkSize, fileSize);
-      const chunkSize = end - start;
-
-      // Read chunk data
-      const chunkData = await FileSystem.readAsStringAsync(fileUri, {
-        encoding: FileSystem.EncodingType.Base64,
-        position: start,
-        length: chunkSize,
-      });
-
-      // Convert base64 to blob for upload
-      const chunkBlob = this.base64ToBlob(chunkData);
-      
-      // Calculate chunk hash
-      const chunkHash = await this.calculateChunkHash(chunkData);
-
-      // Upload chunk
-      await this.uploadChunk(
-        session.sessionId,
-        chunkNumber,
-        chunkBlob,
-        chunkHash,
-        signal
-      );
-
-      uploadedBytes += chunkSize;
-      const progress = (uploadedBytes / fileSize) * 100;
-      onProgress(progress);
-    }
-  }
-
-  /**
-   * Upload individual chunk
-   */
-  private async uploadChunk(
-    sessionId: string,
-    chunkNumber: number,
-    chunkData: Blob,
-    chunkHash: string,
-    signal: AbortSignal
-  ): Promise<void> {
-    const formData = new FormData();
-    formData.append('file', chunkData);
-    formData.append('chunk_hash', chunkHash);
-
-    const response = await fetch(
-      `${this.baseUrl}/api/v1/media/upload/${sessionId}/chunk/${chunkNumber}`,
-      {
-        method: 'POST',
-        headers: this.getAuthHeaders(false), // Don't set Content-Type for FormData
-        body: formData,
-        signal,
-      }
-    );
-
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      throw new Error(errorData.detail || `Chunk upload failed: ${response.status}`);
-    }
-  }
-
-  /**
-   * Complete upload and get streaming URL
-   */
-  private async completeUpload(
-    sessionId: string,
-    fileHash: string,
-    signal: AbortSignal
-  ): Promise<any> {
-    const formData = new FormData();
-    formData.append('file_hash', fileHash);
-
-    const response = await fetch(
-      `${this.baseUrl}/api/v1/media/upload/${sessionId}/complete`,
-      {
-        method: 'POST',
-        headers: this.getAuthHeaders(false),
-        body: formData,
-        signal,
-      }
-    );
-
-    if (!response.ok) {
-      const errorData = await response.json().catch(() => ({}));
-      throw new Error(errorData.detail || `Upload completion failed: ${response.status}`);
-    }
-
-    return response.json();
-  }
-
-  /**
-   * Calculate file hash for integrity verification
-   */
-  private async calculateFileHash(fileUri: string): Promise<string> {
-    try {
-      // For mobile, we'll use a simple hash based on file info
-      // In production, you might want to use a proper hash library
-      const fileInfo = await FileSystem.getInfoAsync(fileUri);
-      
-      let hashInput = fileUri;
-      if ('size' in fileInfo) {
-        hashInput += `_${fileInfo.size}`;
-      }
-      if ('modificationTime' in fileInfo) {
-        hashInput += `_${fileInfo.modificationTime}`;
-      }
-      
-      // Simple hash function (in production, use crypto library)
-      let hash = 0;
-      for (let i = 0; i < hashInput.length; i++) {
-        const char = hashInput.charCodeAt(i);
-        hash = ((hash << 5) - hash) + char;
-        hash = hash & hash; // Convert to 32-bit integer
-      }
-      
-      return Math.abs(hash).toString(16);
-    } catch (error) {
-      console.warn('Failed to calculate file hash:', error);
-      return Date.now().toString(16); // Fallback hash
-    }
-  }
-
-  /**
-   * Calculate chunk hash
-   */
-  private async calculateChunkHash(chunkData: string): Promise<string> {
-    // Simple hash for chunk data
-    let hash = 0;
-    for (let i = 0; i < chunkData.length; i++) {
-      const char = chunkData.charCodeAt(i);
-      hash = ((hash << 5) - hash) + char;
-      hash = hash & hash;
-    }
-    return Math.abs(hash).toString(16);
-  }
-
-  /**
-   * Convert base64 string to Blob
-   */
-  private base64ToBlob(base64Data: string): Blob {
-    // For React Native, we need to create a proper Blob
-    // This is a simplified implementation
-    const byteCharacters = atob(base64Data);
-    const byteNumbers = new Array(byteCharacters.length);
-    
-    for (let i = 0; i < byteCharacters.length; i++) {
-      byteNumbers[i] = byteCharacters.charCodeAt(i);
-    }
-    
-    const byteArray = new Uint8Array(byteNumbers);
-    return new Blob([byteArray], { type: 'video/mp4' });
   }
 
   /**

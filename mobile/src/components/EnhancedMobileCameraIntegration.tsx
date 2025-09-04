@@ -85,12 +85,29 @@ export const EnhancedMobileCameraIntegration: React.FC<EnhancedMobileCameraInteg
       setIsProcessing(true);
       setProcessingStep('Processing recording...');
 
-      // Use the mobile media integration service for processing
-      const processedMedia = await mobileMediaIntegration.stopRecording(
-        statementIndex,
-        media.url || '',
-        media.duration || 0
-      );
+      // Check if media is already uploaded (has cloud storage URL)
+      let processedMedia: MediaCapture;
+      
+      if (media.isUploaded && media.storageType === 'cloud') {
+        // Media is already processed and uploaded, just use it directly
+        processedMedia = media;
+        
+        // Still update Redux with the processed media
+        dispatch(setStatementMedia({
+          index: statementIndex,
+          media: processedMedia,
+        }));
+        
+        // Validate the entire challenge
+        dispatch(validateChallenge());
+      } else {
+        // Use the mobile media integration service for processing local files
+        processedMedia = await mobileMediaIntegration.stopRecording(
+          statementIndex,
+          media.url || '',
+          media.duration || 0
+        );
+      }
 
       // Success haptic feedback
       if (Platform.OS === 'ios') {

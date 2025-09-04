@@ -67,22 +67,41 @@ class AuthService:
         )
     
     def verify_token(self, token: str) -> dict:
-        """Verify JWT token and return payload with enhanced validation"""
+        """Verify and decode JWT token with comprehensive validation"""
+        logger.info(f"=== VERIFY_TOKEN CALLED ===")
+        logger.info(f"Token received: {token[:50]}...")
+        
         try:
-            # Decode token
-            payload = jwt.decode(token, settings.SECRET_KEY, algorithms=[settings.ALGORITHM])
+            logger.info(f"Starting JWT verification for token: {token[:50]}...")
+            logger.info(f"Using SECRET_KEY: {settings.SECRET_KEY}")
+            logger.info(f"Using ALGORITHM: {settings.ALGORITHM}")
             
-            # Validate required claims
-            user_id: str = payload.get("sub")
-            if user_id is None:
+            # Decode and validate JWT - specify expected audience and issuer
+            payload = jwt.decode(
+                token, 
+                settings.SECRET_KEY, 
+                algorithms=[settings.ALGORITHM],
+                audience="twotruthsalie-mobile",
+                issuer="twotruthsalie-api"
+            )
+            
+            # Debug logging
+            logger.info(f"JWT payload decoded successfully: {payload}")
+            logger.info(f"Expected audience: 'twotruthsalie-mobile', Got: '{payload.get('aud')}'")
+            logger.info(f"Expected issuer: 'twotruthsalie-api', Got: '{payload.get('iss')}'")
+            
+            # Validate user ID is present
+            user_id = payload.get("sub")
+            if not user_id:
                 raise HTTPException(
                     status_code=status.HTTP_401_UNAUTHORIZED,
                     detail="Invalid token: missing user ID",
                     headers={"WWW-Authenticate": "Bearer"},
                 )
             
-            # Check if token is still active in our session store
-            if user_id in self.active_sessions:
+            # Check if token is still active in our session store (skip for guest users)
+            token_type = payload.get("type", "user")
+            if user_id in self.active_sessions and token_type != "guest":
                 session = self.active_sessions[user_id]
                 if session["token"] != token:
                     raise HTTPException(
@@ -91,30 +110,21 @@ class AuthService:
                         headers={"WWW-Authenticate": "Bearer"},
                     )
             
-            # Validate audience and issuer
-            if payload.get("aud") != "twotruthsalie-mobile":
-                raise HTTPException(
-                    status_code=status.HTTP_401_UNAUTHORIZED,
-                    detail="Invalid token audience",
-                    headers={"WWW-Authenticate": "Bearer"},
-                )
-            
-            if payload.get("iss") != "twotruthsalie-api":
-                raise HTTPException(
-                    status_code=status.HTTP_401_UNAUTHORIZED,
-                    detail="Invalid token issuer",
-                    headers={"WWW-Authenticate": "Bearer"},
-                )
-            
+            # JWT library has already validated audience and issuer during decode
+            # Return the validated payload
             return payload
             
         except jwt.ExpiredSignatureError:
+            logger.error("JWT ERROR: Token has expired")
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="Token has expired",
                 headers={"WWW-Authenticate": "Bearer"},
             )
         except JWTError as e:
+            logger.error(f"JWT ERROR: {e}")
+            logger.error(f"JWT ERROR Type: {type(e).__name__}")
+            logger.error(f"JWT ERROR Args: {e.args}")
             logger.warning(f"JWT validation error: {e}")
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
