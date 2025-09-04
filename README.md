@@ -13,11 +13,31 @@
 
 </div>
 
-## 🌟 Project Highlights
+## 🚀 Quick Start
 
-> **The classic icebreaker game reimagined with cutting-edge AI emotion recognition technology**
+### For Developers
+```bash
+# Get running in 5 minutes
+git clone https://github.com/kingkw1/2Truths-1Lie.git
+cd 2Truths-1Lie
 
-2Truths-1Lie transforms the beloved social game into an engaging mobile experience where players create video challenges and AI helps detect deception through real-time emotion analysis. Perfect blend of entertainment and innovative technology.
+# Backend setup
+cd backend && pip install -r requirements.txt && uvicorn main:app --reload --host 0.0.0.0 --port 8001
+
+# Mobile setup (new terminal)
+cd mobile && npm install && npm start
+# Scan QR code with Expo Go app
+```
+
+**📋 See [Developer Quick Start Guide](DEVELOPER_QUICK_START.md) for complete setup**
+
+### Current Status: **Media System Production Ready** ✅
+- ✅ 15+ successful video uploads to AWS S3
+- ✅ Complete mobile-to-backend integration  
+- ✅ Challenge creation with uploaded media
+- ✅ Local builds and deployment (no EAS credits needed)
+
+**🎯 Next**: Implementing challenge browse and gameplay screens
 
 ### 🎯 **Key Innovations**
 - **🎥 Native Mobile Video Recording** - Seamless camera integration for authentic storytelling

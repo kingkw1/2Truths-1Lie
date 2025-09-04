@@ -17,10 +17,10 @@
 
 ## 🔧 Development & API
 
+- **[Backend Integration Plan](../BACKEND_INTEGRATION_PLAN.md)** - Current development roadmap and next steps
+- **[Media System Complete Guide](MEDIA_SYSTEM_COMPLETE_GUIDE.md)** - Complete guide for video upload and streaming system (**Production Ready**)
 - **[API Documentation](api.md)** - Mobile-optimized backend API specifications
-- **[Persistent Media Workflow](PERSISTENT_MEDIA_WORKFLOW.md)** - Complete developer guide for video upload and streaming workflow
-- **[Media Upload Quick Reference](MEDIA_UPLOAD_QUICK_REFERENCE.md)** - Quick reference for developers working with media uploads
-- **[Development Schedule](development-schedule.md)** - Mobile app development timeline and hackathon milestones
+- **[User Media Guide](USER_MEDIA_GUIDE.md)** - Complete user guide for creating and sharing video challenges
 
 ## 📱 Mobile App Features
 
