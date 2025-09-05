@@ -44,13 +44,15 @@ include: always
 - Provide meaningful progress feedback during long-running media operations
 
 ## Mobile Code Quality and Build Compliance
-- All mobile code changes must compile successfully with Expo CLI and React Native
+- **CRITICAL**: All mobile code changes must compile successfully with Expo CLI and React Native
+- **MANDATORY**: Run `npx tsc --noEmit` to verify TypeScript compilation before task completion
 - The mobile app should run correctly with `npm run start:mobile` or `expo start`
 - TypeScript checking must pass for mobile code: `npm run type-check:mobile`
 - Mobile builds must succeed: EAS Build for Android/iOS without errors
 - React Native Metro bundler must complete without errors
 - Mobile-specific tests must pass before completing tasks
-- Failed mobile builds must trigger immediate fixes for native compilation issues
+- **NO EXCEPTIONS**: Failed mobile builds or compiler errors must trigger immediate fixes
+- Tasks cannot be marked "complete" until all compilation errors are resolved
 
 ## Mobile Platform Considerations
 - Test on both iOS and Android platforms for compatibility

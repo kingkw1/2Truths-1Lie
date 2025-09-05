@@ -12,11 +12,14 @@ include: always
 
 ## Mobile CI/CD Pipeline
 - Use GitHub Actions or EAS to automate:
+  - **MANDATORY**: TypeScript compilation validation (`npx tsc --noEmit`)
+  - **MANDATORY**: Syntax and import validation for all modified files
   - Running mobile tests on every push
   - Running lint and TypeScript checks for mobile code
   - Building Android APK/AAB and iOS IPA files
   - Deploying test builds to internal testing tracks
   - Publishing to app stores after approval
+- **CRITICAL**: Pipeline must fail if any compilation errors are detected
 
 ## Mobile Build Processes
 - **Development**: Expo Go for instant preview and iteration
