@@ -22,6 +22,7 @@ import {
 import { EnhancedChallenge, GuessResult } from '../types';
 import { ChallengeCreationScreen } from './ChallengeCreationScreen';
 import AnimatedFeedback from '../shared/AnimatedFeedback';
+import SegmentedVideoPlayer from '../components/SegmentedVideoPlayer';
 
 // Mock challenges for testing
 const mockChallenges: EnhancedChallenge[] = [
@@ -55,7 +56,38 @@ const mockChallenges: EnhancedChallenge[] = [
         averageConfidence: 55,
       },
     ],
-    mediaData: [],
+    mediaData: [
+      {
+        type: 'video',
+        streamingUrl: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4',
+        duration: 30000, // 30 seconds
+        fileSize: 5000000, // 5MB
+        mimeType: 'video/mp4',
+        mediaId: 'merged_video_1',
+        isUploaded: true,
+        isMergedVideo: true,
+        segments: [
+          {
+            statementIndex: 0,
+            startTime: 0,
+            endTime: 10000,
+            duration: 10000,
+          },
+          {
+            statementIndex: 1,
+            startTime: 10000,
+            endTime: 20000,
+            duration: 10000,
+          },
+          {
+            statementIndex: 2,
+            startTime: 20000,
+            endTime: 30000,
+            duration: 10000,
+          },
+        ],
+      },
+    ],
     difficultyRating: 65,
     averageGuessTime: 25000,
     popularityScore: 80,
@@ -98,7 +130,38 @@ const mockChallenges: EnhancedChallenge[] = [
         averageConfidence: 90,
       },
     ],
-    mediaData: [],
+    mediaData: [
+      {
+        type: 'video',
+        streamingUrl: 'https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/ElephantsDream.mp4',
+        duration: 45000, // 45 seconds
+        fileSize: 7000000, // 7MB
+        mimeType: 'video/mp4',
+        mediaId: 'merged_video_2',
+        isUploaded: true,
+        isMergedVideo: true,
+        segments: [
+          {
+            statementIndex: 0,
+            startTime: 0,
+            endTime: 15000,
+            duration: 15000,
+          },
+          {
+            statementIndex: 1,
+            startTime: 15000,
+            endTime: 30000,
+            duration: 15000,
+          },
+          {
+            statementIndex: 2,
+            startTime: 30000,
+            endTime: 45000,
+            duration: 15000,
+          },
+        ],
+      },
+    ],
     difficultyRating: 45,
     averageGuessTime: 18000,
     popularityScore: 60,
@@ -127,6 +190,7 @@ export const GameScreen: React.FC = () => {
   const [selectedStatement, setSelectedStatement] = useState<number | null>(null);
   const [showChallengeCreation, setShowChallengeCreation] = useState(false);
   const [currentStreak, setCurrentStreak] = useState(0);
+  const [showVideoPlayer, setShowVideoPlayer] = useState(false);
 
   useEffect(() => {
     // Load mock challenges when component mounts
@@ -174,6 +238,7 @@ export const GameScreen: React.FC = () => {
   const handleNewGame = () => {
     dispatch(endGuessingSession());
     setSelectedStatement(null);
+    setShowVideoPlayer(false);
   };
 
   const renderChallengeList = () => (
@@ -211,47 +276,86 @@ export const GameScreen: React.FC = () => {
     </ScrollView>
   );
 
-  const renderGameplay = () => (
-    <ScrollView style={styles.gameplayContainer}>
-      <Text style={styles.title}>Which statement is the lie?</Text>
-      <Text style={styles.subtitle}>By {selectedChallenge?.creatorName}</Text>
-      
-      {currentSession?.statements.map((statement: any, index: number) => (
-        <TouchableOpacity
-          key={statement.id}
-          style={[
-            styles.statementCard,
-            selectedStatement === index && styles.selectedStatement,
-          ]}
-          onPress={() => !guessSubmitted && setSelectedStatement(index)}
-          disabled={guessSubmitted}
-        >
-          <Text style={styles.statementText}>{statement.text}</Text>
-        </TouchableOpacity>
-      ))}
+  const renderGameplay = () => {
+    const mergedVideo = selectedChallenge?.mediaData?.find(media => media.isMergedVideo);
+    const hasSegmentedVideo = mergedVideo && mergedVideo.segments && mergedVideo.segments.length === 3;
 
-      {!guessSubmitted && selectedStatement !== null && (
-        <TouchableOpacity style={styles.submitButton} onPress={handleSubmitGuess}>
-          <Text style={styles.submitButtonText}>Submit Guess</Text>
-        </TouchableOpacity>
-      )}
-
-      {guessResult && (
-        <View style={styles.resultContainer}>
-          <Text style={[styles.resultText, guessResult.wasCorrect ? styles.correct : styles.incorrect]}>
-            {guessResult.wasCorrect ? '🎉 Correct!' : '🤔 Not quite!'}
-          </Text>
-          <Text style={styles.scoreText}>Score: +{guessResult.totalScore} points</Text>
-          <Text style={styles.explanationText}>
-            The lie was: "{currentSession?.statements[guessResult.correctStatement].text}"
-          </Text>
-          <TouchableOpacity style={styles.newGameButton} onPress={handleNewGame}>
-            <Text style={styles.newGameButtonText}>Play Again</Text>
+    return (
+      <ScrollView style={styles.gameplayContainer}>
+        <Text style={styles.title}>Which statement is the lie?</Text>
+        <Text style={styles.subtitle}>By {selectedChallenge?.creatorName}</Text>
+        
+        {/* Video Player Toggle */}
+        {hasSegmentedVideo && (
+          <TouchableOpacity
+            style={styles.videoToggleButton}
+            onPress={() => setShowVideoPlayer(!showVideoPlayer)}
+          >
+            <Text style={styles.videoToggleText}>
+              {showVideoPlayer ? '📝 Hide Video' : '🎥 Watch Statements'}
+            </Text>
           </TouchableOpacity>
+        )}
+
+        {/* Segmented Video Player */}
+        {showVideoPlayer && hasSegmentedVideo && (
+          <View style={styles.videoPlayerContainer}>
+            <SegmentedVideoPlayer
+              mergedVideo={mergedVideo}
+              statementTexts={currentSession?.statements.map((stmt: any) => stmt.text) || []}
+              onSegmentSelect={(segmentIndex) => {
+                console.log(`Playing segment ${segmentIndex}`);
+              }}
+              autoPlay={false}
+            />
+          </View>
+        )}
+        
+        {/* Statement Selection */}
+        <View style={styles.statementsSection}>
+          <Text style={styles.gameplaySectionTitle}>
+            {showVideoPlayer ? 'Make Your Guess:' : 'Read the statements and make your guess:'}
+          </Text>
+          
+          {currentSession?.statements.map((statement: any, index: number) => (
+            <TouchableOpacity
+              key={statement.id}
+              style={[
+                styles.statementCard,
+                selectedStatement === index && styles.selectedStatement,
+              ]}
+              onPress={() => !guessSubmitted && setSelectedStatement(index)}
+              disabled={guessSubmitted}
+            >
+              <Text style={styles.statementNumber}>Statement {index + 1}</Text>
+              <Text style={styles.statementText}>{statement.text}</Text>
+            </TouchableOpacity>
+          ))}
         </View>
-      )}
-    </ScrollView>
-  );
+
+        {!guessSubmitted && selectedStatement !== null && (
+          <TouchableOpacity style={styles.submitButton} onPress={handleSubmitGuess}>
+            <Text style={styles.submitButtonText}>Submit Guess</Text>
+          </TouchableOpacity>
+        )}
+
+        {guessResult && (
+          <View style={styles.resultContainer}>
+            <Text style={[styles.resultText, guessResult.wasCorrect ? styles.correct : styles.incorrect]}>
+              {guessResult.wasCorrect ? '🎉 Correct!' : '🤔 Not quite!'}
+            </Text>
+            <Text style={styles.scoreText}>Score: +{guessResult.totalScore} points</Text>
+            <Text style={styles.explanationText}>
+              The lie was: "{currentSession?.statements[guessResult.correctStatement].text}"
+            </Text>
+            <TouchableOpacity style={styles.newGameButton} onPress={handleNewGame}>
+              <Text style={styles.newGameButtonText}>Play Again</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+      </ScrollView>
+    );
+  };
 
   return (
     <SafeAreaView style={styles.container}>
@@ -466,5 +570,44 @@ const styles = StyleSheet.create({
     color: 'white',
     fontSize: 16,
     fontWeight: 'bold',
+  },
+  videoToggleButton: {
+    backgroundColor: '#4a90e2',
+    padding: 12,
+    borderRadius: 8,
+    marginBottom: 16,
+    alignItems: 'center',
+  },
+  videoToggleText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  videoPlayerContainer: {
+    backgroundColor: 'white',
+    borderRadius: 12,
+    marginBottom: 20,
+    padding: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  statementsSection: {
+    marginBottom: 20,
+  },
+  gameplaySectionTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#333',
+    marginBottom: 12,
+    textAlign: 'center',
+  },
+  statementNumber: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#4a90e2',
+    marginBottom: 4,
   },
 });
