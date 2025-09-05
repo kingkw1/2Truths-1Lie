@@ -9,7 +9,7 @@ import { GuessingSession, AnalyzedStatement, GuessResult, EnhancedChallenge } fr
 export interface ChallengeLoadError {
   type: 'network' | 'server' | 'auth' | 'timeout' | 'unknown';
   message: string;
-  timestamp: Date;
+  timestamp: number; // Changed from Date to timestamp
   retryable: boolean;
 }
 
@@ -20,7 +20,7 @@ export interface GuessingGameState {
   isLoading: boolean;
   loadError: ChallengeLoadError | null;
   retryCount: number;
-  lastSuccessfulLoad: Date | null;
+  lastSuccessfulLoad: number | null; // Changed from Date to timestamp
   showHint: boolean;
   guessSubmitted: boolean;
   guessResult: GuessResult | null;
@@ -90,7 +90,7 @@ const guessingGameSlice = createSlice({
       state.isLoading = false;
       state.loadError = null;
       state.retryCount = 0;
-      state.lastSuccessfulLoad = new Date();
+      state.lastSuccessfulLoad = Date.now(); // Store as timestamp
     },
 
     setLoading: (state, action: PayloadAction<boolean>) => {
@@ -123,8 +123,8 @@ const guessingGameSlice = createSlice({
       
       state.loadError = {
         type,
-        message: error,
-        timestamp: new Date(),
+        message: error || 'An unknown error occurred',
+        timestamp: Date.now(),
         retryable,
       };
       state.isLoading = false;

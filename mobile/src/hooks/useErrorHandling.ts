@@ -44,7 +44,15 @@ export const useErrorHandling = (
   const [retryCount, setRetryCount] = useState(0);
 
   const handleError = useCallback((err: any, context?: string) => {
+    console.log('🚨 ERROR_HOOK: ================== ERROR HANDLING TRIGGERED ==================');
+    console.log('🚨 ERROR_HOOK: Context:', context);
+    console.log('🚨 ERROR_HOOK: Error type:', typeof err);
+    console.log('🚨 ERROR_HOOK: Error message:', err?.message || 'No message');
+    
     const errorDetails = errorHandlingService.categorizeError(err);
+    console.log('🚨 ERROR_HOOK: Error category:', errorDetails.type);
+    console.log('🚨 ERROR_HOOK: Error retryable:', errorDetails.retryable);
+    
     errorHandlingService.logError(errorDetails, context);
     
     setError(errorDetails);

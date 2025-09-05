@@ -42,7 +42,9 @@ export const UploadUIExample: React.FC<UploadUIExampleProps> = ({
   const handleRetryUpload = async () => {
     try {
       const result = await uploadManager.retryUpload(videoUri, filename, duration);
-      Alert.alert('Upload Complete', `Video uploaded successfully! Media ID: ${result.mediaId}`);
+      if (result) {
+        Alert.alert('Upload Complete', `Video uploaded successfully! Media ID: ${result.mediaId}`);
+      }
     } catch (error: any) {
       Alert.alert('Upload Failed', error.message);
     }

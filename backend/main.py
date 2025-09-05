@@ -35,7 +35,7 @@ from services.validation_service import gameplay_validator, integrity_validator
 from api.media_endpoints import router as media_router
 from api.auth_endpoints import router as auth_router
 from api.s3_media_endpoints import router as s3_media_router
-# from api.test_endpoints import router as test_router  # Disabled to avoid confusion with production endpoints
+from api.test_endpoints import router as test_router  # Enabled for testing challenge creation
 from config import settings
 
 app = FastAPI(
@@ -48,7 +48,7 @@ app = FastAPI(
 app.include_router(media_router)
 app.include_router(auth_router)
 app.include_router(s3_media_router)
-# app.include_router(test_router)  # Disabled to avoid confusion with production endpoints
+app.include_router(test_router)  # Enabled for challenge creation testing
 
 # Import and include challenge endpoints
 from api.challenge_endpoints import router as challenge_router

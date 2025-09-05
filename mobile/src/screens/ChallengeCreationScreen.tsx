@@ -337,9 +337,15 @@ export const ChallengeCreationScreen: React.FC<ChallengeCreationScreenProps> = (
   const handleSubmit = async () => {
     console.log('🚨🚨🚨 SUBMIT BUTTON PRESSED! 🚨🚨🚨');
     console.log('🚨 This should definitely appear in logs if button is working');
+    console.log('🚨 Time:', new Date().toISOString());
+    console.log('🚨 Platform:', Platform.OS);
 
     try {
       console.log('🎯 CHALLENGE: Starting challenge submission...');
+      console.log('🎯 CHALLENGE: Current step:', currentStep);
+      console.log('🎯 CHALLENGE: Challenge statements count:', currentChallenge?.statements?.length);
+      console.log('🎯 CHALLENGE: Challenge has lie selected:', currentChallenge?.statements?.some(s => s.isLie));
+      
       dispatch(startSubmission());
 
       // Use the currentChallenge from component state (already available from useAppSelector above)
@@ -347,19 +353,29 @@ export const ChallengeCreationScreen: React.FC<ChallengeCreationScreenProps> = (
 
       // Validate we have all required data
       if (!currentChallenge?.statements || currentChallenge.statements.length !== 3) {
+        console.error('❌ SUBMIT: Invalid statements count:', currentChallenge?.statements?.length);
         throw new Error('Challenge must have exactly 3 statements');
       }
 
       // Find which statement is marked as the lie
       const lieStatementIndex = currentChallenge.statements.findIndex(stmt => stmt.isLie);
+      console.log('🎯 SUBMIT: Looking for lie statement...');
+      console.log('🎯 SUBMIT: Statement analysis:');
+      currentChallenge.statements.forEach((stmt, idx) => {
+        console.log(`  Statement ${idx}: isLie=${stmt.isLie}, text="${stmt.text}"`);
+      });
+      console.log('🎯 SUBMIT: lieStatementIndex:', lieStatementIndex);
+      
       if (lieStatementIndex === -1) {
+        console.error('❌ SUBMIT: No lie statement found');
         throw new Error('You must select which statement is the lie');
       }
 
-      // Check if we have either a merged video or individual recordings
       console.log('🎯 SUBMIT: Checking video upload status...');
-      console.log('🎯 SUBMIT: mergedVideo:', JSON.stringify(mergedVideo, null, 2));
-      console.log('🎯 SUBMIT: individualRecordings:', JSON.stringify(individualRecordings, null, 2));
+      console.log('🎯 SUBMIT: Has mergedVideo:', !!mergedVideo);
+      console.log('🎯 SUBMIT: mergedVideo isMergedVideo:', mergedVideo?.isMergedVideo);
+      console.log('🎯 SUBMIT: mergedVideo segments count:', mergedVideo?.segments?.length);
+      console.log('🎯 SUBMIT: Has individualRecordings:', !!individualRecordings);
 
       const hasMergedVideo = mergedVideo && mergedVideo.isMergedVideo && mergedVideo.segments && mergedVideo.segments.length === 3;
       const hasIndividualRecordings = individualRecordings &&
@@ -417,7 +433,7 @@ export const ChallengeCreationScreen: React.FC<ChallengeCreationScreenProps> = (
 
       if (hasMergedVideo) {
         console.log('🎯 SUBMIT: Preparing merged video challenge request');
-        console.log('🎯 SUBMIT: Merged video segments:', JSON.stringify(mergedVideo.segments, null, 2));
+        console.log('🎯 SUBMIT: Merged video segments count:', mergedVideo.segments?.length);
 
         // For merged video, all statements use the same media file ID with segment metadata
         challengeRequest = {
@@ -465,13 +481,22 @@ export const ChallengeCreationScreen: React.FC<ChallengeCreationScreenProps> = (
         };
       }
 
-      console.log('🎯 CHALLENGE: Submitting request:', JSON.stringify(challengeRequest, null, 2));
+      console.log('🎯 CHALLENGE: Submitting request with', challengeRequest.statements?.length, 'statements');
+      console.log('🎯 CHALLENGE: Request is_merged_video:', challengeRequest.is_merged_video);
+      console.log('🎯 CHALLENGE: Request size (chars):', JSON.stringify(challengeRequest).length);
+      console.log('🎯 CHALLENGE: About to call realChallengeAPI.createChallenge...');
 
       // Submit to backend
       const response = await realChallengeAPI.createChallenge(challengeRequest);
+      
+      console.log('🎯 CHALLENGE: Got response from API');
+      console.log('🎯 CHALLENGE: Response success:', response.success);
+      console.log('🎯 CHALLENGE: Response data:', response.data);
+      console.log('🎯 CHALLENGE: Response error:', response.error);
 
       if (response.success && response.data) {
-        console.log('✅ CHALLENGE: Successfully created challenge:', response.data.id);
+        console.log('✅ CHALLENGE: Successfully created challenge:', response.data.id || response.data.challenge_id);
+        console.log('✅ CHALLENGE: Response success confirmed');
         dispatch(completeSubmission({ success: true }));
 
         Alert.alert(
@@ -481,6 +506,7 @@ export const ChallengeCreationScreen: React.FC<ChallengeCreationScreenProps> = (
             {
               text: 'Create Another',
               onPress: () => {
+                console.log('🔄 USER: Creating another challenge');
                 dispatch(startNewChallenge());
                 setCurrentStep('instructions');
               }
@@ -489,6 +515,7 @@ export const ChallengeCreationScreen: React.FC<ChallengeCreationScreenProps> = (
               text: 'Done',
               style: 'cancel',
               onPress: () => {
+                console.log('✅ USER: Done creating challenges');
                 // Navigate back or to challenges list
                 // navigation.goBack();
               }
@@ -496,10 +523,18 @@ export const ChallengeCreationScreen: React.FC<ChallengeCreationScreenProps> = (
           ]
         );
       } else {
+        console.error('❌ CHALLENGE: API returned unsuccessful response');
+        console.error('❌ CHALLENGE: Error details:', response.error);
         throw new Error(response.error || 'Failed to create challenge');
       }
 
     } catch (error: any) {
+      console.error('🚨🚨🚨 SUBMIT ERROR CAUGHT! 🚨🚨🚨');
+      console.error('🚨 Error type:', typeof error);
+      console.error('🚨 Error name:', error?.name || 'Unknown');
+      console.error('🚨 Error message:', error?.message || 'No message');
+      console.error('🚨 Error occurred during challenge submission');
+      
       handleCreationError(error, 'ChallengeCreationScreen.submitChallenge');
     }
   };
@@ -695,7 +730,7 @@ export const ChallengeCreationScreen: React.FC<ChallengeCreationScreenProps> = (
           const isLie = currentChallenge.statements?.[index]?.isLie;
 
           return (
-            <View style={styles.previewStatementCard}>
+            <View key={index} style={styles.previewStatementCard}>
               <View style={styles.previewStatementHeader}>
                 <Text style={styles.previewStatementNumber}>
                   Statement {index + 1}

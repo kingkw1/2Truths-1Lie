@@ -22,8 +22,8 @@ const testGameSession: GameSession = {
   sessionId: 'session-123',
   playerId: 'player-456',
   currentActivity: 'creating',
-  startTime: new Date(),
-  lastActivity: new Date(),
+  startTime: Date.now(),
+  lastActivity: Date.now(),
   pointsEarned: 150,
   challengesCompleted: 3,
   guessesSubmitted: 5,
@@ -176,7 +176,7 @@ const testGuessingSession: GuessingSession = {
   confidenceScores: [0.9, 0.6, 0.7],
   hintsUsed: 1,
   timeSpent: 45000,
-  startTime: new Date(),
+  startTime: Date.now(),
   isCompleted: true,
   wasCorrect: true
 };

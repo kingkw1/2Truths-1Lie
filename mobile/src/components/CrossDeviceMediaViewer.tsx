@@ -15,7 +15,7 @@ import {
   Platform,
   RefreshControl,
 } from 'react-native';
-import { Video } from 'expo-av';
+import { Video, ResizeMode } from 'expo-av';
 import useCrossDeviceMedia from '../hooks/useCrossDeviceMedia';
 import { CrossDeviceMediaItem } from '../services/crossDeviceMediaService';
 
@@ -268,7 +268,7 @@ export const CrossDeviceMediaViewer: React.FC<CrossDeviceMediaViewerProps> = ({
             source={{ uri: playingUrl }}
             style={styles.video}
             useNativeControls
-            resizeMode="contain"
+            resizeMode={ResizeMode.CONTAIN}
             shouldPlay={false}
           />
           <TouchableOpacity

@@ -130,20 +130,48 @@ export class RealChallengeAPIService {
 
   async createChallenge(request: CreateChallengeRequest): Promise<APIResponse<Challenge>> {
     try {
-      console.log('🎯 CHALLENGE: Creating challenge with backend...');
-      console.log('🎯 CHALLENGE: Request:', JSON.stringify(request, null, 2));
-      console.log('🎯 CHALLENGE: Attempting to connect to:', `${this.baseUrl}/api/v1/test/challenge`);
+      console.log('🎯 API: ==================== CREATE CHALLENGE API CALL ====================');
+      console.log('🎯 API: Time:', new Date().toISOString());
+      console.log('🎯 API: Platform:', Platform.OS);
+      console.log('🎯 API: Base URL:', this.baseUrl);
+      console.log('🎯 API: Request has statements:', !!request.statements);
+      console.log('🎯 API: Request statements count:', request.statements?.length);
+      console.log('🎯 API: Request is_merged_video:', request.is_merged_video);
+      console.log('🎯 API: Request JSON size:', JSON.stringify(request).length, 'characters');
+      
+      if (request.statements) {
+        console.log('🎯 API: Statements count:', request.statements.length);
+        request.statements.forEach((stmt, idx) => {
+          console.log(`🎯 API: Statement ${idx}:`, {
+            text: stmt.text,
+            media_file_id: stmt.media_file_id,
+            hasSegmentData: !!(stmt.segment_start_time !== undefined),
+          });
+        });
+      }
+      
+      console.log('🎯 API: About to connect to endpoint...');
+      console.log('🎯 API: Full URL:', `${this.baseUrl}/api/v1/test/challenge`);
 
       // Create abort controller for timeout
       const controller = new AbortController();
       const timeoutId = setTimeout(() => {
-        console.log('🚨 CHALLENGE: Request timeout - aborting fetch');
+        console.log('🚨 API: ⏰ REQUEST TIMEOUT! - Aborting fetch after 15 seconds');
         controller.abort();
       }, 15000); // 15 second timeout
 
+      console.log('🎯 API: Creating AbortController and starting fetch...');
+      console.log('🎯 API: Timeout set for 15 seconds');
+
       try {
-        console.log('🎯 CHALLENGE: Starting fetch request...');
-        // Temporarily use test endpoint to bypass auth issues
+        console.log('🎯 API: 🚀 STARTING FETCH REQUEST...');
+        console.log('🎯 API: Method: POST');
+        console.log('🎯 API: Headers: Content-Type: application/json');
+        console.log('🎯 API: Body length:', JSON.stringify(request).length);
+        
+        const startTime = Date.now();
+        
+        // Use test endpoint for development (bypasses auth)
         const response = await fetch(`${this.baseUrl}/api/v1/test/challenge`, {
           method: 'POST',
           headers: {
@@ -153,19 +181,50 @@ export class RealChallengeAPIService {
           signal: controller.signal,
         });
 
+        const endTime = Date.now();
+        const duration = endTime - startTime;
+        
         clearTimeout(timeoutId);
-        console.log('🎯 CHALLENGE: Fetch completed, got response');
+        console.log('🎯 API: ✅ FETCH COMPLETED!');
+        console.log('🎯 API: Request duration:', duration, 'ms');
+        console.log('🎯 API: Response received, checking status...');
 
-        console.log('🎯 CHALLENGE: Response status:', response.status);
+        console.log('🎯 API: Response status:', response.status);
+        console.log('🎯 API: Response ok:', response.ok);
+        console.log('🎯 API: Response statusText:', response.statusText);
+        console.log('🎯 API: Response headers:', response.headers);
 
         if (!response.ok) {
-          const errorText = await response.text().catch(() => 'Unknown error');
-          console.error('❌ CHALLENGE: Create failed:', response.status, errorText);
+          console.error('❌ API: Response not OK! Status:', response.status);
+          
+          let errorText;
+          try {
+            errorText = await response.text();
+            console.error('❌ API: Error response body:', errorText);
+          } catch (textError) {
+            console.error('❌ API: Failed to read error response body:', textError);
+            errorText = 'Unknown error - could not read response';
+          }
+          
+          console.error('❌ API: Throwing error for bad status');
           throw new Error(`Challenge creation failed: ${response.status} ${errorText}`);
         }
 
-        const challenge = await response.json();
-        console.log('✅ CHALLENGE: Created successfully:', challenge);
+        console.log('🎯 API: Status OK, parsing JSON response...');
+        
+        let challenge;
+        try {
+          challenge = await response.json();
+          console.log('✅ API: JSON parsed successfully');
+          console.log('✅ API: Response data type:', typeof challenge);
+          console.log('✅ API: Response has id:', !!(challenge?.id || challenge?.challenge_id));
+        } catch (jsonError) {
+          console.error('❌ API: Failed to parse JSON response:', jsonError);
+          throw new Error('Invalid JSON response from server');
+        }
+
+        console.log('✅ API: Challenge created successfully!');
+        console.log('✅ API: Challenge ID:', challenge?.id || challenge?.challenge_id || 'NO_ID');
 
         return {
           success: true,
@@ -175,16 +234,34 @@ export class RealChallengeAPIService {
 
       } catch (fetchError: any) {
         clearTimeout(timeoutId);
-        console.error('🚨 CHALLENGE: Fetch error:', fetchError);
+        console.error('🚨🚨🚨 API: FETCH ERROR CAUGHT! 🚨🚨🚨');
+        console.error('🚨 API: Error type:', typeof fetchError);
+        console.error('🚨 API: Error name:', fetchError?.name);
+        console.error('🚨 API: Error message:', fetchError?.message);
+        console.error('🚨 API: Error stack:', fetchError?.stack);
+        console.error('🚨 API: Full fetch error:', JSON.stringify(fetchError, Object.getOwnPropertyNames(fetchError), 2));
         
         if (fetchError.name === 'AbortError') {
+          console.error('🚨 API: Request was aborted due to timeout');
           throw new Error('Request timeout - backend not responding');
         }
+        
+        if (fetchError.message?.includes('Network request failed')) {
+          console.error('🚨 API: Network request failed - possibly no connection to backend');
+        }
+        
         throw fetchError;
       }
 
     } catch (error: any) {
-      console.error('❌ CHALLENGE: Error creating challenge:', error);
+      console.error('🚨🚨🚨 API: TOP-LEVEL ERROR CAUGHT! 🚨🚨🚨');
+      console.error('🚨 API: Error in createChallenge method');
+      console.error('🚨 API: Error type:', typeof error);
+      console.error('🚨 API: Error name:', error?.name);
+      console.error('🚨 API: Error message:', error?.message);
+      console.error('🚨 API: Error stack:', error?.stack);
+      console.error('🚨 API: Full error object:', JSON.stringify(error, Object.getOwnPropertyNames(error), 2));
+      
       return {
         success: false,
         error: error.message || 'Failed to create challenge',
