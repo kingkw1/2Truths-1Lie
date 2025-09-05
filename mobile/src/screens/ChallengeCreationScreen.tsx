@@ -162,7 +162,8 @@ export const ChallengeCreationScreen: React.FC<ChallengeCreationScreenProps> = (
         1: individualRecordings[1]!,
         2: individualRecordings[2]!,
       };
-      await mobileMediaIntegration.mergeStatementVideos(validRecordings);
+      // Merge videos WITHOUT upload (upload happens on submit)
+      await mobileMediaIntegration.mergeStatementVideosWithoutUpload(validRecordings);
 
       console.log('✅ Video merging completed successfully');
 
@@ -206,7 +207,7 @@ export const ChallengeCreationScreen: React.FC<ChallengeCreationScreenProps> = (
         // Small delay to ensure all state updates are complete
         setTimeout(() => {
           handleVideoMerging();
-        }, 500);
+        }, 100);
       }
     }
   }, [individualRecordings, mergedVideo, currentStep, handleVideoMerging]);
@@ -257,11 +258,8 @@ export const ChallengeCreationScreen: React.FC<ChallengeCreationScreenProps> = (
     const hasMergedVideo = mergedVideo && mergedVideo.isMergedVideo;
 
     if (hasAllIndividualRecordings && !hasMergedVideo) {
-      console.log('🎬 CHECK_MERGE: Triggering video merging...');
+      console.log('🎬 CHECK_MERGE: All recordings complete, triggering video merging...');
       handleVideoMerging();
-    } else {
-      console.log('🎬 CHECK_MERGE: Moving to lie selection without merging');
-      setCurrentStep('lie-selection');
     }
   }, [individualRecordings, mergedVideo, handleVideoMerging]);
 
@@ -334,7 +332,7 @@ export const ChallengeCreationScreen: React.FC<ChallengeCreationScreenProps> = (
     }
   };
 
-  const handleSubmit = async () => {
+    const handleSubmit = async () => {
     console.log('🚨🚨🚨 SUBMIT BUTTON PRESSED! 🚨🚨🚨');
     console.log('🚨 This should definitely appear in logs if button is working');
     console.log('🚨 Time:', new Date().toISOString());
@@ -345,10 +343,9 @@ export const ChallengeCreationScreen: React.FC<ChallengeCreationScreenProps> = (
       console.log('🎯 CHALLENGE: Current step:', currentStep);
       console.log('🎯 CHALLENGE: Challenge statements count:', currentChallenge?.statements?.length);
       console.log('🎯 CHALLENGE: Challenge has lie selected:', currentChallenge?.statements?.some(s => s.isLie));
-      
+
       dispatch(startSubmission());
 
-      // Use the currentChallenge from component state (already available from useAppSelector above)
       console.log('🎯 CHALLENGE: Using currentChallenge from component state');
 
       // Validate we have all required data
@@ -403,16 +400,52 @@ export const ChallengeCreationScreen: React.FC<ChallengeCreationScreenProps> = (
         throw new Error('All 3 statements must have video recordings');
       }
 
-      // For merged video, check if it's uploaded
-      if (hasMergedVideo) {
-        console.log('🎯 SUBMIT: Using merged video path');
-        console.log('🎯 SUBMIT: mergedVideo.mediaId:', mergedVideo.mediaId);
-        console.log('🎯 SUBMIT: mergedVideo.isUploaded:', mergedVideo.isUploaded);
+      // Use a let variable to allow reassignment after upload
+      let currentMergedVideo = mergedVideo;
 
-        if (!mergedVideo.mediaId || !mergedVideo.isUploaded) {
+      // For merged video, upload it now if not already uploaded
+      if (hasMergedVideo && currentMergedVideo) {
+        console.log('🎯 SUBMIT: Using merged video path');
+        console.log('🎯 SUBMIT: mergedVideo.mediaId:', currentMergedVideo.mediaId);
+        console.log('🎯 SUBMIT: mergedVideo.isUploaded:', currentMergedVideo.isUploaded);
+
+        // Upload merged video if not already uploaded
+        if (!currentMergedVideo.isUploaded) {
+          console.log('🎯 SUBMIT: Uploading merged video now...');
+          
+          // Show processing dialog
+          Alert.alert(
+            'Uploading Video',
+            'Please wait while we upload your merged video...',
+            [],
+            { cancelable: false }
+          );
+
+          try {
+            const uploadedMergedVideo = await mobileMediaIntegration.uploadMergedVideoForSubmission(currentMergedVideo);
+            console.log('✅ SUBMIT: Merged video uploaded successfully:', uploadedMergedVideo.mediaId);
+            
+            // Use the returned uploaded video object directly
+            currentMergedVideo = uploadedMergedVideo;
+            console.log('🎯 SUBMIT: Updated currentMergedVideo after upload:', {
+              mediaId: currentMergedVideo?.mediaId,
+              isUploaded: currentMergedVideo?.isUploaded
+            });
+          } catch (uploadError: any) {
+            console.error('❌ SUBMIT: Failed to upload merged video:', uploadError);
+            throw new Error(`Failed to upload video: ${uploadError.message}`);
+          }
+        }
+
+        // Re-check upload status after upload (now using updated state)
+        if (!currentMergedVideo.mediaId || !currentMergedVideo.isUploaded) {
+          console.error('❌ SUBMIT: Upload validation failed after upload attempt');
+          console.error('❌ SUBMIT: currentMergedVideo.mediaId:', currentMergedVideo.mediaId);
+          console.error('❌ SUBMIT: currentMergedVideo.isUploaded:', currentMergedVideo.isUploaded);
           throw new Error('Merged video must be uploaded before creating the challenge. Please wait for upload to complete.');
         }
-      } else {
+      }
+ else {
         console.log('🎯 SUBMIT: Using individual recordings path');
         // For individual recordings, check that all are uploaded
         const missingUploads = [0, 1, 2].filter(index => {
@@ -431,21 +464,21 @@ export const ChallengeCreationScreen: React.FC<ChallengeCreationScreenProps> = (
       // Prepare the challenge request for the backend
       let challengeRequest;
 
-      if (hasMergedVideo) {
+      if (hasMergedVideo && currentMergedVideo) {
         console.log('🎯 SUBMIT: Preparing merged video challenge request');
-        console.log('🎯 SUBMIT: Merged video segments count:', mergedVideo.segments?.length);
+        console.log('🎯 SUBMIT: Merged video segments count:', currentMergedVideo.segments?.length);
 
         // For merged video, all statements use the same media file ID with segment metadata
         challengeRequest = {
           statements: currentChallenge.statements.map((statement, index) => {
-            const segment = mergedVideo.segments!.find(s => s.statementIndex === index);
+            const segment = currentMergedVideo.segments!.find(s => s.statementIndex === index);
             if (!segment) {
               throw new Error(`Missing segment data for statement ${index + 1}`);
             }
 
             return {
               text: statement.text || `Statement ${index + 1}`, // Use statement text or default
-              media_file_id: mergedVideo.mediaId!,
+              media_file_id: currentMergedVideo.mediaId!,
               // Include segment metadata for merged videos (convert to seconds)
               segment_start_time: segment.startTime / 1000,
               segment_end_time: segment.endTime / 1000,
@@ -456,9 +489,9 @@ export const ChallengeCreationScreen: React.FC<ChallengeCreationScreenProps> = (
           tags: ['mobile-game', '2truths1lie', 'merged-video'], // Include merged-video tag
           is_merged_video: true,
           merged_video_metadata: {
-            total_duration_ms: mergedVideo.duration || 0,
-            segment_count: mergedVideo.segments!.length,
-            segments: mergedVideo.segments!.map(segment => ({
+            total_duration_ms: currentMergedVideo.duration || 0,
+            segment_count: currentMergedVideo.segments!.length,
+            segments: currentMergedVideo.segments!.map(segment => ({
               statement_index: segment.statementIndex,
               start_time_ms: segment.startTime,
               end_time_ms: segment.endTime,

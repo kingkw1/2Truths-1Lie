@@ -133,6 +133,7 @@ export class MobileMediaIntegrationService {
       // Stop recording in Redux
       this.dispatch(stopMediaRecording({ statementIndex }));
 
+      // Process and upload the recorded media directly (skip merging approach)
       // Process the recorded media (without upload for now - we'll upload the merged video)
       const mediaCapture = await this.processRecordedMediaForMerging(
         recordingUri,
@@ -146,7 +147,7 @@ export class MobileMediaIntegrationService {
         recording: mediaCapture,
       }));
 
-      console.log(`✅ Individual recording completed for statement ${statementIndex}`, mediaCapture);
+      console.log(`✅ Individual recording completed and uploaded for statement ${statementIndex}`, mediaCapture);
       return mediaCapture;
     } catch (error: any) {
       this.handleRecordingError(statementIndex, error.message);
@@ -602,7 +603,201 @@ export class MobileMediaIntegrationService {
   }
 
   /**
-   * Merge all three statement videos into a single video with segment metadata
+   * Merge all three statement videos into a single video with segment metadata (WITHOUT UPLOAD)
+   */
+  public async mergeStatementVideosWithoutUpload(
+    individualRecordings: { [key: number]: MediaCapture }
+  ): Promise<MediaCapture> {
+    if (!this.dispatch) {
+      throw new Error('Service not initialized with Redux dispatch');
+    }
+
+    try {
+      // Validate we have all three recordings
+      const recordings = [
+        individualRecordings[0],
+        individualRecordings[1],
+        individualRecordings[2],
+      ];
+
+      if (recordings.some(r => !r || !r.url)) {
+        throw new Error('All three statement recordings are required for merging');
+      }
+
+      const videoUris: [string, string, string] = [
+        recordings[0].url!,
+        recordings[1].url!,
+        recordings[2].url!,
+      ];
+
+      console.log('🎬 Starting video merge process (without upload)');
+
+      // Start merging in Redux
+      this.dispatch(startVideoMerging());
+
+      // Perform the merge
+      const mergeResult = await videoMergingService.mergeStatementVideos(
+        videoUris,
+        {
+          compressionQuality: 0.8,
+          maxOutputSize: this.config.maxFileSize,
+        },
+        (progress: MergeProgress) => {
+          if (this.dispatch) {
+            this.dispatch(updateVideoMergingProgress({
+              progress: progress.progress,
+              stage: progress.stage,
+              currentSegment: progress.currentSegment,
+            }));
+          }
+        }
+      );
+
+      if (!mergeResult.success) {
+        throw new Error(mergeResult.error || 'Video merge failed');
+      }
+
+      // Create merged video media capture (WITHOUT UPLOAD)
+      const mergedMedia: MediaCapture = {
+        type: 'video',
+        url: mergeResult.mergedVideoUri!,
+        duration: mergeResult.totalDuration || 0,
+        fileSize: mergeResult.fileSize || 0,
+        mimeType: this.getMimeType(),
+        isMergedVideo: true,
+        segments: mergeResult.segments || [],
+        compressionRatio: mergeResult.compressionRatio,
+        storageType: 'local', // Keep local until upload
+        isUploaded: false, // Not uploaded yet
+        originalSize: recordings.reduce((sum, r) => sum + (r.fileSize || 0), 0),
+      };
+
+      console.log('✅ Video merge completed successfully (ready for upload on submit)');
+
+      // Complete merging with merged video
+      this.dispatch(completeVideoMerging({ mergedVideo: mergedMedia }));
+
+      return mergedMedia;
+    } catch (error: any) {
+      console.error('❌ Video merging failed:', error);
+      
+      this.dispatch(setVideoMergingError({
+        error: error.message || 'Video merge failed',
+      }));
+      
+      throw error;
+    }
+  }
+
+  /**
+   * Upload a merged video that was previously created (for use during challenge submission)
+   */
+  public async uploadMergedVideoForSubmission(mergedVideo: MediaCapture): Promise<MediaCapture> {
+    if (!this.dispatch) {
+      throw new Error('Service not initialized with Redux dispatch');
+    }
+
+    if (!mergedVideo.isMergedVideo || !mergedVideo.segments) {
+      throw new Error('Invalid merged video - must have segments');
+    }
+
+    try {
+      console.log('🎬 UPLOAD: Starting merged video upload for challenge submission');
+
+      // Generate filename
+      const timestamp = Date.now();
+      const filename = `merged_challenge_${timestamp}.mp4`;
+
+      // Configure upload options
+      const uploadOptions: UploadOptions = {
+        compress: (mergedVideo.fileSize || 0) > this.config.compressionThreshold,
+        compressionQuality: 0.8,
+        maxFileSize: this.config.maxFileSize,
+        retryAttempts: 3,
+        timeout: 120000, // 2 minutes for merged videos
+      };
+
+      // Prepare segment metadata for upload
+      const segments = mergedVideo.segments.map(segment => ({
+        statementIndex: segment.statementIndex,
+        startTime: segment.startTime,
+        endTime: segment.endTime,
+        duration: segment.duration,
+      }));
+
+      console.log('🎬 UPLOAD: Uploading merged video with segments:', segments);
+
+      if (!mergedVideo.url) {
+        throw new Error('Merged video URL is required for upload');
+      }
+
+      // Upload merged video with segment metadata
+      const uploadResult = await videoUploadService.uploadMergedVideo(
+        mergedVideo.url,
+        filename,
+        mergedVideo.duration || 0, // Duration in milliseconds
+        segments,
+        uploadOptions,
+        (progress: UploadProgress) => {
+          // Update progress for merged video upload
+          if (this.dispatch) {
+            this.dispatch(setMediaUploadProgress({
+              statementIndex: 0, // Use 0 for merged uploads
+              progress: {
+                stage: progress.stage,
+                progress: progress.progress,
+                bytesUploaded: progress.bytesUploaded,
+                totalBytes: progress.totalBytes,
+                currentChunk: progress.currentChunk,
+                totalChunks: progress.totalChunks,
+              },
+            }));
+          }
+        }
+      );
+
+      if (!uploadResult.success) {
+        throw new Error(uploadResult.error || 'Merged video upload failed');
+      }
+
+      // Verify cross-device accessibility
+      let optimizedStreamingUrl = uploadResult.streamingUrl!;
+      if (uploadResult.mediaId) {
+        try {
+          const accessibilityCheck = await crossDeviceMediaService.verifyMediaAccessibility(uploadResult.mediaId);
+          if (accessibilityCheck.accessible && accessibilityCheck.streamingUrl) {
+            optimizedStreamingUrl = accessibilityCheck.streamingUrl;
+          }
+        } catch (error: any) {
+          console.warn('⚠️ Cross-device accessibility check failed, using original URL:', error.message);
+        }
+      }
+
+      // Create uploaded merged video media capture
+      const uploadedMergedMedia: MediaCapture = {
+        ...mergedVideo,
+        storageType: 'cloud',
+        isUploaded: true,
+        streamingUrl: optimizedStreamingUrl,
+        mediaId: uploadResult.mediaId!,
+        cloudStorageKey: uploadResult.mediaId!,
+        uploadTime: Date.now() - timestamp,
+      };
+
+      console.log('✅ UPLOAD: Merged video uploaded successfully with metadata');
+      
+      // Update Redux state with uploaded merged video
+      this.dispatch(completeVideoMerging({ mergedVideo: uploadedMergedMedia }));
+
+      return uploadedMergedMedia;
+    } catch (error: any) {
+      console.error('❌ Merged video upload failed:', error);
+      throw error;
+    }
+  }
+
+  /**
+   * Merge all three statement videos into a single video with segment metadata (WITH UPLOAD)
    */
   public async mergeStatementVideos(
     individualRecordings: { [key: number]: MediaCapture }

@@ -13,7 +13,12 @@ from fastapi import APIRouter, HTTPException
 from pydantic import BaseModel
 from typing import List
 import uuid
+import logging
+from services.s3_media_service import get_s3_media_service
+
+logger = logging.getLogger(__name__)
 from datetime import datetime
+from services.s3_media_service import s3_media_service
 from services.challenge_service import challenge_service
 from services.upload_service import ChunkedUploadService
 from models import CreateChallengeRequest, Challenge
@@ -66,20 +71,51 @@ async def create_test_challenge(request: SimpleChallengeRequest):
         creator_id = "test-user-123"
         
         # Create statements
+        # Use video files from request if provided, otherwise use defaults for testing
         statements = []
         lie_statement_id = None
         for i, stmt in enumerate(request.statements):
             statement_id = str(uuid.uuid4())
+            
+            # Use the media_file_id from the request if it's a real UUID, otherwise use test videos
+            if stmt.media_file_id and len(stmt.media_file_id) > 10 and '-' in stmt.media_file_id:
+                # Real media file ID provided - use it directly
+                media_file_id = stmt.media_file_id
+            else:
+                # Fallback to test videos if no real media_file_id provided
+                available_videos = [
+                    "460faef2-a043-446b-a9f2-0c1602f235f5",  # Statement 1
+                    "47ba0574-a6da-4e56-b323-ca730fd4415a",  # Statement 2  
+                    "6404fa02-8dda-4c5e-bff5-cba64d045cb1",  # Statement 3
+                ]
+                media_file_id = available_videos[i] if i < len(available_videos) else available_videos[0]
+            
+            # Generate proper signed URL for the real uploaded video
+            try:
+                s3_service = get_s3_media_service()
+                real_streaming_url = await s3_service.generate_signed_url(media_file_id)
+                real_media_url = real_streaming_url  # Use the same signed URL for both
+            except Exception as e:
+                # Fallback to BigBuckBunny if real video not found
+                logger.warning(f"Could not generate URL for media_file_id {media_file_id}: {e}")
+                real_streaming_url = "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4"
+                real_media_url = real_streaming_url
+            
             statement = Statement(
                 statement_id=statement_id,
                 text=stmt.text,
-                media_file_id=stmt.media_file_id,
-                media_url=f"https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4",  # Use reliable test video
-                streaming_url=f"https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4",  # Use reliable test video
-                duration_seconds=596.0,  # Real duration for Big Buck Bunny sample
-                cloud_storage_key=f"challenges/{challenge_id}/segments/{i}.mp4",
+                media_file_id=media_file_id,  # Use real video from request or fallback
+                media_url=real_media_url,  # Use the real uploaded video URL
+                streaming_url=real_streaming_url,  # Use the real uploaded video URL
+                duration_seconds=3.0,  # Realistic duration for user-recorded videos
+                cloud_storage_key=f"media/videos/20250905/{media_file_id}",
                 storage_type="s3",
                 statement_type=StatementType.LIE if i == request.lie_statement_index else StatementType.TRUTH,
+                # No segment metadata - these are individual videos
+                segment_start_time=None,
+                segment_end_time=None,
+                segment_duration=None,
+                segment_metadata=None,
                 created_at=datetime.now()
             )
             statements.append(statement)
@@ -88,7 +124,7 @@ async def create_test_challenge(request: SimpleChallengeRequest):
             if i == request.lie_statement_index:
                 lie_statement_id = statement_id
         
-        # Create challenge object
+        # Create challenge object - explicitly NOT a merged video
         challenge = Challenge(
             challenge_id=challenge_id,
             creator_id=creator_id,
@@ -99,6 +135,9 @@ async def create_test_challenge(request: SimpleChallengeRequest):
             guess_count=0,
             correct_guess_count=0,
             tags=["test"],
+            is_merged_video=False,  # Individual videos, not segments
+            merged_video_metadata=None,  # No merged video metadata
+            legacy_merged_metadata=None,  # No legacy metadata
             created_at=datetime.now(),
             updated_at=datetime.now()
         )

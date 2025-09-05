@@ -57,30 +57,35 @@ const convertBackendChallenge = (backendChallenge: BackendChallenge): EnhancedCh
         cloudStorageKey: stmt.cloud_storage_key,
       }));
 
-      // For test challenges, create a merged video structure using the first video URL
-      const firstStatement = backendChallenge.statements[0];
-      if (firstStatement && (firstStatement.streaming_url || firstStatement.media_url)) {
-        const mergedVideo = {
-          type: 'video' as const,
-          streamingUrl: firstStatement.streaming_url || firstStatement.media_url,
-          duration: backendChallenge.statements.reduce((total, stmt) => total + ((stmt.duration_seconds || 0) * 1000), 0),
-          mediaId: 'merged-' + backendChallenge.challenge_id,
-          isUploaded: true,
-          storageType: firstStatement.storage_type as any,
-          cloudStorageKey: `challenges/${backendChallenge.challenge_id}/merged.mp4`,
-          isMergedVideo: true,
-          segments: backendChallenge.statements.map((stmt, index) => ({
-            statementIndex: index,
-            startTime: index * 60 * 1000, // Convert to milliseconds: 60 seconds per segment
-            endTime: (index + 1) * 60 * 1000, // Convert to milliseconds
-            duration: 60 * 1000, // Convert to milliseconds
-            url: stmt.streaming_url || stmt.media_url,
-          })),
-        };
+      // Only create merged video if backend indicates it's actually a merged video
+      if (backendChallenge.is_merged_video && backendChallenge.merged_video_metadata) {
+        const firstStatement = backendChallenge.statements[0];
+        if (firstStatement && (firstStatement.streaming_url || firstStatement.media_url)) {
+          const mergedVideo = {
+            type: 'video' as const,
+            streamingUrl: firstStatement.streaming_url || firstStatement.media_url,
+            duration: backendChallenge.statements.reduce((total, stmt) => total + ((stmt.duration_seconds || 0) * 1000), 0),
+            mediaId: 'merged-' + backendChallenge.challenge_id,
+            isUploaded: true,
+            storageType: firstStatement.storage_type as any,
+            cloudStorageKey: `challenges/${backendChallenge.challenge_id}/merged.mp4`,
+            isMergedVideo: true,
+            segments: backendChallenge.statements.map((stmt, index) => ({
+              statementIndex: index,
+              startTime: stmt.segment_start_time || (index * 60 * 1000), // Use actual segment timing or fallback
+              endTime: stmt.segment_end_time || ((index + 1) * 60 * 1000),
+              duration: (stmt.segment_end_time && stmt.segment_start_time) 
+                ? (stmt.segment_end_time - stmt.segment_start_time) 
+                : (stmt.duration_seconds || 60) * 1000,
+              url: stmt.streaming_url || stmt.media_url,
+            })),
+          };
 
-        return [...individualMedia, mergedVideo];
+          return [...individualMedia, mergedVideo];
+        }
       }
 
+      // For individual videos (non-merged), just return the individual media
       return individualMedia;
     })(),
     difficultyRating: 50, // Default difficulty
@@ -391,6 +396,9 @@ export const GameScreen: React.FC = () => {
   const renderGameplay = () => {
     const mergedVideo = selectedChallenge?.mediaData?.find(media => media.isMergedVideo);
     const hasSegmentedVideo = mergedVideo && mergedVideo.segments && mergedVideo.segments.length === 3;
+    const individualVideos = selectedChallenge?.mediaData?.filter(media => !media.isMergedVideo) || [];
+    const hasIndividualVideos = individualVideos.length === 3; // For 3-statement challenges
+    const hasAnyVideo = hasSegmentedVideo || hasIndividualVideos;
 
     // Debug logging
     console.log('🎥 RENDER GAMEPLAY:', {
@@ -398,6 +406,8 @@ export const GameScreen: React.FC = () => {
       mediaDataCount: selectedChallenge?.mediaData?.length,
       mergedVideoFound: !!mergedVideo,
       hasSegmentedVideo,
+      hasIndividualVideos,
+      individualVideosCount: individualVideos.length,
       mergedVideoSegments: mergedVideo?.segments?.length,
     });
 
@@ -407,7 +417,7 @@ export const GameScreen: React.FC = () => {
         <Text style={styles.subtitle}>By {selectedChallenge?.creatorName}</Text>
         
         {/* Video Player Toggle */}
-        {hasSegmentedVideo && (
+        {hasAnyVideo && (
           <TouchableOpacity
             style={styles.videoToggleButton}
             onPress={() => setShowVideoPlayer(!showVideoPlayer)}
@@ -418,7 +428,7 @@ export const GameScreen: React.FC = () => {
           </TouchableOpacity>
         )}
 
-        {/* Segmented Video Player */}
+        {/* Segmented Video Player (for merged videos) */}
         {showVideoPlayer && hasSegmentedVideo && (
           <View style={styles.videoPlayerContainer}>
             <Text style={styles.debugText}>
@@ -437,6 +447,41 @@ export const GameScreen: React.FC = () => {
                 console.log(`🎬 Selected segment ${segmentIndex}, URL: ${mergedVideo?.streamingUrl}`);
               }}
             />
+          </View>
+        )}
+
+        {/* Individual Video Player (for separate videos) */}
+        {showVideoPlayer && hasIndividualVideos && !hasSegmentedVideo && (
+          <View style={styles.videoPlayerContainer}>
+            <Text style={styles.debugText}>
+              Individual Videos: {individualVideos.length}
+            </Text>
+            {individualVideos.map((video, index) => (
+              <View key={video.mediaId} style={styles.individualVideoContainer}>
+                <Text style={styles.videoLabel}>Statement {index + 1} Video</Text>
+                <Text style={styles.debugText}>
+                  URL: {video.streamingUrl?.substring(0, 100)}...
+                </Text>
+                <Text style={styles.debugText}>
+                  Duration: {video.duration}ms
+                </Text>
+                <SimpleVideoPlayer
+                  mergedVideo={{
+                    ...video,
+                    segments: [{
+                      statementIndex: index,
+                      startTime: 0,
+                      endTime: video.duration || 3000,
+                      duration: video.duration || 3000,
+                    }]
+                  }}
+                  statementTexts={[`Statement ${index + 1}`]}
+                  onSegmentSelect={(segmentIndex: number) => {
+                    console.log(`🎬 Playing individual video ${index}, URL: ${video.streamingUrl}`);
+                  }}
+                />
+              </View>
+            ))}
           </View>
         )}
         
@@ -849,5 +894,20 @@ const styles = StyleSheet.create({
     color: '#333',
     marginBottom: 5,
     fontFamily: 'monospace',
+  },
+  individualVideoContainer: {
+    marginBottom: 20,
+    padding: 15,
+    backgroundColor: '#f9f9f9',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#ddd',
+  },
+  videoLabel: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#333',
+    marginBottom: 10,
+    textAlign: 'center',
   },
 });
