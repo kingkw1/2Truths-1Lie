@@ -232,6 +232,36 @@ async def delete_challenge(
         )
 
 
+@router.get("/{challenge_id}/segments")
+async def get_challenge_segments(
+    challenge_id: str,
+    user_id: str = Depends(get_current_user)
+):
+    """
+    Get segment metadata for a challenge (for merged video playback)
+    """
+    try:
+        logger.info(f"User {user_id} requesting segment metadata for challenge {challenge_id}")
+        
+        segment_metadata = await challenge_service.get_challenge_segment_metadata(challenge_id)
+        if not segment_metadata:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Challenge not found or not a merged video challenge"
+            )
+        
+        return segment_metadata
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to get segment metadata for challenge {challenge_id}: {str(e)}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to retrieve challenge segment metadata"
+        )
+
+
 @router.get("/{challenge_id}/stats")
 async def get_challenge_stats(
     challenge_id: str,

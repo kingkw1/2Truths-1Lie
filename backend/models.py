@@ -113,6 +113,22 @@ class StatementType(str, Enum):
     TRUTH = "truth"
     LIE = "lie"
 
+class VideoSegmentMetadata(BaseModel):
+    """Metadata for a video segment within a merged video"""
+    start_time: float = Field(..., ge=0, description="Start time in seconds within merged video")
+    end_time: float = Field(..., gt=0, description="End time in seconds within merged video")
+    duration: float = Field(..., gt=0, description="Duration of segment in seconds")
+    statement_index: int = Field(..., ge=0, le=2, description="Index of the statement (0-2)")
+    
+    def model_post_init(self, __context):
+        """Validate that end_time > start_time and duration matches"""
+        if self.end_time <= self.start_time:
+            raise ValueError("end_time must be greater than start_time")
+        
+        calculated_duration = self.end_time - self.start_time
+        if abs(calculated_duration - self.duration) > 0.1:  # Allow small floating point differences
+            raise ValueError(f"Duration mismatch: calculated {calculated_duration:.2f}s, provided {self.duration:.2f}s")
+
 class Statement(BaseModel):
     """Individual statement within a challenge"""
     statement_id: str = Field(..., description="Unique statement identifier")
@@ -123,12 +139,41 @@ class Statement(BaseModel):
     cloud_storage_key: Optional[str] = Field(None, description="Cloud storage key for direct access")
     storage_type: str = Field(default="local", description="Storage type: local, cloud, or cloud_fallback")
     duration_seconds: float = Field(..., gt=0, description="Duration of the video in seconds")
-    # Segment metadata for merged videos
+    # Segment metadata for merged videos (legacy fields for backward compatibility)
     segment_start_time: Optional[float] = Field(None, description="Start time in seconds within merged video")
     segment_end_time: Optional[float] = Field(None, description="End time in seconds within merged video")
     segment_duration: Optional[float] = Field(None, description="Duration of segment in seconds")
+    # Enhanced segment metadata
+    segment_metadata: Optional[VideoSegmentMetadata] = Field(None, description="Detailed segment metadata for merged videos")
     created_at: datetime = Field(default_factory=datetime.utcnow)
     
+class MergedVideoMetadata(BaseModel):
+    """Metadata for a merged video containing multiple statement segments"""
+    total_duration: float = Field(..., gt=0, description="Total duration of merged video in seconds")
+    segments: List[VideoSegmentMetadata] = Field(..., min_items=3, max_items=3, description="Segment metadata for each statement")
+    video_file_id: str = Field(..., description="File ID of the merged video")
+    compression_applied: bool = Field(default=False, description="Whether compression was applied to the merged video")
+    original_total_duration: Optional[float] = Field(None, description="Original duration before compression")
+    
+    def model_post_init(self, __context):
+        """Validate segment metadata consistency"""
+        if len(self.segments) != 3:
+            raise ValueError("Merged video must have exactly 3 segments")
+        
+        # Validate segments are in order and don't overlap
+        sorted_segments = sorted(self.segments, key=lambda s: s.start_time)
+        for i in range(len(sorted_segments) - 1):
+            current_segment = sorted_segments[i]
+            next_segment = sorted_segments[i + 1]
+            
+            if current_segment.end_time > next_segment.start_time:
+                raise ValueError(f"Segments {current_segment.statement_index} and {next_segment.statement_index} overlap")
+        
+        # Validate total duration matches last segment end time
+        last_segment_end = max(segment.end_time for segment in self.segments)
+        if abs(last_segment_end - self.total_duration) > 0.1:
+            raise ValueError(f"Total duration {self.total_duration}s doesn't match last segment end time {last_segment_end}s")
+
 class Challenge(BaseModel):
     """Challenge containing three statements (2 truths, 1 lie)"""
     challenge_id: str = Field(..., description="Unique challenge identifier")
@@ -141,7 +186,9 @@ class Challenge(BaseModel):
     tags: List[str] = Field(default_factory=list, description="Optional tags for categorization")
     # Merged video metadata
     is_merged_video: bool = Field(default=False, description="Whether this challenge uses a merged video")
-    merged_video_metadata: Optional[Dict[str, Any]] = Field(None, description="Metadata for merged video segments")
+    merged_video_metadata: Optional[MergedVideoMetadata] = Field(None, description="Structured metadata for merged video segments")
+    # Legacy merged video metadata (for backward compatibility)
+    legacy_merged_metadata: Optional[Dict[str, Any]] = Field(None, description="Legacy metadata format for merged video segments")
     created_at: datetime = Field(default_factory=datetime.utcnow)
     updated_at: datetime = Field(default_factory=datetime.utcnow)
     published_at: Optional[datetime] = None
@@ -163,7 +210,9 @@ class CreateChallengeRequest(BaseModel):
     lie_statement_index: int = Field(..., ge=0, le=2, description="Index (0-2) of the lie statement")
     tags: List[str] = Field(default_factory=list, max_items=10)
     is_merged_video: bool = Field(default=False, description="Whether this challenge uses a merged video")
-    merged_video_metadata: Optional[Dict[str, Any]] = Field(None, description="Metadata for merged video segments")
+    merged_video_metadata: Optional[MergedVideoMetadata] = Field(None, description="Structured metadata for merged video segments")
+    # Legacy support for old metadata format
+    legacy_merged_metadata: Optional[Dict[str, Any]] = Field(None, description="Legacy metadata format for merged video segments")
     
 class CreateChallengeResponse(BaseModel):
     """Response from challenge creation"""
