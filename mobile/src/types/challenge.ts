@@ -124,8 +124,8 @@ export interface EnhancedChallenge {
   recommendationWeight: number;
   totalGuesses: number;
   correctGuessRate: number; // percentage
-  createdAt: Date;
-  lastPlayed: Date;
+  createdAt: string; // ISO date string for Redux serialization
+  lastPlayed: string; // ISO date string for Redux serialization
   tags: string[];
   isActive: boolean;
 }

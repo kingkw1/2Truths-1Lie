@@ -27,8 +27,8 @@ const mockChallenges: EnhancedChallenge[] = [
     recommendationWeight: 0.85,
     totalGuesses: 45,
     correctGuessRate: 0.33,
-    createdAt: new Date('2024-01-15'),
-    lastPlayed: new Date('2024-01-20'),
+    createdAt: '2024-01-15T00:00:00.000Z',
+    lastPlayed: '2024-01-20T00:00:00.000Z',
     tags: ['travel', 'languages'],
     isActive: true
   },
@@ -45,8 +45,8 @@ const mockChallenges: EnhancedChallenge[] = [
     recommendationWeight: 0.72,
     totalGuesses: 32,
     correctGuessRate: 0.44,
-    createdAt: new Date('2024-01-18'),
-    lastPlayed: new Date('2024-01-22'),
+    createdAt: '2024-01-18T00:00:00.000Z',
+    lastPlayed: '2024-01-22T00:00:00.000Z',
     tags: ['cooking', 'food'],
     isActive: true
   },
@@ -63,8 +63,8 @@ const mockChallenges: EnhancedChallenge[] = [
     recommendationWeight: 0.91,
     totalGuesses: 28,
     correctGuessRate: 0.25,
-    createdAt: new Date('2024-01-20'),
-    lastPlayed: new Date('2024-01-23'),
+    createdAt: '2024-01-20T00:00:00.000Z',
+    lastPlayed: '2024-01-23T00:00:00.000Z',
     tags: ['pets', 'work'],
     isActive: true
   }

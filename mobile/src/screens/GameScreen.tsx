@@ -27,7 +27,7 @@ import {
 import { EnhancedChallenge, GuessResult } from '../types';
 import { ChallengeCreationScreen } from './ChallengeCreationScreen';
 import AnimatedFeedback from '../shared/AnimatedFeedback';
-import SegmentedVideoPlayer from '../components/SegmentedVideoPlayer';
+import SimpleVideoPlayer from '../components/SimpleVideoPlayer';
 import { realChallengeAPI, Challenge as BackendChallenge } from '../services/realChallengeAPI';
 import { errorHandlingService } from '../services/errorHandlingService';
 
@@ -45,15 +45,44 @@ const convertBackendChallenge = (backendChallenge: BackendChallenge): EnhancedCh
       guessAccuracy: 50,
       averageConfidence: 50,
     })),
-    mediaData: backendChallenge.statements.map((stmt) => ({
-      type: 'video' as const,
-      streamingUrl: stmt.streaming_url || stmt.media_url,
-      duration: (stmt.duration_seconds || 0) * 1000, // Convert to milliseconds
-      mediaId: stmt.media_file_id,
-      isUploaded: true,
-      storageType: stmt.storage_type as any,
-      cloudStorageKey: stmt.cloud_storage_key,
-    })),
+    mediaData: (() => {
+      // Create individual media entries
+      const individualMedia = backendChallenge.statements.map((stmt) => ({
+        type: 'video' as const,
+        streamingUrl: stmt.streaming_url || stmt.media_url,
+        duration: (stmt.duration_seconds || 0) * 1000, // Convert to milliseconds
+        mediaId: stmt.media_file_id,
+        isUploaded: true,
+        storageType: stmt.storage_type as any,
+        cloudStorageKey: stmt.cloud_storage_key,
+      }));
+
+      // For test challenges, create a merged video structure using the first video URL
+      const firstStatement = backendChallenge.statements[0];
+      if (firstStatement && (firstStatement.streaming_url || firstStatement.media_url)) {
+        const mergedVideo = {
+          type: 'video' as const,
+          streamingUrl: firstStatement.streaming_url || firstStatement.media_url,
+          duration: backendChallenge.statements.reduce((total, stmt) => total + ((stmt.duration_seconds || 0) * 1000), 0),
+          mediaId: 'merged-' + backendChallenge.challenge_id,
+          isUploaded: true,
+          storageType: firstStatement.storage_type as any,
+          cloudStorageKey: `challenges/${backendChallenge.challenge_id}/merged.mp4`,
+          isMergedVideo: true,
+          segments: backendChallenge.statements.map((stmt, index) => ({
+            statementIndex: index,
+            startTime: index * 60 * 1000, // Convert to milliseconds: 60 seconds per segment
+            endTime: (index + 1) * 60 * 1000, // Convert to milliseconds
+            duration: 60 * 1000, // Convert to milliseconds
+            url: stmt.streaming_url || stmt.media_url,
+          })),
+        };
+
+        return [...individualMedia, mergedVideo];
+      }
+
+      return individualMedia;
+    })(),
     difficultyRating: 50, // Default difficulty
     averageGuessTime: 20000, // Default 20 seconds
     popularityScore: Math.min(backendChallenge.view_count * 10, 100), // Scale view count to 0-100
@@ -63,8 +92,8 @@ const convertBackendChallenge = (backendChallenge: BackendChallenge): EnhancedCh
     correctGuessRate: backendChallenge.guess_count > 0 
       ? Math.round((backendChallenge.correct_guess_count / backendChallenge.guess_count) * 100)
       : 50,
-    createdAt: new Date(backendChallenge.created_at),
-    lastPlayed: new Date(),
+    createdAt: backendChallenge.created_at, // Keep as ISO string for Redux serialization
+    lastPlayed: new Date().toISOString(), // Keep as ISO string for Redux serialization
     tags: backendChallenge.tags || [],
     isActive: backendChallenge.status === 'published',
   };
@@ -363,6 +392,15 @@ export const GameScreen: React.FC = () => {
     const mergedVideo = selectedChallenge?.mediaData?.find(media => media.isMergedVideo);
     const hasSegmentedVideo = mergedVideo && mergedVideo.segments && mergedVideo.segments.length === 3;
 
+    // Debug logging
+    console.log('🎥 RENDER GAMEPLAY:', {
+      selectedChallengeId: selectedChallenge?.id,
+      mediaDataCount: selectedChallenge?.mediaData?.length,
+      mergedVideoFound: !!mergedVideo,
+      hasSegmentedVideo,
+      mergedVideoSegments: mergedVideo?.segments?.length,
+    });
+
     return (
       <ScrollView style={styles.gameplayContainer}>
         <Text style={styles.title}>Which statement is the lie?</Text>
@@ -383,13 +421,21 @@ export const GameScreen: React.FC = () => {
         {/* Segmented Video Player */}
         {showVideoPlayer && hasSegmentedVideo && (
           <View style={styles.videoPlayerContainer}>
-            <SegmentedVideoPlayer
+            <Text style={styles.debugText}>
+              Video URL: {mergedVideo?.streamingUrl?.substring(0, 100)}
+            </Text>
+            <Text style={styles.debugText}>
+              Segments: {mergedVideo?.segments?.length || 0}
+            </Text>
+            <Text style={styles.debugText}>
+              Total Duration: {mergedVideo?.duration}ms
+            </Text>
+            <SimpleVideoPlayer
               mergedVideo={mergedVideo}
               statementTexts={currentSession?.statements.map((stmt: any) => stmt.text) || []}
-              onSegmentSelect={(segmentIndex) => {
-                console.log(`Playing segment ${segmentIndex}`);
+              onSegmentSelect={(segmentIndex: number) => {
+                console.log(`🎬 Selected segment ${segmentIndex}, URL: ${mergedVideo?.streamingUrl}`);
               }}
-              autoPlay={false}
             />
           </View>
         )}
@@ -796,6 +842,12 @@ const styles = StyleSheet.create({
     fontSize: 10,
     color: '#999',
     marginTop: 5,
+    fontFamily: 'monospace',
+  },
+  debugText: {
+    fontSize: 12,
+    color: '#333',
+    marginBottom: 5,
     fontFamily: 'monospace',
   },
 });

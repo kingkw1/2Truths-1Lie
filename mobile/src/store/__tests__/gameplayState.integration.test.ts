@@ -91,8 +91,8 @@ const mockChallenges: EnhancedChallenge[] = [
     recommendationWeight: 0.85,
     totalGuesses: 100,
     correctGuessRate: 0.4,
-    createdAt: new Date('2024-01-15'),
-    lastPlayed: new Date('2024-01-20'),
+    createdAt: '2024-01-15T00:00:00.000Z',
+    lastPlayed: '2024-01-20T00:00:00.000Z',
     tags: ['travel', 'languages', 'work'],
     isActive: true
   },
@@ -141,8 +141,8 @@ const mockChallenges: EnhancedChallenge[] = [
     recommendationWeight: 0.72,
     totalGuesses: 80,
     correctGuessRate: 0.5,
-    createdAt: new Date('2024-01-18'),
-    lastPlayed: new Date('2024-01-22'),
+    createdAt: '2024-01-18T00:00:00.000Z',
+    lastPlayed: '2024-01-22T00:00:00.000Z',
     tags: ['cooking', 'food', 'health'],
     isActive: true
   }

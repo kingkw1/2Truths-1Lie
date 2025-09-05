@@ -14,6 +14,9 @@ from pydantic import BaseModel
 from typing import List
 import uuid
 from datetime import datetime
+from services.challenge_service import challenge_service
+from services.upload_service import ChunkedUploadService
+from models import CreateChallengeRequest, Challenge
 
 # DISABLED: Uncomment the line below to re-enable test endpoints for development
 router = APIRouter(prefix="/api/v1/test", tags=["testing"])
@@ -56,19 +59,64 @@ async def create_test_challenge(request: SimpleChallengeRequest):
                 detail="lie_statement_index must be 0, 1, or 2"
             )
         
-        # Generate a mock challenge ID
+        # Create challenge directly without validation (for testing)
+        from models import Statement, StatementType, ChallengeStatus
+        
         challenge_id = str(uuid.uuid4())
+        creator_id = "test-user-123"
+        
+        # Create statements
+        statements = []
+        lie_statement_id = None
+        for i, stmt in enumerate(request.statements):
+            statement_id = str(uuid.uuid4())
+            statement = Statement(
+                statement_id=statement_id,
+                text=stmt.text,
+                media_file_id=stmt.media_file_id,
+                media_url=f"https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4",  # Use reliable test video
+                streaming_url=f"https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4",  # Use reliable test video
+                duration_seconds=596.0,  # Real duration for Big Buck Bunny sample
+                cloud_storage_key=f"challenges/{challenge_id}/segments/{i}.mp4",
+                storage_type="s3",
+                statement_type=StatementType.LIE if i == request.lie_statement_index else StatementType.TRUTH,
+                created_at=datetime.now()
+            )
+            statements.append(statement)
+            
+            # Track the lie statement ID
+            if i == request.lie_statement_index:
+                lie_statement_id = statement_id
+        
+        # Create challenge object
+        challenge = Challenge(
+            challenge_id=challenge_id,
+            creator_id=creator_id,
+            statements=statements,
+            lie_statement_id=lie_statement_id,  # Required field
+            status=ChallengeStatus.PUBLISHED,  # Make it visible
+            view_count=0,
+            guess_count=0,
+            correct_guess_count=0,
+            tags=["test"],
+            created_at=datetime.now(),
+            updated_at=datetime.now()
+        )
+        
+        # Store in challenge service
+        challenge_service.challenges[challenge_id] = challenge
+        await challenge_service._save_challenges()  # Persist to disk
         
         # Create response
         response = SimpleChallengeResponse(
-            id=challenge_id,
-            message="Test challenge created successfully",
+            id=challenge.challenge_id,
+            message="Test challenge created successfully and stored in database",
             statements=request.statements,
             lie_index=request.lie_statement_index,
             created_at=datetime.now()
         )
         
-        print(f"🧪 TEST ENDPOINT: Created test challenge {challenge_id}")
+        print(f"🧪 TEST ENDPOINT: Created and stored test challenge {challenge.challenge_id}")
         print(f"🧪 TEST ENDPOINT: Statements: {len(request.statements)}")
         print(f"🧪 TEST ENDPOINT: Lie index: {request.lie_statement_index}")
         
