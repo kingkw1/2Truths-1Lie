@@ -47,9 +47,12 @@ export interface CreateChallengeRequest {
   statements: Array<{
     text: string;
     media_file_id: string;
+    segment_start_time?: number;
+    segment_end_time?: number;
   }>;
   lie_statement_index: number;
   tags?: string[];
+  is_merged_video?: boolean;
 }
 
 export interface APIResponse<T> {

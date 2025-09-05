@@ -218,20 +218,36 @@ const challengeCreationSlice = createSlice({
         }
         
         // Video-only mode: Check if we have video recordings for each statement
-        if (state.currentChallenge.mediaData && state.currentChallenge.mediaData.length >= 3) {
-          const missingVideoStatements = [];
-          for (let i = 0; i < 3; i++) {
-            const media = state.currentChallenge.mediaData[i];
-            if (!media || media.type !== 'video' || !media.url) {
-              missingVideoStatements.push(i + 1);
+        // This can be either individual recordings or a merged video
+        const hasMergedVideo = state.mergedVideo && 
+          state.mergedVideo.isMergedVideo && 
+          state.mergedVideo.segments && 
+          state.mergedVideo.segments.length === 3;
+        
+        const hasIndividualRecordings = state.individualRecordings &&
+          [0, 1, 2].every(index => 
+            state.individualRecordings[index] && 
+            state.individualRecordings[index]?.type === 'video' && 
+            state.individualRecordings[index]?.url
+          );
+        
+        if (!hasMergedVideo && !hasIndividualRecordings) {
+          // Check for partial recordings to give more specific error messages
+          if (state.individualRecordings) {
+            const missingVideoStatements = [];
+            for (let i = 0; i < 3; i++) {
+              const media = state.individualRecordings[i];
+              if (!media || media.type !== 'video' || !media.url) {
+                missingVideoStatements.push(i + 1);
+              }
             }
+            
+            if (missingVideoStatements.length > 0) {
+              errors.push(`Statement${missingVideoStatements.length > 1 ? 's' : ''} ${missingVideoStatements.join(', ')} must have video recordings`);
+            }
+          } else {
+            errors.push('All statements must have video recordings');
           }
-          
-          if (missingVideoStatements.length > 0) {
-            errors.push(`Statement${missingVideoStatements.length > 1 ? 's' : ''} ${missingVideoStatements.join(', ')} must have video recordings`);
-          }
-        } else {
-          errors.push('All statements must have video recordings');
         }
       }
       

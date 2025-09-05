@@ -16,7 +16,7 @@
 
 ## Combined Uploads
 - [x] Update mobile client to record segment start/end time while merging three recorded videos
-- [ ] Implement video merging logic on device for three statements
+- [x] Implement video merging logic on device for three statements
 - [ ] Update upload workflow to send merged video file plus segment metadata to backend
 - [ ] Modify backend and challenge data model to store and retrieve segment metadata with each challenge
 - [ ] Update challenge creation API to accept merged video and segment timecodes
