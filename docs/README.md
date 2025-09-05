@@ -19,11 +19,15 @@
 
 - **[Backend Integration Plan](../BACKEND_INTEGRATION_PLAN.md)** - Current development roadmap and next steps
 - **[Media System Complete Guide](MEDIA_SYSTEM_COMPLETE_GUIDE.md)** - Complete guide for video upload and streaming system (**Production Ready**)
+- **[Segment-Based Challenge Flow](SEGMENT_BASED_CHALLENGE_FLOW.md)** - Technical documentation for merged video system with segment metadata
+- **[Segment-Based Developer Guide](SEGMENT_BASED_DEVELOPER_GUIDE.md)** - Developer integration guide for segment-based video system
 - **[API Documentation](api.md)** - Mobile-optimized backend API specifications
 - **[User Media Guide](USER_MEDIA_GUIDE.md)** - Complete user guide for creating and sharing video challenges
 
 ## 📱 Mobile App Features
 
+- **Segment-based video recording** - Record three statements, automatically merged
+- **Interactive video playback** - Select and play individual statement segments
 - **Native camera and microphone recording**
 - **Offline-first mobile experience**
 - **iOS and Android app store deployment**

@@ -7,14 +7,27 @@ import { Platform } from 'react-native';
 import { authService } from './authService';
 
 export interface Challenge {
-  id: string;
+  challenge_id: string;
   creator_id: string;
-  creator_name: string;
+  title?: string;
   statements: Statement[];
-  mediaData: MediaCapture[];
-  is_public: boolean;
-  created_at: string;
+  lie_statement_id: string;
+  status: string;
+  difficulty_level?: string;
   tags?: string[];
+  is_merged_video?: boolean;
+  merged_video_metadata?: any;
+  created_at: string;
+  updated_at: string;
+  published_at?: string;
+  view_count: number;
+  guess_count: number;
+  correct_guess_count: number;
+  // Computed fields for compatibility
+  id?: string;
+  creator_name?: string;
+  mediaData?: MediaCapture[];
+  is_public?: boolean;
   difficulty_rating?: number;
   popularity_score?: number;
   total_guesses?: number;
@@ -22,11 +35,22 @@ export interface Challenge {
 
 export interface Statement {
   statement_id: string;
-  text: string;
-  is_lie: boolean;
+  statement_type: 'truth' | 'lie';
+  media_url: string;
+  media_file_id: string;
+  streaming_url?: string;
+  cloud_storage_key?: string;
+  storage_type?: string;
+  duration_seconds: number;
+  segment_start_time?: number;
+  segment_end_time?: number;
+  segment_duration?: number;
+  segment_metadata?: any;
+  created_at: string;
+  // Computed fields for compatibility
+  text?: string;
+  is_lie?: boolean;
   media_id?: string;
-  media_url?: string;
-  duration_seconds?: number;
 }
 
 export interface MediaCapture {
@@ -208,7 +232,7 @@ export class RealChallengeAPIService {
       console.log('🎯 CHALLENGE: Fetching challenges list...');
 
       const headers = await this.getAuthHeaders();
-      const response = await fetch(`${this.baseUrl}/api/v1/challenges/?skip=${skip}&limit=${limit}`, {
+      const response = await fetch(`${this.baseUrl}/api/v1/challenges/?skip=${skip}&limit=${limit}&public_only=true`, {
         method: 'GET',
         headers,
       });
@@ -218,7 +242,11 @@ export class RealChallengeAPIService {
         throw new Error(`Failed to get challenges: ${response.status} ${errorText}`);
       }
 
-      const challenges = await response.json();
+      const responseData = await response.json();
+      console.log('🎯 CHALLENGE: Raw response:', responseData);
+
+      // Handle the paginated response format from backend
+      const challenges = responseData.challenges || responseData;
       console.log(`✅ CHALLENGE: Retrieved ${challenges.length} challenges`);
 
       return {

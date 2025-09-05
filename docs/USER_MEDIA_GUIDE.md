@@ -15,8 +15,10 @@ This guide will help you create, upload, and share your video challenges with fr
 
 1. **Open the App** and tap "Create Challenge"
 2. **Plan Your Statements**: Think of two true statements and one lie about yourself
-3. **Record Your Video**: Tap the record button and share your three statements
-4. **Upload & Share**: Your video will automatically upload and be ready to share
+3. **Record Each Statement**: Record three separate videos, one for each statement
+4. **Select Your Lie**: Choose which statement is the lie
+5. **Automatic Processing**: The app merges your videos and uploads automatically
+6. **Share & Play**: Your challenge is ready for others to guess!
 
 ## Recording Your Challenge
 
@@ -32,23 +34,27 @@ This guide will help you create, upload, and share your video challenges with fr
 - **Personality**: Let your personality shine through!
 
 ### Recording Process
-1. **Tap Record**: The red record button starts your video
-2. **Share Your Statements**: Tell your two truths and one lie
-3. **Review**: Watch your recording to make sure you're happy with it
-4. **Confirm**: Tap "Use This Recording" to proceed
+1. **Enter Your Statements**: Type in your two truths and one lie
+2. **Record Statement 1**: Tap record and share your first statement
+3. **Record Statement 2**: Record your second statement
+4. **Record Statement 3**: Record your third statement
+5. **Select the Lie**: Choose which statement is the lie
+6. **Review & Confirm**: The app automatically merges your videos and creates your challenge
 
 ## Upload Process
 
-### Automatic Upload
-Once you confirm your recording, the app automatically:
+### Automatic Processing & Upload
+Once you complete all recordings, the app automatically:
+- **Merges** your three statement videos into one seamless video
 - **Compresses** your video for faster upload (if needed)
-- **Uploads** your video securely to our servers
-- **Creates** a shareable link for your challenge
+- **Uploads** your merged video securely to our servers
+- **Creates** a shareable challenge with segment information
 
-### Upload Progress
+### Processing Progress
 You'll see a progress indicator showing:
-- **Preparation**: Getting your video ready
-- **Compression**: Making the file smaller (if needed)
+- **Preparing**: Getting your videos ready for merging
+- **Merging**: Combining your three statements into one video
+- **Compressing**: Making the file smaller (if needed)
 - **Uploading**: Sending to our servers
 - **Finalizing**: Creating your shareable challenge
 
@@ -75,12 +81,37 @@ Don't worry! The app will:
 
 ### How to Watch
 1. **Browse Feed**: Scroll through community challenges
-2. **Tap to Play**: Videos start playing automatically
-3. **Make Your Guess**: Tap which statement you think is the lie
-4. **See Results**: Find out if you guessed correctly!
+2. **Select Challenge**: Tap on a challenge to start playing
+3. **Choose Statement**: Tap on any of the three statements to watch that specific part
+4. **Watch & Listen**: Each statement plays individually so you can focus on details
+5. **Make Your Guess**: Tap which statement you think is the lie
+6. **See Results**: Find out if you guessed correctly!
+
+### Interactive Statement Playback
+
+The app uses an innovative **segment-based video system** that makes it easy to analyze each statement:
+
+#### Statement Selection
+- **Three Buttons**: Each challenge shows three statement buttons
+- **Individual Playback**: Tap any statement to watch just that part
+- **Statement Text**: See the text of each statement alongside the video
+- **Duration Display**: Know how long each statement is before watching
+
+#### Playback Controls
+- **Play/Pause**: Control playback of the selected statement
+- **Progress Bar**: See how much of the statement you've watched
+- **Replay**: Watch any statement multiple times
+- **Stop**: Stop playback and return to statement selection
+
+#### Smart Features
+- **Automatic Stopping**: Each statement stops at the end, so you don't accidentally watch the next one
+- **Seamless Switching**: Jump between statements without waiting for loading
+- **Progress Tracking**: Visual indicators show your progress through each statement
 
 ### Video Playback
+- **Individual Statement Playback**: Select and play any statement independently
 - **Smooth Streaming**: Videos load quickly and play smoothly
+- **Segment Controls**: Play, pause, and replay individual statements
 - **Any Device**: Watch on any phone or tablet
 - **Offline Viewing**: Previously watched videos work offline
 

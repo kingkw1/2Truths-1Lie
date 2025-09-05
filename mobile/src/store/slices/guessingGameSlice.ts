@@ -6,11 +6,21 @@
 import { createSlice, PayloadAction } from '@reduxjs/toolkit';
 import { GuessingSession, AnalyzedStatement, GuessResult, EnhancedChallenge } from '../../types';
 
+export interface ChallengeLoadError {
+  type: 'network' | 'server' | 'auth' | 'timeout' | 'unknown';
+  message: string;
+  timestamp: Date;
+  retryable: boolean;
+}
+
 export interface GuessingGameState {
   currentSession: GuessingSession | null;
   availableChallenges: EnhancedChallenge[];
   selectedChallenge: EnhancedChallenge | null;
   isLoading: boolean;
+  loadError: ChallengeLoadError | null;
+  retryCount: number;
+  lastSuccessfulLoad: Date | null;
   showHint: boolean;
   guessSubmitted: boolean;
   guessResult: GuessResult | null;
@@ -29,6 +39,9 @@ const initialState: GuessingGameState = {
   availableChallenges: [],
   selectedChallenge: null,
   isLoading: false,
+  loadError: null,
+  retryCount: 0,
+  lastSuccessfulLoad: null,
   showHint: false,
   guessSubmitted: false,
   guessResult: null,
@@ -75,10 +88,56 @@ const guessingGameSlice = createSlice({
     loadChallenges: (state, action: PayloadAction<EnhancedChallenge[]>) => {
       state.availableChallenges = action.payload;
       state.isLoading = false;
+      state.loadError = null;
+      state.retryCount = 0;
+      state.lastSuccessfulLoad = new Date();
     },
 
     setLoading: (state, action: PayloadAction<boolean>) => {
       state.isLoading = action.payload;
+      if (action.payload) {
+        // Clear previous error when starting new load
+        state.loadError = null;
+      }
+    },
+
+    setChallengeLoadError: (state, action: PayloadAction<{ error: string; errorType?: string }>) => {
+      const { error, errorType } = action.payload;
+      
+      // Determine error type based on error message if not provided
+      let type: ChallengeLoadError['type'] = 'unknown';
+      let retryable = true;
+      
+      if (errorType) {
+        type = errorType as ChallengeLoadError['type'];
+      } else if (error.toLowerCase().includes('network') || error.toLowerCase().includes('fetch')) {
+        type = 'network';
+      } else if (error.toLowerCase().includes('timeout')) {
+        type = 'timeout';
+      } else if (error.toLowerCase().includes('401') || error.toLowerCase().includes('unauthorized')) {
+        type = 'auth';
+        retryable = false;
+      } else if (error.toLowerCase().includes('500') || error.toLowerCase().includes('server')) {
+        type = 'server';
+      }
+      
+      state.loadError = {
+        type,
+        message: error,
+        timestamp: new Date(),
+        retryable,
+      };
+      state.isLoading = false;
+      state.retryCount += 1;
+    },
+
+    clearChallengeLoadError: (state) => {
+      state.loadError = null;
+      state.retryCount = 0;
+    },
+
+    resetRetryCount: (state) => {
+      state.retryCount = 0;
     },
 
     updateConfidenceScore: (state, action: PayloadAction<{ statementIndex: number; confidence: number }>) => {
@@ -214,6 +273,9 @@ export const {
   selectChallenge,
   loadChallenges,
   setLoading,
+  setChallengeLoadError,
+  clearChallengeLoadError,
+  resetRetryCount,
   updateConfidenceScore,
   submitGuess,
   setGuessResult,

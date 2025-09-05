@@ -26,6 +26,8 @@ import { EnhancedMobileCameraIntegration } from '../components/EnhancedMobileCam
 import { MediaCapture } from '../types';
 import { realChallengeAPI } from '../services/realChallengeAPI';
 import { mobileMediaIntegration } from '../services/mobileMediaIntegration';
+import { errorHandlingService } from '../services/errorHandlingService';
+import { useErrorHandling } from '../hooks/useErrorHandling';
 
 /**
  * Opens device settings for the app
@@ -76,6 +78,18 @@ export const ChallengeCreationScreen: React.FC<ChallengeCreationScreenProps> = (
   const [currentStatementIndex, setCurrentStatementIndex] = useState(0);
   const [showCameraModal, setShowCameraModal] = useState(false);
   const [selectedLieIndex, setSelectedLieIndex] = useState<number | null>(null);
+
+  // Enhanced error handling for challenge creation
+  const { error: creationError, handleError: handleCreationError, clearError: clearCreationError } = useErrorHandling(
+    undefined,
+    {
+      showAlert: true,
+      onError: (errorDetails) => {
+        console.error('🚨 CHALLENGE CREATION ERROR:', errorDetails);
+        dispatch(completeSubmission({ success: false }));
+      }
+    }
+  );
 
   // Initialize new challenge and mobile media integration on mount
   useEffect(() => {
@@ -486,13 +500,7 @@ export const ChallengeCreationScreen: React.FC<ChallengeCreationScreenProps> = (
       }
 
     } catch (error: any) {
-      console.error('❌ CHALLENGE: Submission failed:', error);
-      dispatch(completeSubmission({ success: false }));
-      Alert.alert(
-        'Challenge Creation Failed',
-        error.message || 'Failed to create challenge. Please try again.',
-        [{ text: 'OK', style: 'default' }]
-      );
+      handleCreationError(error, 'ChallengeCreationScreen.submitChallenge');
     }
   };
 

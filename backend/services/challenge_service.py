@@ -494,6 +494,28 @@ class ChallengeService:
         ]
         return sorted(user_guesses, key=lambda x: x.submitted_at, reverse=True)
     
+    async def get_user_challenges(
+        self, 
+        user_id: str, 
+        page: int = 1, 
+        page_size: int = 20
+    ) -> List[Challenge]:
+        """Get challenges created by a specific user"""
+        user_challenges = [
+            challenge for challenge in self.challenges.values()
+            if challenge.creator_id == user_id
+        ]
+        
+        # Sort by creation date (newest first)
+        user_challenges.sort(key=lambda x: x.created_at, reverse=True)
+        
+        # Paginate
+        start_idx = (page - 1) * page_size
+        end_idx = start_idx + page_size
+        page_challenges = user_challenges[start_idx:end_idx]
+        
+        return page_challenges
+    
     async def get_challenge_guesses(self, challenge_id: str, creator_id: str) -> List[GuessSubmission]:
         """Get all guesses for a challenge (only for challenge creator)"""
         challenge = self.challenges.get(challenge_id)

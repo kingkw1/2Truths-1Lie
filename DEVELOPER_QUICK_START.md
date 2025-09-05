@@ -19,15 +19,18 @@ npm start
 **Result**: Scan QR code with Expo Go app
 
 ### 3. Test Complete Flow
-1. **Record Videos**: Use mobile app to record 3 statements
-2. **Upload**: Videos automatically upload to S3
-3. **Create Challenge**: Submit challenge via test endpoint
-4. **Verify**: Check challenge created successfully
+1. **Record Statements**: Use mobile app to record 3 individual statement videos
+2. **Auto-Merge**: App automatically merges videos with segment metadata
+3. **Upload**: Merged video uploads to S3 with segment information
+4. **Create Challenge**: Submit challenge with merged video data
+5. **Test Playback**: Use segmented video player to test individual statement playback
 
 ## 🎯 What's Working Now
 
+✅ **Segment-Based Video System**: Record 3 statements, auto-merge with metadata  
 ✅ **Video Upload System**: 15+ successful uploads to AWS S3  
-✅ **Challenge Creation**: Backend integration via test endpoints  
+✅ **Challenge Creation**: Backend integration with merged video support  
+✅ **Segmented Playback**: Interactive statement selection and playback  
 ✅ **Mobile App**: Local builds and deployment  
 ✅ **Network Integration**: App connects to local backend  
 

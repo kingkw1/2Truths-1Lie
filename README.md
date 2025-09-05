@@ -49,13 +49,16 @@ cd mobile && npm install && npm start
 ## ✨ Features
 
 ### 🎬 **Core Gameplay**
-- Record and post your "Two Truths and a Lie" video challenges
+- Record three individual statement videos that merge into a single challenge
+- Segment-based video playback allows viewing individual statements
 - Guess lies in other players' videos with AI assistance
 - Real-time emotion recognition overlays during video playback
 - Community voting and scoring system
 
 ### 📱 **Mobile Experience**
 - **Native iOS & Android apps** built with React Native/Expo
+- **Segment-based video recording** - record three statements, automatically merged
+- **Interactive video playback** - select and play individual statement segments
 - Seamless camera and microphone integration
 - Touch-optimized UI with haptic feedback
 - Offline-capable with cloud synchronization
@@ -115,10 +118,12 @@ npm test                 # Run mobile app tests
 
 ### For Users
 - **[User Media Guide](docs/USER_MEDIA_GUIDE.md)** - Complete guide for creating and sharing video challenges
+- **[Segment-Based Challenge Flow](docs/SEGMENT_BASED_CHALLENGE_FLOW.md)** - How the new merged video system works
 
 ### For Developers  
 - **[API Documentation](docs/api.md)** - Full REST endpoint specs and usage examples
-- **[Persistent Media Workflow](docs/PERSISTENT_MEDIA_WORKFLOW.md)** - Complete developer guide for video upload and streaming
+- **[Segment-Based Challenge Flow](docs/SEGMENT_BASED_CHALLENGE_FLOW.md)** - Technical documentation for merged video system
+- **[Media System Complete Guide](docs/MEDIA_SYSTEM_COMPLETE_GUIDE.md)** - Complete developer guide for video upload and streaming
 
 ## Hackathon Participation
 This project leverages AI-assisted development tools, primarily the Kiro agent, to accelerate and guide the build process.  

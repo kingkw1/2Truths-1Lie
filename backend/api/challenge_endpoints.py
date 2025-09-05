@@ -9,16 +9,34 @@ from fastapi.responses import JSONResponse
 import logging
 
 from services.auth_service import get_current_user
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from services.challenge_service import challenge_service
 from services.upload_service import ChunkedUploadService
 from models import (
     CreateChallengeRequest, 
     Challenge, 
-    SubmitGuessRequest
+    SubmitGuessRequest,
+    FlagChallengeRequest
 )
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/v1/challenges", tags=["challenges"])
+
+# Optional authentication dependency
+security = HTTPBearer(auto_error=False)
+
+async def get_current_user_optional(credentials: Optional[HTTPAuthorizationCredentials] = Depends(security)) -> Optional[str]:
+    """Get current user if authenticated, otherwise return None"""
+    if not credentials:
+        return None
+    try:
+        # Use the existing auth service to verify the token
+        from services.auth_service import AuthService
+        auth_service = AuthService()
+        payload = auth_service.verify_token(credentials.credentials)
+        return payload.get("sub")
+    except:
+        return None
 
 # Initialize upload service for challenge creation
 upload_service = ChunkedUploadService()
@@ -65,13 +83,13 @@ async def create_challenge(
 @router.get("/{challenge_id}", response_model=Challenge)
 async def get_challenge(
     challenge_id: str,
-    user_id: str = Depends(get_current_user)
+    user_id: Optional[str] = Depends(get_current_user_optional)
 ) -> Challenge:
     """
     Get a specific challenge by ID
     """
     try:
-        logger.info(f"User {user_id} requesting challenge {challenge_id}")
+        logger.info(f"User {user_id or 'anonymous'} requesting challenge {challenge_id}")
         
         challenge = await challenge_service.get_challenge(challenge_id)
         if not challenge:
@@ -80,7 +98,7 @@ async def get_challenge(
                 detail="Challenge not found"
             )
         
-        logger.debug(f"Challenge retrieved: {challenge.id}")
+        logger.debug(f"Challenge retrieved: {challenge.challenge_id}")
         return challenge
         
     except HTTPException:
@@ -93,27 +111,53 @@ async def get_challenge(
         )
 
 
-@router.get("/", response_model=List[Challenge])
+@router.get("/", response_model=dict)
 async def list_challenges(
     skip: int = 0,
     limit: int = 20,
+    page: Optional[int] = None,
+    page_size: Optional[int] = None,
     public_only: bool = True,
-    user_id: str = Depends(get_current_user)
-) -> List[Challenge]:
+    user_id: Optional[str] = Depends(get_current_user_optional)
+) -> dict:
     """
     List challenges with pagination
     """
     try:
-        logger.info(f"User {user_id} listing challenges (skip={skip}, limit={limit}, public_only={public_only})")
+        logger.info(f"User {user_id or 'anonymous'} listing challenges (skip={skip}, limit={limit}, page={page}, page_size={page_size}, public_only={public_only})")
         
-        challenges = await challenge_service.list_challenges(
-            skip=skip,
-            limit=limit,
-            public_only=public_only
+        # Handle both pagination styles
+        if page is not None and page_size is not None:
+            # Use page/page_size style
+            actual_page = page
+            actual_page_size = page_size
+        else:
+            # Convert skip/limit to page/page_size for service layer
+            actual_page = (skip // limit) + 1 if limit > 0 else 1
+            actual_page_size = limit
+        
+        # Set status filter based on public_only flag - for public access, only show published challenges
+        from models import ChallengeStatus
+        status_filter = ChallengeStatus.PUBLISHED if public_only else None
+        
+        challenges, total_count = await challenge_service.list_challenges(
+            page=actual_page,
+            page_size=actual_page_size,
+            creator_id=None if public_only else None,
+            status=status_filter
         )
         
         logger.debug(f"Retrieved {len(challenges)} challenges")
-        return challenges
+        
+        has_next = (actual_page * actual_page_size) < total_count
+        
+        return {
+            "challenges": challenges,
+            "total_count": total_count,
+            "page": actual_page,
+            "page_size": actual_page_size,
+            "has_next": has_next
+        }
         
     except Exception as e:
         logger.error(f"Failed to list challenges: {str(e)}", exc_info=True)
@@ -168,7 +212,7 @@ async def submit_guess(
         )
 
 
-@router.get("/user/{user_id}", response_model=List[Challenge])
+@router.get("/user/{target_user_id}", response_model=List[Challenge])
 async def get_user_challenges(
     target_user_id: str,
     skip: int = 0,
@@ -181,10 +225,14 @@ async def get_user_challenges(
     try:
         logger.info(f"User {current_user_id} requesting challenges by user {target_user_id}")
         
+        # Convert skip/limit to page/page_size for service layer
+        page = (skip // limit) + 1 if limit > 0 else 1
+        page_size = limit
+        
         challenges = await challenge_service.get_user_challenges(
             user_id=target_user_id,
-            skip=skip,
-            limit=limit
+            page=page,
+            page_size=page_size
         )
         
         logger.debug(f"Retrieved {len(challenges)} challenges for user {target_user_id}")
@@ -290,3 +338,112 @@ async def get_challenge_stats(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to retrieve challenge stats"
         )
+
+
+@router.post("/{challenge_id}/publish")
+async def publish_challenge(
+    challenge_id: str,
+    user_id: str = Depends(get_current_user)
+):
+    """
+    Publish a draft challenge
+    """
+    try:
+        logger.info(f"User {user_id} attempting to publish challenge {challenge_id}")
+        
+        challenge = await challenge_service.publish_challenge(challenge_id, user_id)
+        
+        return {
+            "challenge_id": challenge.challenge_id,
+            "status": challenge.status,
+            "published_at": challenge.published_at
+        }
+        
+    except Exception as e:
+        logger.error(f"Failed to publish challenge {challenge_id}: {str(e)}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to publish challenge"
+        )
+
+
+@router.get("/{challenge_id}/guesses")
+async def get_challenge_guesses(
+    challenge_id: str,
+    user_id: str = Depends(get_current_user)
+):
+    """
+    Get all guesses for a challenge (creator only)
+    """
+    try:
+        logger.info(f"User {user_id} requesting guesses for challenge {challenge_id}")
+        
+        guesses = await challenge_service.get_challenge_guesses(challenge_id, user_id)
+        return {"guesses": guesses}
+        
+    except Exception as e:
+        logger.error(f"Failed to get guesses for challenge {challenge_id}: {str(e)}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to get challenge guesses"
+        )
+
+
+@router.post("/{challenge_id}/flag")
+async def flag_challenge(
+    challenge_id: str,
+    request: FlagChallengeRequest,
+    user_id: str = Depends(get_current_user)
+):
+    """
+    Flag a challenge for manual review
+    """
+    try:
+        logger.info(f"User {user_id} flagging challenge {challenge_id}")
+        
+        reason = request.reason
+        success = await challenge_service.flag_challenge(challenge_id, user_id, reason)
+        
+        if success:
+            return {"message": "Challenge flagged successfully"}
+        else:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Failed to flag challenge"
+            )
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to flag challenge {challenge_id}: {str(e)}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to flag challenge"
+        )
+
+
+@router.get("/{challenge_id}/moderation")
+async def get_challenge_moderation_status(
+    challenge_id: str,
+    user_id: str = Depends(get_current_user)
+):
+    """
+    Get moderation status for a challenge
+    """
+    try:
+        logger.info(f"User {user_id} requesting moderation status for challenge {challenge_id}")
+        
+        moderation_status = await challenge_service.get_moderation_status(challenge_id)
+        if moderation_status:
+            return {"moderation": moderation_status}
+        else:
+            return {"moderation": None}
+        
+    except Exception as e:
+        logger.error(f"Failed to get moderation status for challenge {challenge_id}: {str(e)}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to get moderation status"
+        )
+
+
