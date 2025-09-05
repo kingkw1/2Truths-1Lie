@@ -14,12 +14,14 @@ We use a mobile-first React Native/Expo stack emphasizing native mobile performa
 - **Navigation**: React Navigation for native mobile navigation patterns
 - **State Management**: Redux Toolkit optimized for mobile performance
 - **Media**: Expo Camera and Audio APIs for native device recording capabilities
+- **Video Processing**: FFmpeg for React Native or platform-specific compression libraries
 - **Offline**: AsyncStorage and SQLite for offline-first mobile experience
 
 ## Backend  
 - **Runtime**: Python with FastAPI for REST APIs (mobile-optimized endpoints)
 - **Database**: SQLite for development; PostgreSQL for production-scale mobile users
-- **Storage**: Cloud storage (S3/Firebase) optimized for mobile media uploads
+- **Storage**: Cloud storage (S3/Firebase) optimized for mobile media uploads with CDN integration
+- **Media Processing**: Server-side video validation and metadata extraction
 - **Hosting**: Railway or Render for mobile-optimized backend services
 - **API Design**: Mobile-first API patterns with efficient data transfer and offline sync
 

@@ -17,6 +17,7 @@ include: always
 - Mobile API client logic in `mobile/src/services/`
 - Core game rules and mechanics in `mobile/src/game/` (mobile-optimized)
 - Screen components in `mobile/src/screens/`
+- Media processing utilities in `mobile/src/media/` (compression, merging, segment handling)
 - Navigation configuration in dedicated navigation files
 - Avoid large mobile files: refactor into smaller reusable modules optimized for mobile
 
@@ -37,8 +38,10 @@ include: always
 ## Mobile Error Handling
 - Gracefully handle mobile-specific errors (camera permissions, network connectivity)
 - Display mobile-friendly error messages with appropriate UI feedback
-- Handle app backgrounding and foregrounding states
+- Handle app backgrounding and foregrounding states during video operations
 - Implement offline error states for mobile network issues
+- Handle video compression and merging failures with user-friendly recovery options
+- Provide meaningful progress feedback during long-running media operations
 
 ## Mobile Code Quality and Build Compliance
 - All mobile code changes must compile successfully with Expo CLI and React Native

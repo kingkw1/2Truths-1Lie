@@ -19,6 +19,7 @@ The project uses a mobile-first modular structure to clearly separate concerns b
 │ │ ├── game/ # Core game logic and rules for mobile
 │ │ ├── services/ # API client and mobile services
 │ │ ├── store/ # Redux state management
+│ │ ├── media/ # Video compression, merging, and segment processing
 │ │ └── utils/ # Helper functions and mobile utilities
 │ ├── assets/ # Mobile-specific assets: images, fonts, icons
 │ ├── android/ # Android native configuration and builds
@@ -27,7 +28,8 @@ The project uses a mobile-first modular structure to clearly separate concerns b
 │ └── package.json # Mobile dependencies and scripts
 ├── backend/ # Python FastAPI backend for mobile clients
 │ ├── services/ # Backend business logic and APIs
-│ ├── models.py # Database models
+│ ├── media/ # Video processing, storage, and CDN integration
+│ ├── models.py # Database models including media metadata
 │ ├── main.py # FastAPI application entry point
 │ └── requirements.txt # Python dependencies
 ├── archive/web-app/ # Archived web application code

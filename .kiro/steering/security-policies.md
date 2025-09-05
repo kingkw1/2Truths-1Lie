@@ -16,6 +16,9 @@ include: always
 - Use strict schema validation for mobile API inputs with mobile-specific constraints
 - Enforce mobile-appropriate limits on uploaded media (file size, resolution, duration)
 - Validate camera and microphone permissions before accessing device features
+- Validate merged video file integrity and segment metadata consistency
+- Implement server-side content scanning for uploaded video files
+- Enforce compression parameters to prevent resource exhaustion attacks
 
 ## Mobile Transport Security
 - Use HTTPS/TLS for all mobile-to-server communication
@@ -42,6 +45,8 @@ include: always
 - Protect against mobile-specific abuse (automated app interactions, device farming)
 - Use device fingerprinting and behavioral analytics for mobile fraud detection
 - Implement progressive mobile app lockout for suspicious activity
+- Rate limit video upload endpoints to prevent storage abuse
+- Monitor unusual upload patterns (large files, frequent uploads, suspicious compression ratios)
 
 ## Mobile Dependency & Vulnerability Management
 - Regularly audit React Native and Expo dependencies for mobile security vulnerabilities

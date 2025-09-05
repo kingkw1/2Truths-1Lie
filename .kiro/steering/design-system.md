@@ -29,6 +29,8 @@ include: always
 - Inputs: Mobile-optimized with proper keyboard types and native styling
 - Navigation: React Navigation patterns with native mobile transitions
 - Feedback Animations: React Native Animated API for smooth 60fps mobile animations
+- Media Upload Components: Progress indicators, compression status, segment timeline controls
+- Video Player: Native video player with segment navigation and thumbnail previews
 
 ## Mobile Iconography
 - Use React Native Vector Icons or Expo Vector Icons for scalable mobile icons
@@ -52,5 +54,8 @@ include: always
 - Native mobile navigation patterns (tab bar, stack navigation, modal presentation)
 - Platform-specific design guidelines (iOS Human Interface Guidelines, Material Design)
 - Battery and performance optimization for continuous camera usage
+- Video compression and upload progress indicators with native feel
+- Segmented video playback controls with intuitive navigation between statements
+- Background processing indicators for media operations
 
 ---

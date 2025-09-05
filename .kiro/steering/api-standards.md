@@ -52,13 +52,17 @@ pattern: "backend/**/*"
 - `POST /mobile/v1/statements` - Submit new statements with mobile media uploads
 - `GET /mobile/v1/games/{gameId}` - Retrieve mobile-optimized game data
 - `POST /mobile/v1/games/{gameId}/guess` - Submit mobile game guesses with device context
-- `POST /mobile/v1/media/upload` - Handle mobile camera/video uploads efficiently
+- `POST /mobile/v1/media/upload` - Handle mobile merged video uploads with segment metadata
+- `GET /mobile/v1/media/{mediaId}` - Stream/retrieve compressed video content with CDN support
+- `POST /mobile/v1/challenges` - Create challenges with merged video and segment timecodes
 - `GET /mobile/v1/health` - Mobile app health check and feature flags
 
 ## Mobile Performance Considerations
 - Implement pagination for list endpoints to reduce mobile data usage
-- Use efficient media encoding for mobile video/image uploads
-- Support offline-first patterns with eventual consistency
+- Use efficient media encoding and compression for mobile merged video uploads
+- Support offline-first patterns with eventual consistency for uploaded media
 - Include request/response compression for mobile bandwidth optimization
+- Support resumable uploads for large merged video files
+- Implement background upload support for mobile app lifecycle management
 
 ---

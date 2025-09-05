@@ -19,6 +19,8 @@ Create an engaging, social, gamified **mobile application** based on the classic
 - **Native mobile gameplay**: Users create challenges using device camera and microphone
 - **Mobile-optimized UI**: Touch-first interface designed for iOS and Android
 - **Real-time mobile emotion analysis**: Native processing with camera-based emotion detection
+- **Merged video challenges**: Record three statements, automatically merge into single file with segment navigation
+- **Smart video compression**: Automatic compression optimized for mobile playback and storage
 - **App store distribution**: Full iOS App Store and Google Play Store deployment
 - **Offline-first mobile experience**: Local storage and sync when connectivity returns
 - **Mobile monetization**: In-app purchases, subscriptions, and premium mobile features

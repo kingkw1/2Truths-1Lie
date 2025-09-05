@@ -10,6 +10,9 @@ pattern: "**/*.test.*"
 - Integration tests for mobile API client services in `mobile/src/services/`
 - React Native component tests for critical mobile UI flows and screens
 - E2E tests for complete mobile user journeys using Detox or similar
+- Unit tests for video compression and merging utilities in `mobile/src/media/`
+- Integration tests for upload progress tracking and background processing
+- Tests for segment metadata handling and video playback controls
 
 ## Mobile Testing Tools
 - Use Jest and React Native Testing Library as the base mobile testing framework
@@ -29,6 +32,9 @@ pattern: "**/*.test.*"
 - Aim for at least 80% coverage on mobile business logic and API client services
 - Review mobile test coverage reports as part of CI
 - Focus on critical mobile user paths (camera access, game flow, offline scenarios)
+- Include comprehensive testing of video compression, merging, and upload workflows
+- Test segment metadata accuracy and video playback functionality
+- Test error recovery scenarios for failed compressions and interrupted uploads
 
 ## Mobile Build and Test Validation
 - Tests must run successfully with Expo CLI and EAS Build processes
@@ -49,6 +55,8 @@ pattern: "**/*.test.*"
 - Create mobile test factories for device state and app navigation
 - Avoid hard-coded mobile data across multiple tests
 - Mock device-specific APIs (camera, storage, notifications) consistently
+- Include test video files with known compression ratios and segment boundaries
+- Mock video processing libraries for unit testing without actual file operations
 
 ---
 
