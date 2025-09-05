@@ -42,6 +42,14 @@
 - During playback, the mobile app loads metadata and presents UI controls for each statement, seeking/playing video for only the selected segment based on timecodes.
 - Optionally, migration support is added for legacy challenges (three files → merged plus metadata) if needed.
 
+## Challenge Data Persistence and API Routing (Addition)
+
+- Challenges, including all statements and their associated media URLs and segment metadata, are stored in a database or persistent JSON store.
+- Backend is responsible for loading challenges from persistent storage and exposing authenticated REST APIs under `/api/v1/challenges`.
+- API handlers validate authentication tokens and permissions before returning challenge lists and detail data.
+- Cache policies and pagination implemented for efficiency and scalability.
+- Data synchronization and consistency mechanisms ensure that newly created challenges become visible to all clients promptly.
+
 ## Compression Integration in Media Upload Workflow
 
 - After recording each statement or after merging the statements into a single video, the app will apply video compression using platform-optimized libraries (e.g., FFmpeg for Android/iOS).

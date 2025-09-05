@@ -44,7 +44,17 @@ WHEN a user plays back a challenge
 THE SYSTEM SHALL enable playback of each individual statement by seeking to and playing only the corresponding segment as defined in the metadata,  
 AND allow replay or out-of-order viewing of each segment.
 
-### Requirement 7: Mandatory Compression of Mobile Videos
+## Requirement 7: Persistent Challenge Data Storage and Retrieval
+
+WHEN a user submits a new challenge with uploaded media references  
+THE backend SHALL persist full challenge data (including media URLs and segment metadata) in durable storage  
+AND the system SHALL provide authenticated APIs to list, query, and retrieve all stored challenges for gameplay
+
+WHEN a client requests available challenges or specific challenge details  
+THE system SHALL return current live challenges from persistent storage, reflecting all user-submitted content  
+AND handle errors gracefully if data is missing or corrupt
+
+### Requirement 8: Mandatory Compression of Mobile Videos
 
 WHEN a user completes recording each video statement on a mobile device (Android/iOS)  
 THE app SHALL automatically compress the video to reduce file size without compromising basic visual fidelity  

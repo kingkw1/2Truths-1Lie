@@ -21,7 +21,15 @@
 - [x] Modify backend and challenge data model to store and retrieve segment metadata with each challenge
 - [x] Update challenge creation API to accept merged video and segment timecodes
 - [x] Update mobile playback UI to present three selectable statement segments and seek/play video segment as needed
-- [ ] Test new upload, metadata, and segment playback workflows cross-platform
+
+# Challenge Visibility
+- [ ] Debug and fix backend challenge CRUD endpoints to ensure challenges are persisted correctly.
+- [ ] Verify and stabilize authenticated challenge listing API (`GET /api/v1/challenges`) and detail API (`GET /api/v1/challenges/{id}`).
+- [ ] Remove or disable mock/test challenge endpoints to avoid confusion.
+- [ ] Update frontend challenge browse screen to fetch and display real challenges from the live backend API.
+- [ ] Implement error handling in frontend for challenge load failures.
+- [ ] Validate challenge list UI updates when new challenges are created.
+- [ ] Write integration tests covering end-to-end creation, storage, retrieval, and display.
 - [ ] Update developer and user documentation to describe new segment-based challenge flow
 
 ## Compression Integration
