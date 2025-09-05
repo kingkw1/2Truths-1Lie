@@ -19,7 +19,7 @@
 - [x] Implement video merging logic on device for three statements
 - [x] Update upload workflow to send merged video file plus segment metadata to backend
 - [x] Modify backend and challenge data model to store and retrieve segment metadata with each challenge
-- [ ] Update challenge creation API to accept merged video and segment timecodes
+- [x] Update challenge creation API to accept merged video and segment timecodes
 - [ ] Update mobile playback UI to present three selectable statement segments and seek/play video segment as needed
 - [ ] Test new upload, metadata, and segment playback workflows cross-platform
 - [ ] Update developer and user documentation to describe new segment-based challenge flow
