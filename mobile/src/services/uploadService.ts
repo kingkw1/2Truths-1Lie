@@ -278,6 +278,92 @@ export class VideoUploadService {
   }
 
   /**
+   * Upload merged video with segment metadata
+   */
+  public async uploadMergedVideo(
+    videoUri: string,
+    filename: string,
+    duration: number,
+    segments: Array<{
+      statementIndex: number;
+      startTime: number;
+      endTime: number;
+      duration: number;
+    }>,
+    options: UploadOptions = {},
+    onProgress?: (progress: UploadProgress) => void
+  ): Promise<UploadResult> {
+    console.log('🎬 UPLOAD: Starting merged video upload with segment metadata');
+    console.log('🎬 UPLOAD: Segments:', JSON.stringify(segments, null, 2));
+
+    // Prepare merged video metadata
+    const mergedVideoMetadata = {
+      is_merged_video: true,
+      segment_count: segments.length,
+      segments: segments.map(segment => ({
+        statement_index: segment.statementIndex,
+        start_time_ms: segment.startTime,
+        end_time_ms: segment.endTime,
+        duration_ms: segment.duration,
+      })),
+      total_duration_ms: duration,
+    };
+
+    // Upload the merged video with metadata
+    return this.uploadVideoWithMetadata(
+      videoUri,
+      filename,
+      duration,
+      mergedVideoMetadata,
+      options,
+      onProgress
+    );
+  }
+
+  /**
+   * Upload video with custom metadata
+   */
+  private async uploadVideoWithMetadata(
+    videoUri: string,
+    filename: string,
+    duration: number,
+    metadata: any,
+    options: UploadOptions = {},
+    onProgress?: (progress: UploadProgress) => void
+  ): Promise<UploadResult> {
+    const maxRetries = options.retryAttempts ?? 2;
+    let lastError: Error;
+
+    for (let attempt = 0; attempt <= maxRetries; attempt++) {
+      try {
+        if (attempt > 0) {
+          console.log(`🔄 UPLOAD: Retry attempt ${attempt}/${maxRetries}`);
+          // Wait before retry with exponential backoff
+          const delay = Math.min(1000 * Math.pow(2, attempt - 1), 5000);
+          await new Promise(resolve => setTimeout(resolve, delay));
+        }
+
+        return await this._uploadVideoAttemptWithMetadata(videoUri, filename, duration, metadata, options, onProgress);
+      } catch (error: any) {
+        lastError = error;
+        console.warn(`❌ UPLOAD: Attempt ${attempt + 1} failed:`, error.message);
+        
+        // Don't retry on certain errors
+        if (error.name === 'AbortError' || error.message.includes('401') || error.message.includes('403')) {
+          throw error;
+        }
+        
+        // If this was the last attempt, throw the error
+        if (attempt === maxRetries) {
+          throw error;
+        }
+      }
+    }
+
+    throw lastError!;
+  }
+
+  /**
    * Upload video with retry logic
    */
   public async uploadVideo(
@@ -317,6 +403,185 @@ export class VideoUploadService {
     }
 
     throw lastError!;
+  }
+
+  /**
+   * Single upload attempt with metadata (internal method)
+   */
+  private async _uploadVideoAttemptWithMetadata(
+    videoUri: string,
+    filename: string,
+    duration: number,
+    metadata: any,
+    options: UploadOptions = {},
+    onProgress?: (progress: UploadProgress) => void
+  ): Promise<UploadResult> {
+    const startTime = Date.now();
+    const uploadId = `upload_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
+    
+    try {
+      console.log('🚀 UPLOAD: Starting video upload process with metadata...');
+      console.log('🚀 UPLOAD: Video URI:', videoUri);
+      console.log('🚀 UPLOAD: Filename:', filename);
+      console.log('🚀 UPLOAD: Metadata:', JSON.stringify(metadata, null, 2));
+      console.log('🚀 UPLOAD: Base URL:', this.baseUrl);
+      
+      // Ensure we have an auth token before uploading
+      if (!this.authToken) {
+        console.log('🔐 UPLOAD: No auth token found, initializing auth service...');
+        const { authService } = await import('./authService');
+        await authService.initialize();
+        const token = authService.getAuthToken();
+        if (token) {
+          this.setAuthToken(token);
+          console.log('✅ UPLOAD: Auth token acquired for upload');
+        } else {
+          throw new Error('Failed to acquire authentication token for upload');
+        }
+      }
+
+      // Test network connectivity before starting upload
+      const isConnected = await this.testNetworkConnectivity();
+      if (!isConnected) {
+        throw new Error('Network connection failed - please check your internet connection');
+      }
+      
+      // Create abort controller for this upload
+      const abortController = new AbortController();
+      this.activeUploads.set(uploadId, abortController);
+
+      onProgress?.({ stage: 'preparing', progress: 5, startTime });
+
+      // Get file info
+      const fileInfo = await FileSystem.getInfoAsync(videoUri);
+      if (!fileInfo.exists) {
+        throw new Error('Video file not found');
+      }
+
+      // Handle file size safely
+      let fileSize = 0;
+      if ('size' in fileInfo) {
+        fileSize = fileInfo.size || 0;
+      }
+
+      console.log('📁 UPLOAD: File info:', { exists: fileInfo.exists, size: fileSize });
+
+      onProgress?.({ stage: 'preparing', progress: 10, startTime });
+
+      // Get auth headers
+      const authHeaders = this.getAuthHeaders(false);
+      console.log('🔐 UPLOAD: Auth headers:', Object.keys(authHeaders));
+      console.log('🔐 UPLOAD: Has Authorization?', !!authHeaders.Authorization);
+      
+      // Prepare file for upload with metadata
+      const formData = new FormData();
+      formData.append('file', {
+        uri: videoUri,
+        type: 'video/mp4',
+        name: filename || 'video.mp4',
+      } as any);
+
+      // Add metadata as JSON string
+      formData.append('metadata', JSON.stringify(metadata));
+
+      console.log('📦 UPLOAD: FormData prepared with metadata');
+
+      onProgress?.({ stage: 'uploading', progress: 20, startTime });
+
+      const uploadUrl = `${this.baseUrl}/api/v1/s3-media/upload`;
+      console.log('🌐 UPLOAD: Upload URL:', uploadUrl);
+
+      // Upload directly to S3 endpoint with timeout
+      console.log('🌐 UPLOAD: Making fetch request...');
+      
+      // Create timeout promise
+      const timeoutMs = options?.timeout || 60000; // 60 second default timeout
+      const timeoutPromise = new Promise((_, reject) => {
+        const timeoutId = setTimeout(() => {
+          reject(new Error(`Upload timeout after ${timeoutMs}ms`));
+        }, timeoutMs);
+        
+        // Clear timeout if aborted
+        abortController.signal.addEventListener('abort', () => {
+          clearTimeout(timeoutId);
+        });
+      });
+
+      // Race between fetch and timeout
+      const response = await Promise.race([
+        fetch(uploadUrl, {
+          method: 'POST',
+          headers: authHeaders,
+          body: formData,
+          signal: abortController.signal,
+        }),
+        timeoutPromise
+      ]) as Response;
+
+      console.log('📡 UPLOAD: Response received - Status:', response.status);
+      console.log('📡 UPLOAD: Response headers:', Object.fromEntries(response.headers.entries()));
+
+      if (!response.ok) {
+        const errorText = await response.text().catch(() => 'Unknown error');
+        console.error('❌ UPLOAD: Upload failed:', response.status, errorText);
+        throw new Error(`Upload failed: ${response.status} ${errorText}`);
+      }
+
+      const result = await response.json();
+      console.log('✅ UPLOAD: Upload successful:', result);
+      
+      onProgress?.({ stage: 'finalizing', progress: 90, startTime });
+
+      // Clean up
+      this.activeUploads.delete(uploadId);
+      
+      onProgress?.({ stage: 'finalizing', progress: 100, startTime });
+
+      return {
+        success: true,
+        mediaId: result.media_id,
+        streamingUrl: result.storage_url,
+        cloudStorageKey: result.media_id,
+        storageType: 'cloud' as const,
+        fileSize: fileSize,
+        compressionRatio: 1,
+        uploadTime: Date.now() - startTime,
+      };
+
+    } catch (error: any) {
+      // Clean up on error
+      this.activeUploads.delete(uploadId);
+      
+      if (error.name === 'AbortError') {
+        console.log('⚠️ UPLOAD: Upload cancelled by user');
+        return {
+          success: false,
+          error: 'Upload cancelled by user',
+        };
+      }
+
+      console.error('❌ UPLOAD: Upload error:', error);
+      console.error('❌ UPLOAD: Error details:', {
+        name: error.name,
+        message: error.message,
+        stack: error.stack
+      });
+
+      // Provide more specific error messages for better user feedback
+      let errorMessage = error.message || 'Upload failed';
+      if (error.message?.includes('timeout')) {
+        errorMessage = 'Upload timed out - please check your internet connection and try again';
+      } else if (error.message?.includes('Network request failed')) {
+        errorMessage = 'Network connection failed - please check your internet connection';
+      } else if (error.message?.includes('Failed to fetch')) {
+        errorMessage = 'Unable to connect to server - please check your network connection';
+      }
+      
+      return {
+        success: false,
+        error: errorMessage,
+      };
+    }
   }
 
   /**
@@ -510,9 +775,9 @@ export class VideoUploadService {
    * Cancel all active uploads
    */
   public cancelAllUploads(): void {
-    for (const [uploadId, controller] of this.activeUploads) {
+    this.activeUploads.forEach((controller, uploadId) => {
       controller.abort();
-    }
+    });
     this.activeUploads.clear();
   }
 

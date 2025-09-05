@@ -163,7 +163,7 @@ class ChallengeService:
                 cloud_storage_key = None
                 storage_type = "local"
             
-            # Create statement with persistent URLs
+            # Create statement with persistent URLs and segment metadata
             statement = Statement(
                 statement_id=statement_id,
                 statement_type=statement_type,
@@ -173,11 +173,15 @@ class ChallengeService:
                 cloud_storage_key=cloud_storage_key,
                 storage_type=storage_type,
                 duration_seconds=stmt_data.get('duration_seconds', 0.0),
+                # Add segment metadata for merged videos
+                segment_start_time=stmt_data.get('segment_start_time'),
+                segment_end_time=stmt_data.get('segment_end_time'),
+                segment_duration=stmt_data.get('segment_duration'),
                 created_at=datetime.utcnow()
             )
             statements.append(statement)
         
-        # Create challenge
+        # Create challenge with merged video metadata
         challenge = Challenge(
             challenge_id=challenge_id,
             creator_id=creator_id,
@@ -186,6 +190,8 @@ class ChallengeService:
             lie_statement_id=lie_statement_id,
             status=ChallengeStatus.DRAFT,
             tags=request.tags,
+            is_merged_video=request.is_merged_video,
+            merged_video_metadata=request.merged_video_metadata,
             created_at=datetime.utcnow(),
             updated_at=datetime.utcnow()
         )

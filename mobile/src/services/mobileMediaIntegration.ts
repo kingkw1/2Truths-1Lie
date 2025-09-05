@@ -684,11 +684,15 @@ export class MobileMediaIntegrationService {
   }
 
   /**
-   * Upload the merged video to the backend
+   * Upload the merged video to the backend with segment metadata
    */
   private async uploadMergedVideo(mergedMedia: MediaCapture): Promise<MediaCapture> {
     if (!mergedMedia.url) {
       throw new Error('No merged video URL available');
+    }
+
+    if (!mergedMedia.segments || mergedMedia.segments.length !== 3) {
+      throw new Error('Merged video must have exactly 3 segments');
     }
 
     // Generate filename for merged video
@@ -703,11 +707,22 @@ export class MobileMediaIntegrationService {
       timeout: 120000, // 2 minutes for larger merged files
     };
 
-    // Upload merged video
-    const uploadResult = await videoUploadService.uploadVideo(
+    // Prepare segment metadata for upload
+    const segments = mergedMedia.segments.map(segment => ({
+      statementIndex: segment.statementIndex,
+      startTime: segment.startTime,
+      endTime: segment.endTime,
+      duration: segment.duration,
+    }));
+
+    console.log('🎬 UPLOAD: Uploading merged video with segments:', segments);
+
+    // Upload merged video with segment metadata
+    const uploadResult = await videoUploadService.uploadMergedVideo(
       mergedMedia.url,
       filename,
-      (mergedMedia.duration || 0) / 1000, // Convert to seconds
+      mergedMedia.duration || 0, // Duration in milliseconds
+      segments,
       uploadOptions,
       (progress: UploadProgress) => {
         // Update progress for merged video upload
@@ -748,6 +763,7 @@ export class MobileMediaIntegrationService {
       uploadTime: uploadResult.uploadTime,
     };
 
+    console.log('✅ UPLOAD: Merged video uploaded successfully with metadata');
     return uploadedMergedMedia;
   }
 

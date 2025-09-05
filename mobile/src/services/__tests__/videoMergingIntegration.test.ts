@@ -39,6 +39,14 @@ jest.mock('../uploadService', () => ({
       storageType: 'cloud',
       uploadTime: 5000,
     }),
+    uploadMergedVideo: jest.fn().mockResolvedValue({
+      success: true,
+      streamingUrl: 'https://mock-cdn.com/merged-video.mp4',
+      mediaId: 'mock-merged-video-id',
+      cloudStorageKey: 'mock-merged-storage-key',
+      storageType: 'cloud',
+      uploadTime: 8000,
+    }),
   },
 }));
 

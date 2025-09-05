@@ -123,6 +123,10 @@ class Statement(BaseModel):
     cloud_storage_key: Optional[str] = Field(None, description="Cloud storage key for direct access")
     storage_type: str = Field(default="local", description="Storage type: local, cloud, or cloud_fallback")
     duration_seconds: float = Field(..., gt=0, description="Duration of the video in seconds")
+    # Segment metadata for merged videos
+    segment_start_time: Optional[float] = Field(None, description="Start time in seconds within merged video")
+    segment_end_time: Optional[float] = Field(None, description="End time in seconds within merged video")
+    segment_duration: Optional[float] = Field(None, description="Duration of segment in seconds")
     created_at: datetime = Field(default_factory=datetime.utcnow)
     
 class Challenge(BaseModel):
@@ -135,6 +139,9 @@ class Challenge(BaseModel):
     status: ChallengeStatus = Field(default=ChallengeStatus.DRAFT)
     difficulty_level: Optional[str] = Field(None, description="Estimated difficulty: easy, medium, hard")
     tags: List[str] = Field(default_factory=list, description="Optional tags for categorization")
+    # Merged video metadata
+    is_merged_video: bool = Field(default=False, description="Whether this challenge uses a merged video")
+    merged_video_metadata: Optional[Dict[str, Any]] = Field(None, description="Metadata for merged video segments")
     created_at: datetime = Field(default_factory=datetime.utcnow)
     updated_at: datetime = Field(default_factory=datetime.utcnow)
     published_at: Optional[datetime] = None
@@ -155,6 +162,8 @@ class CreateChallengeRequest(BaseModel):
     statements: List[Dict[str, Any]] = Field(..., min_items=3, max_items=3, description="Statement metadata (media file IDs)")
     lie_statement_index: int = Field(..., ge=0, le=2, description="Index (0-2) of the lie statement")
     tags: List[str] = Field(default_factory=list, max_items=10)
+    is_merged_video: bool = Field(default=False, description="Whether this challenge uses a merged video")
+    merged_video_metadata: Optional[Dict[str, Any]] = Field(None, description="Metadata for merged video segments")
     
 class CreateChallengeResponse(BaseModel):
     """Response from challenge creation"""

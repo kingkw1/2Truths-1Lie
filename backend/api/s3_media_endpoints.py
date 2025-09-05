@@ -17,6 +17,7 @@ router = APIRouter(prefix="/api/v1/s3-media", tags=["s3-media"])
 @router.post("/upload")
 async def upload_video_to_s3(
     file: UploadFile = File(...),
+    metadata: Optional[str] = None,  # JSON string with video metadata
     current_user: str = Depends(get_current_user),  # Authentication required
     s3_service: S3MediaService = Depends(get_s3_media_service)
 ):
@@ -47,10 +48,22 @@ async def upload_video_to_s3(
                 detail="Uploaded file is empty"
             )
         
+        # Parse metadata if provided
+        parsed_metadata = None
+        if metadata:
+            try:
+                import json
+                parsed_metadata = json.loads(metadata)
+                logger.info(f"Received video metadata: {parsed_metadata}")
+            except json.JSONDecodeError as e:
+                logger.warning(f"Invalid metadata JSON: {e}")
+                # Continue without metadata rather than failing
+        
         # Upload to S3 (includes validation)
         media_id = await s3_service.upload_video_to_s3(
             file_content=file_content,
-            content_type=content_type
+            content_type=content_type,
+            metadata=parsed_metadata
         )
         
         # Generate initial signed URL for immediate access
@@ -69,7 +82,8 @@ async def upload_video_to_s3(
                     "original_filename": file.filename,
                     "content_type": content_type,
                     "file_size": len(file_content)
-                }
+                },
+                "metadata": parsed_metadata
             },
             status_code=status.HTTP_201_CREATED,
             headers={

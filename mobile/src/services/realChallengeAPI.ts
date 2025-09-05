@@ -49,10 +49,21 @@ export interface CreateChallengeRequest {
     media_file_id: string;
     segment_start_time?: number;
     segment_end_time?: number;
+    segment_duration?: number;
   }>;
   lie_statement_index: number;
   tags?: string[];
   is_merged_video?: boolean;
+  merged_video_metadata?: {
+    total_duration_ms: number;
+    segment_count: number;
+    segments: Array<{
+      statement_index: number;
+      start_time_ms: number;
+      end_time_ms: number;
+      duration_ms: number;
+    }>;
+  };
 }
 
 export interface APIResponse<T> {

@@ -75,7 +75,7 @@ class S3MediaService:
                 detail=f"File size {file_size} bytes exceeds maximum {max_size} bytes"
             )
     
-    async def upload_video_to_s3(self, file_content: bytes, content_type: str) -> str:
+    async def upload_video_to_s3(self, file_content: bytes, content_type: str, metadata: Optional[Dict[str, Any]] = None) -> str:
         """
         Upload video file directly to S3 and return media ID
         
@@ -95,17 +95,33 @@ class S3MediaService:
             timestamp = datetime.utcnow().strftime('%Y%m%d')
             s3_key = f"media/videos/{timestamp}/{media_id}"
             
+            # Prepare S3 metadata
+            s3_metadata = {
+                'media_id': media_id,
+                'upload_timestamp': datetime.utcnow().isoformat(),
+                'content_type': content_type
+            }
+            
+            # Add custom metadata if provided (for merged videos)
+            if metadata:
+                # Convert metadata to string format for S3 (S3 metadata must be strings)
+                import json
+                if metadata.get('is_merged_video'):
+                    s3_metadata['is_merged_video'] = 'true'
+                    s3_metadata['segment_count'] = str(metadata.get('segment_count', 0))
+                    if metadata.get('segments'):
+                        s3_metadata['segments_data'] = json.dumps(metadata['segments'])
+                    s3_metadata['total_duration_ms'] = str(metadata.get('total_duration_ms', 0))
+                
+                logger.info(f"Adding merged video metadata to S3: {s3_metadata}")
+            
             # Upload to S3 with metadata
             self.s3_client.put_object(
                 Bucket=self.bucket_name,
                 Key=s3_key,
                 Body=file_content,
                 ContentType=content_type,
-                Metadata={
-                    'media_id': media_id,
-                    'upload_timestamp': datetime.utcnow().isoformat(),
-                    'content_type': content_type
-                },
+                Metadata=s3_metadata,
                 # Set cache control for efficient streaming
                 CacheControl='public, max-age=31536000'  # 1 year
             )

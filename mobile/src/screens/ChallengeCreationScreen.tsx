@@ -42,7 +42,7 @@ const openAppSettings = async (): Promise<void> => {
     console.warn('Failed to open app settings:', error);
     // Fallback to showing instructions
     Alert.alert(
-      'Open Settings', 
+      'Open Settings',
       'Please go to:\nSettings > Apps > Expo Go > Permissions\n\nThen enable Camera, Microphone, and Storage permissions.',
       [{ text: 'OK' }]
     );
@@ -80,7 +80,7 @@ export const ChallengeCreationScreen: React.FC<ChallengeCreationScreenProps> = (
   // Initialize new challenge and mobile media integration on mount
   useEffect(() => {
     dispatch(startNewChallenge());
-    
+
     // Initialize mobile media integration with Redux dispatch
     mobileMediaIntegration.initialize(dispatch).catch(error => {
       console.error('Failed to initialize mobile media integration:', error);
@@ -117,23 +117,23 @@ export const ChallengeCreationScreen: React.FC<ChallengeCreationScreenProps> = (
   const handleVideoMerging = React.useCallback(async () => {
     console.log('🎬 Starting video merging process...');
     console.log('🎬 Individual recordings:', JSON.stringify(individualRecordings, null, 2));
-    
+
     try {
       // Check if we have all three individual recordings
-      const hasAllRecordings = [0, 1, 2].every(index => 
-        individualRecordings[index] && 
-        individualRecordings[index]?.type === 'video' && 
+      const hasAllRecordings = [0, 1, 2].every(index =>
+        individualRecordings[index] &&
+        individualRecordings[index]?.type === 'video' &&
         individualRecordings[index]?.url
       );
-      
+
       if (!hasAllRecordings) {
         console.log('❌ Not all recordings are available for merging');
         setCurrentStep('lie-selection');
         return;
       }
-      
+
       console.log('✅ All recordings available, starting merge...');
-      
+
       // Show merging progress (optional - could add a loading state)
       Alert.alert(
         '🎬 Processing Videos',
@@ -141,7 +141,7 @@ export const ChallengeCreationScreen: React.FC<ChallengeCreationScreenProps> = (
         [],
         { cancelable: false }
       );
-      
+
       // Trigger the video merging - filter out null values
       const validRecordings = {
         0: individualRecordings[0]!,
@@ -149,9 +149,9 @@ export const ChallengeCreationScreen: React.FC<ChallengeCreationScreenProps> = (
         2: individualRecordings[2]!,
       };
       await mobileMediaIntegration.mergeStatementVideos(validRecordings);
-      
+
       console.log('✅ Video merging completed successfully');
-      
+
       // Dismiss the loading alert and proceed to lie selection
       Alert.alert(
         '✅ Videos Merged',
@@ -159,7 +159,7 @@ export const ChallengeCreationScreen: React.FC<ChallengeCreationScreenProps> = (
         [{ text: 'Continue', onPress: () => setCurrentStep('lie-selection') }],
         { cancelable: false }
       );
-      
+
     } catch (error: any) {
       console.error('❌ Video merging failed:', error);
       Alert.alert(
@@ -175,18 +175,18 @@ export const ChallengeCreationScreen: React.FC<ChallengeCreationScreenProps> = (
     console.log('🎬 EFFECT: individualRecordings changed:', JSON.stringify(individualRecordings, null, 2));
     console.log('🎬 EFFECT: mergedVideo:', JSON.stringify(mergedVideo, null, 2));
     console.log('🎬 EFFECT: currentStep:', currentStep);
-    
+
     // Only trigger merging if we're in recording step and have all recordings but no merged video
     if (currentStep === 'recording') {
-      const hasAllIndividualRecordings = individualRecordings && 
-        [0, 1, 2].every(index => 
-          individualRecordings[index] && 
-          individualRecordings[index]?.type === 'video' && 
+      const hasAllIndividualRecordings = individualRecordings &&
+        [0, 1, 2].every(index =>
+          individualRecordings[index] &&
+          individualRecordings[index]?.type === 'video' &&
           individualRecordings[index]?.url
         );
-      
+
       const hasMergedVideo = mergedVideo && mergedVideo.isMergedVideo;
-      
+
       if (hasAllIndividualRecordings && !hasMergedVideo) {
         console.log('🎬 EFFECT: All recordings complete, triggering video merging...');
         // Small delay to ensure all state updates are complete
@@ -206,9 +206,9 @@ export const ChallengeCreationScreen: React.FC<ChallengeCreationScreenProps> = (
   const handleRecordingComplete = (media: MediaCapture) => {
     console.log('🎬 RECORDING_COMPLETE: Recording completed for statement', currentStatementIndex + 1);
     console.log('🎬 RECORDING_COMPLETE: Media:', JSON.stringify(media, null, 2));
-    
+
     setShowCameraModal(false);
-    
+
     // Move to next statement or lie selection
     if (currentStatementIndex < 2) {
       console.log('🎬 RECORDING_COMPLETE: Moving to next statement', currentStatementIndex + 2);
@@ -231,17 +231,17 @@ export const ChallengeCreationScreen: React.FC<ChallengeCreationScreenProps> = (
     console.log('🎬 CHECK_MERGE: Checking if video merging is needed...');
     console.log('🎬 CHECK_MERGE: Current individualRecordings:', JSON.stringify(individualRecordings, null, 2));
     console.log('🎬 CHECK_MERGE: Current mergedVideo:', JSON.stringify(mergedVideo, null, 2));
-    
+
     // Check if we have all individual recordings but no merged video
-    const hasAllIndividualRecordings = individualRecordings && 
-      [0, 1, 2].every(index => 
-        individualRecordings[index] && 
-        individualRecordings[index]?.type === 'video' && 
+    const hasAllIndividualRecordings = individualRecordings &&
+      [0, 1, 2].every(index =>
+        individualRecordings[index] &&
+        individualRecordings[index]?.type === 'video' &&
         individualRecordings[index]?.url
       );
-    
+
     const hasMergedVideo = mergedVideo && mergedVideo.isMergedVideo;
-    
+
     if (hasAllIndividualRecordings && !hasMergedVideo) {
       console.log('🎬 CHECK_MERGE: Triggering video merging...');
       handleVideoMerging();
@@ -264,8 +264,8 @@ export const ChallengeCreationScreen: React.FC<ChallengeCreationScreenProps> = (
       message = 'Camera access is needed to record your video statements. Please check your device settings.';
       Alert.alert(title, message, [
         { text: 'Cancel', style: 'cancel' },
-        { 
-          text: 'Open Settings', 
+        {
+          text: 'Open Settings',
           onPress: async () => {
             console.log('Opening device settings for permissions');
             await openAppSettings();
@@ -281,8 +281,8 @@ export const ChallengeCreationScreen: React.FC<ChallengeCreationScreenProps> = (
       message = 'Camera is currently unavailable. Please restart the app and try again.';
       Alert.alert(title, message, [
         { text: 'Cancel', style: 'cancel' },
-        { 
-          text: 'Retry', 
+        {
+          text: 'Retry',
           onPress: () => {
             // Retry recording
             setShowCameraModal(true);
@@ -304,7 +304,7 @@ export const ChallengeCreationScreen: React.FC<ChallengeCreationScreenProps> = (
     console.log('🎯 PREVIEW: Attempting to enter preview mode...');
     console.log('🎯 PREVIEW: Current validation errors:', validationErrors);
     console.log('🎯 PREVIEW: Current challenge state:', JSON.stringify(currentChallenge, null, 2));
-    
+
     dispatch(validateChallenge());
     if (validationErrors.length === 0) {
       console.log('✅ PREVIEW: Validation passed, entering preview mode');
@@ -323,41 +323,41 @@ export const ChallengeCreationScreen: React.FC<ChallengeCreationScreenProps> = (
   const handleSubmit = async () => {
     console.log('🚨🚨🚨 SUBMIT BUTTON PRESSED! 🚨🚨🚨');
     console.log('🚨 This should definitely appear in logs if button is working');
-    
+
     try {
       console.log('🎯 CHALLENGE: Starting challenge submission...');
       dispatch(startSubmission());
-      
+
       // Use the currentChallenge from component state (already available from useAppSelector above)
       console.log('🎯 CHALLENGE: Using currentChallenge from component state');
-      
+
       // Validate we have all required data
       if (!currentChallenge?.statements || currentChallenge.statements.length !== 3) {
         throw new Error('Challenge must have exactly 3 statements');
       }
-      
+
       // Find which statement is marked as the lie
       const lieStatementIndex = currentChallenge.statements.findIndex(stmt => stmt.isLie);
       if (lieStatementIndex === -1) {
         throw new Error('You must select which statement is the lie');
       }
-      
+
       // Check if we have either a merged video or individual recordings
       console.log('🎯 SUBMIT: Checking video upload status...');
       console.log('🎯 SUBMIT: mergedVideo:', JSON.stringify(mergedVideo, null, 2));
       console.log('🎯 SUBMIT: individualRecordings:', JSON.stringify(individualRecordings, null, 2));
-      
+
       const hasMergedVideo = mergedVideo && mergedVideo.isMergedVideo && mergedVideo.segments && mergedVideo.segments.length === 3;
-      const hasIndividualRecordings = individualRecordings && 
-        [0, 1, 2].every(index => 
-          individualRecordings[index] && 
-          individualRecordings[index]?.type === 'video' && 
+      const hasIndividualRecordings = individualRecordings &&
+        [0, 1, 2].every(index =>
+          individualRecordings[index] &&
+          individualRecordings[index]?.type === 'video' &&
           individualRecordings[index]?.url
         );
-      
+
       console.log('🎯 SUBMIT: hasMergedVideo:', hasMergedVideo);
       console.log('🎯 SUBMIT: hasIndividualRecordings:', hasIndividualRecordings);
-      
+
       // Debug alert to show current state
       Alert.alert(
         'Debug: Video State',
@@ -366,19 +366,19 @@ export const ChallengeCreationScreen: React.FC<ChallengeCreationScreenProps> = (
         `Merged Video Uploaded: ${mergedVideo?.isUploaded ? 'YES' : 'NO'}\n` +
         `Merged Video MediaID: ${mergedVideo?.mediaId || 'NONE'}\n` +
         `Individual Recordings Count: ${individualRecordings ? Object.keys(individualRecordings).length : 0}`,
-        [{ text: 'Continue', onPress: () => {} }]
+        [{ text: 'Continue', onPress: () => { } }]
       );
-      
+
       if (!hasMergedVideo && !hasIndividualRecordings) {
         throw new Error('All 3 statements must have video recordings');
       }
-      
+
       // For merged video, check if it's uploaded
       if (hasMergedVideo) {
         console.log('🎯 SUBMIT: Using merged video path');
         console.log('🎯 SUBMIT: mergedVideo.mediaId:', mergedVideo.mediaId);
         console.log('🎯 SUBMIT: mergedVideo.isUploaded:', mergedVideo.isUploaded);
-        
+
         if (!mergedVideo.mediaId || !mergedVideo.isUploaded) {
           throw new Error('Merged video must be uploaded before creating the challenge. Please wait for upload to complete.');
         }
@@ -390,32 +390,55 @@ export const ChallengeCreationScreen: React.FC<ChallengeCreationScreenProps> = (
           console.log(`🎯 SUBMIT: Checking recording ${index}:`, media);
           return !media || !media.mediaId || !media.isUploaded;
         });
-        
+
         console.log('🎯 SUBMIT: missingUploads:', missingUploads);
-        
+
         if (missingUploads.length > 0) {
           throw new Error(`Videos for statement${missingUploads.length > 1 ? 's' : ''} ${missingUploads.map(i => i + 1).join(', ')} must be uploaded before creating the challenge.`);
         }
       }
-      
+
       // Prepare the challenge request for the backend
       let challengeRequest;
-      
+
       if (hasMergedVideo) {
-        // For merged video, all statements use the same media file ID
+        console.log('🎯 SUBMIT: Preparing merged video challenge request');
+        console.log('🎯 SUBMIT: Merged video segments:', JSON.stringify(mergedVideo.segments, null, 2));
+
+        // For merged video, all statements use the same media file ID with segment metadata
         challengeRequest = {
-          statements: currentChallenge.statements.map((statement, index) => ({
-            text: statement.text || `Statement ${index + 1}`, // Use statement text or default
-            media_file_id: mergedVideo.mediaId!,
-            // Include segment metadata for merged videos
-            segment_start_time: mergedVideo.segments![index].startTime / 1000, // Convert to seconds
-            segment_end_time: mergedVideo.segments![index].endTime / 1000, // Convert to seconds
-          })),
+          statements: currentChallenge.statements.map((statement, index) => {
+            const segment = mergedVideo.segments!.find(s => s.statementIndex === index);
+            if (!segment) {
+              throw new Error(`Missing segment data for statement ${index + 1}`);
+            }
+
+            return {
+              text: statement.text || `Statement ${index + 1}`, // Use statement text or default
+              media_file_id: mergedVideo.mediaId!,
+              // Include segment metadata for merged videos (convert to seconds)
+              segment_start_time: segment.startTime / 1000,
+              segment_end_time: segment.endTime / 1000,
+              segment_duration: segment.duration / 1000,
+            };
+          }),
           lie_statement_index: lieStatementIndex,
           tags: ['mobile-game', '2truths1lie', 'merged-video'], // Include merged-video tag
           is_merged_video: true,
+          merged_video_metadata: {
+            total_duration_ms: mergedVideo.duration || 0,
+            segment_count: mergedVideo.segments!.length,
+            segments: mergedVideo.segments!.map(segment => ({
+              statement_index: segment.statementIndex,
+              start_time_ms: segment.startTime,
+              end_time_ms: segment.endTime,
+              duration_ms: segment.duration,
+            })),
+          },
         };
       } else {
+        console.log('🎯 SUBMIT: Preparing individual recordings challenge request');
+
         // For individual recordings, each statement has its own media file ID
         challengeRequest = {
           statements: currentChallenge.statements.map((statement, index) => ({
@@ -424,18 +447,19 @@ export const ChallengeCreationScreen: React.FC<ChallengeCreationScreenProps> = (
           })),
           lie_statement_index: lieStatementIndex,
           tags: ['mobile-game', '2truths1lie'], // Default tags
+          is_merged_video: false,
         };
       }
-      
+
       console.log('🎯 CHALLENGE: Submitting request:', JSON.stringify(challengeRequest, null, 2));
-      
+
       // Submit to backend
       const response = await realChallengeAPI.createChallenge(challengeRequest);
-      
+
       if (response.success && response.data) {
         console.log('✅ CHALLENGE: Successfully created challenge:', response.data.id);
         dispatch(completeSubmission({ success: true }));
-        
+
         Alert.alert(
           '🎉 Challenge Created!',
           `Your challenge "${response.data.id}" has been created successfully! Other players can now guess which statement is the lie.`,
@@ -460,12 +484,12 @@ export const ChallengeCreationScreen: React.FC<ChallengeCreationScreenProps> = (
       } else {
         throw new Error(response.error || 'Failed to create challenge');
       }
-      
+
     } catch (error: any) {
       console.error('❌ CHALLENGE: Submission failed:', error);
       dispatch(completeSubmission({ success: false }));
       Alert.alert(
-        'Challenge Creation Failed', 
+        'Challenge Creation Failed',
         error.message || 'Failed to create challenge. Please try again.',
         [{ text: 'OK', style: 'default' }]
       );
@@ -484,7 +508,7 @@ export const ChallengeCreationScreen: React.FC<ChallengeCreationScreenProps> = (
         You'll record 3 video statements about yourself. Two should be true, and one should be a lie.
         Other players will try to guess which statement is the lie!
       </Text>
-      
+
       <View style={styles.instructionsList}>
         <View style={styles.instructionItem}>
           <Text style={styles.instructionNumber}>1</Text>
@@ -528,17 +552,17 @@ export const ChallengeCreationScreen: React.FC<ChallengeCreationScreenProps> = (
     console.log('🎯 LIE_SELECTION: individualRecordings:', JSON.stringify(individualRecordings, null, 2));
     console.log('🎯 LIE_SELECTION: mergedVideo:', JSON.stringify(mergedVideo, null, 2));
     console.log('🎯 LIE_SELECTION: currentChallenge.mediaData:', JSON.stringify(currentChallenge.mediaData, null, 2));
-    
+
     // Check if we have all individual recordings OR a merged video
-    const hasAllIndividualRecordings = individualRecordings && 
-      [0, 1, 2].every(index => 
-        individualRecordings[index] && 
-        individualRecordings[index]?.type === 'video' && 
+    const hasAllIndividualRecordings = individualRecordings &&
+      [0, 1, 2].every(index =>
+        individualRecordings[index] &&
+        individualRecordings[index]?.type === 'video' &&
         individualRecordings[index]?.url
       );
-    
+
     const hasMergedVideo = mergedVideo && mergedVideo.isMergedVideo && mergedVideo.segments && mergedVideo.segments.length === 3;
-    
+
     const hasAllRecordings = hasAllIndividualRecordings || hasMergedVideo;
 
     console.log('🎯 LIE_SELECTION: hasAllIndividualRecordings:', hasAllIndividualRecordings);
@@ -560,7 +584,7 @@ export const ChallengeCreationScreen: React.FC<ChallengeCreationScreenProps> = (
               // Get media info from individual recordings or merged video segments
               let media = individualRecordings?.[index];
               let duration = media?.duration;
-              
+
               // If we have a merged video, get segment info
               if (hasMergedVideo && mergedVideo?.segments) {
                 const segment = mergedVideo.segments.find(s => s.statementIndex === index);
@@ -568,9 +592,9 @@ export const ChallengeCreationScreen: React.FC<ChallengeCreationScreenProps> = (
                   duration = segment.duration;
                 }
               }
-              
+
               const isSelected = selectedLieIndex === index;
-              
+
               return (
                 <TouchableOpacity
                   key={index}
@@ -589,7 +613,7 @@ export const ChallengeCreationScreen: React.FC<ChallengeCreationScreenProps> = (
                       <Text style={styles.retakeButtonText}>Retake</Text>
                     </TouchableOpacity>
                   </View>
-                  
+
                   <View style={styles.videoPlaceholder}>
                     <Text style={styles.videoPlaceholderText}>
                       {hasMergedVideo ? '📹 Video Merged' : '📹 Video Recorded'}
@@ -598,7 +622,7 @@ export const ChallengeCreationScreen: React.FC<ChallengeCreationScreenProps> = (
                       {duration ? `${Math.round(duration / 1000)}s` : ''}
                     </Text>
                   </View>
-                  
+
                   {isSelected && (
                     <View style={styles.lieIndicator}>
                       <Text style={styles.lieIndicatorText}>🤥 This is the lie</Text>
@@ -646,12 +670,12 @@ export const ChallengeCreationScreen: React.FC<ChallengeCreationScreenProps> = (
 
       <View style={styles.previewContainer}>
         <Text style={styles.previewTitle}>Your Challenge</Text>
-        
+
         {[0, 1, 2].map((index) => {
           // Get media info from individual recordings or merged video segments
           let media = individualRecordings?.[index];
           let duration = media?.duration;
-          
+
           // If we have a merged video, get segment info
           if (mergedVideo?.segments) {
             const segment = mergedVideo.segments.find(s => s.statementIndex === index);
@@ -659,11 +683,11 @@ export const ChallengeCreationScreen: React.FC<ChallengeCreationScreenProps> = (
               duration = segment.duration;
             }
           }
-          
+
           const isLie = currentChallenge.statements?.[index]?.isLie;
-          
+
           return (
-            <View key={index} style={styles.previewStatementCard}>
+            <View style={styles.previewStatementCard}>
               <View style={styles.previewStatementHeader}>
                 <Text style={styles.previewStatementNumber}>
                   Statement {index + 1}
@@ -672,7 +696,7 @@ export const ChallengeCreationScreen: React.FC<ChallengeCreationScreenProps> = (
                   <Text style={styles.previewLieTag}>(The Lie)</Text>
                 )}
               </View>
-              
+
               <View style={styles.previewVideoPlaceholder}>
                 <Text style={styles.previewVideoText}>
                   {mergedVideo ? '📹 Video Statement (Merged)' : '📹 Video Statement'}
@@ -696,7 +720,7 @@ export const ChallengeCreationScreen: React.FC<ChallengeCreationScreenProps> = (
         >
           <Text style={styles.secondaryButtonText}>Edit</Text>
         </TouchableOpacity>
-        
+
         <TouchableOpacity
           style={styles.primaryButton}
           onPress={() => {
