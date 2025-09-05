@@ -32,4 +32,22 @@
 - Serve media with cache-control and CDN integration for optimized delivery  
 - Strict validation (format, duration, resolution, file size) per device/os
 
-***
+## Segmented Challenge Video – Updated Design
+
+- Mobile app merges three recorded video statement files into one using client-side processing (e.g., ffmpeg or platform decoder).
+- Records segment boundaries: list of {start_time, end_time, statement_index}
+- Uploads merged file as before, but includes segment metadata in the payload (in a separate JSON field or as part of the challenge create API).
+- Backend stores this merged video as the challenge's media asset.
+- Challenge data model is updated to include segment timecodes.
+- During playback, the mobile app loads metadata and presents UI controls for each statement, seeking/playing video for only the selected segment based on timecodes.
+- Optionally, migration support is added for legacy challenges (three files → merged plus metadata) if needed.
+
+## Compression Integration in Media Upload Workflow
+
+- After recording each statement or after merging the statements into a single video, the app will apply video compression using platform-optimized libraries (e.g., FFmpeg for Android/iOS).
+- Compression parameters include adjusting bitrate, resolution, and codec settings tuned for mobile device capabilities.
+- The compressed video is the final artifact sent for upload via secure API to cloud storage.
+- Compression stage updates upload progress UI to inform user.
+- Compression step includes recalculation of segment start/end timestamps for accurate playback.
+- Compression should be performed asynchronously to prevent UI blocking.
+- Compression parameters are currently fixed; plans for future user-controlled quality settings are noted but deferred.
