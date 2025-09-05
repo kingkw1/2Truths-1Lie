@@ -35,8 +35,27 @@ export interface ChallengeCreationState {
       uploadProgress: number;
       uploadError: string | null;
       sessionId: string | null;
+      startTime?: number;
+      bytesUploaded?: number;
+      totalBytes?: number;
+      currentChunk?: number;
+      totalChunks?: number;
     };
   };
+  // Individual statement recordings (before merging)
+  individualRecordings: {
+    [statementIndex: number]: MediaCapture | null;
+  };
+  // Video merging state
+  videoMerging: {
+    isInProgress: boolean;
+    progress: number;
+    stage: 'preparing' | 'merging' | 'compressing' | 'finalizing' | null;
+    currentSegment: number | null;
+    error: string | null;
+  };
+  // Final merged video
+  mergedVideo: MediaCapture | null;
 }
 
 const initialState: ChallengeCreationState = {
@@ -59,6 +78,15 @@ const initialState: ChallengeCreationState = {
   previewMode: false,
   mediaRecordingState: {},
   uploadState: {},
+  individualRecordings: {},
+  videoMerging: {
+    isInProgress: false,
+    progress: 0,
+    stage: null,
+    currentSegment: null,
+    error: null,
+  },
+  mergedVideo: null,
 };
 
 const challengeCreationSlice = createSlice({
@@ -484,6 +512,7 @@ const challengeCreationSlice = createSlice({
       const { statementIndex } = action.payload;
       delete state.mediaRecordingState[statementIndex];
       delete state.uploadState[statementIndex];
+      delete state.individualRecordings[statementIndex];
       
       // Clear media data for this statement
       if (state.currentChallenge.mediaData && state.currentChallenge.mediaData[statementIndex]) {
@@ -492,6 +521,78 @@ const challengeCreationSlice = createSlice({
           duration: 0,
         };
       }
+    },
+
+    // Individual recording actions
+    setIndividualRecording: (state, action: PayloadAction<{
+      statementIndex: number;
+      recording: MediaCapture;
+    }>) => {
+      const { statementIndex, recording } = action.payload;
+      state.individualRecordings[statementIndex] = recording;
+    },
+
+    clearIndividualRecording: (state, action: PayloadAction<{ statementIndex: number }>) => {
+      const { statementIndex } = action.payload;
+      delete state.individualRecordings[statementIndex];
+    },
+
+    // Video merging actions
+    startVideoMerging: (state) => {
+      state.videoMerging = {
+        isInProgress: true,
+        progress: 0,
+        stage: 'preparing',
+        currentSegment: null,
+        error: null,
+      };
+    },
+
+    updateVideoMergingProgress: (state, action: PayloadAction<{
+      progress: number;
+      stage: 'preparing' | 'merging' | 'compressing' | 'finalizing';
+      currentSegment?: number;
+    }>) => {
+      const { progress, stage, currentSegment } = action.payload;
+      state.videoMerging.progress = progress;
+      state.videoMerging.stage = stage;
+      state.videoMerging.currentSegment = currentSegment || null;
+    },
+
+    completeVideoMerging: (state, action: PayloadAction<{
+      mergedVideo: MediaCapture;
+    }>) => {
+      const { mergedVideo } = action.payload;
+      state.videoMerging = {
+        isInProgress: false,
+        progress: 100,
+        stage: null,
+        currentSegment: null,
+        error: null,
+      };
+      state.mergedVideo = mergedVideo;
+      
+      // Update the challenge's media data with the merged video
+      // The merged video represents all three statements
+      state.currentChallenge.mediaData = [mergedVideo];
+    },
+
+    setVideoMergingError: (state, action: PayloadAction<{ error: string }>) => {
+      const { error } = action.payload;
+      state.videoMerging.isInProgress = false;
+      state.videoMerging.error = error;
+    },
+
+    resetVideoMerging: (state) => {
+      state.videoMerging = {
+        isInProgress: false,
+        progress: 0,
+        stage: null,
+        currentSegment: null,
+        error: null,
+      };
+      state.mergedVideo = null;
+      state.individualRecordings = {};
     },
   },
 });
@@ -531,6 +632,15 @@ export const {
   cancelUpload,
   setMediaUploadProgress,
   resetMediaState,
+  // Individual recording actions
+  setIndividualRecording,
+  clearIndividualRecording,
+  // Video merging actions
+  startVideoMerging,
+  updateVideoMergingProgress,
+  completeVideoMerging,
+  setVideoMergingError,
+  resetVideoMerging,
 } = challengeCreationSlice.actions;
 
 export default challengeCreationSlice.reducer;

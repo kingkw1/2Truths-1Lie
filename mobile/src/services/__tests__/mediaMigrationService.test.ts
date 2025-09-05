@@ -27,7 +27,11 @@ describe('MediaMigrationService', () => {
     migrationService = MediaMigrationService.getInstance();
     
     // Setup default mocks
-    mockFileSystem.documentDirectory = 'file:///documents/';
+    Object.defineProperty(mockFileSystem, 'documentDirectory', {
+      value: 'file:///documents/',
+      writable: true,
+      configurable: true,
+    });
     mockAsyncStorage.getAllKeys.mockResolvedValue([]);
     mockAsyncStorage.getItem.mockResolvedValue(null);
     mockFileSystem.readDirectoryAsync.mockResolvedValue([]);

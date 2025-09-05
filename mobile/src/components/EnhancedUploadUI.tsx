@@ -17,7 +17,7 @@ import {
 } from 'react-native';
 import { useAppDispatch, useAppSelector } from '../store';
 import {
-  startUpload,
+  startUpload as startUploadAction,
   updateUploadProgress,
   completeUpload,
   setUploadError,
@@ -91,7 +91,7 @@ export const EnhancedUploadUI: React.FC<EnhancedUploadUIProps> = ({
       setRetryAttempts(prev => prev + 1);
       
       // Initialize upload state
-      dispatch(startUpload({ statementIndex, sessionId }));
+      dispatch(startUploadAction({ statementIndex, sessionId }));
 
       // Start the actual upload
       const result = await videoUploadService.uploadVideo(

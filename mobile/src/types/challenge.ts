@@ -24,6 +24,17 @@ export interface Statement {
 export type MediaType = 'video' | 'audio' | 'text';
 
 /**
+ * Video segment metadata for merged videos
+ */
+export interface VideoSegment {
+  statementIndex: number; // 0, 1, or 2 for the three statements
+  startTime: number; // start time in milliseconds within the merged video
+  endTime: number; // end time in milliseconds within the merged video
+  duration: number; // segment duration in milliseconds
+  originalDuration?: number; // original duration before compression
+}
+
+/**
  * Media capture data
  */
 export interface MediaCapture {
@@ -46,6 +57,9 @@ export interface MediaCapture {
   cloudStorageKey?: string; // Cloud storage key for direct access
   uploadSessionId?: string; // Upload session ID for tracking
   isUploaded?: boolean; // Whether media has been successfully uploaded to server
+  // Video segment metadata for merged videos
+  segments?: VideoSegment[]; // Array of segments within this video
+  isMergedVideo?: boolean; // Whether this is a merged video containing multiple statements
 }
 
 /**

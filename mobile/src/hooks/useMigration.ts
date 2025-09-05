@@ -54,8 +54,8 @@ export function useMigration(): MigrationState & MigrationActions {
     verificationResult: null,
   });
 
-  // Get current user ID from auth state
-  const userId = useAppSelector(state => state.auth?.user?.id || 'unknown');
+  // Get current user ID from auth state (fallback to 'unknown' if no auth state)
+  const userId = useAppSelector(state => (state as any).auth?.user?.id || 'unknown');
 
   /**
    * Discover legacy media items
@@ -290,7 +290,7 @@ export function useAutoMigration(options: {
     error: null,
   });
 
-  const userId = useAppSelector(state => state.auth?.user?.id || 'unknown');
+  const userId = useAppSelector(state => (state as any).auth?.user?.id || 'unknown');
 
   const runAutoMigration = useCallback(async () => {
     if (!enabled || autoMigrationState.hasRun || autoMigrationState.isRunning) {

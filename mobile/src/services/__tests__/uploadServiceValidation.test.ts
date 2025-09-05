@@ -199,7 +199,7 @@ describe('VideoUploadService Validation', () => {
 
       boundaryTests.forEach((test, index) => {
         const result = uploadService.validateVideoFile(test.filename, test.size, test.duration);
-        expect(result.valid).toBe(test.shouldPass, `Boundary test ${index + 1} failed`);
+        expect(result.valid).toBe(test.shouldPass);
       });
     });
   });

@@ -7,21 +7,24 @@
 import { Dispatch } from '@reduxjs/toolkit';
 import { Platform } from 'react-native';
 import * as FileSystem from 'expo-file-system';
-import * as MediaLibrary from 'expo-media-library';
 import {
-  setStatementMedia,
   setMediaRecordingError,
   setMediaCompression,
   validateChallenge,
   startMediaRecording,
   stopMediaRecording,
-  updateRecordingDuration,
   setMediaRecordingState,
   setMediaUploadProgress,
+  setIndividualRecording,
+  startVideoMerging,
+  updateVideoMergingProgress,
+  completeVideoMerging,
+  setVideoMergingError,
 } from '../store/slices/challengeCreationSlice';
 import { MediaCapture } from '../types';
 import { videoUploadService, UploadProgress, UploadOptions } from './uploadService';
 import { crossDeviceMediaService } from './crossDeviceMediaService';
+import { videoMergingService, MergeProgress } from './videoMergingService';
 
 export interface MobileMediaIntegrationConfig {
   maxFileSize: number; // in bytes
@@ -82,10 +85,10 @@ export class MobileMediaIntegrationService {
    */
   public async initialize(dispatch: Dispatch): Promise<void> {
     this.dispatch = dispatch;
-    
+
     // Initialize cross-device media service
     await crossDeviceMediaService.initialize();
-    
+
     console.log('📱 Mobile Media Integration Service initialized');
   }
 
@@ -130,23 +133,20 @@ export class MobileMediaIntegrationService {
       // Stop recording in Redux
       this.dispatch(stopMediaRecording({ statementIndex }));
 
-      // Process the recorded media with upload
-      const mediaCapture = await this.processRecordedMediaWithUpload(
+      // Process the recorded media (without upload for now - we'll upload the merged video)
+      const mediaCapture = await this.processRecordedMediaForMerging(
         recordingUri,
         duration,
         statementIndex
       );
 
-      // Update Redux with the processed media
-      this.dispatch(setStatementMedia({
-        index: statementIndex,
-        media: mediaCapture,
+      // Store as individual recording
+      this.dispatch(setIndividualRecording({
+        statementIndex,
+        recording: mediaCapture,
       }));
 
-      // Validate the entire challenge
-      this.dispatch(validateChallenge());
-
-      console.log(`✅ Recording completed for statement ${statementIndex}`, mediaCapture);
+      console.log(`✅ Individual recording completed for statement ${statementIndex}`, mediaCapture);
       return mediaCapture;
     } catch (error: any) {
       this.handleRecordingError(statementIndex, error.message);
@@ -291,13 +291,13 @@ export class MobileMediaIntegrationService {
 
     if (fileSize > this.config.compressionThreshold) {
       finalUri = await this.compressMedia(uri, statementIndex);
-      
+
       // Get compressed file info
       const compressedInfo = await FileSystem.getInfoAsync(finalUri);
       compressionMetadata = {
         originalSize: fileSize,
-        compressionRatio: (compressedInfo.exists && 'size' in compressedInfo && compressedInfo.size) 
-          ? compressedInfo.size / fileSize 
+        compressionRatio: (compressedInfo.exists && 'size' in compressedInfo && compressedInfo.size)
+          ? compressedInfo.size / fileSize
           : 1,
         compressionTime: Date.now(), // Simplified - in real app would track actual time
         compressionQuality: 0.8,
@@ -338,7 +338,7 @@ export class MobileMediaIntegrationService {
           isCompressing: true,
           progress,
         }));
-        
+
         // Simulate processing time
         await new Promise(resolve => setTimeout(resolve, 200));
       }
@@ -413,7 +413,7 @@ export class MobileMediaIntegrationService {
     if (!this.dispatch) return;
 
     console.error(`📱 Recording error for statement ${statementIndex}:`, error);
-    
+
     this.dispatch(setMediaRecordingError({
       statementIndex,
       error,
@@ -439,15 +439,15 @@ export class MobileMediaIntegrationService {
       if (!documentDir) return;
 
       const files = await FileSystem.readDirectoryAsync(documentDir);
-      const tempFiles = files.filter(file => 
-        file.startsWith('compressed_') || 
+      const tempFiles = files.filter(file =>
+        file.startsWith('compressed_') ||
         file.startsWith('temp_recording_')
       );
 
       for (const file of tempFiles) {
         const filePath = `${documentDir}${file}`;
         const fileInfo = await FileSystem.getInfoAsync(filePath);
-        
+
         // Delete files older than 1 hour
         if (fileInfo.exists && fileInfo.modificationTime) {
           const ageMs = Date.now() - fileInfo.modificationTime;
@@ -511,7 +511,7 @@ export class MobileMediaIntegrationService {
   }> {
     try {
       const verification = await crossDeviceMediaService.verifyMediaAccessibility(mediaId);
-      
+
       if (!verification.accessible) {
         return {
           canPlay: false,
@@ -527,7 +527,7 @@ export class MobileMediaIntegrationService {
       }
 
       const streamingUrl = await crossDeviceMediaService.getOptimizedStreamingUrl(mediaId);
-      
+
       return {
         canPlay: !!streamingUrl,
         streamingUrl: streamingUrl || undefined,
@@ -566,6 +566,213 @@ export class MobileMediaIntegrationService {
       supportedFormats: this.config.supportedFormats,
       preferences: crossDeviceMediaService.getDeviceMediaPreferences(),
     };
+  }
+
+  /**
+   * Process recorded media for merging (without upload)
+   */
+  private async processRecordedMediaForMerging(
+    uri: string,
+    duration: number,
+    statementIndex: number
+  ): Promise<MediaCapture> {
+    // Validate file exists
+    const fileInfo = await FileSystem.getInfoAsync(uri);
+    if (!fileInfo.exists) {
+      throw new Error('Recording file not found');
+    }
+
+    const fileSize = fileInfo.size || 0;
+
+    // Validate file size and duration
+    this.validateMediaFile(fileSize, duration);
+
+    // Create MediaCapture object for individual recording
+    const mediaCapture: MediaCapture = {
+      type: 'video',
+      url: uri,
+      duration,
+      fileSize: fileSize,
+      mimeType: this.getMimeType(),
+      storageType: 'local',
+      isUploaded: false,
+    };
+
+    return mediaCapture;
+  }
+
+  /**
+   * Merge all three statement videos into a single video with segment metadata
+   */
+  public async mergeStatementVideos(
+    individualRecordings: { [key: number]: MediaCapture }
+  ): Promise<MediaCapture> {
+    if (!this.dispatch) {
+      throw new Error('Service not initialized with Redux dispatch');
+    }
+
+    try {
+      // Validate we have all three recordings
+      const recordings = [
+        individualRecordings[0],
+        individualRecordings[1],
+        individualRecordings[2],
+      ];
+
+      if (recordings.some(r => !r || !r.url)) {
+        throw new Error('All three statement recordings are required for merging');
+      }
+
+      const videoUris: [string, string, string] = [
+        recordings[0].url!,
+        recordings[1].url!,
+        recordings[2].url!,
+      ];
+
+      console.log('🎬 Starting video merge process for challenge');
+
+      // Start merging in Redux
+      this.dispatch(startVideoMerging());
+
+      // Perform the merge
+      const mergeResult = await videoMergingService.mergeStatementVideos(
+        videoUris,
+        {
+          compressionQuality: 0.8,
+          maxOutputSize: this.config.maxFileSize,
+        },
+        (progress: MergeProgress) => {
+          if (this.dispatch) {
+            this.dispatch(updateVideoMergingProgress({
+              progress: progress.progress,
+              stage: progress.stage,
+              currentSegment: progress.currentSegment,
+            }));
+          }
+        }
+      );
+
+      if (!mergeResult.success) {
+        throw new Error(mergeResult.error || 'Video merge failed');
+      }
+
+      // Create merged media capture
+      const mergedMedia = videoMergingService.createMergedMediaCapture(
+        mergeResult,
+        recordings
+      );
+
+      // Upload the merged video
+      const uploadedMergedMedia = await this.uploadMergedVideo(mergedMedia);
+
+      // Complete merging in Redux
+      this.dispatch(completeVideoMerging({
+        mergedVideo: uploadedMergedMedia,
+      }));
+
+      // Validate the challenge
+      this.dispatch(validateChallenge());
+
+      console.log('✅ Video merge and upload completed successfully');
+      return uploadedMergedMedia;
+
+    } catch (error: any) {
+      console.error('❌ Video merge failed:', error);
+      this.dispatch(setVideoMergingError({ error: error.message }));
+      throw error;
+    }
+  }
+
+  /**
+   * Upload the merged video to the backend
+   */
+  private async uploadMergedVideo(mergedMedia: MediaCapture): Promise<MediaCapture> {
+    if (!mergedMedia.url) {
+      throw new Error('No merged video URL available');
+    }
+
+    // Generate filename for merged video
+    const timestamp = Date.now();
+    const filename = `merged_challenge_${timestamp}.mp4`;
+
+    // Configure upload options
+    const uploadOptions: UploadOptions = {
+      compress: false, // Already compressed during merge
+      maxFileSize: this.config.maxFileSize,
+      retryAttempts: 3,
+      timeout: 120000, // 2 minutes for larger merged files
+    };
+
+    // Upload merged video
+    const uploadResult = await videoUploadService.uploadVideo(
+      mergedMedia.url,
+      filename,
+      (mergedMedia.duration || 0) / 1000, // Convert to seconds
+      uploadOptions,
+      (progress: UploadProgress) => {
+        // Update progress for merged video upload
+        if (this.dispatch) {
+          this.dispatch(updateVideoMergingProgress({
+            progress: 80 + (progress.progress * 0.2), // 80-100% for upload
+            stage: 'finalizing',
+          }));
+        }
+      }
+    );
+
+    if (!uploadResult.success) {
+      throw new Error(uploadResult.error || 'Merged video upload failed');
+    }
+
+    // Verify cross-device accessibility
+    let optimizedStreamingUrl = uploadResult.streamingUrl!;
+    if (uploadResult.mediaId) {
+      try {
+        const accessibilityCheck = await crossDeviceMediaService.verifyMediaAccessibility(uploadResult.mediaId);
+        if (accessibilityCheck.accessible && accessibilityCheck.streamingUrl) {
+          optimizedStreamingUrl = accessibilityCheck.streamingUrl;
+        }
+      } catch (error) {
+        console.warn('Failed to verify merged video accessibility:', error);
+      }
+    }
+
+    // Update merged media with upload information
+    const uploadedMergedMedia: MediaCapture = {
+      ...mergedMedia,
+      streamingUrl: optimizedStreamingUrl,
+      mediaId: uploadResult.mediaId,
+      cloudStorageKey: uploadResult.cloudStorageKey,
+      storageType: uploadResult.storageType || 'cloud',
+      isUploaded: true,
+      uploadTime: uploadResult.uploadTime,
+    };
+
+    return uploadedMergedMedia;
+  }
+
+  /**
+   * Check if all three statements have been recorded
+   */
+  public hasAllStatementRecordings(individualRecordings: { [key: number]: MediaCapture }): boolean {
+    return [0, 1, 2].every(index =>
+      individualRecordings[index] &&
+      individualRecordings[index].url
+    );
+  }
+
+  /**
+   * Get segment playback information for a merged video
+   */
+  public getSegmentPlaybackInfo(
+    mergedVideo: MediaCapture,
+    statementIndex: number
+  ): {
+    startTime: number;
+    endTime: number;
+    duration: number;
+  } | null {
+    return videoMergingService.getSegmentPlaybackInfo(mergedVideo, statementIndex);
   }
 
   /**

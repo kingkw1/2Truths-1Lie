@@ -20,6 +20,7 @@ export type {
 export type {
   Statement,
   MediaCapture,
+  VideoSegment,
   EmotionScores,
   AnalyzedStatement,
   EnhancedChallenge,

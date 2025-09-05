@@ -169,7 +169,7 @@ export class CrossDeviceMediaService {
           uploadedAt: item.uploadedAt,
           deviceInfo: item.deviceInfo,
           storageType: item.storageType as 'local' | 'cloud' | 'cloud_fallback',
-          mimeType: item.mimeType,
+          mimeType: this.inferMimeTypeFromFilename(item.filename),
           isAccessible: accessibility.accessible,
           lastSyncedAt: new Date().toISOString(),
         });
@@ -430,6 +430,26 @@ export class CrossDeviceMediaService {
       lastSyncTime: this.lastSyncTime,
       syncInProgress: this.syncInProgress,
     };
+  }
+
+  /**
+   * Infer MIME type from filename
+   */
+  private inferMimeTypeFromFilename(filename: string): string {
+    const extension = filename.toLowerCase().split('.').pop();
+    
+    switch (extension) {
+      case 'mp4':
+        return 'video/mp4';
+      case 'mov':
+        return 'video/quicktime';
+      case '3gp':
+        return 'video/3gpp';
+      case 'webm':
+        return 'video/webm';
+      default:
+        return 'video/mp4'; // Default fallback
+    }
   }
 }
 
