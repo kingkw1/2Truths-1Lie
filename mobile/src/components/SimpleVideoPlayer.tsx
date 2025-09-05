@@ -17,12 +17,14 @@ import { MediaCapture, VideoSegment } from '../types';
 
 interface SimpleVideoPlayerProps {
   mergedVideo: MediaCapture;
+  individualVideos?: MediaCapture[]; // Add individual videos for proper segment playback
   onSegmentSelect?: (segmentIndex: number) => void;
   statementTexts?: string[];
 }
 
 export const SimpleVideoPlayer: React.FC<SimpleVideoPlayerProps> = ({
   mergedVideo,
+  individualVideos = [],
   onSegmentSelect,
   statementTexts = [],
 }) => {
@@ -32,9 +34,23 @@ export const SimpleVideoPlayer: React.FC<SimpleVideoPlayerProps> = ({
   const [isLoading, setIsLoading] = useState(false);
   const [videoStatus, setVideoStatus] = useState<string>('not-loaded');
   const [errorMessage, setErrorMessage] = useState<string>('');
+  const [currentVideoUrl, setCurrentVideoUrl] = useState<string>(''); // Track which video is currently loaded
 
   // Extract segments from merged video
   const segments: VideoSegment[] = mergedVideo.segments || [];
+  
+  // Determine if we should use individual videos (when available and segments match)
+  const useIndividualVideos = individualVideos.length === segments.length;
+  
+  // Initialize video URL (start with merged video or first individual video)
+  const initialVideoUrl = useIndividualVideos && individualVideos[0] 
+    ? (individualVideos[0].streamingUrl || individualVideos[0].url)
+    : (mergedVideo.streamingUrl || mergedVideo.url);
+    
+  // Initialize currentVideoUrl if not set
+  if (!currentVideoUrl && initialVideoUrl) {
+    setCurrentVideoUrl(initialVideoUrl);
+  }
 
   // Video status update handler
   const handlePlaybackStatusUpdate = (status: AVPlaybackStatus) => {
@@ -53,6 +69,8 @@ export const SimpleVideoPlayer: React.FC<SimpleVideoPlayerProps> = ({
 
   // Play a specific segment
   const playSegment = async (segmentIndex: number) => {
+    console.log(`🎬 SIMPLE PLAYER: playSegment called with index ${segmentIndex}`);
+    
     if (segmentIndex < 0 || segmentIndex >= segments.length) {
       console.error('Invalid segment index:', segmentIndex);
       return;
@@ -67,15 +85,63 @@ export const SimpleVideoPlayer: React.FC<SimpleVideoPlayerProps> = ({
         startTime: segment.startTime,
         endTime: segment.endTime,
         duration: segment.duration,
-        url: mergedVideo.streamingUrl
+        useIndividualVideos,
+        individualVideosCount: individualVideos.length,
       });
 
-      if (videoRef.current) {
-        // Seek to segment start time (convert milliseconds to milliseconds)
-        await videoRef.current.setPositionAsync(segment.startTime);
+      if (useIndividualVideos && individualVideos[segmentIndex]) {
+        // Use individual video for this segment
+        const individualVideo = individualVideos[segmentIndex];
+        const individualVideoUrl = individualVideo.streamingUrl || individualVideo.url;
         
-        // Play the video
-        await videoRef.current.playAsync();
+        console.log(`🎬 SIMPLE PLAYER: Switching to individual video ${segmentIndex}:`, individualVideoUrl);
+        
+        if (currentVideoUrl !== individualVideoUrl) {
+          // Need to switch video source
+          console.log(`🎬 SIMPLE PLAYER: Loading new video source`);
+          setCurrentVideoUrl(individualVideoUrl || '');
+          
+          // Wait a bit for the video to load the new source
+          await new Promise(resolve => setTimeout(resolve, 500));
+        }
+        
+        if (videoRef.current) {
+          // For individual videos, start from beginning
+          console.log(`🎬 SIMPLE PLAYER: Playing individual video from start`);
+          await videoRef.current.setPositionAsync(0);
+          await videoRef.current.playAsync();
+        }
+        
+      } else {
+        // Fall back to merged video with seeking
+        console.log(`🎬 SIMPLE PLAYER: Using merged video with seeking`);
+        
+        const mergedVideoUrl = mergedVideo.streamingUrl || mergedVideo.url;
+        if (currentVideoUrl !== mergedVideoUrl) {
+          console.log(`🎬 SIMPLE PLAYER: Loading merged video source`);
+          setCurrentVideoUrl(mergedVideoUrl || '');
+          await new Promise(resolve => setTimeout(resolve, 500));
+        }
+
+        if (videoRef.current) {
+          // Get current status
+          const status = await videoRef.current.getStatusAsync();
+          console.log(`🎬 SIMPLE PLAYER: Current video status before seek:`, status);
+          
+          // Seek to segment start time
+          console.log(`🎬 SIMPLE PLAYER: Seeking to position ${segment.startTime}ms`);
+          await videoRef.current.setPositionAsync(segment.startTime);
+          
+          // Play the video
+          console.log(`🎬 SIMPLE PLAYER: Starting playback`);
+          await videoRef.current.playAsync();
+          
+          // Get status after play
+          const newStatus = await videoRef.current.getStatusAsync();
+          console.log(`🎬 SIMPLE PLAYER: Video status after play:`, newStatus);
+        } else {
+          console.error('🎬 SIMPLE PLAYER: Video ref is null');
+        }
       }
       
       onSegmentSelect?.(segmentIndex);
@@ -119,7 +185,7 @@ export const SimpleVideoPlayer: React.FC<SimpleVideoPlayerProps> = ({
     );
   }
 
-  const videoUrl = mergedVideo.streamingUrl || mergedVideo.url;
+  const videoUrl = currentVideoUrl || mergedVideo.streamingUrl || mergedVideo.url;
 
   return (
     <View style={styles.container}>
@@ -129,6 +195,8 @@ export const SimpleVideoPlayer: React.FC<SimpleVideoPlayerProps> = ({
       <View style={styles.debugContainer}>
         <Text style={styles.debugText}>Video URL: {videoUrl?.substring(0, 80)}...</Text>
         <Text style={styles.debugText}>Segments: {segments.length}</Text>
+        <Text style={styles.debugText}>Individual Videos: {individualVideos.length}</Text>
+        <Text style={styles.debugText}>Use Individual: {useIndividualVideos ? 'Yes' : 'No'}</Text>
         <Text style={styles.debugText}>Status: {videoStatus}</Text>
         {errorMessage ? (
           <Text style={styles.errorText}>Error: {errorMessage}</Text>
@@ -137,6 +205,7 @@ export const SimpleVideoPlayer: React.FC<SimpleVideoPlayerProps> = ({
 
       {/* Video Player - Visible for debugging */}
       <Video
+        key={currentVideoUrl} // Add unique key based on current video URL
         ref={videoRef}
         source={{ uri: videoUrl! }}
         style={styles.visibleVideo}
@@ -156,7 +225,10 @@ export const SimpleVideoPlayer: React.FC<SimpleVideoPlayerProps> = ({
               styles.segmentButton,
               selectedSegment === index && styles.selectedSegmentButton,
             ]}
-            onPress={() => playSegment(index)}
+            onPress={() => {
+              console.log(`🎬 SIMPLE PLAYER: Button ${index} pressed for segment`, segments[index]);
+              playSegment(index);
+            }}
             disabled={isLoading || videoStatus !== 'loaded'}
           >
             <Text style={styles.segmentButtonText}>

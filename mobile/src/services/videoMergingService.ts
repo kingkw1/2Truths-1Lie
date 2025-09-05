@@ -490,10 +490,9 @@ export class VideoMergingService {
   ): Promise<void> {
     console.log('🎬 Creating concatenated video file...');
     
-    // For mobile video concatenation, we'll use a practical approach:
-    // 1. Use the first video as the base container
-    // 2. Append the other videos' data in a way that creates a playable result
-    // 3. This creates a single file that can be played as one continuous video
+    // TEMPORARY SOLUTION: Since true video merging is complex in React Native,
+    // we'll use the first video as a placeholder and rely on segment metadata
+    // to play the correct individual videos at the right times
     
     // Start with the first video as the base
     await FileSystem.copyAsync({
@@ -505,12 +504,13 @@ export class VideoMergingService {
     const baseFileInfo = await FileSystem.getInfoAsync(outputUri);
     console.log('📹 Base video copied, size:', baseFileInfo.exists && 'size' in baseFileInfo ? baseFileInfo.size : 0);
     
-    console.log('📹 Skipping additional segment appending (binary concatenation doesn\'t work for video files)...');
+    console.log('📹 Using first video as merged video placeholder');
+    console.log('� Video player will use segment metadata to play individual videos');
     
     // Set progress to complete since we're using the first video only
     onProgress?.(90);
     
-    console.log('✅ Video concatenation completed successfully (using first video as base)');
+    console.log('✅ Video concatenation completed (placeholder approach)');
   }
 
   /**

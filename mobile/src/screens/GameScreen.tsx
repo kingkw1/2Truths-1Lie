@@ -441,7 +441,9 @@ export const GameScreen: React.FC = () => {
               Total Duration: {mergedVideo?.duration}ms
             </Text>
             <SimpleVideoPlayer
+              key={`segmented-${mergedVideo?.streamingUrl || 'default'}`}
               mergedVideo={mergedVideo}
+              individualVideos={individualVideos} // Pass individual videos for proper segment playback
               statementTexts={currentSession?.statements.map((stmt: any) => stmt.text) || []}
               onSegmentSelect={(segmentIndex: number) => {
                 console.log(`🎬 Selected segment ${segmentIndex}, URL: ${mergedVideo?.streamingUrl}`);
@@ -457,7 +459,7 @@ export const GameScreen: React.FC = () => {
               Individual Videos: {individualVideos.length}
             </Text>
             {individualVideos.map((video, index) => (
-              <View key={video.mediaId} style={styles.individualVideoContainer}>
+              <View key={`${video.mediaId}-${index}`} style={styles.individualVideoContainer}>
                 <Text style={styles.videoLabel}>Statement {index + 1} Video</Text>
                 <Text style={styles.debugText}>
                   URL: {video.streamingUrl?.substring(0, 100)}...
@@ -466,6 +468,7 @@ export const GameScreen: React.FC = () => {
                   Duration: {video.duration}ms
                 </Text>
                 <SimpleVideoPlayer
+                  key={`individual-${video.mediaId}-${index}`}
                   mergedVideo={{
                     ...video,
                     segments: [{

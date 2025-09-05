@@ -10,6 +10,7 @@ import {
   Platform,
   Dimensions,
   Linking,
+  ActivityIndicator,
 } from 'react-native';
 import { useAppDispatch, useAppSelector } from '../store';
 import {
@@ -78,6 +79,7 @@ export const ChallengeCreationScreen: React.FC<ChallengeCreationScreenProps> = (
   const [currentStatementIndex, setCurrentStatementIndex] = useState(0);
   const [showCameraModal, setShowCameraModal] = useState(false);
   const [selectedLieIndex, setSelectedLieIndex] = useState<number | null>(null);
+  const [isMergingVideos, setIsMergingVideos] = useState(false);
 
   // Enhanced error handling for challenge creation
   const { error: creationError, handleError: handleCreationError, clearError: clearCreationError } = useErrorHandling(
@@ -148,13 +150,8 @@ export const ChallengeCreationScreen: React.FC<ChallengeCreationScreenProps> = (
 
       console.log('✅ All recordings available, starting merge...');
 
-      // Show merging progress (optional - could add a loading state)
-      Alert.alert(
-        '🎬 Processing Videos',
-        'Merging your video statements...',
-        [],
-        { cancelable: false }
-      );
+      // Set loading state instead of showing blocking alert
+      setIsMergingVideos(true);
 
       // Trigger the video merging - filter out null values
       const validRecordings = {
@@ -167,16 +164,13 @@ export const ChallengeCreationScreen: React.FC<ChallengeCreationScreenProps> = (
 
       console.log('✅ Video merging completed successfully');
 
-      // Dismiss the loading alert and proceed to lie selection
-      Alert.alert(
-        '✅ Videos Merged',
-        'Your video statements have been combined successfully!',
-        [{ text: 'Continue', onPress: () => setCurrentStep('lie-selection') }],
-        { cancelable: false }
-      );
+      // Clear loading state and proceed to lie selection
+      setIsMergingVideos(false);
+      setCurrentStep('lie-selection');
 
     } catch (error: any) {
       console.error('❌ Video merging failed:', error);
+      setIsMergingVideos(false);
       Alert.alert(
         'Merge Failed',
         error.message || 'Failed to merge videos. You can still proceed with individual recordings.',
@@ -847,6 +841,17 @@ export const ChallengeCreationScreen: React.FC<ChallengeCreationScreenProps> = (
         onCancel={() => setShowCameraModal(false)}
         onError={handleRecordingError}
       />
+
+      {/* Video Merging Loading Overlay */}
+      {isMergingVideos && (
+        <View style={styles.loadingOverlay}>
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color="#007AFF" />
+            <Text style={styles.loadingTitle}>🎬 Processing Videos</Text>
+            <Text style={styles.loadingSubtitle}>Merging your video statements...</Text>
+          </View>
+        </View>
+      )}
     </SafeAreaView>
   );
 };
@@ -1101,6 +1106,36 @@ const styles = StyleSheet.create({
   },
   disabledButton: {
     backgroundColor: '#ccc',
+  },
+  loadingOverlay: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0, 0, 0, 0.8)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 1000,
+  },
+  loadingContainer: {
+    backgroundColor: 'white',
+    padding: 30,
+    borderRadius: 15,
+    alignItems: 'center',
+    maxWidth: 300,
+  },
+  loadingTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    marginBottom: 10,
+    textAlign: 'center',
+  },
+  loadingSubtitle: {
+    fontSize: 14,
+    color: '#666',
+    textAlign: 'center',
+    marginBottom: 15,
   },
 
 });
