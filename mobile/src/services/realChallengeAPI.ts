@@ -320,7 +320,7 @@ export class RealChallengeAPIService {
       }
 
       const responseData = await response.json();
-      console.log('🎯 CHALLENGE: Raw response:', responseData);
+      console.log('🎯 CHALLENGE: Raw response: [HIDDEN]');
 
       // Handle the paginated response format from backend
       const challenges = responseData.challenges || responseData;

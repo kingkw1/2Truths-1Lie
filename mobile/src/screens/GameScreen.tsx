@@ -46,7 +46,70 @@ const convertBackendChallenge = (backendChallenge: BackendChallenge): EnhancedCh
       averageConfidence: 50,
     })),
     mediaData: (() => {
-      // Create individual media entries
+      // For merged videos from backend, we need to decide strategy based on individual video availability
+      if (backendChallenge.is_merged_video && backendChallenge.merged_video_metadata) {
+        const mergedMetadata = backendChallenge.merged_video_metadata;
+        
+        // Use the merged video file ID to get the signed URL
+        const mergedVideoFileId = mergedMetadata.video_file_id;
+        if (mergedVideoFileId) {
+          // Find a statement with a signed URL for the same file ID
+          const statementWithSignedUrl = backendChallenge.statements.find(stmt => 
+            stmt.streaming_url && stmt.streaming_url.includes(mergedVideoFileId)
+          );
+          
+          if (statementWithSignedUrl) {
+            const mergedVideoUrl = statementWithSignedUrl.streaming_url;
+            
+            // Check if we have original individual video URLs that are different from merged
+            const hasOriginalIndividualVideos = backendChallenge.statements.some(stmt => 
+              stmt.streaming_url && !stmt.streaming_url.includes(mergedVideoFileId)
+            );
+            
+            if (hasOriginalIndividualVideos) {
+              // We have proper individual videos - create individual media entries
+              console.log('🎬 INDIVIDUAL_STRATEGY: Using original individual videos (different URLs)');
+              const individualMedia = backendChallenge.statements.map((stmt) => ({
+                type: 'video' as const,
+                streamingUrl: stmt.streaming_url || stmt.media_url,
+                duration: (stmt.duration_seconds || 0) * 1000, // Convert to milliseconds
+                mediaId: stmt.media_file_id,
+                isUploaded: true,
+                storageType: stmt.storage_type as any,
+                cloudStorageKey: stmt.cloud_storage_key,
+              }));
+              
+              return individualMedia;
+            } else {
+              // Only merged video available - create merged video entry
+              console.log('🎬 MERGED_STRATEGY: Using merged video (no individual URLs available)');
+              const mergedVideo = {
+                type: 'video' as const,
+                streamingUrl: mergedVideoUrl,
+                duration: (mergedMetadata.total_duration || 0) * 1000, // Convert seconds to milliseconds
+                mediaId: mergedVideoFileId,
+                isUploaded: true,
+                storageType: 'cloud' as any,
+                cloudStorageKey: `challenges/${backendChallenge.challenge_id}/merged.mp4`,
+                isMergedVideo: true,
+                segments: (mergedMetadata.segments || []).map((segment: any, index: number) => ({
+                  statementIndex: segment.statement_index || index,
+                  startTime: (segment.start_time || 0) * 1000, // Convert seconds to milliseconds
+                  endTime: (segment.end_time || 0) * 1000, // Convert seconds to milliseconds
+                  duration: (segment.duration || 0) * 1000, // Convert seconds to milliseconds
+                  url: mergedVideoUrl,
+                })),
+              };
+              
+              return [mergedVideo];
+            }
+          } else {
+            console.warn('🎬 GAMESCREEN: No signed URL found for merged video file ID:', mergedVideoFileId);
+          }
+        }
+      }
+
+      // For individual videos (non-merged), create individual media entries
       const individualMedia = backendChallenge.statements.map((stmt) => ({
         type: 'video' as const,
         streamingUrl: stmt.streaming_url || stmt.media_url,
@@ -57,35 +120,7 @@ const convertBackendChallenge = (backendChallenge: BackendChallenge): EnhancedCh
         cloudStorageKey: stmt.cloud_storage_key,
       }));
 
-      // Only create merged video if backend indicates it's actually a merged video
-      if (backendChallenge.is_merged_video && backendChallenge.merged_video_metadata) {
-        const firstStatement = backendChallenge.statements[0];
-        if (firstStatement && (firstStatement.streaming_url || firstStatement.media_url)) {
-          const mergedVideo = {
-            type: 'video' as const,
-            streamingUrl: firstStatement.streaming_url || firstStatement.media_url,
-            duration: backendChallenge.statements.reduce((total, stmt) => total + ((stmt.duration_seconds || 0) * 1000), 0),
-            mediaId: 'merged-' + backendChallenge.challenge_id,
-            isUploaded: true,
-            storageType: firstStatement.storage_type as any,
-            cloudStorageKey: `challenges/${backendChallenge.challenge_id}/merged.mp4`,
-            isMergedVideo: true,
-            segments: backendChallenge.statements.map((stmt, index) => ({
-              statementIndex: index,
-              startTime: stmt.segment_start_time || (index * 60 * 1000), // Use actual segment timing or fallback
-              endTime: stmt.segment_end_time || ((index + 1) * 60 * 1000),
-              duration: (stmt.segment_end_time && stmt.segment_start_time) 
-                ? (stmt.segment_end_time - stmt.segment_start_time) 
-                : (stmt.duration_seconds || 60) * 1000,
-              url: stmt.streaming_url || stmt.media_url,
-            })),
-          };
-
-          return [...individualMedia, mergedVideo];
-        }
-      }
-
-      // For individual videos (non-merged), just return the individual media
+      console.log('🎬 INDIVIDUAL_VIDEOS: Created individual videos (no merged video):', individualMedia.length);
       return individualMedia;
     })(),
     difficultyRating: 50, // Default difficulty
@@ -171,7 +206,7 @@ export const GameScreen: React.FC = () => {
       const response = await realChallengeAPI.getChallenges(0, 20);
       
       if (response.success && response.data) {
-        console.log('✅ GAME: Successfully loaded challenges:', response.data.length);
+        // console.log('✅ GAME: Successfully loaded challenges:', response.data.length);
         
         // Convert backend challenges to frontend format
         const enhancedChallenges = response.data.map(convertBackendChallenge);
@@ -440,13 +475,23 @@ export const GameScreen: React.FC = () => {
             <Text style={styles.debugText}>
               Total Duration: {mergedVideo?.duration}ms
             </Text>
+            <Text style={styles.debugText}>
+              Individual Videos Count: {individualVideos.length}
+            </Text>
+            {individualVideos.map((video, idx) => (
+              <Text key={idx} style={styles.debugText}>
+                Individual {idx}: {video.streamingUrl?.substring(0, 80)}...
+              </Text>
+            ))}
             <SimpleVideoPlayer
               key={`segmented-${mergedVideo?.streamingUrl || 'default'}`}
               mergedVideo={mergedVideo}
               individualVideos={individualVideos} // Pass individual videos for proper segment playback
               statementTexts={currentSession?.statements.map((stmt: any) => stmt.text) || []}
               onSegmentSelect={(segmentIndex: number) => {
-                console.log(`🎬 Selected segment ${segmentIndex}, URL: ${mergedVideo?.streamingUrl}`);
+                console.log(`🎬 GAMESCREEN: Selected segment ${segmentIndex}`);
+                console.log(`🎬 GAMESCREEN: Merged video URL: ${mergedVideo?.streamingUrl}`);
+                console.log(`🎬 GAMESCREEN: Individual videos:`, individualVideos.map(v => v.streamingUrl));
               }}
             />
           </View>

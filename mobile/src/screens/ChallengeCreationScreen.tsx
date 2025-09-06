@@ -181,29 +181,9 @@ export const ChallengeCreationScreen: React.FC<ChallengeCreationScreenProps> = (
 
   // Monitor individual recordings and trigger merging when all are complete
   useEffect(() => {
-    console.log('🎬 EFFECT: individualRecordings changed:', JSON.stringify(individualRecordings, null, 2));
-    console.log('🎬 EFFECT: mergedVideo:', JSON.stringify(mergedVideo, null, 2));
-    console.log('🎬 EFFECT: currentStep:', currentStep);
-
-    // Only trigger merging if we're in recording step and have all recordings but no merged video
-    if (currentStep === 'recording') {
-      const hasAllIndividualRecordings = individualRecordings &&
-        [0, 1, 2].every(index =>
-          individualRecordings[index] &&
-          individualRecordings[index]?.type === 'video' &&
-          individualRecordings[index]?.url
-        );
-
-      const hasMergedVideo = mergedVideo && mergedVideo.isMergedVideo;
-
-      if (hasAllIndividualRecordings && !hasMergedVideo) {
-        console.log('🎬 EFFECT: All recordings complete, triggering video merging...');
-        // Small delay to ensure all state updates are complete
-        setTimeout(() => {
-          handleVideoMerging();
-        }, 100);
-      }
-    }
+    // REMOVED: Automatic video merging after recording
+    // Video merging should only happen during preview/submit, not immediately after recording
+    // This allows users to review their recordings and select the lie first
   }, [individualRecordings, mergedVideo, currentStep, handleVideoMerging]);
 
   const handleStartRecording = () => {
@@ -227,35 +207,15 @@ export const ChallengeCreationScreen: React.FC<ChallengeCreationScreenProps> = (
         setShowCameraModal(true);
       }, 500);
     } else {
-      console.log('🎬 RECORDING_COMPLETE: All recordings complete, checking for video merging...');
-      // All recordings complete, check if we need to trigger video merging
-      // Use a small delay to ensure Redux state is updated
-      setTimeout(() => {
-        checkAndTriggerVideoMerging();
-      }, 1000);
+      console.log('🎬 RECORDING_COMPLETE: All recordings complete, moving to lie selection');
+      // All recordings complete, move to lie selection step
+      // Do NOT trigger video merging yet - wait until preview/submit
+      setCurrentStep('lie-selection');
     }
   };
 
-  const checkAndTriggerVideoMerging = React.useCallback(() => {
-    console.log('🎬 CHECK_MERGE: Checking if video merging is needed...');
-    console.log('🎬 CHECK_MERGE: Current individualRecordings:', JSON.stringify(individualRecordings, null, 2));
-    console.log('🎬 CHECK_MERGE: Current mergedVideo:', JSON.stringify(mergedVideo, null, 2));
-
-    // Check if we have all individual recordings but no merged video
-    const hasAllIndividualRecordings = individualRecordings &&
-      [0, 1, 2].every(index =>
-        individualRecordings[index] &&
-        individualRecordings[index]?.type === 'video' &&
-        individualRecordings[index]?.url
-      );
-
-    const hasMergedVideo = mergedVideo && mergedVideo.isMergedVideo;
-
-    if (hasAllIndividualRecordings && !hasMergedVideo) {
-      console.log('🎬 CHECK_MERGE: All recordings complete, triggering video merging...');
-      handleVideoMerging();
-    }
-  }, [individualRecordings, mergedVideo, handleVideoMerging]);
+  // REMOVED: checkAndTriggerVideoMerging function
+  // Video merging should only happen during preview/submit, not automatically after recording
 
 
 
@@ -362,6 +322,10 @@ export const ChallengeCreationScreen: React.FC<ChallengeCreationScreenProps> = (
         throw new Error('You must select which statement is the lie');
       }
 
+      // Track if individual video uploads were successful and store media IDs
+      let individualVideosUploadSuccessful = false;
+      let uploadedMediaIds: string[] = [];
+
       console.log('🎯 SUBMIT: Checking video upload status...');
       console.log('🎯 SUBMIT: Has mergedVideo:', !!mergedVideo);
       console.log('🎯 SUBMIT: mergedVideo isMergedVideo:', mergedVideo?.isMergedVideo);
@@ -379,18 +343,81 @@ export const ChallengeCreationScreen: React.FC<ChallengeCreationScreenProps> = (
       console.log('🎯 SUBMIT: hasMergedVideo:', hasMergedVideo);
       console.log('🎯 SUBMIT: hasIndividualRecordings:', hasIndividualRecordings);
 
+      // If we don't have a merged video but we have individual recordings, 
+      // attempt to merge/upload them now (during submit)
+      if (!hasMergedVideo && hasIndividualRecordings) {
+        console.log('🎯 SUBMIT: No merged video found, attempting to merge/upload individual videos...');
+        
+        // Show processing dialog
+        Alert.alert(
+          'Processing Videos',
+          'Please wait while we process your videos for submission...',
+          [],
+          { cancelable: false }
+        );
+
+        try {
+          // Trigger the video merging/upload process
+          const validRecordings = {
+            0: individualRecordings[0]!,
+            1: individualRecordings[1]!,
+            2: individualRecordings[2]!,
+          };
+          
+          console.log('🎯 SUBMIT: Starting video merge/upload process...');
+          const uploadResult = await mobileMediaIntegration.mergeStatementVideosWithoutUpload(validRecordings);
+          console.log('🎯 SUBMIT: Video merge/upload completed with result:', uploadResult);
+          
+          // Check if uploads were successful based on the return value
+          if (!uploadResult.success) {
+            throw new Error('Video upload process failed');
+          }
+          
+          // Mark individual videos as successfully uploaded
+          individualVideosUploadSuccessful = uploadResult.useIndividualVideos || false;
+          uploadedMediaIds = uploadResult.uploadedMediaIds || [];
+          console.log('🎯 SUBMIT: Individual videos upload successful:', individualVideosUploadSuccessful);
+          console.log('🎯 SUBMIT: Uploaded media IDs:', uploadedMediaIds);
+          
+        } catch (mergeError: any) {
+          console.error('❌ SUBMIT: Video merge/upload failed:', mergeError);
+          Alert.alert(
+            'Video Processing Failed',
+            `Failed to process videos: ${mergeError.message}. Please try again.`,
+            [{ text: 'OK' }]
+          );
+          throw new Error(`Video processing failed: ${mergeError.message}`);
+        }
+      }
+
+      // Re-check video status after potential merge/upload using current Redux selectors
+      // Access the fresh state from the component's existing selectors
+      console.log('🎯 SUBMIT: Fresh Redux state - individualRecordings:', individualRecordings);
+      console.log('🎯 SUBMIT: Fresh Redux state - mergedVideo:', mergedVideo);
+      
+      const updatedHasMergedVideo = mergedVideo && mergedVideo.isMergedVideo && mergedVideo.segments && mergedVideo.segments.length === 3;
+      const updatedHasIndividualRecordings = individualRecordings &&
+        [0, 1, 2].every(index =>
+          individualRecordings[index] &&
+          individualRecordings[index]?.type === 'video' &&
+          individualRecordings[index]?.url
+        );
+
+      console.log('🎯 SUBMIT: After processing - hasMergedVideo:', updatedHasMergedVideo);
+      console.log('🎯 SUBMIT: After processing - hasIndividualRecordings:', updatedHasIndividualRecordings);
+
       // Debug alert to show current state
       Alert.alert(
-        'Debug: Video State',
-        `Merged Video: ${hasMergedVideo ? 'YES' : 'NO'}\n` +
-        `Individual Recordings: ${hasIndividualRecordings ? 'YES' : 'NO'}\n` +
+        'Debug: Video State After Processing',
+        `Merged Video: ${updatedHasMergedVideo ? 'YES' : 'NO'}\n` +
+        `Individual Recordings: ${updatedHasIndividualRecordings ? 'YES' : 'NO'}\n` +
         `Merged Video Uploaded: ${mergedVideo?.isUploaded ? 'YES' : 'NO'}\n` +
         `Merged Video MediaID: ${mergedVideo?.mediaId || 'NONE'}\n` +
         `Individual Recordings Count: ${individualRecordings ? Object.keys(individualRecordings).length : 0}`,
         [{ text: 'Continue', onPress: () => { } }]
       );
 
-      if (!hasMergedVideo && !hasIndividualRecordings) {
+      if (!updatedHasMergedVideo && !updatedHasIndividualRecordings) {
         throw new Error('All 3 statements must have video recordings');
       }
 
@@ -398,7 +425,7 @@ export const ChallengeCreationScreen: React.FC<ChallengeCreationScreenProps> = (
       let currentMergedVideo = mergedVideo;
 
       // For merged video, upload it now if not already uploaded
-      if (hasMergedVideo && currentMergedVideo) {
+      if (updatedHasMergedVideo && currentMergedVideo) {
         console.log('🎯 SUBMIT: Using merged video path');
         console.log('🎯 SUBMIT: mergedVideo.mediaId:', currentMergedVideo.mediaId);
         console.log('🎯 SUBMIT: mergedVideo.isUploaded:', currentMergedVideo.isUploaded);
@@ -441,31 +468,37 @@ export const ChallengeCreationScreen: React.FC<ChallengeCreationScreenProps> = (
       }
  else {
         console.log('🎯 SUBMIT: Using individual recordings path');
-        // For individual recordings, check that all are uploaded
-        const missingUploads = [0, 1, 2].filter(index => {
-          const media = individualRecordings[index];
-          console.log(`🎯 SUBMIT: Checking recording ${index}:`, media);
-          return !media || !media.mediaId || !media.isUploaded;
-        });
+        
+        // If we just successfully uploaded individual videos, skip Redux state validation
+        if (individualVideosUploadSuccessful) {
+          console.log('🎯 SUBMIT: Individual videos were just uploaded successfully, skipping validation');
+        } else {
+          // For individual recordings, check that all are uploaded using current Redux state
+          const missingUploads = [0, 1, 2].filter(index => {
+            const media = individualRecordings[index];
+            console.log(`🎯 SUBMIT: Checking recording ${index}:`, media);
+            return !media || !media.mediaId || !media.isUploaded;
+          });
 
-        console.log('🎯 SUBMIT: missingUploads:', missingUploads);
+          console.log('🎯 SUBMIT: missingUploads:', missingUploads);
 
-        if (missingUploads.length > 0) {
-          throw new Error(`Videos for statement${missingUploads.length > 1 ? 's' : ''} ${missingUploads.map(i => i + 1).join(', ')} must be uploaded before creating the challenge.`);
+          if (missingUploads.length > 0) {
+            throw new Error(`Videos for statement${missingUploads.length > 1 ? 's' : ''} ${missingUploads.map(i => i + 1).join(', ')} must be uploaded before creating the challenge.`);
+          }
         }
       }
 
       // Prepare the challenge request for the backend
       let challengeRequest;
 
-      if (hasMergedVideo && currentMergedVideo) {
+      if (updatedHasMergedVideo && currentMergedVideo) {
         console.log('🎯 SUBMIT: Preparing merged video challenge request');
         console.log('🎯 SUBMIT: Merged video segments count:', currentMergedVideo.segments?.length);
 
         // For merged video, all statements use the same media file ID with segment metadata
         challengeRequest = {
           statements: currentChallenge.statements.map((statement, index) => {
-            const segment = currentMergedVideo.segments!.find(s => s.statementIndex === index);
+            const segment = currentMergedVideo.segments!.find((s: any) => s.statementIndex === index);
             if (!segment) {
               throw new Error(`Missing segment data for statement ${index + 1}`);
             }
@@ -485,7 +518,7 @@ export const ChallengeCreationScreen: React.FC<ChallengeCreationScreenProps> = (
           merged_video_metadata: {
             total_duration_ms: currentMergedVideo.duration || 0,
             segment_count: currentMergedVideo.segments!.length,
-            segments: currentMergedVideo.segments!.map(segment => ({
+            segments: currentMergedVideo.segments!.map((segment: any) => ({
               statement_index: segment.statementIndex,
               start_time_ms: segment.startTime,
               end_time_ms: segment.endTime,
@@ -496,11 +529,18 @@ export const ChallengeCreationScreen: React.FC<ChallengeCreationScreenProps> = (
       } else {
         console.log('🎯 SUBMIT: Preparing individual recordings challenge request');
 
-        // For individual recordings, each statement has its own media file ID
+        // For individual recordings, use uploaded media IDs if available, otherwise use Redux state
+        const getMediaId = (index: number): string => {
+          if (individualVideosUploadSuccessful && uploadedMediaIds.length > index) {
+            return uploadedMediaIds[index];
+          }
+          return individualRecordings[index]!.mediaId!;
+        };
+
         challengeRequest = {
           statements: currentChallenge.statements.map((statement, index) => ({
             text: statement.text || `Statement ${index + 1}`, // Use statement text or default
-            media_file_id: individualRecordings[index]!.mediaId!,
+            media_file_id: getMediaId(index),
           })),
           lie_statement_index: lieStatementIndex,
           tags: ['mobile-game', '2truths1lie'], // Default tags
@@ -618,11 +658,6 @@ export const ChallengeCreationScreen: React.FC<ChallengeCreationScreenProps> = (
   );
 
   const renderLieSelection = () => {
-    console.log('🎯 LIE_SELECTION: Rendering lie selection screen');
-    console.log('🎯 LIE_SELECTION: individualRecordings:', JSON.stringify(individualRecordings, null, 2));
-    console.log('🎯 LIE_SELECTION: mergedVideo:', JSON.stringify(mergedVideo, null, 2));
-    console.log('🎯 LIE_SELECTION: currentChallenge.mediaData:', JSON.stringify(currentChallenge.mediaData, null, 2));
-
     // Check if we have all individual recordings OR a merged video
     const hasAllIndividualRecordings = individualRecordings &&
       [0, 1, 2].every(index =>
@@ -635,11 +670,10 @@ export const ChallengeCreationScreen: React.FC<ChallengeCreationScreenProps> = (
 
     const hasAllRecordings = hasAllIndividualRecordings || hasMergedVideo;
 
-    console.log('🎯 LIE_SELECTION: hasAllIndividualRecordings:', hasAllIndividualRecordings);
-    console.log('🎯 LIE_SELECTION: hasMergedVideo:', hasMergedVideo);
-    console.log('🎯 LIE_SELECTION: hasAllRecordings:', hasAllRecordings);
-    console.log('🎯 LIE_SELECTION: selectedLieIndex:', selectedLieIndex);
-    console.log('🎯 LIE_SELECTION: Will show preview button:', hasAllRecordings && selectedLieIndex !== null);
+    // Only log when there's a state change we care about
+    if (selectedLieIndex !== null) {
+      console.log('🎯 LIE_SELECTION: Lie selected:', selectedLieIndex);
+    }
 
     return (
       <ScrollView style={styles.stepContainer}>

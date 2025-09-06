@@ -334,6 +334,15 @@ class WebAPIService implements APIServiceInterface {
   }
 
   async uploadMedia(file: Blob | string, metadata: any): Promise<APIResponse<{ url: string }>> {
+    // TEMPORARILY DISABLED: FormData usage causing launch issues
+    console.warn('⚠️ Media upload temporarily disabled due to FormData issues');
+    return {
+      success: false,
+      error: 'Media upload temporarily disabled - FormData compatibility issues',
+      timestamp: new Date()
+    };
+    
+    /*
     const formData = new FormData();
     formData.append('file', file as Blob);
     formData.append('metadata', JSON.stringify(metadata));
@@ -343,6 +352,7 @@ class WebAPIService implements APIServiceInterface {
       body: formData,
       headers: {}, // Don't set Content-Type for FormData
     });
+    */
   }
 
   async deleteMedia(url: string): Promise<APIResponse<boolean>> {
