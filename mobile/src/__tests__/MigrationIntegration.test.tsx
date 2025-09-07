@@ -74,7 +74,11 @@ describe('Migration Integration Tests', () => {
     jest.clearAllMocks();
     
     // Setup default mocks
-    mockFileSystem.documentDirectory = 'file:///documents/';
+    Object.defineProperty(mockFileSystem, 'documentDirectory', {
+      value: 'file:///documents/',
+      writable: true,
+      configurable: true
+    });
     mockAsyncStorage.getAllKeys.mockResolvedValue([]);
     mockAsyncStorage.getItem.mockResolvedValue(null);
     mockAsyncStorage.setItem.mockResolvedValue();
@@ -156,7 +160,7 @@ describe('Migration Integration Tests', () => {
         expect.stringContaining('migrated_'),
         5, // duration in seconds
         expect.objectContaining({
-          compress: true,
+          
           compressionQuality: 0.8,
         })
       );

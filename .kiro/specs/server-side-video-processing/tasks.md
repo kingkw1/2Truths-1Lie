@@ -2,12 +2,12 @@
 
 ## Cleanup & Setup
 
-- [ ] Remove client-side video merging and compression logic.
+- [x] Remove client-side video merging and compression logic.
 - [ ] Refactor mobile upload flow to send three separate video files per challenge.
 
 ## Backend – Upload & Merge
 
-- [ ] Implement `/api/v1/challenge-videos/upload-for-merge` backend endpoint for multi-video upload.
+- [-] Implement `/api/v1/challenge-videos/upload-for-merge` backend endpoint for multi-video upload.
 - [ ] Develop backend logic to merge videos using FFmpeg asynchronously.
 - [ ] Integrate video compression in merge pipeline with standard parameters.
 - [ ] Upload merged video to S3 and remove individual uploaded videos.

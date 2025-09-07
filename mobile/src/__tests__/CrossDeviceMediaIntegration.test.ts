@@ -248,17 +248,17 @@ describe('Cross-Device Media Accessibility Integration', () => {
       };
 
       // Network available
-      const onlineResult = await attemptMediaAccess('media-1', true);
+      const onlineResult = await attemptMediaAccess('media-1', true) as any;
       expect(onlineResult.accessible).toBe(true);
       expect(onlineResult.cached).toBe(false);
 
       // Network unavailable, cached version available
-      const cachedResult = await attemptMediaAccess('media-1', false);
+      const cachedResult = await attemptMediaAccess('media-1', false) as any;
       expect(cachedResult.accessible).toBe(true);
       expect(cachedResult.cached).toBe(true);
 
       // Network unavailable, no cached version
-      const failedResult = await attemptMediaAccess('media-2', false);
+      const failedResult = await attemptMediaAccess('media-2', false) as any;
       expect(failedResult.accessible).toBe(false);
       expect(failedResult.error).toBe('Network unavailable and no cached version');
     });

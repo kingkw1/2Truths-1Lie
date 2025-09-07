@@ -45,14 +45,6 @@ describe('challengeCreationSlice', () => {
       mediaRecordingState: {},
       uploadState: {},
       individualRecordings: {},
-      videoMerging: {
-        isInProgress: false,
-        progress: 0,
-        stage: null,
-        currentSegment: null,
-        error: null,
-      },
-      mergedVideo: null,
     };
   });
 

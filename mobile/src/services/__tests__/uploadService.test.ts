@@ -53,7 +53,7 @@ describe('VideoUploadService', () => {
       'mock://video.mp4',
       'test.mp4',
       5000,
-      { compress: false }
+      { retryAttempts: 1 }
     );
 
     expect(result.success).toBe(false);

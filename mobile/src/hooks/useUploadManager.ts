@@ -88,8 +88,6 @@ export const useUploadManager = (
         filename,
         duration,
         {
-          compress: true,
-          compressionQuality,
           maxFileSize,
           chunkSize: 1024 * 1024, // 1MB chunks
           retryAttempts: 2, // Internal retries per chunk
@@ -129,7 +127,6 @@ export const useUploadManager = (
             storageType: result.storageType || 'cloud',
             duration,
             fileSize: result.fileSize,
-            compressionRatio: result.compressionRatio,
             uploadTime: result.uploadTime,
             mimeType: 'video/mp4',
             isUploaded: true,

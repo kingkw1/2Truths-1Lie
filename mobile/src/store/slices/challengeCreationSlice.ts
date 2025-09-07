@@ -24,8 +24,7 @@ export interface ChallengeCreationState {
       mediaType: 'video' | 'audio' | 'text' | null;
       hasPermission: boolean;
       error: string | null;
-      isCompressing: boolean;
-      compressionProgress: number | null;
+
     };
   };
   // Upload state per statement
@@ -42,20 +41,10 @@ export interface ChallengeCreationState {
       totalChunks?: number;
     };
   };
-  // Individual statement recordings (before merging)
+  // Individual statement recordings
   individualRecordings: {
     [statementIndex: number]: MediaCapture | null;
   };
-  // Video merging state
-  videoMerging: {
-    isInProgress: boolean;
-    progress: number;
-    stage: 'preparing' | 'merging' | 'compressing' | 'finalizing' | null;
-    currentSegment: number | null;
-    error: string | null;
-  };
-  // Final merged video
-  mergedVideo: MediaCapture | null;
 }
 
 const initialState: ChallengeCreationState = {
@@ -79,14 +68,6 @@ const initialState: ChallengeCreationState = {
   mediaRecordingState: {},
   uploadState: {},
   individualRecordings: {},
-  videoMerging: {
-    isInProgress: false,
-    progress: 0,
-    stage: null,
-    currentSegment: null,
-    error: null,
-  },
-  mergedVideo: null,
 };
 
 const challengeCreationSlice = createSlice({
@@ -218,12 +199,6 @@ const challengeCreationSlice = createSlice({
         }
         
         // Video-only mode: Check if we have video recordings for each statement
-        // This can be either individual recordings or a merged video
-        const hasMergedVideo = state.mergedVideo && 
-          state.mergedVideo.isMergedVideo && 
-          state.mergedVideo.segments && 
-          state.mergedVideo.segments.length === 3;
-        
         const hasIndividualRecordings = state.individualRecordings &&
           [0, 1, 2].every(index => 
             state.individualRecordings[index] && 
@@ -231,7 +206,7 @@ const challengeCreationSlice = createSlice({
             state.individualRecordings[index]?.url
           );
         
-        if (!hasMergedVideo && !hasIndividualRecordings) {
+        if (!hasIndividualRecordings) {
           // Check for partial recordings to give more specific error messages
           if (state.individualRecordings) {
             const missingVideoStatements = [];
@@ -290,8 +265,6 @@ const challengeCreationSlice = createSlice({
           mediaType: null,
           hasPermission: false,
           error: null,
-          isCompressing: false,
-          compressionProgress: null,
         };
       }
       state.mediaRecordingState[statementIndex] = {
@@ -312,8 +285,6 @@ const challengeCreationSlice = createSlice({
         mediaType,
         hasPermission: true,
         error: null,
-        isCompressing: false,
-        compressionProgress: null,
       };
       state.isRecording = true;
       state.recordingType = mediaType === 'text' ? null : mediaType;
@@ -367,34 +338,12 @@ const challengeCreationSlice = createSlice({
           mediaType: null,
           hasPermission: false,
           error: null,
-          isCompressing: false,
-          compressionProgress: null,
         };
       }
       state.mediaRecordingState[statementIndex].error = error;
     },
 
-    setMediaCompression: (state, action: PayloadAction<{
-      statementIndex: number;
-      isCompressing: boolean;
-      progress?: number;
-    }>) => {
-      const { statementIndex, isCompressing, progress } = action.payload;
-      if (!state.mediaRecordingState[statementIndex]) {
-        state.mediaRecordingState[statementIndex] = {
-          isRecording: false,
-          isPaused: false,
-          duration: 0,
-          mediaType: null,
-          hasPermission: false,
-          error: null,
-          isCompressing: false,
-          compressionProgress: null,
-        };
-      }
-      state.mediaRecordingState[statementIndex].isCompressing = isCompressing;
-      state.mediaRecordingState[statementIndex].compressionProgress = progress || null;
-    },
+
 
     // Upload state actions
     setUploadState: (state, action: PayloadAction<{
@@ -553,63 +502,7 @@ const challengeCreationSlice = createSlice({
       delete state.individualRecordings[statementIndex];
     },
 
-    // Video merging actions
-    startVideoMerging: (state) => {
-      state.videoMerging = {
-        isInProgress: true,
-        progress: 0,
-        stage: 'preparing',
-        currentSegment: null,
-        error: null,
-      };
-    },
 
-    updateVideoMergingProgress: (state, action: PayloadAction<{
-      progress: number;
-      stage: 'preparing' | 'merging' | 'compressing' | 'finalizing';
-      currentSegment?: number;
-    }>) => {
-      const { progress, stage, currentSegment } = action.payload;
-      state.videoMerging.progress = progress;
-      state.videoMerging.stage = stage;
-      state.videoMerging.currentSegment = currentSegment || null;
-    },
-
-    completeVideoMerging: (state, action: PayloadAction<{
-      mergedVideo: MediaCapture;
-    }>) => {
-      const { mergedVideo } = action.payload;
-      state.videoMerging = {
-        isInProgress: false,
-        progress: 100,
-        stage: null,
-        currentSegment: null,
-        error: null,
-      };
-      state.mergedVideo = mergedVideo;
-      
-      // Update the challenge's media data with the merged video
-      // The merged video represents all three statements
-      state.currentChallenge.mediaData = [mergedVideo];
-    },
-
-    setVideoMergingError: (state, action: PayloadAction<{ error: string }>) => {
-      const { error } = action.payload;
-      state.videoMerging.isInProgress = false;
-      state.videoMerging.error = error;
-    },
-
-    resetVideoMerging: (state) => {
-      state.videoMerging = {
-        isInProgress: false,
-        progress: 0,
-        stage: null,
-        currentSegment: null,
-        error: null,
-      };
-      state.mergedVideo = null;
-      state.individualRecordings = {};
-    },
   },
 });
 
@@ -638,7 +531,6 @@ export const {
   resumeMediaRecording,
   updateRecordingDuration,
   setMediaRecordingError,
-  setMediaCompression,
   // Upload actions
   setUploadState,
   startUpload,
@@ -651,12 +543,6 @@ export const {
   // Individual recording actions
   setIndividualRecording,
   clearIndividualRecording,
-  // Video merging actions
-  startVideoMerging,
-  updateVideoMergingProgress,
-  completeVideoMerging,
-  setVideoMergingError,
-  resetVideoMerging,
 } = challengeCreationSlice.actions;
 
 export default challengeCreationSlice.reducer;

@@ -23,7 +23,6 @@ import {
   startNewChallenge,
   updateStatement,
   setLieStatement,
-  resetVideoMerging,
 } from '../store/slices/challengeCreationSlice';
 
 
@@ -33,7 +32,7 @@ interface EnhancedChallengeCreationProps {
   onCancel?: () => void;
 }
 
-type CreationStep = 'statements' | 'recording' | 'merging' | 'preview' | 'complete';
+type CreationStep = 'statements' | 'recording' | 'preview' | 'complete';
 
 export const EnhancedChallengeCreation: React.FC<EnhancedChallengeCreationProps> = ({
   onChallengeComplete,
@@ -60,14 +59,6 @@ export const EnhancedChallengeCreation: React.FC<EnhancedChallengeCreationProps>
       return {
         currentChallenge: {},
         individualRecordings: {} as { [statementIndex: number]: MediaCapture | null },
-        videoMerging: {
-          isInProgress: false,
-          progress: 0,
-          stage: null as 'preparing' | 'merging' | 'compressing' | 'finalizing' | null,
-          currentSegment: null,
-          error: null,
-        },
-        mergedVideo: null as MediaCapture | null,
         validationErrors: [] as string[],
       };
     }
@@ -76,14 +67,6 @@ export const EnhancedChallengeCreation: React.FC<EnhancedChallengeCreationProps>
   const {
     currentChallenge = {},
     individualRecordings = {} as { [statementIndex: number]: MediaCapture | null },
-    videoMerging = {
-      isInProgress: false,
-      progress: 0,
-      stage: null as 'preparing' | 'merging' | 'compressing' | 'finalizing' | null,
-      currentSegment: null,
-      error: null,
-    },
-    mergedVideo = null as MediaCapture | null,
     validationErrors = [] as string[]
   } = challengeState;
 
@@ -110,12 +93,7 @@ export const EnhancedChallengeCreation: React.FC<EnhancedChallengeCreationProps>
     initializeServices();
 
     return () => {
-      try {
-        // Cleanup on unmount
-        dispatch(resetVideoMerging());
-      } catch (error) {
-        console.error('Error during cleanup:', error);
-      }
+
     };
   }, [dispatch]);
 
@@ -204,9 +182,9 @@ export const EnhancedChallengeCreation: React.FC<EnhancedChallengeCreationProps>
         [
           { text: 'Review Statements', style: 'cancel' },
           {
-            text: 'Merge Videos',
+            text: 'Create Challenge',
             style: 'default',
-            onPress: startVideoMerging,
+            onPress: createChallengeWithIndividualVideos,
           },
         ]
       );
@@ -219,10 +197,10 @@ export const EnhancedChallengeCreation: React.FC<EnhancedChallengeCreationProps>
     setCurrentStep('statements');
   };
 
-  // Start video merging process
-  const startVideoMerging = async () => {
+  // Create challenge with individual videos (server-side merging)
+  const createChallengeWithIndividualVideos = async () => {
     if (!canProceedToMerging) {
-      Alert.alert('Incomplete Recordings', 'Please record all three statements before merging.');
+      Alert.alert('Incomplete Recordings', 'Please record all three statements before creating challenge.');
       return;
     }
 
@@ -231,33 +209,17 @@ export const EnhancedChallengeCreation: React.FC<EnhancedChallengeCreationProps>
       return;
     }
 
-    setCurrentStep('merging');
-
-    try {
-      await mobileMediaIntegration.mergeStatementVideos(getValidRecordings);
-      setCurrentStep('preview');
-    } catch (error: any) {
-      console.error('Video merging failed:', error);
-      Alert.alert(
-        'Merge Failed',
-        error.message || 'Failed to merge videos. Please try again.',
-        [
-          { text: 'OK', onPress: () => setCurrentStep('statements') }
-        ]
-      );
-    }
+    setCurrentStep('preview');
   };
 
   // Complete challenge creation
   const completeChallenge = () => {
-    if (!mergedVideo) {
-      Alert.alert('Error', 'No merged video available.');
-      return;
-    }
-
+    const validRecordings = getValidRecordings;
+    
     const challengeData = {
       ...currentChallenge,
-      mediaData: [mergedVideo],
+      mediaData: [validRecordings[0], validRecordings[1], validRecordings[2]], // Send individual videos
+      lieIndex: selectedLieIndex,
     };
 
     setCurrentStep('complete');
@@ -334,11 +296,11 @@ export const EnhancedChallengeCreation: React.FC<EnhancedChallengeCreationProps>
             styles.mergeButton,
             (!canProceedToMerging || selectedLieIndex === null) && styles.mergeButtonDisabled,
           ]}
-          onPress={startVideoMerging}
+          onPress={createChallengeWithIndividualVideos}
           disabled={!canProceedToMerging || selectedLieIndex === null}
         >
           <Text style={styles.mergeButtonText}>
-            {canProceedToMerging ? 'Merge Videos & Create Challenge' : 'Record All Statements First'}
+            {canProceedToMerging ? 'Create Challenge' : 'Record All Statements First'}
           </Text>
         </TouchableOpacity>
 
@@ -375,75 +337,37 @@ export const EnhancedChallengeCreation: React.FC<EnhancedChallengeCreationProps>
     );
   };
 
-  // Render merging step
-  const renderMergingStep = () => (
-    <View style={styles.mergingContainer}>
-      <Text style={styles.mergingTitle}>Creating Your Challenge</Text>
-      <Text style={styles.mergingSubtitle}>
-        Merging your three statement videos...
-      </Text>
 
-      <View style={styles.progressContainer}>
-        <ActivityIndicator size="large" color="#4a90e2" />
-        <Text style={styles.progressText}>
-          {videoMerging.stage === 'preparing' && 'Preparing videos...'}
-          {videoMerging.stage === 'merging' && 'Merging videos...'}
-          {videoMerging.stage === 'compressing' && 'Compressing video...'}
-          {videoMerging.stage === 'finalizing' && 'Uploading to server...'}
-        </Text>
-        <Text style={styles.progressPercentage}>
-          {Math.round(videoMerging.progress)}%
-        </Text>
-      </View>
-
-      {videoMerging.currentSegment !== null && (
-        <Text style={styles.currentSegmentText}>
-          Processing statement {videoMerging.currentSegment + 1}
-        </Text>
-      )}
-
-      {videoMerging.error && (
-        <View style={styles.errorContainer}>
-          <Text style={styles.errorText}>{videoMerging.error}</Text>
-          <TouchableOpacity
-            style={styles.retryButton}
-            onPress={() => setCurrentStep('statements')}
-          >
-            <Text style={styles.retryButtonText}>Back to Statements</Text>
-          </TouchableOpacity>
-        </View>
-      )}
-    </View>
-  );
 
   // Render preview step
-  const renderPreviewStep = () => (
-    <View style={styles.previewContainer}>
-      <Text style={styles.previewTitle}>Challenge Ready!</Text>
-      <Text style={styles.previewSubtitle}>
-        Your three statements have been merged into a single video with segment tracking.
-      </Text>
+  const renderPreviewStep = () => {
+    const validRecordings = getValidRecordings;
+    const totalDuration = Object.values(validRecordings).reduce((sum, recording) => sum + (recording?.duration || 0), 0);
+    const totalSize = Object.values(validRecordings).reduce((sum, recording) => sum + (recording?.fileSize || 0), 0);
+    
+    return (
+      <View style={styles.previewContainer}>
+        <Text style={styles.previewTitle}>Challenge Ready!</Text>
+        <Text style={styles.previewSubtitle}>
+          Your three statements are ready to be uploaded. The server will merge them automatically.
+        </Text>
 
-      {mergedVideo && (
         <View style={styles.videoInfo}>
           <Text style={styles.videoInfoText}>
-            📹 Duration: {Math.round((mergedVideo.duration || 0) / 1000)}s
+            📹 Total Duration: {Math.round(totalDuration / 1000)}s
           </Text>
           <Text style={styles.videoInfoText}>
-            💾 Size: {((mergedVideo.fileSize || 0) / (1024 * 1024)).toFixed(1)}MB
+            💾 Total Size: {(totalSize / (1024 * 1024)).toFixed(1)}MB
           </Text>
           <Text style={styles.videoInfoText}>
-            🎬 Segments: {mergedVideo.segments?.length || 0}
+            🎬 Videos: {Object.keys(validRecordings).length} statements
           </Text>
-          {mergedVideo.compressionRatio && (
-            <Text style={styles.videoInfoText}>
-              🗜️ Compression: {Math.round((1 - mergedVideo.compressionRatio) * 100)}%
-            </Text>
-          )}
+          <Text style={styles.videoInfoText}>
+            🤥 Lie: Statement {(selectedLieIndex || 0) + 1}
+          </Text>
         </View>
-      )}
 
-      <View style={styles.previewActions}>
+        <View style={styles.previewActions}>
         <TouchableOpacity
           style={styles.completeButton}
           onPress={completeChallenge}
@@ -451,15 +375,16 @@ export const EnhancedChallengeCreation: React.FC<EnhancedChallengeCreationProps>
           <Text style={styles.completeButtonText}>Complete Challenge</Text>
         </TouchableOpacity>
 
-        <TouchableOpacity
-          style={[styles.backButton, { marginTop: 12 }]}
-          onPress={() => setCurrentStep('statements')}
-        >
-          <Text style={styles.backButtonText}>Back to Edit</Text>
-        </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.backButton, { marginTop: 12 }]}
+            onPress={() => setCurrentStep('statements')}
+          >
+            <Text style={styles.backButtonText}>Back to Edit</Text>
+          </TouchableOpacity>
+        </View>
       </View>
-    </View>
-  );
+    );
+  };
 
   // Render complete step
   const renderCompleteStep = () => (
@@ -476,7 +401,6 @@ export const EnhancedChallengeCreation: React.FC<EnhancedChallengeCreationProps>
     <View style={styles.mainContainer}>
       {currentStep === 'statements' && renderStatementsStep()}
       {currentStep === 'recording' && renderRecordingStep()}
-      {currentStep === 'merging' && renderMergingStep()}
       {currentStep === 'preview' && renderPreviewStep()}
       {currentStep === 'complete' && renderCompleteStep()}
     </View>

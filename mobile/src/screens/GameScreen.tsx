@@ -429,21 +429,17 @@ export const GameScreen: React.FC = () => {
   );
 
   const renderGameplay = () => {
-    const mergedVideo = selectedChallenge?.mediaData?.find(media => media.isMergedVideo);
-    const hasSegmentedVideo = mergedVideo && mergedVideo.segments && mergedVideo.segments.length === 3;
-    const individualVideos = selectedChallenge?.mediaData?.filter(media => !media.isMergedVideo) || [];
+    // Get all individual videos - with the removal of client-side merging, all videos are individual
+    const individualVideos = selectedChallenge?.mediaData || [];
     const hasIndividualVideos = individualVideos.length === 3; // For 3-statement challenges
-    const hasAnyVideo = hasSegmentedVideo || hasIndividualVideos;
+    const hasAnyVideo = hasIndividualVideos;
 
     // Debug logging
     console.log('🎥 RENDER GAMEPLAY:', {
       selectedChallengeId: selectedChallenge?.id,
       mediaDataCount: selectedChallenge?.mediaData?.length,
-      mergedVideoFound: !!mergedVideo,
-      hasSegmentedVideo,
       hasIndividualVideos,
       individualVideosCount: individualVideos.length,
-      mergedVideoSegments: mergedVideo?.segments?.length,
     });
 
     return (
@@ -463,73 +459,26 @@ export const GameScreen: React.FC = () => {
           </TouchableOpacity>
         )}
 
-        {/* Segmented Video Player (for merged videos) */}
-        {showVideoPlayer && hasSegmentedVideo && (
-          <View style={styles.videoPlayerContainer}>
-            <Text style={styles.debugText}>
-              Video URL: {mergedVideo?.streamingUrl?.substring(0, 100)}
-            </Text>
-            <Text style={styles.debugText}>
-              Segments: {mergedVideo?.segments?.length || 0}
-            </Text>
-            <Text style={styles.debugText}>
-              Total Duration: {mergedVideo?.duration}ms
-            </Text>
-            <Text style={styles.debugText}>
-              Individual Videos Count: {individualVideos.length}
-            </Text>
-            {individualVideos.map((video, idx) => (
-              <Text key={idx} style={styles.debugText}>
-                Individual {idx}: {video.streamingUrl?.substring(0, 80)}...
-              </Text>
-            ))}
-            <SimpleVideoPlayer
-              key={`segmented-${mergedVideo?.streamingUrl || 'default'}`}
-              mergedVideo={mergedVideo}
-              individualVideos={individualVideos} // Pass individual videos for proper segment playback
-              statementTexts={currentSession?.statements.map((stmt: any) => stmt.text) || []}
-              onSegmentSelect={(segmentIndex: number) => {
-                console.log(`🎬 GAMESCREEN: Selected segment ${segmentIndex}`);
-                console.log(`🎬 GAMESCREEN: Merged video URL: ${mergedVideo?.streamingUrl}`);
-                console.log(`🎬 GAMESCREEN: Individual videos:`, individualVideos.map(v => v.streamingUrl));
-              }}
-            />
-          </View>
-        )}
-
-        {/* Individual Video Player (for separate videos) */}
-        {showVideoPlayer && hasIndividualVideos && !hasSegmentedVideo && (
+        {/* Video Player for Individual Videos */}
+        {showVideoPlayer && hasIndividualVideos && (
           <View style={styles.videoPlayerContainer}>
             <Text style={styles.debugText}>
               Individual Videos: {individualVideos.length}
             </Text>
-            {individualVideos.map((video, index) => (
-              <View key={`${video.mediaId}-${index}`} style={styles.individualVideoContainer}>
-                <Text style={styles.videoLabel}>Statement {index + 1} Video</Text>
-                <Text style={styles.debugText}>
-                  URL: {video.streamingUrl?.substring(0, 100)}...
-                </Text>
-                <Text style={styles.debugText}>
-                  Duration: {video.duration}ms
-                </Text>
-                <SimpleVideoPlayer
-                  key={`individual-${video.mediaId}-${index}`}
-                  mergedVideo={{
-                    ...video,
-                    segments: [{
-                      statementIndex: index,
-                      startTime: 0,
-                      endTime: video.duration || 3000,
-                      duration: video.duration || 3000,
-                    }]
-                  }}
-                  statementTexts={[`Statement ${index + 1}`]}
-                  onSegmentSelect={(segmentIndex: number) => {
-                    console.log(`🎬 Playing individual video ${index}, URL: ${video.streamingUrl}`);
-                  }}
-                />
-              </View>
+            {individualVideos.map((video, idx) => (
+              <Text key={idx} style={styles.debugText}>
+                Video {idx + 1}: {video.streamingUrl?.substring(0, 80)}...
+              </Text>
             ))}
+            <SimpleVideoPlayer
+              key={`individual-videos-${individualVideos.map(v => v.mediaId).join('-')}`}
+              individualVideos={individualVideos}
+              statementTexts={currentSession?.statements.map((stmt: any) => stmt.text) || []}
+              onSegmentSelect={(segmentIndex: number) => {
+                console.log(`🎬 GAMESCREEN: Selected segment ${segmentIndex}`);
+                console.log(`🎬 GAMESCREEN: Individual videos:`, individualVideos.map(v => v.streamingUrl));
+              }}
+            />
           </View>
         )}
         

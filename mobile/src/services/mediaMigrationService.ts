@@ -291,8 +291,7 @@ export class MediaMigrationService {
             filename,
             (item.duration || 0) / 1000, // Convert to seconds
             {
-              compress: true,
-              compressionQuality: 0.8,
+              chunkSize: 1024 * 1024,
               maxFileSize: 50 * 1024 * 1024, // 50MB
               retryAttempts: 3,
             }

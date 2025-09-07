@@ -89,14 +89,6 @@ describe('End-to-End Integration Tests', () => {
           mediaRecordingState: {},
           previewMode: false,
           individualRecordings: {},
-          videoMerging: {
-            isInProgress: false,
-            progress: 0,
-            stage: null,
-            currentSegment: null,
-            error: null,
-          },
-          mergedVideo: null,
         },
         gameSession: {
           currentSession: null,
@@ -232,7 +224,7 @@ describe('End-to-End Integration Tests', () => {
         mockVideoFile.uri,
         'merged-challenge-video.mp4',
         30000, // 30 seconds total
-        { compress: true }
+        {}
       );
 
       expect(uploadResult.success).toBe(true);
@@ -351,7 +343,7 @@ describe('End-to-End Integration Tests', () => {
         mockVideoFile.uri,
         'retry-video.mp4',
         25000,
-        { compress: false, retryAttempts: 3 }
+        { retryAttempts: 3 }
       );
 
       expect(uploadResult.success).toBe(true);
@@ -608,7 +600,7 @@ describe('End-to-End Integration Tests', () => {
         mockVideoFile.uri,
         'ios-video.mp4',
         35000,
-        { compress: true }
+        {}
       );
 
       expect(uploadResult.success).toBe(true);
@@ -678,7 +670,7 @@ describe('End-to-End Integration Tests', () => {
         mockVideoFile.uri,
         'android-video.mp4',
         40000,
-        { compress: true }
+        {}
       );
 
       expect(uploadResult.success).toBe(true);

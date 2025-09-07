@@ -74,14 +74,6 @@ describe('Upload Integration - Comprehensive Tests', () => {
           mediaRecordingState: {},
           previewMode: false,
           individualRecordings: {},
-          videoMerging: {
-            isInProgress: false,
-            progress: 0,
-            stage: null,
-            currentSegment: null,
-            error: null,
-          },
-          mergedVideo: null,
         },
       },
     });
@@ -161,7 +153,7 @@ describe('Upload Integration - Comprehensive Tests', () => {
         'mock://video.mp4',
         'test-video.mp4',
         30000, // 30 seconds
-        { compress: true }
+        {}
       );
 
       expect(result.success).toBe(true);
@@ -238,7 +230,7 @@ describe('Upload Integration - Comprehensive Tests', () => {
         'mock://video.mp4',
         'test-video.mp4',
         25000,
-        { compress: true }
+        {}
       );
 
       expect(result.success).toBe(true);
@@ -276,7 +268,7 @@ describe('Upload Integration - Comprehensive Tests', () => {
         'mock://video.mp4',
         'test-video.mp4',
         20000,
-        { compress: false }
+        {}
       );
 
       // Cancel after a short delay
@@ -323,7 +315,7 @@ describe('Upload Integration - Comprehensive Tests', () => {
         'mock://large-video.mp4',
         'large-video.mp4',
         120000,
-        { compress: false }
+        {}
       );
 
       expect(result.success).toBe(false);
@@ -353,7 +345,7 @@ describe('Upload Integration - Comprehensive Tests', () => {
         'mock://video.mp4',
         'test-video.mp4',
         30000,
-        { compress: false }
+        {}
       );
 
       expect(result.success).toBe(false);
@@ -415,7 +407,7 @@ describe('Upload Integration - Comprehensive Tests', () => {
         'mock://video.mp4',
         'test-video.mp4',
         25000,
-        { compress: false, retryAttempts: 3 }
+        { retryAttempts: 3 }
       );
 
       expect(result.success).toBe(true);
@@ -629,7 +621,7 @@ describe('Upload Integration - Comprehensive Tests', () => {
         mockFileInfo.uri,
         'ios-video.mp4',
         35000,
-        { compress: true }
+        {}
       );
 
       expect(result.success).toBe(true);
@@ -690,7 +682,7 @@ describe('Upload Integration - Comprehensive Tests', () => {
         mockFileInfo.uri,
         'android-video.mp4',
         40000,
-        { compress: true }
+        {}
       );
 
       expect(result.success).toBe(true);
@@ -749,7 +741,7 @@ describe('Upload Integration - Comprehensive Tests', () => {
         mockFileInfo.uri,
         'large-video.mp4',
         300000, // 5 minutes
-        { compress: false }
+        {}
       );
 
       expect(result.success).toBe(true);
@@ -800,7 +792,7 @@ describe('Upload Integration - Comprehensive Tests', () => {
         mockFileInfo.uri,
         'cleanup-video.mp4',
         25000,
-        { compress: false }
+        {}
       );
 
       expect(result.success).toBe(true);

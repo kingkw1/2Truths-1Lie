@@ -20,8 +20,14 @@ jest.mock('../services/uploadService');
 jest.mock('../services/authService');
 
 const mockAsyncStorage = AsyncStorage as jest.Mocked<typeof AsyncStorage>;
-const mockVideoUploadService = VideoUploadService as jest.MockedClass<typeof VideoUploadService>;
-const mockAuthService = AuthService as jest.MockedClass<typeof AuthService>;
+// Mock the services by mocking their instances
+const mockVideoUploadService = {
+  verifyMediaAccess: jest.fn(),
+  getStreamingUrl: jest.fn(),
+} as any;
+const mockAuthService = {
+  getCurrentUser: jest.fn(),
+} as any;
 
 describe('Cross-Device Media Accessibility', () => {
   let crossDeviceService: CrossDeviceMediaService;
@@ -353,7 +359,7 @@ describe('Cross-Device Media Accessibility', () => {
       const user2MediaIds = ['media-3', 'media-4'];
 
       // Simulate user 1 login
-      mockAuth.getCurrentUser.mockReturnValue({ id: 'user-1', name: 'User 1' });
+      mockAuth.getCurrentUser.mockReturnValue({ id: 'user-1', name: 'User 1', createdAt: new Date() });
       mockAsyncStorage.getItem.mockImplementation((key) => {
         if (key === 'mediaLibraryCache') {
           return Promise.resolve(JSON.stringify(user1MediaIds.map(id => ({ mediaId: id }))));
@@ -368,7 +374,7 @@ describe('Cross-Device Media Accessibility', () => {
       // Simulate user logout and user 2 login
       await crossDeviceService.onUserLogout();
       
-      mockAuth.getCurrentUser.mockReturnValue({ id: 'user-2', name: 'User 2' });
+      mockAuth.getCurrentUser.mockReturnValue({ id: 'user-2', name: 'User 2', createdAt: new Date() });
       mockAsyncStorage.getItem.mockImplementation((key) => {
         if (key === 'mediaLibraryCache') {
           return Promise.resolve(JSON.stringify(user2MediaIds.map(id => ({ mediaId: id }))));
@@ -388,7 +394,7 @@ describe('Cross-Device Media Accessibility', () => {
       const mediaId = 'user-specific-media';
       
       // User 1 should have access
-      mockAuth.getCurrentUser.mockReturnValue({ id: 'user-1', name: 'User 1' });
+      mockAuth.getCurrentUser.mockReturnValue({ id: 'user-1', name: 'User 1', createdAt: new Date() });
       mockUploadService.verifyMediaAccess.mockResolvedValue({
         accessible: true,
         deviceCompatible: true,
@@ -399,12 +405,11 @@ describe('Cross-Device Media Accessibility', () => {
       expect(result.accessible).toBe(true);
 
       // User 2 should not have access to user 1's media
-      mockAuth.getCurrentUser.mockReturnValue({ id: 'user-2', name: 'User 2' });
+      mockAuth.getCurrentUser.mockReturnValue({ id: 'user-2', name: 'User 2', createdAt: new Date() });
       mockUploadService.verifyMediaAccess.mockResolvedValue({
         accessible: false,
         deviceCompatible: true,
         requiresAuth: true,
-        error: 'Media not found or access denied',
       });
 
       result = await crossDeviceService.verifyMediaAccessibility(mediaId);
@@ -438,7 +443,6 @@ describe('Cross-Device Media Accessibility', () => {
         accessible: true,
         deviceCompatible: false,
         requiresAuth: true,
-        mimeType: 'video/unsupported',
       });
 
       const result = await crossDeviceService.verifyMediaAccessibility(mediaId);

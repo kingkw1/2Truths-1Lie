@@ -527,7 +527,7 @@ export const MobileCameraRecorder: React.FC<MobileCameraRecorderProps> = ({
       
       Alert.alert(
         '✅ Recording Complete',
-        `Video ${storageType === 'cloud' ? 'uploaded' : 'recorded'} successfully!\n\nDuration: ${durationText}s\nSize: ${sizeText}MB${mediaCapture.compressionRatio ? `\nCompression: ${Math.round((1 - mediaCapture.compressionRatio) * 100)}%` : ''}`,
+        `Video ${storageType === 'cloud' ? 'uploaded' : 'recorded'} successfully!\n\nDuration: ${durationText}s\nSize: ${sizeText}MB`,
         [{ text: 'OK', style: 'default' }],
         { cancelable: false }
       );
@@ -1046,11 +1046,11 @@ export const MobileCameraRecorder: React.FC<MobileCameraRecorderProps> = ({
         </View>
 
         {/* Processing indicator with enhanced styling */}
-        {(recordingState?.isCompressing || isLoading) && (
+        {isLoading && (
           <View style={styles.processingIndicator}>
             <ActivityIndicator size="small" color="#4a90e2" />
             <Text style={styles.processingText}>
-              {recordingState?.isCompressing ? 'Processing video...' : 'Please wait...'}
+              Please wait...
             </Text>
           </View>
         )}

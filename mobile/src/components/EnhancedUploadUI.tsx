@@ -99,8 +99,6 @@ export const EnhancedUploadUI: React.FC<EnhancedUploadUIProps> = ({
         filename,
         duration,
         {
-          compress: true,
-          compressionQuality: 0.8,
           maxFileSize: 50 * 1024 * 1024, // 50MB
           chunkSize: 1024 * 1024, // 1MB chunks
           retryAttempts: 3,
@@ -140,7 +138,6 @@ export const EnhancedUploadUI: React.FC<EnhancedUploadUIProps> = ({
             storageType: result.storageType || 'cloud',
             duration,
             fileSize: result.fileSize,
-            compressionRatio: result.compressionRatio,
             uploadTime: result.uploadTime,
             mimeType: Platform.select({
               ios: 'video/quicktime',
@@ -154,7 +151,7 @@ export const EnhancedUploadUI: React.FC<EnhancedUploadUIProps> = ({
         // Show success message
         Alert.alert(
           '✅ Upload Complete',
-          `Video uploaded successfully!\n\nSize: ${formatBytes(result.fileSize || 0)}\nTime: ${formatDuration(result.uploadTime || 0)}${result.compressionRatio ? `\nCompression: ${Math.round((1 - result.compressionRatio) * 100)}%` : ''}`,
+          `Video uploaded successfully!\n\nSize: ${formatBytes(result.fileSize || 0)}\nTime: ${formatDuration(result.uploadTime || 0)}`,
           [{ text: 'OK', onPress: () => setModalVisible(false) }]
         );
       } else {

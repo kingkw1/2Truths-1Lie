@@ -36,13 +36,6 @@ jest.mock('react-native', () => {
 });
 
 // Mock components that might cause rendering issues
-jest.mock('../components/SegmentedVideoPlayer', () => {
-  return {
-    __esModule: true,
-    default: () => null,
-  };
-});
-
 jest.mock('../shared/AnimatedFeedback', () => {
   return {
     __esModule: true,
@@ -133,8 +126,8 @@ const mockChallenge1: EnhancedChallenge = {
   recommendationWeight: 70,
   totalGuesses: 25,
   correctGuessRate: 60,
-  createdAt: new Date('2024-01-01'),
-  lastPlayed: new Date('2024-01-02'),
+  createdAt: '2024-01-01T00:00:00.000Z',
+  lastPlayed: '2024-01-02T00:00:00.000Z',
   tags: ['test', 'mobile'],
   isActive: true,
 };
@@ -160,8 +153,8 @@ const mockChallenge2: EnhancedChallenge = {
   recommendationWeight: 60,
   totalGuesses: 12,
   correctGuessRate: 75,
-  createdAt: new Date('2024-01-03'),
-  lastPlayed: new Date('2024-01-03'),
+  createdAt: '2024-01-03T00:00:00.000Z',
+  lastPlayed: '2024-01-03T00:00:00.000Z',
   tags: ['new', 'fresh'],
   isActive: true,
 };
@@ -179,13 +172,13 @@ const convertToBackendChallenge = (challenge: EnhancedChallenge) => ({
     cloud_storage_key: challenge.mediaData[index]?.cloudStorageKey,
     storage_type: challenge.mediaData[index]?.storageType,
     duration_seconds: (challenge.mediaData[index]?.duration || 0) / 1000,
-    created_at: challenge.createdAt.toISOString(),
+    created_at: challenge.createdAt,
   })),
   lie_statement_id: challenge.statements.find(s => s.isLie)?.id || '',
   status: 'published',
   tags: challenge.tags,
-  created_at: challenge.createdAt.toISOString(),
-  updated_at: challenge.createdAt.toISOString(),
+  created_at: challenge.createdAt,
+  updated_at: challenge.createdAt,
   view_count: challenge.totalGuesses,
   guess_count: challenge.totalGuesses,
   correct_guess_count: Math.round(challenge.totalGuesses * (challenge.correctGuessRate / 100)),

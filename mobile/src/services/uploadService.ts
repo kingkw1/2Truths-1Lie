@@ -1,14 +1,14 @@
 /**
  * Mobile Video Upload Service
- * Handles secure video upload to backend with progress feedback and compression
+ * Handles secure video upload to backend with progress feedback
  */
 
 import * as FileSystem from 'expo-file-system';
 import { Platform } from 'react-native';
-import { mediaCompressor, CompressionOptions, CompressionProgress } from '../utils/mediaCompression.mobile';
+
 
 export interface UploadProgress {
-  stage: 'preparing' | 'compressing' | 'uploading' | 'finalizing';
+  stage: 'preparing' | 'uploading' | 'finalizing';
   progress: number; // 0 to 100
   bytesUploaded?: number;
   totalBytes?: number;
@@ -19,8 +19,6 @@ export interface UploadProgress {
 }
 
 export interface UploadOptions {
-  compress?: boolean;
-  compressionQuality?: number;
   maxFileSize?: number;
   chunkSize?: number;
   retryAttempts?: number;
@@ -34,7 +32,6 @@ export interface UploadResult {
   cloudStorageKey?: string;
   storageType?: 'local' | 'cloud' | 'cloud_fallback';
   fileSize?: number;
-  compressionRatio?: number;
   uploadTime?: number;
   error?: string;
 }
@@ -278,49 +275,6 @@ export class VideoUploadService {
   }
 
   /**
-   * Upload merged video with segment metadata
-   */
-  public async uploadMergedVideo(
-    videoUri: string,
-    filename: string,
-    duration: number,
-    segments: Array<{
-      statementIndex: number;
-      startTime: number;
-      endTime: number;
-      duration: number;
-    }>,
-    options: UploadOptions = {},
-    onProgress?: (progress: UploadProgress) => void
-  ): Promise<UploadResult> {
-    console.log('🎬 UPLOAD: Starting merged video upload with segment metadata');
-    console.log('🎬 UPLOAD: Segments:', JSON.stringify(segments, null, 2));
-
-    // Prepare merged video metadata
-    const mergedVideoMetadata = {
-      is_merged_video: true,
-      segment_count: segments.length,
-      segments: segments.map(segment => ({
-        statement_index: segment.statementIndex,
-        start_time_ms: segment.startTime,
-        end_time_ms: segment.endTime,
-        duration_ms: segment.duration,
-      })),
-      total_duration_ms: duration,
-    };
-
-    // Upload the merged video with metadata
-    return this.uploadVideoWithMetadata(
-      videoUri,
-      filename,
-      duration,
-      mergedVideoMetadata,
-      options,
-      onProgress
-    );
-  }
-
-  /**
    * Upload video with custom metadata
    */
   private async uploadVideoWithMetadata(
@@ -544,7 +498,6 @@ export class VideoUploadService {
         cloudStorageKey: result.media_id,
         storageType: 'cloud' as const,
         fileSize: fileSize,
-        compressionRatio: 1,
         uploadTime: Date.now() - startTime,
       };
 
@@ -718,7 +671,6 @@ export class VideoUploadService {
         cloudStorageKey: result.media_id,
         storageType: 'cloud' as const,
         fileSize: fileSize,
-        compressionRatio: 1,
         uploadTime: Date.now() - startTime,
       };
 

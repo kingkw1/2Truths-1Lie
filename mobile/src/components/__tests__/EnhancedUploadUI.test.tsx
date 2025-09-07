@@ -99,14 +99,6 @@ describe('EnhancedUploadUI', () => {
           mediaRecordingState: {},
           previewMode: false,
           individualRecordings: {},
-          videoMerging: {
-            isInProgress: false,
-            progress: 0,
-            stage: null,
-            currentSegment: null,
-            error: null,
-          },
-          mergedVideo: null,
         },
       },
     });

@@ -97,8 +97,8 @@ const TestChallengeListComponent: React.FC = () => {
           correctGuessRate: backendChallenge.guess_count > 0 
             ? Math.round((backendChallenge.correct_guess_count / backendChallenge.guess_count) * 100)
             : 50,
-          createdAt: new Date(backendChallenge.created_at),
-          lastPlayed: new Date(),
+          createdAt: backendChallenge.created_at,
+          lastPlayed: new Date().toISOString(),
           tags: backendChallenge.tags || [],
           isActive: backendChallenge.status === 'published',
         }));

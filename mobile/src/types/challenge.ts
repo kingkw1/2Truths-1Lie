@@ -45,11 +45,6 @@ export interface MediaCapture {
   fileSize?: number; // in bytes
   mimeType?: string;
   thumbnail?: string; // for video
-  // Compression metadata
-  originalSize?: number; // original file size before compression
-  compressionRatio?: number; // ratio of compression (originalSize / compressedSize)
-  compressionTime?: number; // time taken to compress in milliseconds
-  compressionQuality?: number; // quality setting used (0-1)
   // Upload metadata
   mediaId?: string; // server-assigned media ID
   uploadTime?: number; // time taken to upload in milliseconds
@@ -57,9 +52,6 @@ export interface MediaCapture {
   cloudStorageKey?: string; // Cloud storage key for direct access
   uploadSessionId?: string; // Upload session ID for tracking
   isUploaded?: boolean; // Whether media has been successfully uploaded to server
-  // Video segment metadata for merged videos
-  segments?: VideoSegment[]; // Array of segments within this video
-  isMergedVideo?: boolean; // Whether this is a merged video containing multiple statements
 }
 
 /**

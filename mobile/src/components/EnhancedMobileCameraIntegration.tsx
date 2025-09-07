@@ -17,7 +17,6 @@ import { useAppDispatch, useAppSelector } from '../store';
 import {
   setStatementMedia,
   setMediaRecordingError,
-  setMediaCompression,
   validateChallenge,
 } from '../store/slices/challengeCreationSlice';
 import { MobileCameraRecorder } from './MobileCameraRecorder';
@@ -117,7 +116,7 @@ export const EnhancedMobileCameraIntegration: React.FC<EnhancedMobileCameraInteg
       // Show success message with processed media info
       Alert.alert(
         '✅ Recording Saved',
-        `Statement ${statementIndex + 1} has been recorded successfully!\n\nDuration: ${processedMedia.duration ? Math.round(processedMedia.duration / 1000) : 'Unknown'}s\nSize: ${processedMedia.fileSize ? (processedMedia.fileSize / (1024 * 1024)).toFixed(1) + 'MB' : 'Unknown'}${processedMedia.compressionRatio ? `\nCompressed: ${Math.round((1 - processedMedia.compressionRatio) * 100)}%` : ''}`,
+        `Statement ${statementIndex + 1} has been recorded successfully!\n\nDuration: ${processedMedia.duration ? Math.round(processedMedia.duration / 1000) : 'Unknown'}s\nSize: ${processedMedia.fileSize ? (processedMedia.fileSize / (1024 * 1024)).toFixed(1) + 'MB' : 'Unknown'}`,
         [{ text: 'Continue', style: 'default' }],
         { cancelable: false }
       );
@@ -232,21 +231,6 @@ export const EnhancedMobileCameraIntegration: React.FC<EnhancedMobileCameraInteg
           <ActivityIndicator size="large" color="#4a90e2" />
           <Text style={styles.processingTitle}>Processing Recording</Text>
           <Text style={styles.processingStep}>{processingStep}</Text>
-          {recordingState?.isCompressing && recordingState.compressionProgress !== null && (
-            <View style={styles.progressContainer}>
-              <View style={styles.progressBar}>
-                <View 
-                  style={[
-                    styles.progressFill,
-                    { width: `${recordingState.compressionProgress}%` }
-                  ]} 
-                />
-              </View>
-              <Text style={styles.progressText}>
-                {recordingState.compressionProgress}% complete
-              </Text>
-            </View>
-          )}
         </View>
       </View>
     );
