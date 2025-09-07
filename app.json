@@ -1,12 +1,40 @@
 {
   "expo": {
+    "name": "2Truths-1Lie",
+    "slug": "two-truths-one-lie-game",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "icon": "./assets/app_icon.png",
+    "userInterfaceStyle": "light",
+    "splash": {
+      "image": "./assets/app_icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#ffffff"
+    },
+    "assetBundlePatterns": [
+      "**/*"
+    ],
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.kingkw1.twotruthsoneliegame"
+    },
+    "android": {
+      "package": "com.kingkw1.twotruthsoneliegame",
+      "adaptiveIcon": {
+        "foregroundImage": "./assets/app_icon.png",
+        "backgroundColor": "#FFFFFF"
+      }
+    },
+    "web": {
+      "favicon": "./assets/app_icon.png"
+    },
     "extra": {
       "eas": {
         "projectId": "7f16a081-e340-4410-84c5-c30352022ead"
       }
     },
-    "android": {
-      "package": "com.kingkw1.twotruthsoneliegame"
-    }
+    "plugins": [
+      "expo-dev-client"
+    ]
   }
 }

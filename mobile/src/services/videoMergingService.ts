@@ -1,27 +1,16 @@
 /**
  * Video Merging Service
  * Handles merging of three statement videos into a single video with segment metadata
- * Provides multiple merging strategies: FFmpeg (preferred), MediaLibrary, and fallback
+ * Uses FFmpeg Kit for development/production builds with native dependencies
  */
 
 import { Platform } from 'react-native';
 import * as FileSystem from 'expo-file-system';
 import * as MediaLibrary from 'expo-media-library';
-import { Audio } from 'expo-av';
+import { FFmpegKit, FFmpegKitConfig, ReturnCode } from 'ffmpeg-kit-react-native';
 import { MediaCapture, VideoSegment } from '../types';
 
-// Video merging service - simplified for Expo Go compatibility
-// Note: FFmpeg concatenation requires a development build
-let ffmpegVideoMerger: any = null;
-
-// Only try to load custom FFmpeg merger if available
-try {
-  const ffmpegModule = require('./ffmpegVideoMerger');
-  ffmpegVideoMerger = ffmpegModule.ffmpegVideoMerger;
-} catch (fallbackError) {
-  console.warn('⚠️ Custom FFmpeg merger not available, will use fallback methods');
-  ffmpegVideoMerger = null;
-}
+console.log('✅ Video Merging Service: Using expo-av for video composition');
 
 export interface VideoMergingOptions {
   compressionQuality?: number; // 0-1 scale, default 0.8
@@ -231,9 +220,9 @@ export class VideoMergingService {
       // Validate the preferred strategy is available
       switch (preferredStrategy) {
         case 'ffmpeg':
-          // For now, always fall back since FFmpeg isn't properly installed
-          console.warn('⚠️ FFmpeg not properly installed, falling back to enhanced metadata strategy');
-          break;
+          // Use FFmpeg Kit for video merging (development/production builds)
+          console.log('✅ Using FFmpeg Kit for video merging');
+          return 'ffmpeg';
         case 'native':
           // Check if MediaLibrary is available
           try {
@@ -250,9 +239,9 @@ export class VideoMergingService {
       }
     }
 
-    // Auto-determine best strategy - use fallback for now since FFmpeg isn't installed
-    console.log('🎯 Using enhanced fallback merging strategy (FFmpeg not installed)');
-    return 'fallback';
+    // Auto-determine best strategy - prefer FFmpeg Kit strategy
+    console.log('🎯 Auto-selecting FFmpeg Kit based video merging strategy');
+    return 'ffmpeg';
   }
 
   /**
@@ -432,7 +421,7 @@ export class VideoMergingService {
   }
 
   /**
-   * Perform FFmpeg-based video merging (highest quality)
+   * Perform FFmpeg based video merging (Development/Production builds)
    */
   private async performFFmpegMerge(
     videoUris: [string, string, string],
@@ -440,49 +429,136 @@ export class VideoMergingService {
     options: VideoMergingOptions,
     onProgress?: (progress: MergeProgress) => void
   ): Promise<MergeResult> {
-    if (!ffmpegVideoMerger) {
-      throw new Error('FFmpeg not available. Please install ffmpeg-kit-react-native package.');
-    }
-
     try {
-      console.log('🎬 Using FFmpeg for high-quality video merging...');
+      console.log('🎬 Using FFmpeg Kit for video merging...');
 
-      const result = await ffmpegVideoMerger.createConcatenatedVideo(
-        videoUris,
-        {
-          compressionQuality: options.compressionQuality,
-          outputFormat: options.outputFormat,
-          maxOutputSize: options.maxOutputSize,
-          targetResolution: options.targetResolution,
-          targetBitrate: options.targetBitrate,
-        },
-        (ffmpegProgress: any) => {
-          // Map FFmpeg progress to our progress format
-          const stageProgress = ffmpegProgress.progress || 0;
-          onProgress?.({
-            stage: ffmpegProgress.stage || 'merging',
-            progress: 30 + (stageProgress * 0.5), // Map to 30-80% range
-            currentSegment: ffmpegProgress.currentSegment,
-          });
-        }
-      );
+      onProgress?.({
+        stage: 'preparing',
+        progress: 10,
+      });
 
-      if (!result.success) {
-        throw new Error(result.error || 'FFmpeg merge failed');
+      // Create output file path
+      const outputPath = `${FileSystem.documentDirectory}merged_${Date.now()}.mp4`;
+
+      // Create a temporary file list for FFmpeg concat
+      const fileListPath = `${FileSystem.documentDirectory}filelist_${Date.now()}.txt`;
+      const fileListContent = videoUris.map(uri => `file '${uri}'`).join('\n');
+      
+      await FileSystem.writeAsStringAsync(fileListPath, fileListContent);
+
+      onProgress?.({
+        stage: 'merging',
+        progress: 30,
+      });
+
+      console.log('🔧 Starting FFmpeg video concatenation...');
+
+      // Use FFmpeg to concatenate videos
+      const success = await this.executeFFmpegConcat(fileListPath, outputPath, onProgress);
+
+      if (!success) {
+        throw new Error('FFmpeg concatenation failed');
       }
+
+      onProgress?.({
+        stage: 'finalizing',
+        progress: 80,
+      });
+
+      // Clean up temporary file list
+      await FileSystem.deleteAsync(fileListPath, { idempotent: true });
+
+      // Get file info
+      const fileInfo = await FileSystem.getInfoAsync(outputPath);
+      const totalDuration = segments.reduce((sum, segment) => sum + segment.duration, 0);
+      const fileSize = fileInfo.exists && 'size' in fileInfo ? fileInfo.size : 0;
+
+      console.log('✅ FFmpeg merge completed successfully');
 
       return {
         success: true,
-        mergedVideoUri: result.mergedVideoUri!,
-        segments: result.segments!,
-        totalDuration: result.totalDuration,
-        fileSize: result.fileSize,
-        compressionRatio: result.compressionRatio,
-        mergeStrategy: 'ffmpeg',
+        mergedVideoUri: outputPath,
+        segments,
+        totalDuration,
+        fileSize,
+        compressionRatio: 1.0,
+        mergeStrategy: 'ffmpeg-concat',
       };
     } catch (error: any) {
       console.error('❌ FFmpeg merge failed:', error);
-      throw error;
+      throw new Error(`FFmpeg merge failed: ${error.message}`);
+    }
+  }
+
+  /**
+   * Execute FFmpeg concatenation
+   */
+  private async executeFFmpegConcat(
+    fileListPath: string,
+    outputPath: string,
+    onProgress?: (progress: MergeProgress) => void
+  ): Promise<boolean> {
+    return new Promise((resolve) => {
+      const command = `-f concat -safe 0 -i "${fileListPath}" -c copy "${outputPath}"`;
+      
+      console.log('🔧 FFmpeg command:', command);
+
+      FFmpegKit.executeAsync(command, async (session) => {
+        const returnCode = await session.getReturnCode();
+        const output = await session.getOutput();
+        
+        if (ReturnCode.isSuccess(returnCode)) {
+          console.log('✅ FFmpeg concatenation successful');
+          onProgress?.({
+            stage: 'finalizing',
+            progress: 90,
+          });
+          resolve(true);
+        } else {
+          console.error('❌ FFmpeg concatenation failed:');
+          console.error('Return code:', returnCode);
+          console.error('Output:', output);
+          resolve(false);
+        }
+      });
+    });
+  }
+
+  /**
+   * Create video composition using server-side merging
+   * Since client-side video merging isn't available in Expo Go,
+   * we'll implement a server-side merge strategy that still reduces AWS costs
+   */
+  private async createVideoComposition(
+    videoAssets: Array<{ uri: string; timeRange: { start: number; duration: number } }>,
+    outputPath: string
+  ): Promise<{ uri: string }> {
+    try {
+      console.log('🔧 Using server-side video merging for AWS cost optimization');
+      
+      // For now, we'll use the individual video strategy
+      // The backend will handle merging when we upload
+      console.log('� Will upload individual videos for server-side merging');
+      
+      // Copy the first video as reference (this won't be the final approach)
+      const baseVideoUri = videoAssets[0].uri;
+      await FileSystem.copyAsync({
+        from: baseVideoUri,
+        to: outputPath
+      });
+
+      // TODO: Implement server-side merge request
+      // 1. Upload videos to temporary endpoint
+      // 2. Request merge operation
+      // 3. Get merged video URL
+      // 4. Delete temporary individual videos
+      
+      console.log('⚠️ Currently using first video as placeholder - server merge pending');
+      
+      return { uri: outputPath };
+    } catch (error: any) {
+      console.error('❌ Video composition setup failed:', error);
+      throw new Error(`Video composition failed: ${error.message}`);
     }
   }
 
@@ -605,37 +681,20 @@ export class VideoMergingService {
   }
 
   /**
-   * Get actual video durations using Expo AV
+   * Get actual video durations using FFmpeg
    */
   private async getActualVideoDurations(videoUris: [string, string, string]): Promise<number[]> {
     const durations: number[] = [];
     
     for (let i = 0; i < videoUris.length; i++) {
       try {
-        // Create a sound object to get duration (works for video files too)
-        const { sound } = await Audio.Sound.createAsync(
-          { uri: videoUris[i] },
-          { shouldPlay: false }
-        );
+        // Use FFmpeg to get video duration
+        const duration = await this.getVideoDurationWithFFmpeg(videoUris[i]);
+        durations.push(duration * 1000); // Convert to milliseconds
+      } catch (error: any) {
+        console.warn(`⚠️ Could not get duration for video ${i + 1}:`, error.message);
         
-        const status = await sound.getStatusAsync();
-        if (status.isLoaded && status.durationMillis) {
-          durations.push(status.durationMillis);
-        } else {
-          // Fallback to file size estimation if duration can't be determined
-          const fileInfo = await FileSystem.getInfoAsync(videoUris[i]);
-          const fileSize = fileInfo.exists && 'size' in fileInfo ? fileInfo.size : 0;
-          const estimatedDuration = Math.max(1000, (fileSize / (1024 * 1024)) * 10 * 1000);
-          durations.push(estimatedDuration);
-          console.warn(`Could not get duration for video ${i}, using estimate: ${estimatedDuration}ms`);
-        }
-        
-        // Clean up the sound object
-        await sound.unloadAsync();
-        
-      } catch (error) {
-        console.warn(`Failed to get duration for video ${i}:`, error);
-        // Fallback to file size estimation
+        // Fallback to file size estimation if duration can't be determined
         const fileInfo = await FileSystem.getInfoAsync(videoUris[i]);
         const fileSize = fileInfo.exists && 'size' in fileInfo ? fileInfo.size : 0;
         const estimatedDuration = Math.max(1000, (fileSize / (1024 * 1024)) * 10 * 1000);
@@ -645,6 +704,39 @@ export class VideoMergingService {
     
     console.log('📊 Actual video durations:', durations);
     return durations;
+  }
+
+  /**
+   * Get video duration using FFmpeg
+   */
+  private async getVideoDurationWithFFmpeg(videoUri: string): Promise<number> {
+    return new Promise((resolve, reject) => {
+      const command = `-i "${videoUri}" -f null -`;
+      
+      FFmpegKit.executeAsync(command, async (session) => {
+        const returnCode = await session.getReturnCode();
+        const output = await session.getOutput();
+        
+        if (ReturnCode.isSuccess(returnCode) || output.includes('Duration:')) {
+          // Parse duration from FFmpeg output
+          const durationMatch = output.match(/Duration: (\d{2}):(\d{2}):(\d{2})\.(\d{2})/);
+          
+          if (durationMatch) {
+            const hours = parseInt(durationMatch[1]);
+            const minutes = parseInt(durationMatch[2]);
+            const seconds = parseInt(durationMatch[3]);
+            const centiseconds = parseInt(durationMatch[4]);
+            
+            const totalSeconds = hours * 3600 + minutes * 60 + seconds + centiseconds / 100;
+            resolve(totalSeconds);
+          } else {
+            reject(new Error('Could not parse duration from FFmpeg output'));
+          }
+        } else {
+          reject(new Error(`FFmpeg failed with return code: ${returnCode}`));
+        }
+      });
+    });
   }
 
   /**
@@ -1030,31 +1122,19 @@ export class VideoMergingService {
         };
       }
       
-      // Try to get video duration using Expo AV
+      // Try to get video duration using FFmpeg
       try {
-        const { sound } = await Audio.Sound.createAsync(
-          { uri: outputUri },
-          { shouldPlay: false }
-        );
-        
-        const status = await sound.getStatusAsync();
-        let duration = 0;
-        
-        if (status.isLoaded && status.durationMillis) {
-          duration = status.durationMillis;
-        }
-        
-        await sound.unloadAsync();
+        const duration = await this.getVideoDurationWithFFmpeg(outputUri);
         
         return {
           isValid: true,
-          duration,
+          duration: duration * 1000, // Convert to milliseconds
           fileSize,
         };
         
-      } catch (audioError) {
-        // If we can't load it as audio/video, it might still be a valid file
-        console.warn('Could not validate video duration:', audioError);
+      } catch (ffmpegError) {
+        // If we can't get duration with FFmpeg, file might still be valid
+        console.warn('Could not validate video duration with FFmpeg:', ffmpegError);
         return {
           isValid: true,
           fileSize,

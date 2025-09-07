@@ -604,25 +604,25 @@ export class MobileMediaIntegrationService {
   }
 
   /**
-   * Check if FFmpeg is available for video processing
+   * Check if FFmpeg Kit is available for video processing
    */
-  private isFFmpegAvailable(): boolean {
+  private async isFFmpegAvailable(): Promise<boolean> {
     try {
-      // Try to import FFmpeg module and check if it's functional
-      const ffmpegModule = require('./ffmpegVideoMerger');
-      console.log('🔥 FFmpeg module loaded:', typeof ffmpegModule);
+      // Check if FFmpeg Kit is available (for development/production builds)
+      const FFmpegKit = require('ffmpeg-kit-react-native');
+      console.log('🔥 FFmpeg Kit module loaded:', typeof FFmpegKit);
       
-      // In Expo Go, FFmpeg is not available, so this should fail
-      // Return false for Expo Go environment
-      if (Platform.OS === 'android' || Platform.OS === 'ios') {
-        console.log('🔥 Running in mobile environment - FFmpeg not available in Expo Go');
-        return false;
+      // Test if FFmpeg Kit is functional by checking version
+      if (FFmpegKit.FFmpegKitConfig) {
+        console.log('✅ FFmpeg Kit is available - development/production build detected');
+        return true;
       }
       
-      return ffmpegModule && typeof ffmpegModule.ffmpegVideoMerger === 'function';
+      console.log('⚠️ FFmpeg Kit not functional');
+      return false;
     } catch (error: any) {
-      console.warn('⚠️ FFmpeg module not available:', error?.message);
-      console.log('⚠️ FFmpeg not available, skipping initialization');
+      console.warn('⚠️ FFmpeg Kit module not available:', error?.message);
+      console.log('⚠️ Running in Expo Go - FFmpeg not available');
       return false;
     }
   }
@@ -660,116 +660,16 @@ export class MobileMediaIntegrationService {
       console.log('🔥 FFmpeg Available:', ffmpegAvailable);
       
       if (!ffmpegAvailable) {
-        console.log('🔥🔥🔥 FFmpeg NOT AVAILABLE - USING INDIVIDUAL VIDEO STRATEGY 🔥🔥🔥');
-        
-        // Upload individual videos since we can't merge them
-        console.log('🔧 INDIVIDUAL: Starting upload of individual videos...');
-        
-        // Track uploaded media IDs for return value
-        const uploadedMediaIds: string[] = [];
-        
-        // Upload each video and update Redux state
-        for (let i = 0; i < recordingsArray.length; i++) {
-          const recording = recordingsArray[i];
-          if (recording?.url) {
-            console.log(`🔧 INDIVIDUAL: Uploading video ${i}...`);
-            
-            try {
-              // Upload the video using the upload service
-              const filename = `statement_${i}_${Date.now()}.mp4`;
-              const uploadResult = await videoUploadService.uploadVideo(
-                recording.url,
-                filename,
-                recording.duration || 0,
-                { 
-                  compress: false, // Keep original quality
-                  maxFileSize: this.config.maxFileSize,
-                  retryAttempts: 3,
-                  timeout: 60000
-                }
-              );
-              
-              if (!uploadResult.success) {
-                throw new Error(uploadResult.error || 'Upload failed');
-              }
-              
-              console.log(`✅ INDIVIDUAL: Video ${i} uploaded with mediaId:`, uploadResult.mediaId);
-              
-              // Store media ID for return value
-              uploadedMediaIds.push(uploadResult.mediaId!);
-              
-              // Update the individual recording in Redux with upload info
-              const updatedRecording = {
-                ...recording,
-                mediaId: uploadResult.mediaId,
-                isUploaded: true,
-                uploadedAt: new Date().toISOString()
-              };
-              
-              // Update Redux state
-              if (this.dispatch) {
-                this.dispatch(setIndividualRecording({ 
-                  statementIndex: i, 
-                  recording: updatedRecording 
-                }));
-              }
-              
-              console.log(`🔧 INDIVIDUAL: Updated Redux for video ${i}`);
-              
-            } catch (uploadError: any) {
-              console.error(`❌ INDIVIDUAL: Failed to upload video ${i}:`, uploadError);
-              throw new Error(`Failed to upload video for statement ${i + 1}: ${uploadError.message}`);
-            }
-          } else {
-            throw new Error(`Missing recording for statement ${i + 1}`);
-          }
-        }
-        
-        console.log('✅ INDIVIDUAL: All videos uploaded successfully');        // For Expo Go compatibility, skip merging and return individual videos with metadata
-        const totalDuration = recordingsArray.reduce((sum, recording) => sum + (recording.duration || 0), 0);
-        
-        console.log('🔥 Individual video durations:', recordingsArray.map(r => r.duration));
-        console.log('🔥 Total duration calculated:', totalDuration);
-        
-        // Create segment metadata for individual videos
-        const segments: VideoSegment[] = [];
-        let currentTime = 0;
-        
-        recordingsArray.forEach((recording, index) => {
-          const duration = recording.duration || 0;
-          segments.push({
-            statementIndex: index,
-            startTime: currentTime,
-            endTime: currentTime + duration,
-            duration,
-            originalDuration: duration,
-          });
-          currentTime += duration;
-        });
-
-        console.log('📊 UPLOAD_DEBUG: Individual videos strategy');
-        console.log('📊 UPLOAD_DEBUG: Total duration:', totalDuration, 'ms');
-        console.log('📊 UPLOAD_DEBUG: Individual videos count:', recordingsArray.length);
-        console.log('📊 UPLOAD_DEBUG: Final individual video info:', {
-          duration: totalDuration,
-          segmentCount: segments.length,
-          recordings: recordingsArray.map(r => ({ url: r.url, duration: r.duration }))
-        });
-
-        // Complete merging in Redux - skip since we don't have a merged video
-        // Individual videos will be handled separately
-        
-        console.log('✅ Individual video strategy completed (videos uploaded and ready for submit)');
-
-        return {
-          success: true,
-          mergedVideo: null, // No merged video - use individual videos
-          segments,
-          totalDuration,
-          useIndividualVideos: true, // Flag to indicate individual video usage
-          uploadedMediaIds, // Include the uploaded media IDs
-        };
+        console.error('� FFmpeg NOT AVAILABLE - Cannot proceed without video merging capability');
+        throw new Error('FFmpeg is required for video merging. Please use a development build or standalone app.');
       }
+
+      // FFmpeg is available, proceed with merged video logic
+
+
+
+
+
 
       // Original merged video logic for when FFmpeg is available
       const videoUris: [string, string, string] = [

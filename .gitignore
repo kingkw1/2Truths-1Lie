@@ -94,6 +94,10 @@ __pycache__/
 google-services.json
 GoogleService-Info.plist
 
+# APK builds
+*.apk
+*.aab
+
 # Virtual environments
 .vscode/
 .idea/

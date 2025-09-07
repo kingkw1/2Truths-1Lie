@@ -21,7 +21,7 @@
         "backgroundColor": "#4a90e2"
       },
       "package": "com.kingkw1.twotruthsoneliegame",
-      "versionCode": 20,
+      "versionCode": 23,
       "permissions": [
         "CAMERA",
         "RECORD_AUDIO",
