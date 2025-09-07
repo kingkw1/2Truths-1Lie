@@ -57,6 +57,9 @@ pattern: "backend/**/*"
 - `POST /mobile/v1/challenges` - Create challenges with merged video and segment timecodes
 - `GET /mobile/v1/health` - Mobile app health check and feature flags
 
+### Server-Side Merging Endpoint
+To support robust and scalable media merging without client dependency complexity, the backend exposes `/mobile/v1/challenges/upload-for-merge`. This endpoint accepts multiple raw video uploads, merges them server-side using FFmpeg, stores the merged video in cloud storage, and returns segment metadata and URLs for client consumption.
+
 ## Mobile Performance Considerations
 - Implement pagination for list endpoints to reduce mobile data usage
 - Use efficient media encoding and compression for mobile merged video uploads

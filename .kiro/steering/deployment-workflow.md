@@ -51,4 +51,9 @@ include: always
 - Maintain mobile app signing certificates and provisioning profiles securely
 - Backend deployment docs focused on mobile API requirements
 
----
+## Backend Deployment Notes for FFmpeg Merging Service
+- Ensure hosting environment supports native FFmpeg binaries (Railway, Render, AWS EC2 with FFmpeg installed).
+- Use Docker containers if possible to encapsulate FFmpeg environment for consistent builds.
+- Monitor FFmpeg process logs and resource usage to tune performance.
+- Test merge endpoint under staging environments before production.
+- Configure CI/CD pipelines to validate FFmpeg build and backend integration.

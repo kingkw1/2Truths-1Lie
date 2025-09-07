@@ -58,5 +58,10 @@ pattern: "**/*.test.*"
 - Include test video files with known compression ratios and segment boundaries
 - Mock video processing libraries for unit testing without actual file operations
 
----
-
+## Server side merging
+- Add unit and integration tests for backend merging services, including handling video uploads, FFmpeg execution, and error conditions.
+- Test merge status and progress API endpoints with various scenarios, including failure and retry logic.
+- Perform thorough e2e testing of client upload of multiple videos to merge endpoint and playing back merged video segments.
+- Include mobile component tests covering playback UI controls for segmented merged videos.
+- Validate server-side compression effectiveness and metadata accuracy.
+- Use mock video files with known segment boundaries to verify segmentation correctness.
