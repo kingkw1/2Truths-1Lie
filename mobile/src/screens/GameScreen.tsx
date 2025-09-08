@@ -141,6 +141,9 @@ const convertBackendChallenge = (backendChallenge: BackendChallenge): EnhancedCh
 };
 
 export const GameScreen: React.FC = () => {
+  console.log('=== GAMESCREEN COMPONENT STARTED ===');
+  console.log('GameScreen.tsx: GameScreen component rendering');
+  
   const dispatch = useAppDispatch();
   const {
     availableChallenges,
