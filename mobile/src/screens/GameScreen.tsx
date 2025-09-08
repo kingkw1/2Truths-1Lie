@@ -83,7 +83,7 @@ const convertBackendChallenge = (backendChallenge: BackendChallenge): EnhancedCh
               return individualMedia;
             } else {
               // Only merged video available - create merged video entry
-              console.log('🎬 MERGED_STRATEGY: Using merged video (no individual URLs available)');
+              // console.log('🎬 MERGED_STRATEGY: Using merged video (no individual URLs available)');
               const mergedVideo = {
                 type: 'video' as const,
                 streamingUrl: mergedVideoUrl,
@@ -141,9 +141,6 @@ const convertBackendChallenge = (backendChallenge: BackendChallenge): EnhancedCh
 };
 
 export const GameScreen: React.FC = () => {
-  console.log('=== GAMESCREEN COMPONENT STARTED ===');
-  console.log('GameScreen.tsx: GameScreen component rendering');
-  
   const dispatch = useAppDispatch();
   const {
     availableChallenges,

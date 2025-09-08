@@ -121,9 +121,9 @@ export class AuthService {
    * Get current auth token
    */
   public getAuthToken(): string | null {
-    console.log('🔐 AUTH SERVICE: getAuthToken called, current token exists:', !!this.authToken);
-    if (this.authToken) {
-      console.log('🔐 AUTH SERVICE: Token preview:', this.authToken.substring(0, 30) + '...');
+    // Reduced logging frequency - only log if no token exists
+    if (!this.authToken) {
+      console.log('🔐 AUTH SERVICE: No token available');
     }
     return this.authToken;
   }

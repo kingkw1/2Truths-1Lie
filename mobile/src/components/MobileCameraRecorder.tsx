@@ -98,16 +98,20 @@ export const MobileCameraRecorder: React.FC<MobileCameraRecorderProps> = ({
   const initializationRef = useRef(false);
   const isInitializing = useRef(false);
 
-  // Debug effect to track Redux state changes
+  // Debug effect to track significant Redux state changes
   useEffect(() => {
-    console.log('🔄 Redux state changed:', {
-      statementIndex,
-      isRecording: isRecordingFromRedux,
-      isPaused: isPausedFromRedux,
-      isLoading,
-      recordingState
-    });
-  }, [isRecordingFromRedux, isPausedFromRedux, isLoading, statementIndex]);
+    // Only log recording state transitions, not every render
+    if (isRecordingFromRedux !== prevRecordingState.current) {
+      console.log('🔄 Recording state changed:', {
+        statementIndex,
+        isRecording: isRecordingFromRedux,
+        duration: recordingState?.duration || 0
+      });
+      prevRecordingState.current = isRecordingFromRedux;
+    }
+  }, [isRecordingFromRedux, statementIndex]);
+
+  const prevRecordingState = useRef(false);
 
   // Initialize component and check permissions
   useEffect(() => {
@@ -778,9 +782,7 @@ export const MobileCameraRecorder: React.FC<MobileCameraRecorderProps> = ({
   // SIMPLIFIED: Assume permissions are granted if user reached this screen
   const needsPermissions = false; // Skip permission check - assume granted via device settings
   
-  console.log('🔍 Permission check render (SIMPLIFIED - ASSUMED GRANTED)');
-  
-  // Add render debug alert
+  // Add render debug alert (only during testing if needed)
   if (needsPermissions && !permissionsChecked) {
     // Only show alert once to avoid spam
     React.useEffect(() => {
