@@ -190,7 +190,7 @@ describe('Challenge List UI Validation', () => {
   beforeEach(() => {
     store = createTestStore();
     jest.clearAllMocks();
-    
+
     // Reset API mocks
     mockRealChallengeAPI.getChallenges.mockReset();
     mockRealChallengeAPI.createChallenge.mockReset();
@@ -225,8 +225,8 @@ describe('Challenge List UI Validation', () => {
 
     it('should show loading state during initial load', async () => {
       // Mock API with delay
-      mockRealChallengeAPI.getChallenges.mockImplementation(() => 
-        new Promise(resolve => 
+      mockRealChallengeAPI.getChallenges.mockImplementation(() =>
+        new Promise(resolve =>
           setTimeout(() => resolve({
             success: true,
             data: [convertToBackendChallenge(mockChallenge1)],
@@ -623,7 +623,7 @@ describe('Challenge List UI Validation', () => {
         act(() => {
           store.dispatch({ type: 'guessingGame/setLoading', payload: true });
         });
-        
+
         await waitFor(() => {
           expect(getByText('By Test User 1')).toBeTruthy();
         });

@@ -189,6 +189,10 @@ class Challenge(BaseModel):
     merged_video_metadata: Optional[MergedVideoMetadata] = Field(None, description="Structured metadata for merged video segments")
     # Legacy merged video metadata (for backward compatibility)
     legacy_merged_metadata: Optional[Dict[str, Any]] = Field(None, description="Legacy metadata format for merged video segments")
+    # Server-side merged video fields
+    merged_video_url: Optional[str] = Field(None, description="URL of the server-merged video file")
+    merged_video_file_id: Optional[str] = Field(None, description="File ID of the server-merged video")
+    merge_session_id: Optional[str] = Field(None, description="ID of the merge session that created this video")
     created_at: datetime = Field(default_factory=datetime.utcnow)
     updated_at: datetime = Field(default_factory=datetime.utcnow)
     published_at: Optional[datetime] = None
@@ -213,6 +217,10 @@ class CreateChallengeRequest(BaseModel):
     merged_video_metadata: Optional[MergedVideoMetadata] = Field(None, description="Structured metadata for merged video segments")
     # Legacy support for old metadata format
     legacy_merged_metadata: Optional[Dict[str, Any]] = Field(None, description="Legacy metadata format for merged video segments")
+    # New fields for server-side merged video
+    merged_video_url: Optional[str] = Field(None, description="URL of the server-merged video file")
+    merged_video_file_id: Optional[str] = Field(None, description="File ID of the server-merged video")
+    merge_session_id: Optional[str] = Field(None, description="ID of the merge session that created this video")
     
 class CreateChallengeResponse(BaseModel):
     """Response from challenge creation"""

@@ -318,6 +318,58 @@ export class VideoUploadService {
   }
 
   /**
+   * Upload multiple videos for server-side merging
+   */
+  public async uploadVideosForMerge(
+    videos: Array<{
+      uri: string;
+      filename: string;
+      duration: number;
+      statementIndex: number;
+    }>,
+    options: UploadOptions = {},
+    onProgress?: (progress: UploadProgress) => void
+  ): Promise<{
+    success: boolean;
+    mergeSessionId?: string;
+    mergedVideoUrl?: string;
+    segmentMetadata?: Array<{
+      statementIndex: number;
+      startTime: number;
+      endTime: number;
+    }>;
+    error?: string;
+  }> {
+    const maxRetries = options.retryAttempts ?? 2;
+    let lastError: Error;
+
+    for (let attempt = 0; attempt <= maxRetries; attempt++) {
+      try {
+        if (attempt > 0) {
+          console.log(`🔄 MERGE_UPLOAD: Retry attempt ${attempt}/${maxRetries}`);
+          const delay = Math.min(1000 * Math.pow(2, attempt - 1), 5000);
+          await new Promise(resolve => setTimeout(resolve, delay));
+        }
+
+        return await this._uploadVideosForMergeAttempt(videos, options, onProgress);
+      } catch (error: any) {
+        lastError = error;
+        console.warn(`❌ MERGE_UPLOAD: Attempt ${attempt + 1} failed:`, error.message);
+        
+        if (error.name === 'AbortError' || error.message.includes('401') || error.message.includes('403')) {
+          throw error;
+        }
+        
+        if (attempt === maxRetries) {
+          throw error;
+        }
+      }
+    }
+
+    throw lastError!;
+  }
+
+  /**
    * Upload video with retry logic
    */
   public async uploadVideo(
@@ -357,6 +409,187 @@ export class VideoUploadService {
     }
 
     throw lastError!;
+  }
+
+  /**
+   * Single attempt to upload multiple videos for merging (internal method)
+   */
+  private async _uploadVideosForMergeAttempt(
+    videos: Array<{
+      uri: string;
+      filename: string;
+      duration: number;
+      statementIndex: number;
+    }>,
+    options: UploadOptions = {},
+    onProgress?: (progress: UploadProgress) => void
+  ): Promise<{
+    success: boolean;
+    mergeSessionId?: string;
+    mergedVideoUrl?: string;
+    segmentMetadata?: Array<{
+      statementIndex: number;
+      startTime: number;
+      endTime: number;
+    }>;
+    error?: string;
+  }> {
+    const startTime = Date.now();
+    const uploadId = `merge_upload_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
+    
+    try {
+      console.log('🚀 MERGE_UPLOAD: Starting multi-video upload for merging...');
+      console.log('🚀 MERGE_UPLOAD: Videos count:', videos.length);
+      console.log('🚀 MERGE_UPLOAD: Base URL:', this.baseUrl);
+      
+      // Validate we have exactly 3 videos
+      if (videos.length !== 3) {
+        throw new Error('Exactly 3 videos are required for challenge creation');
+      }
+
+      // Ensure we have an auth token
+      if (!this.authToken) {
+        console.log('🔐 MERGE_UPLOAD: No auth token found, initializing auth service...');
+        const { authService } = await import('./authService');
+        await authService.initialize();
+        const token = authService.getAuthToken();
+        if (token) {
+          this.setAuthToken(token);
+          console.log('✅ MERGE_UPLOAD: Auth token acquired for upload');
+        } else {
+          throw new Error('Failed to acquire authentication token for upload');
+        }
+      }
+
+      // Test network connectivity
+      const isConnected = await this.testNetworkConnectivity();
+      if (!isConnected) {
+        throw new Error('Network connection failed - please check your internet connection');
+      }
+      
+      // Create abort controller for this upload
+      const abortController = new AbortController();
+      this.activeUploads.set(uploadId, abortController);
+
+      onProgress?.({ stage: 'preparing', progress: 5, startTime });
+
+      // Validate all video files exist
+      for (const video of videos) {
+        const fileInfo = await FileSystem.getInfoAsync(video.uri);
+        if (!fileInfo.exists) {
+          throw new Error(`Video file not found for statement ${video.statementIndex + 1}`);
+        }
+      }
+
+      onProgress?.({ stage: 'preparing', progress: 15, startTime });
+
+      // Get auth headers
+      const authHeaders = this.getAuthHeaders(false);
+      console.log('🔐 MERGE_UPLOAD: Auth headers prepared');
+      
+      // Prepare form data with multiple video files
+      const formData = new FormData();
+      
+      // Add each video file with its statement index
+      for (const video of videos) {
+        formData.append(`video_${video.statementIndex}`, {
+          uri: video.uri,
+          type: 'video/mp4',
+          name: video.filename,
+        } as any);
+        
+        // Add metadata for each video
+        formData.append(`metadata_${video.statementIndex}`, JSON.stringify({
+          statementIndex: video.statementIndex,
+          duration: video.duration,
+          filename: video.filename,
+        }));
+      }
+
+      console.log('📦 MERGE_UPLOAD: FormData prepared with 3 videos');
+
+      onProgress?.({ stage: 'uploading', progress: 25, startTime });
+
+      const uploadUrl = `${this.baseUrl}/api/v1/challenge-videos/upload-for-merge`;
+      console.log('🌐 MERGE_UPLOAD: Upload URL:', uploadUrl);
+
+      // Create timeout promise
+      const timeoutMs = options?.timeout || 120000; // 2 minute timeout for multiple videos
+      const timeoutPromise = new Promise((_, reject) => {
+        const timeoutId = setTimeout(() => {
+          reject(new Error(`Multi-video upload timeout after ${timeoutMs}ms`));
+        }, timeoutMs);
+        
+        abortController.signal.addEventListener('abort', () => {
+          clearTimeout(timeoutId);
+        });
+      });
+
+      // Upload to merge endpoint
+      console.log('🌐 MERGE_UPLOAD: Making fetch request...');
+      
+      const response = await Promise.race([
+        fetch(uploadUrl, {
+          method: 'POST',
+          headers: authHeaders,
+          body: formData,
+          signal: abortController.signal,
+        }),
+        timeoutPromise
+      ]) as Response;
+
+      console.log('📡 MERGE_UPLOAD: Response received - Status:', response.status);
+
+      if (!response.ok) {
+        const errorText = await response.text().catch(() => 'Unknown error');
+        console.error('❌ MERGE_UPLOAD: Upload failed:', response.status, errorText);
+        throw new Error(`Multi-video upload failed: ${response.status} ${errorText}`);
+      }
+
+      const result = await response.json();
+      console.log('✅ MERGE_UPLOAD: Upload successful:', result);
+      
+      onProgress?.({ stage: 'finalizing', progress: 90, startTime });
+
+      // Clean up
+      this.activeUploads.delete(uploadId);
+      
+      onProgress?.({ stage: 'finalizing', progress: 100, startTime });
+
+      return {
+        success: true,
+        mergeSessionId: result.merge_session_id,
+        mergedVideoUrl: result.merged_video_url,
+        segmentMetadata: result.segment_metadata,
+      };
+
+    } catch (error: any) {
+      // Clean up on error
+      this.activeUploads.delete(uploadId);
+      
+      if (error.name === 'AbortError') {
+        console.log('⚠️ MERGE_UPLOAD: Upload cancelled by user');
+        return {
+          success: false,
+          error: 'Upload cancelled by user',
+        };
+      }
+
+      console.error('❌ MERGE_UPLOAD: Upload error:', error);
+
+      // Use enhanced error handling service
+      const { errorHandlingService } = await import('./errorHandlingService');
+      const errorDetails = errorHandlingService.handleUploadError(error, {
+        fileName: 'merged_videos',
+        uploadProgress: 0,
+        sessionId: uploadId,
+      });
+      
+      return {
+        success: false,
+        error: errorDetails.userMessage,
+      };
+    }
   }
 
   /**

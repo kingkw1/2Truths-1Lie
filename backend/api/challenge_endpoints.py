@@ -112,19 +112,20 @@ async def get_challenge(
 
 
 @router.get("/", response_model=dict)
-async def list_challenges(
+async def list_challenges_authenticated(
     skip: int = 0,
     limit: int = 20,
     page: Optional[int] = None,
     page_size: Optional[int] = None,
-    public_only: bool = True,
-    user_id: Optional[str] = Depends(get_current_user_optional)
+    include_drafts: bool = False,
+    user_id: str = Depends(get_current_user)
 ) -> dict:
     """
-    List challenges with pagination
+    List challenges with merged video data (authenticated endpoint)
+    Returns challenges with complete merged video metadata including segment information
     """
     try:
-        logger.info(f"User {user_id or 'anonymous'} listing challenges (skip={skip}, limit={limit}, page={page}, page_size={page_size}, public_only={public_only})")
+        logger.info(f"Authenticated user {user_id} listing challenges (skip={skip}, limit={limit}, page={page}, page_size={page_size}, include_drafts={include_drafts})")
         
         # Handle both pagination styles
         if page is not None and page_size is not None:
@@ -136,18 +137,115 @@ async def list_challenges(
             actual_page = (skip // limit) + 1 if limit > 0 else 1
             actual_page_size = limit
         
-        # Set status filter based on public_only flag - for public access, only show published challenges
+        # Set status filter - authenticated users can see published challenges and optionally their drafts
         from models import ChallengeStatus
-        status_filter = ChallengeStatus.PUBLISHED if public_only else None
+        status_filter = None if include_drafts else ChallengeStatus.PUBLISHED
+        creator_filter = user_id if include_drafts else None
         
         challenges, total_count = await challenge_service.list_challenges(
             page=actual_page,
             page_size=actual_page_size,
-            creator_id=None if public_only else None,
+            creator_id=creator_filter,
             status=status_filter
         )
         
-        logger.debug(f"Retrieved {len(challenges)} challenges")
+        logger.debug(f"Retrieved {len(challenges)} challenges for authenticated user")
+        
+        # Enhance challenges with merged video data
+        enhanced_challenges = []
+        for challenge in challenges:
+            challenge_dict = challenge.model_dump()
+            
+            # Add merged video information if available
+            if challenge.is_merged_video:
+                challenge_dict["merged_video_info"] = {
+                    "has_merged_video": True,
+                    "merged_video_url": challenge.merged_video_url,
+                    "merged_video_file_id": challenge.merged_video_file_id,
+                    "merge_session_id": challenge.merge_session_id
+                }
+                
+                # Add segment metadata
+                if challenge.merged_video_metadata:
+                    challenge_dict["merged_video_info"]["metadata"] = {
+                        "total_duration": challenge.merged_video_metadata.total_duration,
+                        "compression_applied": challenge.merged_video_metadata.compression_applied,
+                        "original_total_duration": challenge.merged_video_metadata.original_total_duration,
+                        "segments": [
+                            {
+                                "statement_index": segment.statement_index,
+                                "start_time": segment.start_time,
+                                "end_time": segment.end_time,
+                                "duration": segment.duration
+                            }
+                            for segment in challenge.merged_video_metadata.segments
+                        ]
+                    }
+                elif challenge.legacy_merged_metadata:
+                    challenge_dict["merged_video_info"]["legacy_metadata"] = challenge.legacy_merged_metadata
+            else:
+                challenge_dict["merged_video_info"] = {
+                    "has_merged_video": False
+                }
+            
+            enhanced_challenges.append(challenge_dict)
+        
+        has_next = (actual_page * actual_page_size) < total_count
+        
+        return {
+            "challenges": enhanced_challenges,
+            "total_count": total_count,
+            "page": actual_page,
+            "page_size": actual_page_size,
+            "has_next": has_next,
+            "authenticated": True,
+            "user_id": user_id
+        }
+        
+    except Exception as e:
+        logger.error(f"Failed to list challenges for authenticated user {user_id}: {str(e)}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to list challenges"
+        )
+
+
+@router.get("/public", response_model=dict)
+async def list_challenges_public(
+    skip: int = 0,
+    limit: int = 20,
+    page: Optional[int] = None,
+    page_size: Optional[int] = None,
+    user_id: Optional[str] = Depends(get_current_user_optional)
+) -> dict:
+    """
+    List public challenges (legacy endpoint for backward compatibility)
+    """
+    try:
+        logger.info(f"User {user_id or 'anonymous'} listing public challenges (skip={skip}, limit={limit}, page={page}, page_size={page_size})")
+        
+        # Handle both pagination styles
+        if page is not None and page_size is not None:
+            # Use page/page_size style
+            actual_page = page
+            actual_page_size = page_size
+        else:
+            # Convert skip/limit to page/page_size for service layer
+            actual_page = (skip // limit) + 1 if limit > 0 else 1
+            actual_page_size = limit
+        
+        # Only show published challenges for public access
+        from models import ChallengeStatus
+        status_filter = ChallengeStatus.PUBLISHED
+        
+        challenges, total_count = await challenge_service.list_challenges(
+            page=actual_page,
+            page_size=actual_page_size,
+            creator_id=None,
+            status=status_filter
+        )
+        
+        logger.debug(f"Retrieved {len(challenges)} public challenges")
         
         has_next = (actual_page * actual_page_size) < total_count
         
@@ -160,7 +258,7 @@ async def list_challenges(
         }
         
     except Exception as e:
-        logger.error(f"Failed to list challenges: {str(e)}", exc_info=True)
+        logger.error(f"Failed to list public challenges: {str(e)}", exc_info=True)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to list challenges"

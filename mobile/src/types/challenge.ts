@@ -52,6 +52,9 @@ export interface MediaCapture {
   cloudStorageKey?: string; // Cloud storage key for direct access
   uploadSessionId?: string; // Upload session ID for tracking
   isUploaded?: boolean; // Whether media has been successfully uploaded to server
+  // Merged video metadata
+  isMergedVideo?: boolean; // Whether this is a merged video with segments
+  segments?: VideoSegment[]; // Segment metadata for merged videos
 }
 
 /**

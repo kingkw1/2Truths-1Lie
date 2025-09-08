@@ -94,18 +94,35 @@ class GameplayValidationService:
                     {"lie_index": request.lie_statement_index, "valid_range": f"0-{len(request.statements)-1}"}
                 )
             
-            # Validate each statement has required media
+            # Validate media - skip individual validation for server-side merged videos
             media_validation_results = []
-            for i, statement_data in enumerate(request.statements):
-                media_result = await self._validate_statement_media(statement_data, upload_service, i)
-                media_validation_results.append(media_result)
+            
+            # Check if this is a server-side merged video
+            if request.is_merged_video and request.merged_video_url and request.merged_video_metadata:
+                # Server-side merged video - validate merged video metadata instead
+                merged_validation = self._validate_merged_video_metadata(request)
+                if not merged_validation.is_valid:
+                    return merged_validation
                 
-                if not media_result.is_valid:
-                    return ValidationResult(
-                        False,
-                        f"Statement {i} media validation failed: {media_result.message}",
-                        {"statement_index": i, "media_error": media_result.details}
-                    )
+                # Create placeholder validation results for each statement
+                for i in range(len(request.statements)):
+                    media_validation_results.append(ValidationResult(
+                        True,
+                        f"Statement {i} uses server-merged video",
+                        {"statement_index": i, "merged_video": True}
+                    ))
+            else:
+                # Individual media files - validate each statement
+                for i, statement_data in enumerate(request.statements):
+                    media_result = await self._validate_statement_media(statement_data, upload_service, i)
+                    media_validation_results.append(media_result)
+                    
+                    if not media_result.is_valid:
+                        return ValidationResult(
+                            False,
+                            f"Statement {i} media validation failed: {media_result.message}",
+                            {"statement_index": i, "media_error": media_result.details}
+                        )
             
             # Validate title if provided
             if request.title and len(request.title.strip()) == 0:
@@ -198,6 +215,72 @@ class GameplayValidationService:
                 False,
                 f"Error validating statement media: {str(e)}",
                 {"statement_index": statement_index, "error": str(e)}
+            )
+    
+    def _validate_merged_video_metadata(self, request: CreateChallengeRequest) -> ValidationResult:
+        """Validate server-side merged video metadata"""
+        try:
+            # Validate merged video URL
+            if not request.merged_video_url:
+                return ValidationResult(
+                    False,
+                    "Merged video URL is required for server-side merged videos",
+                    {"merged_video_url": request.merged_video_url}
+                )
+            
+            # Validate merged video metadata
+            if not request.merged_video_metadata:
+                return ValidationResult(
+                    False,
+                    "Merged video metadata is required for server-side merged videos",
+                    {"merged_video_metadata": None}
+                )
+            
+            # Validate segment count matches statement count
+            expected_segments = len(request.statements)
+            actual_segments = len(request.merged_video_metadata.segments)
+            
+            if actual_segments != expected_segments:
+                return ValidationResult(
+                    False,
+                    f"Merged video must have {expected_segments} segments, got {actual_segments}",
+                    {"expected_segments": expected_segments, "actual_segments": actual_segments}
+                )
+            
+            # Validate segment indices
+            segment_indices = {segment.statement_index for segment in request.merged_video_metadata.segments}
+            expected_indices = set(range(expected_segments))
+            
+            if segment_indices != expected_indices:
+                return ValidationResult(
+                    False,
+                    f"Segment indices must be {expected_indices}, got {segment_indices}",
+                    {"expected_indices": list(expected_indices), "actual_indices": list(segment_indices)}
+                )
+            
+            # Validate total duration is positive
+            if request.merged_video_metadata.total_duration <= 0:
+                return ValidationResult(
+                    False,
+                    "Merged video total duration must be positive",
+                    {"total_duration": request.merged_video_metadata.total_duration}
+                )
+            
+            return ValidationResult(
+                True,
+                "Merged video metadata is valid",
+                {
+                    "merged_video_url": request.merged_video_url,
+                    "total_duration": request.merged_video_metadata.total_duration,
+                    "segment_count": len(request.merged_video_metadata.segments)
+                }
+            )
+            
+        except Exception as e:
+            return ValidationResult(
+                False,
+                f"Error validating merged video metadata: {str(e)}",
+                {"error": str(e)}
             )
     
     def _validate_video_requirements(

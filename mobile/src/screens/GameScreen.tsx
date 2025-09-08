@@ -28,6 +28,7 @@ import { EnhancedChallenge, GuessResult } from '../types';
 import { ChallengeCreationScreen } from './ChallengeCreationScreen';
 import AnimatedFeedback from '../shared/AnimatedFeedback';
 import SimpleVideoPlayer from '../components/SimpleVideoPlayer';
+import SegmentedVideoPlayer from '../components/SegmentedVideoPlayer';
 import { realChallengeAPI, Challenge as BackendChallenge } from '../services/realChallengeAPI';
 import { errorHandlingService } from '../services/errorHandlingService';
 
@@ -429,17 +430,26 @@ export const GameScreen: React.FC = () => {
   );
 
   const renderGameplay = () => {
-    // Get all individual videos - with the removal of client-side merging, all videos are individual
-    const individualVideos = selectedChallenge?.mediaData || [];
+    const mediaData = selectedChallenge?.mediaData || [];
+    
+    // Check if we have a merged video with segments
+    const mergedVideo = mediaData.find(media => media.isMergedVideo && media.segments);
+    const hasMergedVideo = !!mergedVideo;
+    
+    // Get individual videos (non-merged)
+    const individualVideos = mediaData.filter(media => !media.isMergedVideo);
     const hasIndividualVideos = individualVideos.length === 3; // For 3-statement challenges
-    const hasAnyVideo = hasIndividualVideos;
+    
+    const hasAnyVideo = hasMergedVideo || hasIndividualVideos;
 
     // Debug logging
     console.log('🎥 RENDER GAMEPLAY:', {
       selectedChallengeId: selectedChallenge?.id,
-      mediaDataCount: selectedChallenge?.mediaData?.length,
+      mediaDataCount: mediaData.length,
+      hasMergedVideo,
       hasIndividualVideos,
       individualVideosCount: individualVideos.length,
+      mergedVideoSegments: mergedVideo?.segments?.length || 0,
     });
 
     return (
@@ -459,8 +469,30 @@ export const GameScreen: React.FC = () => {
           </TouchableOpacity>
         )}
 
-        {/* Video Player for Individual Videos */}
-        {showVideoPlayer && hasIndividualVideos && (
+        {/* Video Player - Merged Video with Segments */}
+        {showVideoPlayer && hasMergedVideo && mergedVideo && (
+          <View style={styles.videoPlayerContainer}>
+            <Text style={styles.debugText}>
+              Merged Video with {mergedVideo.segments?.length || 0} segments
+            </Text>
+            <Text style={styles.debugText}>
+              URL: {mergedVideo.streamingUrl?.substring(0, 80)}...
+            </Text>
+            <SegmentedVideoPlayer
+              key={`merged-video-${mergedVideo.mediaId}`}
+              mergedVideo={mergedVideo}
+              segments={mergedVideo.segments || []}
+              statementTexts={currentSession?.statements.map((stmt: any) => stmt.text) || []}
+              onSegmentSelect={(segmentIndex: number) => {
+                console.log(`🎬 GAMESCREEN: Selected merged video segment ${segmentIndex}`);
+              }}
+              autoPlay={false}
+            />
+          </View>
+        )}
+
+        {/* Video Player - Individual Videos */}
+        {showVideoPlayer && !hasMergedVideo && hasIndividualVideos && (
           <View style={styles.videoPlayerContainer}>
             <Text style={styles.debugText}>
               Individual Videos: {individualVideos.length}
@@ -475,7 +507,7 @@ export const GameScreen: React.FC = () => {
               individualVideos={individualVideos}
               statementTexts={currentSession?.statements.map((stmt: any) => stmt.text) || []}
               onSegmentSelect={(segmentIndex: number) => {
-                console.log(`🎬 GAMESCREEN: Selected segment ${segmentIndex}`);
+                console.log(`🎬 GAMESCREEN: Selected individual video segment ${segmentIndex}`);
                 console.log(`🎬 GAMESCREEN: Individual videos:`, individualVideos.map(v => v.streamingUrl));
               }}
             />

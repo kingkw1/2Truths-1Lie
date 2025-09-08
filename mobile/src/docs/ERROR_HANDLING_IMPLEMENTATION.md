@@ -1,198 +1,433 @@
-# Error Handling Implementation Summary
+# Robust Error Handling Implementation
+
+This document describes the comprehensive error handling system implemented for upload and playback operations in the mobile application.
 
 ## Overview
 
-This document describes the comprehensive error handling system implemented for challenge load failures and other API operations in the mobile app.
+The error handling system provides:
+- **Categorized Error Types**: Network, upload, playback, merge, storage, auth, validation, and unknown errors
+- **Severity Levels**: Low, medium, high, and critical error classification
+- **Automated Recovery**: Automatic error recovery strategies where possible
+- **User-Friendly Messages**: Clear, actionable error messages for users
+- **Retry Mechanisms**: Intelligent retry strategies with exponential backoff
+- **Error Logging**: Comprehensive error tracking for debugging and analytics
 
-## Components Implemented
+## Architecture
 
-### 1. Error Handling Service (`src/services/errorHandlingService.ts`)
+### Core Components
 
-A centralized service that provides:
+1. **ErrorHandlingService** (`services/errorHandlingService.ts`)
+   - Categorizes and analyzes errors
+   - Provides user-friendly error messages
+   - Determines retry strategies
+   - Logs errors with context
 
-- **Error Categorization**: Automatically categorizes errors into types:
-  - `network`: Connection issues, offline state
-  - `timeout`: Request timeouts, server not responding
-  - `server`: 5xx server errors
-  - `auth`: Authentication/authorization failures
-  - `validation`: 4xx client errors
-  - `unknown`: Uncategorized errors
+2. **ErrorRecoveryService** (`services/errorRecoveryService.ts`)
+   - Implements automated recovery strategies
+   - Provides manual recovery recommendations
+   - Tracks recovery success rates
 
-- **Network Status Monitoring**: Uses `@react-native-community/netinfo` to monitor connectivity
+3. **useErrorHandling Hook** (`hooks/useErrorHandling.ts`)
+   - React hook for component-level error handling
+   - Manages retry state and logic
+   - Integrates with error services
 
-- **Retry Strategy**: Implements exponential backoff with jitter for different error types
-
-- **User-Friendly Messages**: Converts technical errors into user-friendly messages with platform-specific guidance
-
-### 2. Enhanced Redux Slice (`src/store/slices/guessingGameSlice.ts`)
-
-Extended the guessing game slice with:
-
-- **Error State Management**: 
-  - `loadError`: Current error details
-  - `retryCount`: Number of retry attempts
-  - `lastSuccessfulLoad`: Timestamp of last successful data load
-
-- **Error Actions**:
-  - `setChallengeLoadError`: Sets error with categorization
-  - `clearChallengeLoadError`: Clears error state
-  - `resetRetryCount`: Resets retry counter
-
-### 3. Error Handling Hook (`src/hooks/useErrorHandling.ts`)
-
-A reusable React hook that provides:
-
-- **Error State Management**: Manages error, retry count, and retry status
-- **Auto-Retry Logic**: Automatically retries failed operations with exponential backoff
-- **Manual Retry**: Allows manual retry triggers
-- **Alert Integration**: Optional error alerts with retry options
-
-### 4. Error Display Component (`src/components/ErrorDisplay.tsx`)
-
-A reusable UI component that:
-
-- **Visual Error Representation**: Shows appropriate icons and styling for different error types
-- **Retry Interface**: Provides retry buttons for retryable errors
-- **Progress Indication**: Shows retry progress and attempt counts
-- **Compact Mode**: Supports compact display for inline errors
-- **Last Update Info**: Shows when data was last successfully loaded
-
-### 5. Enhanced GameScreen (`src/screens/GameScreen.tsx`)
-
-Updated with comprehensive error handling:
-
-- **Network Status Checking**: Verifies connectivity before API calls
-- **Auto-Retry Mechanism**: Automatically retries failed challenge loads
-- **Enhanced Error Display**: Shows detailed error information with context
-- **Graceful Degradation**: Shows cached data when possible during errors
-- **User Feedback**: Clear loading states and error recovery options
-
-### 6. Enhanced ChallengeCreationScreen (`src/screens/ChallengeCreationScreen.tsx`)
-
-Improved error handling for challenge creation:
-
-- **Categorized Error Handling**: Uses error handling service for better error categorization
-- **User-Friendly Error Messages**: Shows appropriate error messages based on error type
+4. **Error Display Components**
+   - `ErrorDisplay`: Generic error display component
+   - `UploadErrorHandler`: Specialized upload error handling
+   - `PlaybackErrorHandler`: Specialized playback error handling
+   - `ErrorBoundary`: React error boundary for JavaScript errors
 
 ## Error Types and Handling
 
 ### Network Errors
-- **Detection**: Connection failures, offline state
+- **Detection**: Connection failures, timeouts, DNS issues
+- **Recovery**: Check connectivity, wait and retry, suggest network switching
 - **User Message**: "No internet connection. Please check your network and try again."
-- **Retry Strategy**: Up to 5 retries with 2-second base delay
-- **UI**: Blue-themed error container with network icon
+- **Retry Strategy**: Up to 5 retries with exponential backoff
 
-### Timeout Errors
-- **Detection**: Request timeouts, server not responding
-- **User Message**: "Request timed out. The server might be busy. Please try again."
-- **Retry Strategy**: Up to 3 retries with 3-second base delay
-- **UI**: Clock icon with retry progress
+### Upload Errors
+- **Detection**: File size limits, format issues, storage quota, network failures
+- **Recovery**: Compress video, clear temp files, check storage space
+- **User Messages**: 
+  - "File is too large. Please compress the video or record a shorter clip."
+  - "Storage quota exceeded. Please free up space or contact support."
+- **Retry Strategy**: Up to 3 retries with 2-second base delay
 
-### Server Errors
-- **Detection**: 5xx HTTP status codes
-- **User Message**: "Server error occurred. Please try again in a few moments."
-- **Retry Strategy**: Up to 3 retries with 5-second base delay
-- **UI**: Wrench icon indicating server issues
+### Playback Errors
+- **Detection**: Video not found, codec issues, buffering problems
+- **Recovery**: Reload video, check accessibility, fallback to lower quality
+- **User Messages**:
+  - "Video not found. It may have been deleted or moved."
+  - "Video format not supported on this device."
+- **Retry Strategy**: Up to 2 retries with 1-second base delay
+
+### Merge Errors
+- **Detection**: FFmpeg failures, server processing errors
+- **Recovery**: Retry merge, fallback to individual uploads
+- **User Message**: "Video merging failed. Please try uploading your videos again."
+- **Retry Strategy**: Up to 2 retries with 5-second base delay
+
+### Storage Errors
+- **Detection**: Insufficient disk space, write permissions
+- **Recovery**: Clear temp files, suggest freeing space
+- **User Message**: "Insufficient storage space. Please free up space and try again."
+- **Retry Strategy**: No automatic retry (requires user action)
 
 ### Authentication Errors
-- **Detection**: 401/403 status codes, auth-related messages
+- **Detection**: Token expiration, unauthorized access
+- **Recovery**: Refresh token, prompt re-login
 - **User Message**: "Authentication failed. Please log in again."
-- **Retry Strategy**: No auto-retry (requires user action)
-- **UI**: Lock icon with orange theme
-
-### Validation Errors
-- **Detection**: 400 status codes, validation failures
-- **User Message**: "Invalid request. Please check your input and try again."
-- **Retry Strategy**: No auto-retry (requires user correction)
-- **UI**: Warning icon with purple theme
-
-## Features
-
-### Auto-Retry with Exponential Backoff
-- Automatically retries failed operations
-- Implements exponential backoff with jitter to prevent thundering herd
-- Different retry limits for different error types
-- Visual progress indication during retries
-
-### Network Awareness
-- Monitors network connectivity status
-- Prevents API calls when offline
-- Shows appropriate offline messages
-
-### Graceful Degradation
-- Shows cached data when available during errors
-- Maintains app functionality even with API failures
-- Clear indication of data freshness
-
-### User Experience
-- Clear, actionable error messages
-- Platform-specific guidance (iOS vs Android)
-- Visual error categorization with icons and colors
-- Manual retry options for all retryable errors
-
-## Testing
-
-Comprehensive tests cover:
-
-- Error categorization logic
-- Retry strategy calculations
-- User message formatting
-- Platform-specific guidance
-- Error logging functionality
+- **Retry Strategy**: No automatic retry (requires user action)
 
 ## Usage Examples
 
-### In Components
-```typescript
-// Using the error handling hook
-const { error, isRetrying, handleError, retry } = useErrorHandling(
-  loadDataFunction,
-  { autoRetry: true, maxRetries: 3 }
-);
+### Basic Error Handling in Components
 
-// Using the error display component
-<ErrorDisplay 
-  error={error}
-  isRetrying={isRetrying}
-  onRetry={retry}
-  lastSuccessfulUpdate={lastUpdate}
-/>
+```typescript
+import { useErrorHandling } from '../hooks/useErrorHandling';
+
+const MyComponent = () => {
+  const {
+    error,
+    isRetrying,
+    retryCount,
+    handleError,
+    clearError,
+    retry,
+    canRetry,
+  } = useErrorHandling(
+    () => performOperation(), // Retry function
+    {
+      showAlert: false, // Use custom error display
+      autoRetry: true,  // Enable automatic retries
+      maxRetries: 3,
+      onError: (error) => console.log('Error occurred:', error),
+      onMaxRetriesReached: (error) => console.log('Max retries reached:', error),
+    }
+  );
+
+  const performOperation = async () => {
+    try {
+      // Your operation here
+      await someAsyncOperation();
+    } catch (err) {
+      handleError(err, 'performOperation', {
+        operation: 'upload',
+        component: 'MyComponent',
+        additionalData: { userId: 'user123' },
+      });
+    }
+  };
+
+  if (error) {
+    return (
+      <UploadErrorHandler
+        error={error}
+        isRetrying={isRetrying}
+        retryCount={retryCount}
+        onRetry={canRetry ? retry : undefined}
+        onCancel={clearError}
+      />
+    );
+  }
+
+  // Normal component render
+  return <View>...</View>;
+};
 ```
 
-### In Redux Actions
-```typescript
-// Setting an error
-dispatch(setChallengeLoadError({ 
-  error: 'Network request failed', 
-  errorType: 'network' 
-}));
+### Upload Error Handling
 
-// Clearing an error
-dispatch(clearChallengeLoadError());
+```typescript
+import { errorHandlingService } from '../services/errorHandlingService';
+
+const uploadFile = async (file: File) => {
+  try {
+    const result = await uploadService.upload(file);
+    return result;
+  } catch (error) {
+    const errorDetails = errorHandlingService.handleUploadError(error, {
+      fileName: file.name,
+      fileSize: file.size,
+      uploadProgress: 0,
+    });
+    
+    // Show user-friendly error
+    Alert.alert(
+      errorHandlingService.getErrorTitle(errorDetails),
+      errorDetails.userMessage
+    );
+    
+    throw errorDetails;
+  }
+};
 ```
 
-## Dependencies Added
+### Playback Error Handling
 
-- `@react-native-community/netinfo`: For network status monitoring
+```typescript
+import { errorHandlingService } from '../services/errorHandlingService';
 
-## Files Modified/Created
+const VideoPlayer = ({ videoUrl }) => {
+  const handlePlaybackError = (error: any) => {
+    const errorDetails = errorHandlingService.handlePlaybackError(error, {
+      videoUrl,
+      currentTime: player.currentTime,
+      duration: player.duration,
+    });
+    
+    setPlaybackError(errorDetails);
+  };
 
-### Created:
-- `src/services/errorHandlingService.ts`
-- `src/hooks/useErrorHandling.ts`
-- `src/components/ErrorDisplay.tsx`
-- `src/__tests__/ErrorHandling.test.tsx`
-- `src/docs/ERROR_HANDLING_IMPLEMENTATION.md`
+  return (
+    <Video
+      source={{ uri: videoUrl }}
+      onError={handlePlaybackError}
+      // ... other props
+    />
+  );
+};
+```
 
-### Modified:
-- `src/store/slices/guessingGameSlice.ts`
-- `src/screens/GameScreen.tsx`
-- `src/screens/ChallengeCreationScreen.tsx`
+### Error Boundary Usage
+
+```typescript
+import { ErrorBoundary } from '../components/ErrorBoundary';
+
+const App = () => {
+  return (
+    <ErrorBoundary
+      onError={(error, errorInfo) => {
+        console.log('App-level error:', error);
+        // Send to crash reporting service
+      }}
+    >
+      <MyAppContent />
+    </ErrorBoundary>
+  );
+};
+```
+
+## Error Recovery Strategies
+
+### Automated Recovery
+
+The system attempts automated recovery for certain error types:
+
+1. **Network Errors**
+   - Check connectivity status
+   - Wait for network stabilization
+   - Retry with exponential backoff
+
+2. **Upload Errors**
+   - Clear temporary files to free space
+   - Retry with smaller chunk sizes
+   - Check and report storage availability
+
+3. **Playback Errors**
+   - Reload video source
+   - Verify video accessibility
+   - Attempt lower quality fallback
+
+4. **Storage Errors**
+   - Clean up temporary files
+   - Report available space
+
+### Manual Recovery
+
+When automated recovery fails, the system provides manual recovery options:
+
+1. **User Actions**
+   - Clear app cache
+   - Free up storage space
+   - Switch network connections
+   - Restart the application
+
+2. **Recovery Recommendations**
+   - Immediate actions (check connection, retry)
+   - Follow-up actions (restart app, contact support)
+   - Prevention tips (monitor storage, use WiFi)
+
+## Error Logging and Analytics
+
+### Log Structure
+
+```typescript
+{
+  type: 'upload' | 'playback' | 'network' | ...,
+  message: string,
+  context: string,
+  component?: string,
+  userId?: string,
+  sessionId?: string,
+  timestamp: string,
+  platform: 'ios' | 'android',
+  retryable: boolean,
+  severity: 'low' | 'medium' | 'high' | 'critical',
+  errorCode?: string,
+  additionalData?: Record<string, any>
+}
+```
+
+### Analytics Integration
+
+The error handling system is designed to integrate with analytics services:
+
+- Error frequency and patterns
+- Recovery success rates
+- User impact metrics
+- Performance correlation
+
+## Best Practices
+
+### For Developers
+
+1. **Always Use Error Context**
+   ```typescript
+   handleError(error, 'operationName', {
+     operation: 'upload',
+     component: 'ComponentName',
+     additionalData: { relevant: 'data' },
+   });
+   ```
+
+2. **Implement Proper Cleanup**
+   ```typescript
+   try {
+     await operation();
+   } catch (error) {
+     // Clean up resources
+     cleanup();
+     handleError(error);
+   }
+   ```
+
+3. **Use Appropriate Error Components**
+   - `UploadErrorHandler` for upload operations
+   - `PlaybackErrorHandler` for video playback
+   - `ErrorDisplay` for general errors
+   - `ErrorBoundary` for component trees
+
+4. **Test Error Scenarios**
+   - Network disconnection
+   - Storage full conditions
+   - Invalid file formats
+   - Server errors
+
+### For Users
+
+The error handling system provides:
+
+1. **Clear Error Messages**
+   - What went wrong
+   - Why it happened
+   - What to do next
+
+2. **Recovery Options**
+   - Automatic retry when appropriate
+   - Manual recovery steps
+   - Alternative approaches
+
+3. **Progress Feedback**
+   - Retry attempts and progress
+   - Recovery status
+   - Estimated time remaining
+
+## Configuration
+
+### Error Handling Settings
+
+```typescript
+// Configure retry strategies
+const retryConfig = {
+  network: { maxRetries: 5, baseDelay: 2000 },
+  upload: { maxRetries: 3, baseDelay: 2000 },
+  playback: { maxRetries: 2, baseDelay: 1000 },
+};
+
+// Configure error severity thresholds
+const severityConfig = {
+  criticalErrors: ['auth', 'storage'],
+  highSeverityErrors: ['server', 'merge'],
+  autoNotifyErrors: ['critical', 'high'],
+};
+```
+
+### Environment-Specific Behavior
+
+- **Development**: Detailed error information and stack traces
+- **Production**: User-friendly messages and error reporting
+- **Testing**: Configurable error simulation
+
+## Testing
+
+### Error Simulation
+
+The system includes utilities for testing error scenarios:
+
+```typescript
+// Simulate network errors
+errorHandlingService.simulateError('network', 'Connection timeout');
+
+// Test recovery strategies
+errorRecoveryService.testRecovery('upload', 'clear_temp_files');
+
+// Verify error categorization
+const errorDetails = errorHandlingService.categorizeError(testError);
+expect(errorDetails.type).toBe('upload');
+expect(errorDetails.retryable).toBe(true);
+```
+
+### Integration Tests
+
+- Upload failure and recovery scenarios
+- Playback error handling flows
+- Network disconnection handling
+- Storage full conditions
 
 ## Future Enhancements
 
-1. **Offline Queue**: Queue failed operations for retry when connection is restored
-2. **Error Analytics**: Send error metrics to analytics service
-3. **Custom Error Recovery**: Allow custom recovery strategies per error type
-4. **Background Sync**: Sync data in background when connection is restored
-5. **Error Boundaries**: Add React error boundaries for component-level error handling
+1. **Machine Learning Error Prediction**
+   - Predict likely errors based on context
+   - Proactive error prevention
+
+2. **Advanced Recovery Strategies**
+   - Context-aware recovery selection
+   - User behavior-based recovery
+
+3. **Real-time Error Monitoring**
+   - Live error dashboards
+   - Automated alerting
+
+4. **User Feedback Integration**
+   - Error report collection
+   - Recovery effectiveness tracking
+
+## Troubleshooting
+
+### Common Issues
+
+1. **Errors Not Being Caught**
+   - Ensure error boundaries are properly placed
+   - Check async error handling patterns
+   - Verify error context is provided
+
+2. **Recovery Not Working**
+   - Check network connectivity
+   - Verify storage permissions
+   - Ensure recovery strategies are enabled
+
+3. **Poor User Experience**
+   - Review error message clarity
+   - Test recovery flow usability
+   - Monitor error frequency
+
+### Debug Tools
+
+- Error logging with detailed context
+- Recovery attempt tracking
+- Performance impact monitoring
+- User journey analysis
+
+This comprehensive error handling system ensures robust operation of upload and playback functionality while providing excellent user experience even when things go wrong.

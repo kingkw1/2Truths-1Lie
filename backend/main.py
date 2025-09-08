@@ -5,6 +5,9 @@ from dotenv import load_dotenv
 # Load environment variables from .env file
 load_dotenv()
 
+# Initialize logging configuration early
+import logging_config
+
 from fastapi import FastAPI, HTTPException, Depends, UploadFile, File, Form, Header
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse, FileResponse
@@ -52,12 +55,16 @@ app.include_router(test_router)  # Enabled for challenge creation testing
 
 # Import and include challenge endpoints
 from api.challenge_endpoints import router as challenge_router
+from api.challenge_video_endpoints import router as challenge_video_router
 from api.user_endpoints import router as user_router
 from api.admin_endpoints import router as admin_router
+from api.monitoring_endpoints import router as monitoring_router
 
 app.include_router(challenge_router)
+app.include_router(challenge_video_router)
 app.include_router(user_router)
 app.include_router(admin_router)
+app.include_router(monitoring_router)
 
 # CORS middleware for frontend integration
 app.add_middleware(

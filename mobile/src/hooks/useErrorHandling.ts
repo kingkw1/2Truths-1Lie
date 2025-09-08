@@ -43,31 +43,59 @@ export const useErrorHandling = (
   const [isRetrying, setIsRetrying] = useState(false);
   const [retryCount, setRetryCount] = useState(0);
 
-  const handleError = useCallback((err: any, context?: string) => {
+  const handleError = useCallback((err: any, contextString?: string, errorContext?: any) => {
     console.log('🚨 ERROR_HOOK: ================== ERROR HANDLING TRIGGERED ==================');
-    console.log('🚨 ERROR_HOOK: Context:', context);
+    console.log('🚨 ERROR_HOOK: Context:', contextString);
     console.log('🚨 ERROR_HOOK: Error type:', typeof err);
     console.log('🚨 ERROR_HOOK: Error message:', err?.message || 'No message');
     
-    const errorDetails = errorHandlingService.categorizeError(err);
+    // Create error context if provided
+    let context;
+    if (errorContext) {
+      context = errorHandlingService.createErrorContext(
+        errorContext.operation || 'general',
+        errorContext.component,
+        errorContext.additionalData
+      );
+    }
+    
+    const errorDetails = errorHandlingService.categorizeError(err, context);
     console.log('🚨 ERROR_HOOK: Error category:', errorDetails.type);
     console.log('🚨 ERROR_HOOK: Error retryable:', errorDetails.retryable);
+    console.log('🚨 ERROR_HOOK: Error severity:', errorDetails.severity);
     
-    errorHandlingService.logError(errorDetails, context);
+    errorHandlingService.logError(errorDetails, contextString);
     
     setError(errorDetails);
     setRetryCount(prev => prev + 1);
     
-    if (showAlert) {
+    // Show alert based on error severity and user preferences
+    if (showAlert && errorHandlingService.shouldNotifyUser(errorDetails)) {
       const userMessage = errorHandlingService.formatErrorForUser(errorDetails);
-      Alert.alert(
-        'Error',
-        userMessage,
-        errorDetails.retryable && retryFunction ? [
-          { text: 'Cancel', style: 'cancel' },
-          { text: 'Retry', onPress: () => retry() }
-        ] : [{ text: 'OK' }]
-      );
+      const errorTitle = errorHandlingService.getErrorTitle(errorDetails);
+      const recoveryActions = errorHandlingService.getRecoveryActions(errorDetails);
+      
+      // Create alert buttons
+      const buttons = [];
+      
+      if (errorDetails.retryable && retryFunction) {
+        buttons.push({ text: 'Cancel', style: 'cancel' as const });
+        buttons.push({ text: 'Retry', onPress: () => retry() });
+      } else if (recoveryActions.length > 0) {
+        buttons.push({ text: 'OK', style: 'cancel' as const });
+        // Add primary recovery action if available
+        const primaryAction = recoveryActions.find(action => action.primary);
+        if (primaryAction) {
+          buttons.push({ 
+            text: primaryAction.label, 
+            onPress: () => primaryAction.action() 
+          });
+        }
+      } else {
+        buttons.push({ text: 'OK' });
+      }
+      
+      Alert.alert(errorTitle, userMessage, buttons);
     }
     
     onError?.(errorDetails);
@@ -94,18 +122,22 @@ export const useErrorHandling = (
     }
   }, [retryFunction, error, retryCount, onRetry, handleError, clearError]);
 
-  // Auto-retry logic
+  // Auto-retry logic with enhanced strategy
   useEffect(() => {
     if (error && error.retryable && autoRetry && retryCount <= maxRetries && retryFunction) {
-      const retryStrategy = errorHandlingService.getRetryStrategy(error.type, retryCount);
+      const context = error.context ? { operation: error.context as any } : undefined;
+      const retryStrategy = errorHandlingService.getRetryStrategy(error.type, retryCount, context);
       
       if (retryStrategy.shouldRetry) {
+        console.log(`🔄 AUTO_RETRY: Scheduling retry ${retryCount}/${retryStrategy.maxRetries} in ${retryStrategy.delay}ms`);
+        
         const timeoutId = setTimeout(() => {
           retry();
         }, retryStrategy.delay);
 
         return () => clearTimeout(timeoutId);
       } else {
+        console.log(`❌ AUTO_RETRY: Max retries reached for ${error.type} error`);
         onMaxRetriesReached?.(error);
       }
     }

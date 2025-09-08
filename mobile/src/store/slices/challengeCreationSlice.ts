@@ -45,6 +45,24 @@ export interface ChallengeCreationState {
   individualRecordings: {
     [statementIndex: number]: MediaCapture | null;
   };
+  // Merge progress state
+  mergeState: {
+    [mergeSessionId: string]: {
+      status: 'pending' | 'processing' | 'completed' | 'failed';
+      progress: number; // 0-100
+      currentStep?: string;
+      estimatedTimeRemaining?: number; // in seconds
+      error?: string;
+      mergedVideoUrl?: string;
+      segmentMetadata?: Array<{
+        statementIndex: number;
+        startTime: number;
+        endTime: number;
+      }>;
+      startedAt?: number; // timestamp
+      completedAt?: number; // timestamp
+    };
+  };
 }
 
 const initialState: ChallengeCreationState = {
@@ -68,6 +86,7 @@ const initialState: ChallengeCreationState = {
   mediaRecordingState: {},
   uploadState: {},
   individualRecordings: {},
+  mergeState: {},
 };
 
 const challengeCreationSlice = createSlice({
@@ -502,6 +521,92 @@ const challengeCreationSlice = createSlice({
       delete state.individualRecordings[statementIndex];
     },
 
+    // Merge state actions
+    initiateMerge: (state, action: PayloadAction<{
+      mergeSessionId: string;
+    }>) => {
+      const { mergeSessionId } = action.payload;
+      state.mergeState[mergeSessionId] = {
+        status: 'pending',
+        progress: 0,
+        currentStep: 'Initiating merge...',
+        startedAt: Date.now(),
+      };
+    },
+
+    setMergeProgress: (state, action: PayloadAction<{
+      mergeSessionId: string;
+      progress: number;
+      stage: 'pending' | 'processing' | 'completed' | 'failed';
+      currentStep?: string;
+      estimatedTimeRemaining?: number;
+    }>) => {
+      const { mergeSessionId, progress, stage, currentStep, estimatedTimeRemaining } = action.payload;
+      if (!state.mergeState[mergeSessionId]) {
+        state.mergeState[mergeSessionId] = {
+          status: 'pending',
+          progress: 0,
+        };
+      }
+      
+      state.mergeState[mergeSessionId].status = stage;
+      state.mergeState[mergeSessionId].progress = progress;
+      if (currentStep) {
+        state.mergeState[mergeSessionId].currentStep = currentStep;
+      }
+      if (estimatedTimeRemaining !== undefined) {
+        state.mergeState[mergeSessionId].estimatedTimeRemaining = estimatedTimeRemaining;
+      }
+    },
+
+    setMergeStatus: (state, action: PayloadAction<{
+      mergeSessionId: string;
+      status: 'pending' | 'processing' | 'completed' | 'failed';
+    }>) => {
+      const { mergeSessionId, status } = action.payload;
+      if (state.mergeState[mergeSessionId]) {
+        state.mergeState[mergeSessionId].status = status;
+      }
+    },
+
+    setMergeError: (state, action: PayloadAction<{
+      mergeSessionId: string;
+      error: string;
+    }>) => {
+      const { mergeSessionId, error } = action.payload;
+      if (state.mergeState[mergeSessionId]) {
+        state.mergeState[mergeSessionId].status = 'failed';
+        state.mergeState[mergeSessionId].error = error;
+      }
+    },
+
+    completeMerge: (state, action: PayloadAction<{
+      mergeSessionId: string;
+      mergedVideoUrl?: string;
+      segmentMetadata?: Array<{
+        statementIndex: number;
+        startTime: number;
+        endTime: number;
+      }>;
+    }>) => {
+      const { mergeSessionId, mergedVideoUrl, segmentMetadata } = action.payload;
+      if (state.mergeState[mergeSessionId]) {
+        state.mergeState[mergeSessionId].status = 'completed';
+        state.mergeState[mergeSessionId].progress = 100;
+        state.mergeState[mergeSessionId].completedAt = Date.now();
+        if (mergedVideoUrl) {
+          state.mergeState[mergeSessionId].mergedVideoUrl = mergedVideoUrl;
+        }
+        if (segmentMetadata) {
+          state.mergeState[mergeSessionId].segmentMetadata = segmentMetadata;
+        }
+      }
+    },
+
+    clearMergeState: (state, action: PayloadAction<{ mergeSessionId: string }>) => {
+      const { mergeSessionId } = action.payload;
+      delete state.mergeState[mergeSessionId];
+    },
 
   },
 });
@@ -543,6 +648,13 @@ export const {
   // Individual recording actions
   setIndividualRecording,
   clearIndividualRecording,
+  // Merge state actions
+  initiateMerge,
+  setMergeProgress,
+  setMergeStatus,
+  setMergeError,
+  completeMerge,
+  clearMergeState,
 } = challengeCreationSlice.actions;
 
 export default challengeCreationSlice.reducer;

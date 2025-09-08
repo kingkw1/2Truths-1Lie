@@ -128,9 +128,9 @@ export class MobileMediaIntegrationService {
       // Stop recording in Redux
       this.dispatch(stopMediaRecording({ statementIndex }));
 
-      // Process and upload the recorded media directly (skip merging approach)
-      // Process the recorded media (without upload for now - we'll upload the merged video)
-      const mediaCapture = await this.processRecordedMediaForMerging(
+      // Process the recorded media for later server-side merging
+      // Store locally for now, upload all three together later
+      const mediaCapture = await this.processRecordedMediaForServerMerging(
         recordingUri,
         duration,
         statementIndex
@@ -142,7 +142,7 @@ export class MobileMediaIntegrationService {
         recording: mediaCapture,
       }));
 
-      console.log(`✅ Individual recording completed and uploaded for statement ${statementIndex}`, mediaCapture);
+      console.log(`✅ Individual recording completed for statement ${statementIndex}`, mediaCapture);
       return mediaCapture;
     } catch (error: any) {
       this.handleRecordingError(statementIndex, error.message);
@@ -495,7 +495,47 @@ export class MobileMediaIntegrationService {
   }
 
   /**
-   * Process recorded media for merging (without upload)
+   * Process recorded media for server-side merging (store locally until all three are ready)
+   */
+  private async processRecordedMediaForServerMerging(
+    uri: string,
+    duration: number,
+    statementIndex: number
+  ): Promise<MediaCapture> {
+    // Validate file exists
+    const fileInfo = await FileSystem.getInfoAsync(uri);
+    if (!fileInfo.exists) {
+      throw new Error('Recording file not found');
+    }
+
+    const fileSize = fileInfo.size || 0;
+
+    // Validate file size and duration
+    this.validateMediaFile(fileSize, duration);
+
+    // Create MediaCapture object for local storage (will be uploaded later with all three videos)
+    const mediaCapture: MediaCapture = {
+      type: 'video',
+      url: uri, // Keep local URI for now
+      duration,
+      fileSize: fileSize,
+      mimeType: this.getMimeType(),
+      storageType: 'local', // Mark as local until uploaded for merging
+      isUploaded: false, // Will be uploaded as part of the merge process
+    };
+
+    console.log(`📹 Prepared video ${statementIndex + 1} for server-side merging:`, {
+      duration: Math.round(duration / 1000),
+      fileSize: Math.round(fileSize / (1024 * 1024) * 100) / 100,
+      uri: uri.substring(uri.lastIndexOf('/') + 1),
+    });
+
+    return mediaCapture;
+  }
+
+  /**
+   * Process recorded media for merging (upload individual videos for server-side merging)
+   * @deprecated Use processRecordedMediaForServerMerging instead
    */
   private async processRecordedMediaForMerging(
     uri: string,
@@ -513,18 +553,200 @@ export class MobileMediaIntegrationService {
     // Validate file size and duration
     this.validateMediaFile(fileSize, duration);
 
-    // Create MediaCapture object for individual recording
+    // Generate filename for this individual video
+    const timestamp = Date.now();
+    const filename = `statement_${statementIndex}_${timestamp}.mp4`;
+
+    // Upload individual video to backend for later merging
+    const uploadResult = await videoUploadService.uploadVideo(
+      uri,
+      filename,
+      duration / 1000, // Convert to seconds
+      {
+        maxFileSize: this.config.maxFileSize,
+        retryAttempts: 3,
+        timeout: 60000,
+      },
+      (progress) => {
+        if (this.dispatch) {
+          this.dispatch(setMediaUploadProgress({
+            statementIndex,
+            progress: {
+              stage: progress.stage,
+              progress: progress.progress,
+              bytesUploaded: progress.bytesUploaded,
+              totalBytes: progress.totalBytes,
+            },
+          }));
+        }
+      }
+    );
+
+    if (!uploadResult.success) {
+      throw new Error(uploadResult.error || 'Failed to upload individual video');
+    }
+
+    // Create MediaCapture object with uploaded video info
     const mediaCapture: MediaCapture = {
       type: 'video',
-      url: uri,
+      url: uploadResult.streamingUrl || uri,
+      streamingUrl: uploadResult.streamingUrl,
       duration,
-      fileSize: fileSize,
+      fileSize: uploadResult.fileSize || fileSize,
       mimeType: this.getMimeType(),
-      storageType: 'local',
-      isUploaded: false,
+      mediaId: uploadResult.mediaId,
+      cloudStorageKey: uploadResult.cloudStorageKey,
+      storageType: uploadResult.storageType || 'cloud',
+      isUploaded: true,
+      uploadTime: uploadResult.uploadTime,
     };
 
+    // Clear upload progress
+    if (this.dispatch) {
+      this.dispatch(setMediaUploadProgress({
+        statementIndex,
+        progress: undefined,
+      }));
+    }
+
     return mediaCapture;
+  }
+
+  /**
+   * Upload all three videos for server-side merging with progress tracking
+   */
+  public async uploadVideosForMerging(
+    individualRecordings: { [key: number]: MediaCapture }
+  ): Promise<{
+    success: boolean;
+    mergeSessionId?: string;
+    mergedVideoUrl?: string;
+    segmentMetadata?: Array<{
+      statementIndex: number;
+      startTime: number; // in milliseconds
+      endTime: number; // in milliseconds
+    }>;
+    error?: string;
+  }> {
+    try {
+      // Validate we have all three recordings
+      if (!this.hasAllStatementRecordings(individualRecordings)) {
+        throw new Error('All three statement recordings are required for merging');
+      }
+
+      // Prepare videos array for upload
+      const videos = [0, 1, 2].map(index => {
+        const recording = individualRecordings[index];
+        if (!recording || !recording.url) {
+          throw new Error(`Missing recording for statement ${index + 1}`);
+        }
+
+        return {
+          uri: recording.url,
+          filename: `statement_${index}_${Date.now()}.mp4`,
+          duration: recording.duration || 0,
+          statementIndex: index,
+        };
+      });
+
+      console.log('🎬 MERGE: Uploading 3 videos for server-side merging...');
+
+      // Initialize merge status service
+      const { mergeStatusService } = await import('./mergeStatusService');
+      if (this.dispatch) {
+        await mergeStatusService.initialize(this.dispatch);
+      }
+
+      // Upload all videos for merging
+      const result = await videoUploadService.uploadVideosForMerge(
+        videos,
+        {
+          maxFileSize: this.config.maxFileSize,
+          retryAttempts: 3,
+          timeout: 180000, // 3 minutes for multiple videos + merging
+        },
+        (progress) => {
+          console.log(`🎬 MERGE: Progress - ${progress.stage}: ${progress.progress}%`);
+        }
+      );
+
+      if (result.success) {
+        console.log('✅ MERGE: Server-side video merging completed successfully');
+        console.log('✅ MERGE: Merged video URL:', result.mergedVideoUrl);
+        console.log('✅ MERGE: Segment metadata:', result.segmentMetadata);
+      }
+
+      return {
+        ...result,
+        mergeSessionId: result.mergeSessionId, // Pass through merge session ID for status tracking
+      };
+
+    } catch (error: any) {
+      console.error('❌ MERGE: Failed to upload videos for merging:', error);
+      return {
+        success: false,
+        error: error.message || 'Failed to upload videos for merging',
+      };
+    }
+  }
+
+  /**
+   * Start monitoring merge progress for a session
+   */
+  public async startMergeProgressMonitoring(
+    mergeSessionId: string,
+    onProgress?: (progress: { stage: string; progress: number; currentStep?: string; estimatedTimeRemaining?: number }) => void,
+    onComplete?: (result: { success: boolean; mergedVideoUrl?: string; segmentMetadata?: any; mergeSessionId?: string; error?: string }) => void
+  ): Promise<void> {
+    try {
+      const { mergeStatusService } = await import('./mergeStatusService');
+      
+      if (this.dispatch) {
+        await mergeStatusService.initialize(this.dispatch);
+      }
+
+      // Start polling for merge status
+      mergeStatusService.startPolling(mergeSessionId, {
+        pollInterval: 2000, // Poll every 2 seconds
+        maxDuration: 300000, // 5 minute timeout
+        onProgress: (progress) => {
+          console.log(`🔄 MERGE_MONITOR: ${progress.stage} - ${progress.progress}%`);
+          onProgress?.({
+            stage: progress.stage,
+            progress: progress.progress,
+            currentStep: progress.currentStep,
+            estimatedTimeRemaining: progress.estimatedTimeRemaining,
+          });
+        },
+        onComplete: (result) => {
+          console.log(`🏁 MERGE_MONITOR: Complete - Success: ${result.success}`);
+          onComplete?.({
+            ...result,
+            mergeSessionId: mergeSessionId,
+          });
+        },
+      });
+
+    } catch (error: any) {
+      console.error('❌ MERGE_MONITOR: Failed to start monitoring:', error);
+      onComplete?.({
+        success: false,
+        error: error.message || 'Failed to monitor merge progress',
+        mergeSessionId: mergeSessionId,
+      });
+    }
+  }
+
+  /**
+   * Stop monitoring merge progress
+   */
+  public stopMergeProgressMonitoring(mergeSessionId: string): void {
+    try {
+      const { mergeStatusService } = require('./mergeStatusService');
+      mergeStatusService.stopPolling(mergeSessionId);
+    } catch (error) {
+      console.warn('Failed to stop merge monitoring:', error);
+    }
   }
 
   /**

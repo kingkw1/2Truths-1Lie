@@ -489,6 +489,93 @@ async def generate_cdn_signed_url(
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Error generating CDN signed URL: {str(e)}")
 
+@router.get("/{id}")
+async def serve_media_asset(
+    id: str,
+    expires_in: Optional[int] = 3600,  # Default 1 hour
+    current_user: str = Depends(require_permission("media:read"))
+):
+    """
+    Serve video assets with secure signed URLs
+    
+    - **id**: Unique media identifier
+    - **expires_in**: URL expiration time in seconds (default: 3600 = 1 hour, max: 86400 = 24 hours)
+    - **Returns**: Secure signed URL for media access
+    - **Authentication**: Required
+    """
+    try:
+        # Validate expires_in parameter
+        if expires_in <= 0 or expires_in > 86400:  # Max 24 hours
+            raise HTTPException(
+                status_code=400,
+                detail="expires_in must be between 1 and 86400 seconds (24 hours)"
+            )
+        
+        # Verify user has access to this media
+        verification = await media_service.verify_media_access(
+            media_id=id,
+            user_id=current_user
+        )
+        
+        if not verification.get("accessible", False):
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Access denied to this media"
+            )
+        
+        # Get media info to determine storage type
+        media_info = await media_service.get_media_info(id, current_user)
+        if not media_info:
+            raise HTTPException(status_code=404, detail="Media not found")
+        
+        # Generate signed URL based on storage type
+        if media_info.get("storage_type") == "cloud" and media_service.use_cloud_storage:
+            # Generate cloud storage signed URL
+            signed_url = await media_service.cloud_storage.get_file_url(
+                key=media_info.get("cloud_key", f"media/{id}"),
+                expires_in=expires_in
+            )
+        else:
+            # Generate local signed URL using auth service
+            from services.auth_service import auth_service
+            signed_url_path = auth_service.create_signed_url(id, current_user, expires_in)
+            # Convert relative path to full URL
+            signed_url = f"/api/v1/media/stream{signed_url_path.replace('/api/v1/media/stream', '')}"
+        
+        # Calculate expiration timestamp
+        import time
+        expires_at = int(time.time()) + expires_in
+        
+        # Log access
+        logger.info(f"Generated signed URL for user {current_user}: {id}")
+        
+        return JSONResponse(
+            content={
+                "success": True,
+                "media_id": id,
+                "signed_url": signed_url,
+                "expires_in": expires_in,
+                "expires_at": expires_at,
+                "storage_type": media_info.get("storage_type", "local"),
+                "content_type": media_info.get("content_type"),
+                "file_size": media_info.get("file_size"),
+                "message": "Signed URL generated successfully"
+            },
+            headers={
+                "X-Media-ID": id,
+                "X-URL-Expires-In": str(expires_in),
+                "X-Storage-Type": media_info.get("storage_type", "local"),
+                "Cache-Control": f"private, max-age={min(expires_in, 300)}"  # Cache for 5 min max
+            }
+        )
+        
+    except HTTPException:
+        # Re-raise HTTP exceptions
+        raise
+    except Exception as e:
+        logger.error(f"Error serving media asset for user {current_user}, media {id}: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to serve media asset: {str(e)}")
+
 @router.get("/optimized/{media_id}")
 async def get_optimized_streaming_url(
     media_id: str,

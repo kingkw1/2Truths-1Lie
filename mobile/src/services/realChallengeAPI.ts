@@ -79,15 +79,21 @@ export interface CreateChallengeRequest {
   tags?: string[];
   is_merged_video?: boolean;
   merged_video_metadata?: {
-    total_duration_ms: number;
-    segment_count: number;
+    total_duration: number; // Changed from total_duration_ms to match backend
     segments: Array<{
       statement_index: number;
-      start_time_ms: number;
-      end_time_ms: number;
-      duration_ms: number;
+      start_time: number; // Changed from start_time_ms to match backend
+      end_time: number; // Changed from end_time_ms to match backend
+      duration: number; // Changed from duration_ms to match backend
     }>;
+    video_file_id: string;
+    compression_applied?: boolean;
+    original_total_duration?: number;
   };
+  // Server-side merged video fields
+  merged_video_url?: string;
+  merged_video_file_id?: string;
+  merge_session_id?: string;
 }
 
 export interface APIResponse<T> {

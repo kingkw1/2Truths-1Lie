@@ -43,6 +43,10 @@ export const ErrorDisplay: React.FC<ErrorDisplayProps> = ({
       case 'server': return '🔧';
       case 'auth': return '🔐';
       case 'validation': return '⚠️';
+      case 'upload': return '📤';
+      case 'playback': return '🎥';
+      case 'merge': return '🔄';
+      case 'storage': return '💾';
       default: return '❌';
     }
   };
@@ -54,6 +58,10 @@ export const ErrorDisplay: React.FC<ErrorDisplayProps> = ({
       case 'server': return 'Server Error';
       case 'auth': return 'Authentication Required';
       case 'validation': return 'Invalid Request';
+      case 'upload': return 'Upload Failed';
+      case 'playback': return 'Playback Error';
+      case 'merge': return 'Video Processing Failed';
+      case 'storage': return 'Storage Full';
       default: return 'Something Went Wrong';
     }
   };
@@ -63,6 +71,12 @@ export const ErrorDisplay: React.FC<ErrorDisplayProps> = ({
     error.type === 'network' && styles.networkErrorContainer,
     error.type === 'auth' && styles.authErrorContainer,
     error.type === 'validation' && styles.validationErrorContainer,
+    error.type === 'upload' && styles.uploadErrorContainer,
+    error.type === 'playback' && styles.playbackErrorContainer,
+    error.type === 'merge' && styles.mergeErrorContainer,
+    error.type === 'storage' && styles.storageErrorContainer,
+    error.severity === 'critical' && styles.criticalErrorContainer,
+    error.severity === 'high' && styles.highSeverityContainer,
     compact && styles.compactContainer,
     style,
   ];
@@ -135,6 +149,32 @@ const styles = StyleSheet.create({
   validationErrorContainer: {
     backgroundColor: '#f3e5f5',
     borderColor: '#ce93d8',
+  },
+  uploadErrorContainer: {
+    backgroundColor: '#fff3e0',
+    borderColor: '#ffb74d',
+  },
+  playbackErrorContainer: {
+    backgroundColor: '#e8f5e8',
+    borderColor: '#81c784',
+  },
+  mergeErrorContainer: {
+    backgroundColor: '#e1f5fe',
+    borderColor: '#4fc3f7',
+  },
+  storageErrorContainer: {
+    backgroundColor: '#fce4ec',
+    borderColor: '#f48fb1',
+  },
+  criticalErrorContainer: {
+    backgroundColor: '#ffebee',
+    borderColor: '#f44336',
+    borderWidth: 2,
+  },
+  highSeverityContainer: {
+    backgroundColor: '#fff3e0',
+    borderColor: '#ff9800',
+    borderWidth: 2,
   },
   errorIcon: {
     fontSize: 32,

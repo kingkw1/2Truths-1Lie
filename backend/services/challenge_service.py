@@ -112,7 +112,15 @@ class ChallengeService:
         
         # Validate merged video metadata if provided
         if request.is_merged_video:
-            if not request.merged_video_metadata and not request.legacy_merged_metadata:
+            # Check if we have server-side merged video data
+            if request.merged_video_url and request.merged_video_metadata:
+                # Server-side merged video - validate metadata
+                segment_indices = {segment.statement_index for segment in request.merged_video_metadata.segments}
+                expected_indices = {0, 1, 2}
+                if segment_indices != expected_indices:
+                    raise ChallengeServiceError(f"Merged video must have segments for indices 0, 1, 2. Got: {segment_indices}")
+            elif not request.merged_video_metadata and not request.legacy_merged_metadata:
+                # Client-side merged video - require metadata
                 raise ChallengeServiceError("Merged video metadata is required when is_merged_video is True")
             
             if request.merged_video_metadata:
@@ -129,80 +137,122 @@ class ChallengeService:
         statements = []
         lie_statement_id = None
         
-        for i, stmt_data in enumerate(request.statements):
-            statement_id = str(uuid.uuid4())
-            
-            # Determine if this is the lie
-            statement_type = StatementType.LIE if i == request.lie_statement_index else StatementType.TRUTH
-            if statement_type == StatementType.LIE:
-                lie_statement_id = statement_id
-            
-            # Get media info from upload service
-            media_file_id = stmt_data.get('media_file_id')
-            if not media_file_id:
-                raise ChallengeServiceError(f"Missing media_file_id for statement {i}")
-            
-            # Verify the upload session exists and is completed
-            upload_session = await upload_service.get_upload_status(media_file_id)
-            if not upload_session:
-                raise ChallengeServiceError(f"Upload session {media_file_id} not found")
-            
-            if upload_session.status != "completed":
-                raise ChallengeServiceError(f"Upload session {media_file_id} is not completed")
-            
-            # Get media info from media upload service to get persistent URLs
-            from services.media_upload_service import MediaUploadService
-            media_service = MediaUploadService()
-            
-            # Complete the upload to get persistent URLs
-            try:
-                completion_result = await media_service.complete_video_upload(
-                    session_id=media_file_id,
-                    user_id=creator_id
-                )
+        # Check if this is a server-side merged video
+        if request.is_merged_video and request.merged_video_url and request.merged_video_metadata:
+            # Server-side merged video - create statements that reference the merged video
+            for i, stmt_data in enumerate(request.statements):
+                statement_id = str(uuid.uuid4())
                 
-                # Use the persistent streaming URL
-                media_url = completion_result.get('streaming_url', f"/api/v1/media/stream/{completion_result['media_id']}")
-                streaming_url = completion_result.get('streaming_url')
-                cloud_storage_key = completion_result.get('cloud_key')
-                storage_type = completion_result.get('storage_type', 'local')
+                # Determine if this is the lie
+                statement_type = StatementType.LIE if i == request.lie_statement_index else StatementType.TRUTH
+                if statement_type == StatementType.LIE:
+                    lie_statement_id = statement_id
                 
-            except Exception as e:
-                logger.warning(f"Failed to complete media upload for {media_file_id}: {e}")
-                # Fallback to legacy URL format
-                media_url = f"/api/v1/files/{media_file_id}_{upload_session.filename}"
-                streaming_url = None
-                cloud_storage_key = None
-                storage_type = "local"
-            
-            # Create segment metadata if this is a merged video
-            segment_metadata = None
-            if request.is_merged_video and request.merged_video_metadata:
                 # Find the segment metadata for this statement index
+                segment_metadata = None
                 for segment in request.merged_video_metadata.segments:
                     if segment.statement_index == i:
                         segment_metadata = segment
                         break
-            
-            # Create statement with persistent URLs and segment metadata
-            statement = Statement(
-                statement_id=statement_id,
-                statement_type=statement_type,
-                media_url=media_url,
-                media_file_id=media_file_id,
-                streaming_url=streaming_url,
-                cloud_storage_key=cloud_storage_key,
-                storage_type=storage_type,
-                duration_seconds=stmt_data.get('duration_seconds', 0.0),
-                # Legacy segment metadata for backward compatibility
-                segment_start_time=stmt_data.get('segment_start_time'),
-                segment_end_time=stmt_data.get('segment_end_time'),
-                segment_duration=stmt_data.get('segment_duration'),
-                # Enhanced segment metadata
-                segment_metadata=segment_metadata,
-                created_at=datetime.utcnow()
-            )
-            statements.append(statement)
+                
+                if not segment_metadata:
+                    raise ChallengeServiceError(f"Missing segment metadata for statement {i}")
+                
+                # Create statement with merged video URL and segment metadata
+                statement = Statement(
+                    statement_id=statement_id,
+                    statement_type=statement_type,
+                    media_url=request.merged_video_url,
+                    media_file_id=request.merged_video_file_id or f"merged_{request.merge_session_id}",
+                    streaming_url=request.merged_video_url,
+                    cloud_storage_key=None,  # Will be set by the merge service
+                    storage_type="cloud" if request.merged_video_url.startswith("http") else "local",
+                    duration_seconds=segment_metadata.duration,
+                    # Legacy segment metadata for backward compatibility
+                    segment_start_time=segment_metadata.start_time,
+                    segment_end_time=segment_metadata.end_time,
+                    segment_duration=segment_metadata.duration,
+                    # Enhanced segment metadata
+                    segment_metadata=segment_metadata,
+                    created_at=datetime.utcnow()
+                )
+                statements.append(statement)
+        else:
+            # Client-side upload or legacy merged video - process individual files
+            for i, stmt_data in enumerate(request.statements):
+                statement_id = str(uuid.uuid4())
+                
+                # Determine if this is the lie
+                statement_type = StatementType.LIE if i == request.lie_statement_index else StatementType.TRUTH
+                if statement_type == StatementType.LIE:
+                    lie_statement_id = statement_id
+                
+                # Get media info from upload service
+                media_file_id = stmt_data.get('media_file_id')
+                if not media_file_id:
+                    raise ChallengeServiceError(f"Missing media_file_id for statement {i}")
+                
+                # Verify the upload session exists and is completed
+                upload_session = await upload_service.get_upload_status(media_file_id)
+                if not upload_session:
+                    raise ChallengeServiceError(f"Upload session {media_file_id} not found")
+                
+                if upload_session.status != "completed":
+                    raise ChallengeServiceError(f"Upload session {media_file_id} is not completed")
+                
+                # Get media info from media upload service to get persistent URLs
+                from services.media_upload_service import MediaUploadService
+                media_service = MediaUploadService()
+                
+                # Complete the upload to get persistent URLs
+                try:
+                    completion_result = await media_service.complete_video_upload(
+                        session_id=media_file_id,
+                        user_id=creator_id
+                    )
+                    
+                    # Use the persistent streaming URL
+                    media_url = completion_result.get('streaming_url', f"/api/v1/media/stream/{completion_result['media_id']}")
+                    streaming_url = completion_result.get('streaming_url')
+                    cloud_storage_key = completion_result.get('cloud_key')
+                    storage_type = completion_result.get('storage_type', 'local')
+                    
+                except Exception as e:
+                    logger.warning(f"Failed to complete media upload for {media_file_id}: {e}")
+                    # Fallback to legacy URL format
+                    media_url = f"/api/v1/files/{media_file_id}_{upload_session.filename}"
+                    streaming_url = None
+                    cloud_storage_key = None
+                    storage_type = "local"
+                
+                # Create segment metadata if this is a merged video
+                segment_metadata = None
+                if request.is_merged_video and request.merged_video_metadata:
+                    # Find the segment metadata for this statement index
+                    for segment in request.merged_video_metadata.segments:
+                        if segment.statement_index == i:
+                            segment_metadata = segment
+                            break
+                
+                # Create statement with persistent URLs and segment metadata
+                statement = Statement(
+                    statement_id=statement_id,
+                    statement_type=statement_type,
+                    media_url=media_url,
+                    media_file_id=media_file_id,
+                    streaming_url=streaming_url,
+                    cloud_storage_key=cloud_storage_key,
+                    storage_type=storage_type,
+                    duration_seconds=stmt_data.get('duration_seconds', 0.0),
+                    # Legacy segment metadata for backward compatibility
+                    segment_start_time=stmt_data.get('segment_start_time'),
+                    segment_end_time=stmt_data.get('segment_end_time'),
+                    segment_duration=stmt_data.get('segment_duration'),
+                    # Enhanced segment metadata
+                    segment_metadata=segment_metadata,
+                    created_at=datetime.utcnow()
+                )
+                statements.append(statement)
         
         # Create challenge with merged video metadata
         challenge = Challenge(
@@ -216,6 +266,10 @@ class ChallengeService:
             is_merged_video=request.is_merged_video,
             merged_video_metadata=request.merged_video_metadata,
             legacy_merged_metadata=request.legacy_merged_metadata,
+            # Server-side merged video fields
+            merged_video_url=request.merged_video_url,
+            merged_video_file_id=request.merged_video_file_id,
+            merge_session_id=request.merge_session_id,
             created_at=datetime.utcnow(),
             updated_at=datetime.utcnow()
         )

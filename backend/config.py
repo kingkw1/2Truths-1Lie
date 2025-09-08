@@ -43,6 +43,40 @@ class Settings(BaseSettings):
     MAX_VIDEO_DURATION_SECONDS: int = 300  # 5 minutes max
     MAX_USER_UPLOADS: int = 10  # Max concurrent uploads per user
     
+    # Video compression settings
+    VIDEO_COMPRESSION_PRESET: str = "medium"  # ultrafast, superfast, veryfast, faster, fast, medium, slow, slower, veryslow
+    VIDEO_COMPRESSION_CRF: int = 23  # Constant Rate Factor (0-51, lower = better quality)
+    VIDEO_MAX_BITRATE: str = "2M"  # Maximum bitrate (e.g., "2M" for 2 Mbps)
+    VIDEO_BUFFER_SIZE: str = "4M"  # Buffer size for rate control
+    AUDIO_BITRATE: str = "128k"  # Audio bitrate (e.g., "128k" for 128 kbps)
+    AUDIO_CODEC: str = "aac"  # Audio codec
+    VIDEO_CODEC: str = "libx264"  # Video codec
+    
+    # Compression quality presets
+    COMPRESSION_QUALITY_PRESETS: dict = {
+        "high": {
+            "crf": 18,
+            "preset": "slow",
+            "max_bitrate": "5M",
+            "buffer_size": "10M",
+            "audio_bitrate": "192k"
+        },
+        "medium": {
+            "crf": 23,
+            "preset": "medium", 
+            "max_bitrate": "2M",
+            "buffer_size": "4M",
+            "audio_bitrate": "128k"
+        },
+        "low": {
+            "crf": 28,
+            "preset": "fast",
+            "max_bitrate": "1M", 
+            "buffer_size": "2M",
+            "audio_bitrate": "96k"
+        }
+    }
+    
     # Cloud storage settings
     CLOUD_STORAGE_PROVIDER: str = "s3"  # s3, firebase, etc.
     USE_CLOUD_STORAGE: bool = True  # Set to False to use local storage

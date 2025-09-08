@@ -238,7 +238,7 @@ export const ChallengeCreationScreen: React.FC<ChallengeCreationScreenProps> = (
     }
   };
 
-    const handleSubmit = async () => {
+  const handleSubmit = async () => {
     console.log('🚨🚨🚨 SUBMIT BUTTON PRESSED! 🚨🚨🚨');
     console.log('🚨 This should definitely appear in logs if button is working');
     console.log('🚨 Time:', new Date().toISOString());
@@ -268,7 +268,7 @@ export const ChallengeCreationScreen: React.FC<ChallengeCreationScreenProps> = (
         console.log(`  Statement ${idx}: isLie=${stmt.isLie}, text="${stmt.text}"`);
       });
       console.log('🎯 SUBMIT: lieStatementIndex:', lieStatementIndex);
-      
+
       if (lieStatementIndex === -1) {
         console.error('❌ SUBMIT: No lie statement found');
         throw new Error('You must select which statement is the lie');
@@ -291,40 +291,75 @@ export const ChallengeCreationScreen: React.FC<ChallengeCreationScreenProps> = (
         throw new Error('All 3 statements must have video recordings');
       }
 
-      // Check that all individual videos are uploaded
-      const missingUploads = [0, 1, 2].filter(index => {
+      // Check that all individual videos are recorded (they will be uploaded during merge)
+      const missingRecordings = [0, 1, 2].filter(index => {
         const media = individualRecordings[index];
         console.log(`🎯 SUBMIT: Checking recording ${index}:`, media);
-        return !media || !media.mediaId || !media.isUploaded;
+        return !media || !media.url;
       });
 
-      console.log('🎯 SUBMIT: missingUploads:', missingUploads);
+      console.log('🎯 SUBMIT: missingRecordings:', missingRecordings);
 
-      if (missingUploads.length > 0) {
-        throw new Error(`Videos for statement${missingUploads.length > 1 ? 's' : ''} ${missingUploads.map(i => i + 1).join(', ')} must be uploaded before creating the challenge.`);
+      if (missingRecordings.length > 0) {
+        throw new Error(`Videos for statement${missingRecordings.length > 1 ? 's' : ''} ${missingRecordings.map(i => i + 1).join(', ')} must be recorded before creating the challenge.`);
       }
 
-      console.log('🎯 SUBMIT: Preparing individual recordings challenge request');
+      console.log('🎯 SUBMIT: Uploading videos for server-side merging...');
 
-      // Prepare the challenge request for individual videos
+      // Upload all three videos for server-side merging
+      const mergeResult = await mobileMediaIntegration.uploadVideosForMerging(individualRecordings);
+
+      if (!mergeResult.success) {
+        throw new Error(mergeResult.error || 'Failed to upload videos for merging');
+      }
+
+      console.log('✅ SUBMIT: Videos uploaded and merged successfully');
+      console.log('✅ SUBMIT: Merged video URL:', mergeResult.mergedVideoUrl);
+      console.log('✅ SUBMIT: Segment metadata:', mergeResult.segmentMetadata);
+
+      // Prepare the challenge request with merged video data
       const challengeRequest = {
-        statements: currentChallenge.statements.map((statement, index) => ({
-          text: statement.text || `Statement ${index + 1}`,
-          media_file_id: individualRecordings[index]!.mediaId!,
-        })),
+        statements: currentChallenge.statements.map((statement, index) => {
+          const segmentData = mergeResult.segmentMetadata?.find(s => s.statementIndex === index);
+          return {
+            text: statement.text || `Statement ${index + 1}`,
+            media_file_id: mergeResult.mergedVideoUrl || '', // Use merged video URL as media file ID
+            segment_start_time: segmentData?.startTime ? segmentData.startTime / 1000 : undefined, // Convert to seconds
+            segment_end_time: segmentData?.endTime ? segmentData.endTime / 1000 : undefined, // Convert to seconds
+            segment_duration: segmentData ? (segmentData.endTime - segmentData.startTime) / 1000 : undefined, // Convert to seconds
+          };
+        }),
         lie_statement_index: lieStatementIndex,
         tags: ['mobile-game', '2truths1lie'],
-        is_merged_video: false,
+        is_merged_video: true,
+        // Server-side merged video fields
+        merged_video_url: mergeResult.mergedVideoUrl,
+        merged_video_file_id: mergeResult.mergedVideoUrl, // Use URL as file ID for now
+        merge_session_id: mergeResult.mergeSessionId,
+        merged_video_metadata: mergeResult.segmentMetadata ? {
+          total_duration: mergeResult.segmentMetadata.reduce((total, segment) =>
+            Math.max(total, segment.endTime), 0) / 1000, // Convert to seconds
+          segments: mergeResult.segmentMetadata.map(segment => ({
+            statement_index: segment.statementIndex,
+            start_time: segment.startTime / 1000, // Convert to seconds
+            end_time: segment.endTime / 1000, // Convert to seconds
+            duration: (segment.endTime - segment.startTime) / 1000, // Convert to seconds
+          })),
+          video_file_id: mergeResult.mergedVideoUrl || '',
+          compression_applied: true, // Assume compression was applied during merge
+          original_total_duration: mergeResult.segmentMetadata.reduce((total, segment) =>
+            Math.max(total, segment.endTime), 0) / 1000, // Same as total for now
+        } : undefined,
       };
 
-      console.log('🎯 CHALLENGE: Submitting request with', challengeRequest.statements?.length, 'statements');
+      console.log('🎯 CHALLENGE: Submitting request with merged video');
       console.log('🎯 CHALLENGE: Request is_merged_video:', challengeRequest.is_merged_video);
       console.log('🎯 CHALLENGE: Request size (chars):', JSON.stringify(challengeRequest).length);
       console.log('🎯 CHALLENGE: About to call realChallengeAPI.createChallenge...');
 
       // Submit to backend
       const response = await realChallengeAPI.createChallenge(challengeRequest);
-      
+
       console.log('🎯 CHALLENGE: Got response from API');
       console.log('🎯 CHALLENGE: Response success:', response.success);
       console.log('🎯 CHALLENGE: Response data:', response.data);
@@ -370,7 +405,7 @@ export const ChallengeCreationScreen: React.FC<ChallengeCreationScreenProps> = (
       console.error('🚨 Error name:', error?.name || 'Unknown');
       console.error('🚨 Error message:', error?.message || 'No message');
       console.error('🚨 Error occurred during challenge submission');
-      
+
       handleCreationError(error, 'ChallengeCreationScreen.submitChallenge');
     }
   };
@@ -427,7 +462,7 @@ export const ChallengeCreationScreen: React.FC<ChallengeCreationScreenProps> = (
   );
 
   const renderLieSelection = () => {
-    // Check if we have all individual recordings
+    // Check if we have all individual recordings (local files are fine for lie selection)
     const hasAllIndividualRecordings = individualRecordings &&
       [0, 1, 2].every(index =>
         individualRecordings[index] &&

@@ -41,7 +41,7 @@ export const SimpleVideoPlayer: React.FC<SimpleVideoPlayerProps> = ({
       setVideoStatus('loaded');
     } else {
       setVideoStatus('error');
-      if (status.error) {
+      if ('error' in status && status.error) {
         console.error('Video playback error:', status.error);
         setErrorMessage(status.error);
       }
