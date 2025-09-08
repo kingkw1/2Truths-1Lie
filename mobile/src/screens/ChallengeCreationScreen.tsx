@@ -423,7 +423,10 @@ export const ChallengeCreationScreen: React.FC<ChallengeCreationScreenProps> = (
   };
 
   const renderInstructions = () => (
-    <ScrollView style={styles.stepContainer}>
+    <ScrollView 
+      style={styles.stepContainer}
+      contentContainerStyle={styles.scrollContentContainer}
+    >
       <Text style={styles.stepTitle}>Create Your Challenge</Text>
       <Text style={styles.stepDescription}>
         You'll record 3 video statements about yourself. Two should be true, and one should be a lie.
@@ -485,7 +488,10 @@ export const ChallengeCreationScreen: React.FC<ChallengeCreationScreenProps> = (
     }
 
     return (
-      <ScrollView style={styles.stepContainer}>
+      <ScrollView 
+        style={styles.stepContainer}
+        contentContainerStyle={styles.scrollContentContainer}
+      >
         <Text style={styles.stepTitle}>Select the Lie</Text>
         <Text style={styles.stepDescription}>
           Which of your three statements is the lie? Choose carefully!
@@ -567,7 +573,10 @@ export const ChallengeCreationScreen: React.FC<ChallengeCreationScreenProps> = (
   };
 
   const renderPreview = () => (
-    <ScrollView style={styles.stepContainer}>
+    <ScrollView 
+      style={styles.stepContainer}
+      contentContainerStyle={styles.scrollContentContainer}
+    >
       <Text style={styles.stepTitle}>Preview Your Challenge</Text>
       <Text style={styles.stepDescription}>
         Review your challenge before submitting. Other players will see this.
@@ -710,6 +719,9 @@ const styles = StyleSheet.create({
   stepContainer: {
     flex: 1,
     padding: 20,
+  },
+  scrollContentContainer: {
+    paddingBottom: Platform.OS === 'android' ? 100 : 50, // Extra bottom padding for Android navigation bar
   },
   stepTitle: {
     fontSize: 24,

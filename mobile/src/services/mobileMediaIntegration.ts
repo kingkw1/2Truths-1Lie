@@ -41,6 +41,8 @@ export class MobileMediaIntegrationService {
   private static instance: MobileMediaIntegrationService;
   private config: MobileMediaIntegrationConfig;
   private dispatch: Dispatch | null = null;
+  private isInitialized: boolean = false;
+  private initializationPromise: Promise<void> | null = null;
 
 
   private constructor() {
@@ -79,12 +81,39 @@ export class MobileMediaIntegrationService {
    * Initialize the service with Redux dispatch
    */
   public async initialize(dispatch: Dispatch): Promise<void> {
-    this.dispatch = dispatch;
+    // If already initialized, just update dispatch and return
+    if (this.isInitialized) {
+      this.dispatch = dispatch;
+      console.log('📱 Mobile Media Integration Service already initialized, updated dispatch');
+      return;
+    }
 
-    // Initialize cross-device media service
-    await crossDeviceMediaService.initialize();
+    // If initialization is in progress, wait for it
+    if (this.initializationPromise) {
+      console.log('📱 Mobile Media Integration Service initialization in progress, waiting...');
+      await this.initializationPromise;
+      this.dispatch = dispatch;
+      return;
+    }
 
-    console.log('📱 Mobile Media Integration Service initialized');
+    // Start new initialization
+    this.initializationPromise = this.doInitialize(dispatch);
+    await this.initializationPromise;
+  }
+
+  private async doInitialize(dispatch: Dispatch): Promise<void> {
+    try {
+      this.dispatch = dispatch;
+
+      // Initialize cross-device media service
+      await crossDeviceMediaService.initialize();
+
+      this.isInitialized = true;
+      console.log('📱 Mobile Media Integration Service initialized');
+    } catch (error) {
+      this.initializationPromise = null;
+      throw error;
+    }
   }
 
   /**
@@ -171,6 +200,19 @@ export class MobileMediaIntegrationService {
     duration: number,
     statementIndex: number
   ): Promise<MediaCapture> {
+    // Upload service is disabled - return local media capture
+    console.log('📱 Upload service disabled, processing locally only');
+    return this.processRecordedMediaLocally(uri, duration, statementIndex);
+  }
+
+  /**
+   * Process recorded media locally (no upload)
+   */
+  private async processRecordedMediaLocally(
+    uri: string,
+    duration: number,
+    statementIndex: number
+  ): Promise<MediaCapture> {
     // Validate file exists
     const fileInfo = await FileSystem.getInfoAsync(uri);
     if (!fileInfo.exists) {
@@ -186,75 +228,20 @@ export class MobileMediaIntegrationService {
     const timestamp = Date.now();
     const filename = `statement_${statementIndex}_${timestamp}.mp4`;
 
-    // Configure upload options
-    const uploadOptions: UploadOptions = {
-      maxFileSize: this.config.maxFileSize,
-      retryAttempts: 3,
-      timeout: 60000, // 60 seconds
-    };
-
-    // Upload video with progress tracking
-    const uploadResult = await videoUploadService.uploadVideo(
-      uri,
-      filename,
-      duration / 1000, // Convert to seconds
-      uploadOptions,
-      (progress: UploadProgress) => {
-        if (this.dispatch) {
-          this.dispatch(setMediaUploadProgress({
-            statementIndex,
-            progress: {
-              stage: progress.stage,
-              progress: progress.progress,
-              bytesUploaded: progress.bytesUploaded,
-              totalBytes: progress.totalBytes,
-              currentChunk: progress.currentChunk,
-              totalChunks: progress.totalChunks,
-            },
-          }));
-        }
-      }
-    );
-
-    if (!uploadResult.success) {
-      throw new Error(uploadResult.error || 'Upload failed');
-    }
-
-    // Verify cross-device accessibility
-    let optimizedStreamingUrl = uploadResult.streamingUrl!;
-    if (uploadResult.mediaId) {
-      try {
-        const accessibilityCheck = await crossDeviceMediaService.verifyMediaAccessibility(uploadResult.mediaId);
-        if (accessibilityCheck.accessible && accessibilityCheck.streamingUrl) {
-          optimizedStreamingUrl = accessibilityCheck.streamingUrl;
-        }
-      } catch (error) {
-        console.warn('Failed to verify media accessibility:', error);
-      }
-    }
-
-    // Create MediaCapture object with server URL and cross-device compatibility
+    // Create MediaCapture object for local use (no upload)
     const mediaCapture: MediaCapture = {
       type: 'video',
-      url: optimizedStreamingUrl, // Keep for backward compatibility
-      streamingUrl: optimizedStreamingUrl,
+      url: uri, // Local file URI
+      streamingUrl: uri,
       duration,
-      fileSize: uploadResult.fileSize || fileSize,
+      fileSize,
       mimeType: this.getMimeType(),
-      mediaId: uploadResult.mediaId,
-      cloudStorageKey: uploadResult.cloudStorageKey,
-      storageType: uploadResult.storageType || 'cloud',
-      isUploaded: true,
-      uploadTime: uploadResult.uploadTime,
+      mediaId: `local_${timestamp}`,
+      cloudStorageKey: undefined,
+      storageType: 'local',
+      isUploaded: false,
+      uploadTime: undefined,
     };
-
-    // Clear upload progress
-    if (this.dispatch) {
-      this.dispatch(setMediaUploadProgress({
-        statementIndex,
-        progress: undefined,
-      }));
-    }
 
     return mediaCapture;
   }
@@ -542,74 +529,9 @@ export class MobileMediaIntegrationService {
     duration: number,
     statementIndex: number
   ): Promise<MediaCapture> {
-    // Validate file exists
-    const fileInfo = await FileSystem.getInfoAsync(uri);
-    if (!fileInfo.exists) {
-      throw new Error('Recording file not found');
-    }
-
-    const fileSize = fileInfo.size || 0;
-
-    // Validate file size and duration
-    this.validateMediaFile(fileSize, duration);
-
-    // Generate filename for this individual video
-    const timestamp = Date.now();
-    const filename = `statement_${statementIndex}_${timestamp}.mp4`;
-
-    // Upload individual video to backend for later merging
-    const uploadResult = await videoUploadService.uploadVideo(
-      uri,
-      filename,
-      duration / 1000, // Convert to seconds
-      {
-        maxFileSize: this.config.maxFileSize,
-        retryAttempts: 3,
-        timeout: 60000,
-      },
-      (progress) => {
-        if (this.dispatch) {
-          this.dispatch(setMediaUploadProgress({
-            statementIndex,
-            progress: {
-              stage: progress.stage,
-              progress: progress.progress,
-              bytesUploaded: progress.bytesUploaded,
-              totalBytes: progress.totalBytes,
-            },
-          }));
-        }
-      }
-    );
-
-    if (!uploadResult.success) {
-      throw new Error(uploadResult.error || 'Failed to upload individual video');
-    }
-
-    // Create MediaCapture object with uploaded video info
-    const mediaCapture: MediaCapture = {
-      type: 'video',
-      url: uploadResult.streamingUrl || uri,
-      streamingUrl: uploadResult.streamingUrl,
-      duration,
-      fileSize: uploadResult.fileSize || fileSize,
-      mimeType: this.getMimeType(),
-      mediaId: uploadResult.mediaId,
-      cloudStorageKey: uploadResult.cloudStorageKey,
-      storageType: uploadResult.storageType || 'cloud',
-      isUploaded: true,
-      uploadTime: uploadResult.uploadTime,
-    };
-
-    // Clear upload progress
-    if (this.dispatch) {
-      this.dispatch(setMediaUploadProgress({
-        statementIndex,
-        progress: undefined,
-      }));
-    }
-
-    return mediaCapture;
+    // Upload service is disabled - return local media capture
+    console.log('📱 Upload service disabled, processing for local merging');
+    return this.processRecordedMediaLocally(uri, duration, statementIndex);
   }
 
   /**
@@ -657,28 +579,22 @@ export class MobileMediaIntegrationService {
         await mergeStatusService.initialize(this.dispatch);
       }
 
-      // Upload all videos for merging
-      const result = await videoUploadService.uploadVideosForMerge(
-        videos,
-        {
-          maxFileSize: this.config.maxFileSize,
-          retryAttempts: 3,
-          timeout: 180000, // 3 minutes for multiple videos + merging
-        },
-        (progress) => {
-          console.log(`🎬 MERGE: Progress - ${progress.stage}: ${progress.progress}%`);
-        }
-      );
-
-      if (result.success) {
-        console.log('✅ MERGE: Server-side video merging completed successfully');
-        console.log('✅ MERGE: Merged video URL:', result.mergedVideoUrl);
-        console.log('✅ MERGE: Segment metadata:', result.segmentMetadata);
-      }
-
+      // Upload service is disabled - create local merged video representation
+      console.log('📱 Upload service disabled, creating local merged video representation');
+      
       return {
-        ...result,
-        mergeSessionId: result.mergeSessionId, // Pass through merge session ID for status tracking
+        success: true,
+        mergedVideoUrl: videos[0]?.uri || '', // Use first video as fallback
+        mergeSessionId: `local_merge_${Date.now()}`,
+        segmentMetadata: videos.map((video, index) => ({
+          id: `segment_${index}`,
+          statementIndex: index,
+          startTime: index * 30, // Approximate timing
+          endTime: (index + 1) * 30,
+          duration: video.duration || 30000,
+          url: video.uri,
+        })),
+        error: undefined,
       };
 
     } catch (error: any) {

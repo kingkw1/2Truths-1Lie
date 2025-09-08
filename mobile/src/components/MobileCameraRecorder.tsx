@@ -911,72 +911,73 @@ export const MobileCameraRecorder: React.FC<MobileCameraRecorderProps> = ({
           facing={facing}
           mode="video"
           onCameraReady={() => setCameraReady(true)}
-        >
-          {/* Recording indicator with enhanced mobile design */}
-          {isRecording && (
-            <View style={[
-              styles.recordingIndicator,
-              Platform.OS === 'android' && styles.recordingIndicatorAndroid
-            ]}>
-              <View style={[
-                styles.recordingDot,
-                { backgroundColor: recordingDuration > 50000 ? '#ff8800' : '#ff4444' }
-              ]} />
-              <Text style={styles.recordingText}>REC</Text>
-              <Text style={styles.durationText}>
-                {formatDuration(recordingDuration)}
-              </Text>
-              {recordingDuration > 50000 && (
-                <Text style={styles.warningText}>10s left</Text>
-              )}
-            </View>
-          )}
-
-          {/* Storage indicator */}
-          {storageInfo && (
-            <View style={styles.storageIndicator}>
-              <Text style={styles.storageText}>
-                {(storageInfo.available / (1024 * 1024 * 1024)).toFixed(1)}GB free
-              </Text>
-            </View>
-          )}
-
-          {/* Camera controls overlay with platform-specific positioning */}
+        />
+        
+        {/* Overlay content positioned absolutely over the camera */}
+        {/* Recording indicator with enhanced mobile design */}
+        {isRecording && (
           <View style={[
-            styles.controlsOverlay,
-            Platform.OS === 'android' && styles.controlsOverlayAndroid
+            styles.recordingIndicator,
+            Platform.OS === 'android' && styles.recordingIndicatorAndroid
           ]}>
-            {/* Flip camera button */}
-            <TouchableOpacity
-              style={[
-                styles.flipButton,
-                isRecording && styles.flipButtonDisabled
-              ]}
-              onPress={toggleCameraFacing}
-              disabled={isRecording || isLoading}
-              activeOpacity={0.7}
-            >
-              <Text style={styles.flipButtonText}>
-                {facing === 'front' ? '🤳' : '📷'}
-              </Text>
-            </TouchableOpacity>
-
-            {/* Close button */}
-            <TouchableOpacity
-              style={styles.closeButton}
-              onPress={onCancel}
-              disabled={isRecording}
-              activeOpacity={0.7}
-            >
-              <Text style={styles.closeButtonText}>✕</Text>
-            </TouchableOpacity>
+            <View style={[
+              styles.recordingDot,
+              { backgroundColor: recordingDuration > 50000 ? '#ff8800' : '#ff4444' }
+            ]} />
+            <Text style={styles.recordingText}>REC</Text>
+            <Text style={styles.durationText}>
+              {formatDuration(recordingDuration)}
+            </Text>
+            {recordingDuration > 50000 && (
+              <Text style={styles.warningText}>10s left</Text>
+            )}
           </View>
+        )}
 
-          {/* Center focus indicator */}
-          <View style={styles.focusIndicator}>
-            <View style={styles.focusRing} />
+        {/* Storage indicator */}
+        {storageInfo && (
+          <View style={styles.storageIndicator}>
+            <Text style={styles.storageText}>
+              {(storageInfo.available / (1024 * 1024 * 1024)).toFixed(1)}GB free
+            </Text>
           </View>
-        </CameraView>
+        )}
+
+        {/* Camera controls overlay with platform-specific positioning */}
+        <View style={[
+          styles.controlsOverlay,
+          Platform.OS === 'android' && styles.controlsOverlayAndroid
+        ]}>
+          {/* Flip camera button */}
+          <TouchableOpacity
+            style={[
+              styles.flipButton,
+              isRecording && styles.flipButtonDisabled
+            ]}
+            onPress={toggleCameraFacing}
+            disabled={isRecording || isLoading}
+            activeOpacity={0.7}
+          >
+            <Text style={styles.flipButtonText}>
+              {facing === 'front' ? '🤳' : '📷'}
+            </Text>
+          </TouchableOpacity>
+
+          {/* Close button */}
+          <TouchableOpacity
+            style={styles.closeButton}
+            onPress={onCancel}
+            disabled={isRecording}
+            activeOpacity={0.7}
+          >
+            <Text style={styles.closeButtonText}>✕</Text>
+          </TouchableOpacity>
+        </View>
+
+        {/* Center focus indicator */}
+        <View style={styles.focusIndicator}>
+          <View style={styles.focusRing} />
+        </View>
       </View>
 
       {/* Enhanced bottom controls with platform-specific styling */}

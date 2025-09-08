@@ -6,12 +6,16 @@ export const videoUploadService = {
   uploadVideo: () => Promise.resolve({ success: false, error: 'Service disabled' }),
   mergeVideos: () => Promise.resolve({ success: false, error: 'Service disabled' }),
   uploadSignedVideo: () => Promise.resolve({ success: false, error: 'Service disabled' }),
+  syncMediaState: () => Promise.resolve({ syncedCount: 0, errors: [] }),
+  uploadVideosForMerge: () => Promise.resolve({ success: false, error: 'Service disabled' }),
 };
 
 export class VideoUploadService {
   uploadVideo() { return Promise.resolve({ success: false, error: 'Service disabled' }); }
   mergeVideos() { return Promise.resolve({ success: false, error: 'Service disabled' }); }
   uploadSignedVideo() { return Promise.resolve({ success: false, error: 'Service disabled' }); }
+  syncMediaState() { return Promise.resolve({ syncedCount: 0, errors: [] }); }
+  uploadVideosForMerge() { return Promise.resolve({ success: false, error: 'Service disabled' }); }
 }
 
 export interface UploadProgress {
