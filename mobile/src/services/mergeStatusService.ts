@@ -49,7 +49,7 @@ export class MergeStatusService {
 
   private constructor() {
     // Use the same base URL as upload service
-    this.baseUrl = 'http://192.168.50.111:8001';
+    this.baseUrl = 'http://192.168.50.111:8000';
   }
 
   public static getInstance(): MergeStatusService {

@@ -115,9 +115,9 @@ export class RealChallengeAPIService {
     // if (__DEV__) {
       // Development mode - use local backend
       if (Platform.OS === 'android') {
-        return 'http://192.168.50.111:8001'; // Your local development IP
+        return 'http://192.168.50.111:8000'; // Updated to correct port 8000
       } else {
-        return 'http://localhost:8001';
+        return 'http://192.168.50.111:8000'; // Updated to use IP instead of localhost
       }
     // } else {
     //   // Production mode - use your production API
@@ -127,11 +127,17 @@ export class RealChallengeAPIService {
 
   private async getAuthHeaders(): Promise<Record<string, string>> {
     const token = authService.getAuthToken();
-    return {
+    console.log('🔐 AUTH: Getting auth headers, token exists:', !!token);
+    console.log('🔐 AUTH: Token preview:', token ? `${token.substring(0, 20)}...` : 'null');
+    
+    const headers = {
       'Content-Type': 'application/json',
       'Authorization': token ? `Bearer ${token}` : '',
       'User-Agent': 'TwoTruthsLie-Mobile/1.0',
     };
+    
+    console.log('🔐 AUTH: Headers prepared, has authorization:', !!headers.Authorization);
+    return headers;
   }
 
   async createChallenge(request: CreateChallengeRequest): Promise<APIResponse<Challenge>> {
@@ -310,41 +316,66 @@ export class RealChallengeAPIService {
     }
   }
 
-  async getChallenges(skip: number = 0, limit: number = 20): Promise<APIResponse<Challenge[]>> {
+  async getChallenges(skip = 0, limit = 20, publicOnly = true): Promise<Challenge[]> {
     try {
-      console.log('🎯 CHALLENGE: Fetching challenges list...');
-
+      console.log('🔍 STARTING getChallenges - checking auth status...');
+      
+      // Check if we have an auth token
+      const existingToken = await authService.getAuthToken();
+      console.log('🔍 Existing token found:', !!existingToken);
+      
+      // If no token, initialize auth service
+      if (!existingToken) {
+        console.log('⚠️ No auth token found, initializing auth service...');
+        await authService.initialize();
+      }
+      
       const headers = await this.getAuthHeaders();
-      const response = await fetch(`${this.baseUrl}/api/v1/challenges/?skip=${skip}&limit=${limit}&public_only=true`, {
+      const url = `${this.baseUrl}/api/v1/challenges/?skip=${skip}&limit=${limit}&public_only=${publicOnly}`;
+      
+      console.log('🌐 Making API call to:', url);
+      console.log('📋 Request headers:', headers);
+      
+      console.log('📡 About to fetch...');
+      const response = await fetch(url, {
         method: 'GET',
         headers,
       });
 
+      console.log('📡 Fetch completed, status:', response.status);
+      console.log('📡 Response ok:', response.ok);
+
       if (!response.ok) {
-        const errorText = await response.text().catch(() => 'Unknown error');
-        throw new Error(`Failed to get challenges: ${response.status} ${errorText}`);
+        console.error('❌ API call failed with status:', response.status);
+        const errorText = await response.text();
+        console.error('❌ Error response:', errorText);
+        throw new Error(`HTTP error! status: ${response.status}`);
       }
 
-      const responseData = await response.json();
-      console.log('🎯 CHALLENGE: Raw response: [HIDDEN]');
-
-      // Handle the paginated response format from backend
-      const challenges = responseData.challenges || responseData;
-      console.log(`✅ CHALLENGE: Retrieved ${challenges.length} challenges`);
-
-      return {
-        success: true,
-        data: challenges,
-        timestamp: new Date(),
-      };
-
-    } catch (error: any) {
-      console.error('❌ CHALLENGE: Error getting challenges:', error);
-      return {
-        success: false,
-        error: error.message || 'Failed to get challenges',
-        timestamp: new Date(),
-      };
+      console.log('📡 About to parse JSON...');
+      const data = await response.json();
+      console.log('✅ JSON parsed successfully');
+      console.log('✅ API Response received:');
+      console.log('  - Type:', typeof data);
+      console.log('  - Keys:', Object.keys(data));
+      console.log('  - Total count:', data.total_count);
+      console.log('  - Challenges array length:', data.challenges?.length || 0);
+      
+      if (data.challenges && data.challenges.length > 0) {
+        console.log('  - First challenge ID:', data.challenges[0].challenge_id);
+        console.log('🎉 Returning challenges array with', data.challenges.length, 'items');
+        return data.challenges;  // Return the challenges array
+      } else {
+        console.log('  - No challenges in response');
+        console.log('🎉 Returning empty array');
+        return [];
+      }
+    } catch (error) {
+      console.error('💥 Error in getChallenges:', error);
+      if (error instanceof Error) {
+        console.error('💥 Error stack:', error.stack);
+      }
+      throw error;
     }
   }
 

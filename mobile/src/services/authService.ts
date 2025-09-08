@@ -87,6 +87,7 @@ export class AuthService {
       await AsyncStorage.setItem('refreshToken', data.refresh_token);
 
       console.log('✅ Created guest user with backend token:', guestUser.id);
+      console.log('✅ Auth token stored:', data.access_token ? `${data.access_token.substring(0, 30)}...` : 'null');
     } catch (error) {
       console.error('❌ Failed to create guest session with backend:', error);
       
@@ -120,6 +121,10 @@ export class AuthService {
    * Get current auth token
    */
   public getAuthToken(): string | null {
+    console.log('🔐 AUTH SERVICE: getAuthToken called, current token exists:', !!this.authToken);
+    if (this.authToken) {
+      console.log('🔐 AUTH SERVICE: Token preview:', this.authToken.substring(0, 30) + '...');
+    }
     return this.authToken;
   }
 
@@ -267,7 +272,7 @@ export class AuthService {
   private getApiBaseUrl(): string {
     // Force development URL for now
     console.log('🌐 AUTH: Using development URL');
-    return 'http://192.168.50.111:8001';
+    return 'http://192.168.50.111:8000';
   }
 
   /**

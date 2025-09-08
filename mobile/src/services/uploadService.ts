@@ -53,7 +53,7 @@ export class VideoUploadService {
   private constructor() {
     // Force development URL for now
     console.log('🌐 UPLOAD: Using development URL');
-    this.baseUrl = 'http://192.168.50.111:8001';
+    this.baseUrl = 'http://192.168.50.111:8000';
   }
 
   public static getInstance(): VideoUploadService {

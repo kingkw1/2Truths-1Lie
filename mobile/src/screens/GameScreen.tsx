@@ -206,15 +206,19 @@ export const GameScreen: React.FC = () => {
       
       const response = await realChallengeAPI.getChallenges(0, 20);
       
-      if (response.success && response.data) {
-        // console.log('✅ GAME: Successfully loaded challenges:', response.data.length);
+      console.log('🎯 GAME: Response received:', typeof response, Array.isArray(response) ? `Array[${response.length}]` : 'Not array');
+      
+      // Handle direct array response from API
+      if (Array.isArray(response)) {
+        console.log('✅ GAME: Successfully loaded challenges:', response.length);
         
         // Convert backend challenges to frontend format
-        const enhancedChallenges = response.data.map(convertBackendChallenge);
+        const enhancedChallenges = response.map(convertBackendChallenge);
         dispatch(loadChallenges(enhancedChallenges));
       } else {
-        const errorMessage = response.error || 'Failed to load challenges';
+        const errorMessage = 'Invalid response format from challenges API';
         console.error('❌ GAME: Failed to load challenges:', errorMessage);
+        console.error('❌ GAME: Response was:', response);
         
         const errorDetails = errorHandlingService.categorizeError(new Error(errorMessage));
         errorHandlingService.logError(errorDetails, 'GameScreen.loadChallenges');
@@ -224,10 +228,8 @@ export const GameScreen: React.FC = () => {
           errorType: errorDetails.type 
         }));
         
-        // Only fallback to empty array if it's not a retryable error
-        if (!errorDetails.retryable) {
-          dispatch(loadChallenges([]));
-        }
+        // Fallback to empty array
+        dispatch(loadChallenges([]));
       }
     } catch (err: any) {
       console.error('❌ GAME: Error loading challenges:', err);
