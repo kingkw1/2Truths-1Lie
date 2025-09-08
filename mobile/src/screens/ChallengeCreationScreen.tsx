@@ -345,23 +345,29 @@ export const ChallengeCreationScreen: React.FC<ChallengeCreationScreenProps> = (
         merge_session_id: mergeResult.mergeSessionId,
         merged_video_metadata: mergeResult.segmentMetadata ? {
           total_duration: mergeResult.segmentMetadata.reduce((total, segment) =>
-            Math.max(total, segment.endTime), 0) / 1000, // Convert to seconds
+            total + (segment as any).duration, 0) / 1000, // Sum actual durations and convert to seconds
           segments: mergeResult.segmentMetadata.map(segment => ({
             statement_index: segment.statementIndex,
-            start_time: segment.startTime / 1000, // Convert to seconds
-            end_time: segment.endTime / 1000, // Convert to seconds
-            duration: (segment.endTime - segment.startTime) / 1000, // Convert to seconds
+            start_time: segment.startTime, // Already in seconds, don't convert
+            end_time: segment.endTime, // Already in seconds, don't convert
+            duration: (segment as any).duration / 1000, // Use actual duration and convert to seconds
           })),
           video_file_id: mergeResult.mergedVideoUrl || '',
           compression_applied: true, // Assume compression was applied during merge
           original_total_duration: mergeResult.segmentMetadata.reduce((total, segment) =>
-            Math.max(total, segment.endTime), 0) / 1000, // Same as total for now
+            total + (segment as any).duration, 0) / 1000, // Sum actual durations and convert to seconds
         } : undefined,
       };
 
       console.log('🎯 CHALLENGE: Submitting request with merged video');
       console.log('🎯 CHALLENGE: Request is_merged_video:', challengeRequest.is_merged_video);
       console.log('🎯 CHALLENGE: Request size (chars):', JSON.stringify(challengeRequest).length);
+      console.log('🔍 DEBUG: Full segment metadata being sent:');
+      if (challengeRequest.merged_video_metadata?.segments) {
+        challengeRequest.merged_video_metadata.segments.forEach((seg, i) => {
+          console.log(`🔍 DEBUG: Segment ${i}: start_time=${seg.start_time}, end_time=${seg.end_time}, duration=${seg.duration}`);
+        });
+      }
       console.log('🎯 CHALLENGE: About to call realChallengeAPI.createChallenge...');
 
       // Submit to backend

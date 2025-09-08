@@ -181,6 +181,9 @@ export class RealChallengeAPIService {
         console.log('🎯 API: Headers: Content-Type: application/json');
         console.log('🎯 API: Body length:', JSON.stringify(request).length);
         
+        // DEBUG: Log the exact JSON being sent
+        console.log('🔍 DEBUG: Request merged_video_metadata:', JSON.stringify(request.merged_video_metadata, null, 2));
+        
         const startTime = Date.now();
         
         // Use test endpoint for development (bypasses auth)

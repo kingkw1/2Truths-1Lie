@@ -118,19 +118,24 @@ async def create_test_challenge(request: SimpleChallengeRequest):
             if request.is_merged_video and request.merged_video_metadata and 'segments' in request.merged_video_metadata:
                 # Find the segment for this statement index
                 segments = request.merged_video_metadata.get('segments', [])
+                print(f"🔍 DEBUG: Processing segments for statement {i}")
+                print(f"🔍 DEBUG: Total segments available: {len(segments)}")
                 for segment in segments:
+                    print(f"🔍 DEBUG: Checking segment: {segment}")
                     if segment.get('statement_index') == i:
-                        # Convert from milliseconds to seconds for VideoSegmentMetadata
+                        print(f"🔍 DEBUG: Found matching segment for statement {i}: {segment}")
+                        # Convert from seconds to VideoSegmentMetadata (mobile app now sends in seconds)
                         statement_segment_metadata = VideoSegmentMetadata(
-                            start_time=segment.get('start_time_ms', 0) / 1000.0,
-                            end_time=segment.get('end_time_ms', 0) / 1000.0,
-                            duration=segment.get('duration_ms', 0) / 1000.0,
+                            start_time=segment.get('start_time', 0),
+                            end_time=segment.get('end_time', 0),
+                            duration=segment.get('duration', 0),
                             statement_index=segment.get('statement_index', i)
                         )
-                        # Keep milliseconds for statement fields (mobile app expects milliseconds)
-                        statement_start_time_ms = segment.get('start_time_ms', 0)
-                        statement_end_time_ms = segment.get('end_time_ms', 0)
-                        statement_duration_ms = segment.get('duration_ms', 0)
+                        print(f"🔍 DEBUG: Created VideoSegmentMetadata: start_time={statement_segment_metadata.start_time}, end_time={statement_segment_metadata.end_time}, duration={statement_segment_metadata.duration}")
+                        # Convert to milliseconds for statement fields (mobile app expects milliseconds)
+                        statement_start_time_ms = segment.get('start_time', 0) * 1000.0
+                        statement_end_time_ms = segment.get('end_time', 0) * 1000.0
+                        statement_duration_ms = segment.get('duration', 0) * 1000.0
                         break
             
             statement = Statement(
@@ -168,9 +173,9 @@ async def create_test_challenge(request: SimpleChallengeRequest):
             if 'segments' in raw_metadata:
                 for segment in raw_metadata['segments']:
                     transformed_segment = VideoSegmentMetadata(
-                        start_time=segment.get('start_time_ms', 0) / 1000.0,
-                        end_time=segment.get('end_time_ms', 0) / 1000.0,
-                        duration=segment.get('duration_ms', 0) / 1000.0,
+                        start_time=segment.get('start_time', 0),
+                        end_time=segment.get('end_time', 0),
+                        duration=segment.get('duration', 0),
                         statement_index=segment.get('statement_index', 0)
                     )
                     transformed_segments.append(transformed_segment)
@@ -180,11 +185,11 @@ async def create_test_challenge(request: SimpleChallengeRequest):
             
             # Create the properly formatted MergedVideoMetadata
             transformed_merged_metadata = MergedVideoMetadata(
-                total_duration=raw_metadata.get('total_duration_ms', 0) / 1000.0,
+                total_duration=raw_metadata.get('total_duration', 0),
                 segments=transformed_segments,
                 video_file_id=video_file_id,
                 compression_applied=raw_metadata.get('compression_applied', False),
-                original_total_duration=raw_metadata.get('original_total_duration_ms', None) / 1000.0 if raw_metadata.get('original_total_duration_ms') else None
+                original_total_duration=raw_metadata.get('original_total_duration', None)
             )
         
         challenge = Challenge(

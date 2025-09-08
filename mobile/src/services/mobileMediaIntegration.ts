@@ -586,14 +586,21 @@ export class MobileMediaIntegrationService {
         success: true,
         mergedVideoUrl: videos[0]?.uri || '', // Use first video as fallback
         mergeSessionId: `local_merge_${Date.now()}`,
-        segmentMetadata: videos.map((video, index) => ({
-          id: `segment_${index}`,
-          statementIndex: index,
-          startTime: index * 30, // Approximate timing
-          endTime: (index + 1) * 30,
-          duration: video.duration || 30000,
-          url: video.uri,
-        })),
+        segmentMetadata: videos.map((video, index) => {
+          // Calculate realistic segment timing based on actual video durations
+          const videoDurationSeconds = (video.duration || 1000) / 1000; // Convert ms to seconds
+          const previousSegmentsDuration = videos.slice(0, index).reduce((sum, v) => 
+            sum + ((v.duration || 1000) / 1000), 0);
+          
+          return {
+            id: `segment_${index}`,
+            statementIndex: index,
+            startTime: previousSegmentsDuration, // Start where previous segment ended
+            endTime: previousSegmentsDuration + videoDurationSeconds, // End based on actual duration
+            duration: video.duration || 1000, // Keep in milliseconds for compatibility
+            url: video.uri,
+          };
+        }),
         error: undefined,
       };
 
