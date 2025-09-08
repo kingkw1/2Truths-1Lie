@@ -1,133 +1,104 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, SafeAreaView } from 'react-native';
+import { StoreProvider } from './src/store/StoreProvider';
+import { GameScreen } from './src/screens/GameScreen';
+import { ChallengeCreationScreen } from './src/screens/ChallengeCreationScreen';
+import { ErrorBoundary } from './src/components/ErrorBoundary';
 
-interface Challenge {
-  id: string;
-  title: string;
-  statements: string[];
-  category: string;
-}
+type Screen = 'game' | 'create' | 'test';
 
-export default function App() {
-  const [challenges, setChallenges] = useState<Challenge[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+const AppContent: React.FC = () => {
+  const [currentScreen, setCurrentScreen] = useState<Screen>('test');
 
   console.log('=== APP LOADING ===');
   console.log('If you see this in Expo logs, logging is working!');
 
-  const fetchChallenges = async () => {
+  const testBackendConnection = async () => {
     try {
       console.log('🔄 Testing backend connection...');
-      setLoading(true);
-      setError(null);
+      const response = await fetch('http://192.168.50.111:8000/health');
+      console.log('📡 Health endpoint status:', response.status);
       
-      // First try the health endpoint to test basic connectivity
-      const healthResponse = await fetch('http://192.168.50.111:8000/health');
-      console.log('📡 Health endpoint status:', healthResponse.status);
-      
-      if (healthResponse.ok) {
-        const healthData = await healthResponse.json();
-        console.log('🏥 Health check result:', healthData);
-        
-        // Mock some challenge data for now since we confirmed connectivity
-        const mockChallenges = [
-          {
-            id: "test1",
-            title: "Backend Connection Test",
-            statements: [
-              "The backend server is running on port 8000",
-              "The health endpoint returned status 200",
-              "Console logging is working perfectly"
-            ],
-            category: "System Test"
-          },
-          {
-            id: "test2", 
-            title: "Server-Side Video Processing Ready",
-            statements: [
-              "Your FFmpeg video processing is completed",
-              "The API endpoints are responding correctly",
-              "Mobile app integration is successful"
-            ],
-            category: "Video Processing"
-          }
-        ];
-        
-        console.log('📦 Using test challenges:', mockChallenges.length);
-        console.log('🔍 First challenge:', mockChallenges[0]);
-        setChallenges(mockChallenges);
-        setLoading(false);
-      } else {
-        throw new Error(`Health check failed with status: ${healthResponse.status}`);
+      if (response.ok) {
+        const data = await response.json();
+        console.log('🏥 Health check result:', data);
+        console.log('✅ Backend is ready for full app testing!');
       }
     } catch (err) {
-      const errorMsg = err instanceof Error ? err.message : 'Unknown error';
-      console.error('❌ Backend test failed:', errorMsg);
-      setError(errorMsg);
-      setLoading(false);
+      console.error('❌ Backend connection test failed:', err);
     }
   };
 
-  const testBasicLogging = () => {
-    console.log('🔘 Test button pressed!');
-    console.log('📱 App is fully interactive');
-  };
-
-  return (
-    <ScrollView style={styles.container}>
-      <Text style={styles.title}>2 Truths & 1 Lie</Text>
-      <Text style={styles.subtitle}>Mobile Testing Interface</Text>
-      
-      <TouchableOpacity style={styles.button} onPress={testBasicLogging}>
-        <Text style={styles.buttonText}>Test Console Logging</Text>
-      </TouchableOpacity>
-      
-      <TouchableOpacity style={styles.button} onPress={fetchChallenges}>
-        <Text style={styles.buttonText}>
-          {loading ? 'Loading...' : 'Fetch Challenges from Backend'}
+  if (currentScreen === 'test') {
+    return (
+      <SafeAreaView style={styles.container}>
+        <Text style={styles.title}>2 Truths & 1 Lie</Text>
+        <Text style={styles.subtitle}>Choose App Mode</Text>
+        
+        <TouchableOpacity style={styles.button} onPress={testBackendConnection}>
+          <Text style={styles.buttonText}>Test Backend Connection</Text>
+        </TouchableOpacity>
+        
+        <TouchableOpacity 
+          style={[styles.button, styles.primaryButton]} 
+          onPress={() => setCurrentScreen('game')}
+        >
+          <Text style={styles.buttonText}>🎮 Enter Game Mode</Text>
+        </TouchableOpacity>
+        
+        <TouchableOpacity 
+          style={[styles.button, styles.secondaryButton]} 
+          onPress={() => setCurrentScreen('create')}
+        >
+          <Text style={styles.buttonText}>📹 Create Challenge Mode</Text>
+        </TouchableOpacity>
+        
+        <Text style={styles.info}>
+          This is the full app with Redux store, video players, and backend integration.
+          {'\n\n'}Upload services are temporarily disabled to prevent FormData issues.
         </Text>
-      </TouchableOpacity>
-      
-      {error && (
-        <View style={styles.errorContainer}>
-          <Text style={styles.errorTitle}>Connection Error:</Text>
-          <Text style={styles.errorText}>{error}</Text>
-        </View>
-      )}
-      
-      {challenges.length > 0 && (
-        <View style={styles.resultsContainer}>
-          <Text style={styles.resultsTitle}>
-            ✅ Successfully loaded {challenges.length} challenges!
-          </Text>
-          
-          {challenges.slice(0, 3).map((challenge, index) => (
-            <View key={challenge.id} style={styles.challengeCard}>
-              <Text style={styles.challengeTitle}>{challenge.title}</Text>
-              <Text style={styles.challengeCategory}>Category: {challenge.category}</Text>
-              <View style={styles.statements}>
-                {challenge.statements.map((statement, idx) => (
-                  <Text key={idx} style={styles.statement}>
-                    {idx + 1}. {statement}
-                  </Text>
-                ))}
-              </View>
-            </View>
-          ))}
-          
-          {challenges.length > 3 && (
-            <Text style={styles.moreText}>
-              ... and {challenges.length - 3} more challenges
-            </Text>
-          )}
-        </View>
-      )}
-      
-      <Text style={styles.info}>
-        This tests backend connectivity and server-side video processing
-      </Text>
-    </ScrollView>
+      </SafeAreaView>
+    );
+  }
+
+  if (currentScreen === 'game') {
+    return (
+      <View style={styles.fullScreen}>
+        <TouchableOpacity 
+          style={styles.backButton} 
+          onPress={() => setCurrentScreen('test')}
+        >
+          <Text style={styles.backText}>← Back to Menu</Text>
+        </TouchableOpacity>
+        <GameScreen />
+      </View>
+    );
+  }
+
+  if (currentScreen === 'create') {
+    return (
+      <View style={styles.fullScreen}>
+        <TouchableOpacity 
+          style={styles.backButton} 
+          onPress={() => setCurrentScreen('test')}
+        >
+          <Text style={styles.backText}>← Back to Menu</Text>
+        </TouchableOpacity>
+        <ChallengeCreationScreen />
+      </View>
+    );
+  }
+
+  return null;
+};
+
+export default function App() {
+  return (
+    <ErrorBoundary>
+      <StoreProvider>
+        <AppContent />
+      </StoreProvider>
+    </ErrorBoundary>
   );
 }
 
@@ -136,17 +107,22 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#fff',
     padding: 20,
-    paddingTop: 50,
+    justifyContent: 'center',
+  },
+  fullScreen: {
+    flex: 1,
+    backgroundColor: '#fff',
   },
   title: {
-    fontSize: 24,
+    fontSize: 28,
     fontWeight: 'bold',
     marginBottom: 10,
     textAlign: 'center',
+    color: '#333',
   },
   subtitle: {
     fontSize: 18,
-    marginBottom: 20,
+    marginBottom: 30,
     textAlign: 'center',
     color: '#666',
   },
@@ -156,72 +132,36 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     marginBottom: 15,
   },
+  primaryButton: {
+    backgroundColor: '#34C759',
+  },
+  secondaryButton: {
+    backgroundColor: '#FF9500',
+  },
   buttonText: {
     color: 'white',
     fontSize: 16,
     fontWeight: 'bold',
     textAlign: 'center',
   },
-  errorContainer: {
-    backgroundColor: '#ffebee',
-    padding: 15,
-    borderRadius: 8,
-    marginBottom: 15,
-  },
-  errorTitle: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#c62828',
-    marginBottom: 5,
-  },
-  errorText: {
-    color: '#c62828',
-  },
-  resultsContainer: {
-    backgroundColor: '#e8f5e8',
-    padding: 15,
-    borderRadius: 8,
-    marginBottom: 15,
-  },
-  resultsTitle: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#2e7d32',
-    marginBottom: 10,
-  },
-  challengeCard: {
-    backgroundColor: '#f0f0f0',
+  backButton: {
+    position: 'absolute',
+    top: 50,
+    left: 20,
+    zIndex: 100,
+    backgroundColor: 'rgba(0,0,0,0.7)',
     padding: 10,
-    marginBottom: 10,
-    borderRadius: 8,
+    borderRadius: 5,
   },
-  challengeTitle: {
+  backText: {
+    color: 'white',
     fontSize: 16,
-    fontWeight: 'bold',
-    marginBottom: 3,
-  },
-  challengeCategory: {
-    fontSize: 12,
-    color: '#666',
-    marginBottom: 8,
-  },
-  statements: {
-    marginLeft: 5,
-  },
-  statement: {
-    fontSize: 14,
-    marginBottom: 3,
-  },
-  moreText: {
-    textAlign: 'center',
-    color: '#666',
-    marginTop: 10,
-    fontStyle: 'italic',
   },
   info: {
     fontSize: 14,
     color: '#666',
     textAlign: 'center',
-    marginTop: 20,
+    marginTop: 30,
+    lineHeight: 20,
   },
 });

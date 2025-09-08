@@ -68,7 +68,7 @@ export interface Achievement {
   name: string;
   description: string;
   iconUrl: string;
-  unlockedAt?: Date;
+  unlockedAt?: string; // ISO date string for Redux serialization
   progress: number; // 0-100 percentage
   maxProgress: number;
   isUnlocked: boolean;
@@ -102,8 +102,8 @@ export interface PlayerProgression {
   longestStreak: number;
   achievements: Achievement[];
   unlockedCosmetics: string[];
-  createdAt: Date;
-  lastUpdated: Date;
+  createdAt: string; // ISO date string for Redux serialization
+  lastUpdated: string; // ISO date string for Redux serialization
 }
 
 /**
