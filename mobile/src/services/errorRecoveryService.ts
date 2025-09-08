@@ -393,7 +393,7 @@ export class ErrorRecoveryService {
       return {
         success: false,
         strategy: strategy.name,
-        message: `Recovery strategy failed: ${error.message}`,
+        message: `Recovery strategy failed: ${error instanceof Error ? error.message : String(error)}`,
       };
     }
   }

@@ -74,6 +74,7 @@ describe('Upload Integration - Comprehensive Tests', () => {
           mediaRecordingState: {},
           previewMode: false,
           individualRecordings: {},
+          mergeState: {},
         },
       },
     });

@@ -89,6 +89,7 @@ describe('End-to-End Integration Tests', () => {
           mediaRecordingState: {},
           previewMode: false,
           individualRecordings: {},
+          mergeState: {},
         },
         gameSession: {
           currentSession: null,
@@ -259,13 +260,15 @@ describe('End-to-End Integration Tests', () => {
         lie_statement_index: 2,
         is_merged_video: true,
         merged_video_metadata: {
-          total_duration_ms: 30000,
-          segment_count: 3,
+          total_duration: 30,
           segments: [
-            { statement_index: 0, start_time_ms: 0, end_time_ms: 10000, duration_ms: 10000 },
-            { statement_index: 1, start_time_ms: 10000, end_time_ms: 20000, duration_ms: 10000 },
-            { statement_index: 2, start_time_ms: 20000, end_time_ms: 30000, duration_ms: 10000 },
+            { statement_index: 0, start_time: 0, end_time: 10, duration: 10 },
+            { statement_index: 1, start_time: 10, end_time: 20, duration: 10 },
+            { statement_index: 2, start_time: 20, end_time: 30, duration: 10 },
           ],
+          video_file_id: 'e2e-video-id',
+          compression_applied: true,
+          original_total_duration: 30,
         },
       };
 
@@ -844,13 +847,15 @@ describe('End-to-End Integration Tests', () => {
         tags: ['adventure', 'travel', 'languages'],
         is_merged_video: true,
         merged_video_metadata: {
-          total_duration_ms: 38000,
-          segment_count: 3,
+          total_duration: 38,
           segments: [
-            { statement_index: 0, start_time_ms: 0, end_time_ms: 12000, duration_ms: 12000 },
-            { statement_index: 1, start_time_ms: 12000, end_time_ms: 25000, duration_ms: 13000 },
-            { statement_index: 2, start_time_ms: 25000, end_time_ms: 38000, duration_ms: 13000 },
+            { statement_index: 0, start_time: 0, end_time: 12, duration: 12 },
+            { statement_index: 1, start_time: 12, end_time: 25, duration: 13 },
+            { statement_index: 2, start_time: 25, end_time: 38, duration: 13 },
           ],
+          video_file_id: 'consistency-video',
+          compression_applied: true,
+          original_total_duration: 38,
         },
       };
 

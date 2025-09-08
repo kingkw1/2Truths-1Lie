@@ -307,7 +307,14 @@ export const ChallengeCreationScreen: React.FC<ChallengeCreationScreenProps> = (
       console.log('🎯 SUBMIT: Uploading videos for server-side merging...');
 
       // Upload all three videos for server-side merging
-      const mergeResult = await mobileMediaIntegration.uploadVideosForMerging(individualRecordings);
+      // Filter out null values to match expected type
+      const validRecordings: { [key: number]: MediaCapture } = {};
+      Object.entries(individualRecordings).forEach(([key, value]) => {
+        if (value !== null) {
+          validRecordings[parseInt(key, 10)] = value;
+        }
+      });
+      const mergeResult = await mobileMediaIntegration.uploadVideosForMerging(validRecordings);
 
       if (!mergeResult.success) {
         throw new Error(mergeResult.error || 'Failed to upload videos for merging');

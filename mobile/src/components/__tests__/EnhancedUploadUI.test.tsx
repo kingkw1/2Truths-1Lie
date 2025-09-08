@@ -99,6 +99,7 @@ describe('EnhancedUploadUI', () => {
           mediaRecordingState: {},
           previewMode: false,
           individualRecordings: {},
+          mergeState: {},
         },
       },
     });

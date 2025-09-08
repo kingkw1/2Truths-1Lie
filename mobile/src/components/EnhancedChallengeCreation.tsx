@@ -399,7 +399,7 @@ export const EnhancedChallengeCreation: React.FC<EnhancedChallengeCreationProps>
       // Prepare challenge request with merged video data
       const challengeRequest = {
         statements: statementTexts.map((text, index) => {
-          const segmentData = mergeResult.segmentMetadata?.find(s => s.statementIndex === index);
+          const segmentData = mergeResult.segmentMetadata?.find((s: any) => s.statementIndex === index);
           return {
             text: text || `Statement ${index + 1}`,
             media_file_id: mergeResult.mergedVideoUrl || '',
@@ -415,9 +415,9 @@ export const EnhancedChallengeCreation: React.FC<EnhancedChallengeCreationProps>
         merged_video_file_id: mergeResult.mergedVideoUrl,
         merge_session_id: mergeResult.mergeSessionId,
         merged_video_metadata: {
-          total_duration: mergeResult.segmentMetadata.reduce((total, segment) =>
+          total_duration: mergeResult.segmentMetadata.reduce((total: number, segment: any) =>
             Math.max(total, segment.endTime), 0) / 1000,
-          segments: mergeResult.segmentMetadata.map(segment => ({
+          segments: mergeResult.segmentMetadata.map((segment: any) => ({
             statement_index: segment.statementIndex,
             start_time: segment.startTime / 1000,
             end_time: segment.endTime / 1000,
@@ -425,7 +425,7 @@ export const EnhancedChallengeCreation: React.FC<EnhancedChallengeCreationProps>
           })),
           video_file_id: mergeResult.mergedVideoUrl || '',
           compression_applied: true,
-          original_total_duration: mergeResult.segmentMetadata.reduce((total, segment) =>
+          original_total_duration: mergeResult.segmentMetadata.reduce((total: number, segment: any) =>
             Math.max(total, segment.endTime), 0) / 1000,
         },
       };

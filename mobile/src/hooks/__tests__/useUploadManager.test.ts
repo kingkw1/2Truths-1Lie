@@ -59,6 +59,7 @@ describe('useUploadManager', () => {
           mediaRecordingState: {},
           previewMode: false,
           individualRecordings: {},
+          mergeState: {},
         },
       },
     });

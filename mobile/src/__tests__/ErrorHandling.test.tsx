@@ -83,6 +83,7 @@ describe('Error Formatting', () => {
       userMessage: 'No internet connection. Please check your network and try again.',
       retryable: true,
       timestamp: new Date(),
+      severity: 'medium' as const,
     };
 
     const formattedMessage = errorHandlingService.formatErrorForUser(networkError);
@@ -99,6 +100,7 @@ describe('Error Formatting', () => {
       userMessage: 'Server error occurred',
       retryable: true,
       timestamp: new Date(),
+      severity: 'high' as const,
     };
 
     errorHandlingService.logError(errorDetails, 'TestContext');

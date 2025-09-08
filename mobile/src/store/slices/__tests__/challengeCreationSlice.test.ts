@@ -45,6 +45,7 @@ describe('challengeCreationSlice', () => {
       mediaRecordingState: {},
       uploadState: {},
       individualRecordings: {},
+      mergeState: {},
     };
   });
 
