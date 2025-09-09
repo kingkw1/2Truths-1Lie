@@ -1,0 +1,463 @@
+{
+  "dashboard": {
+    "title": "Media Processing Pipeline Monitoring",
+    "description": "Comprehensive monitoring dashboard for video processing operations",
+    "refresh_interval": "30s",
+    "time_range": "1h",
+    "panels": [
+      {
+        "id": "system_health",
+        "title": "System Health Overview",
+        "type": "stat",
+        "targets": [
+          {
+            "endpoint": "/api/v1/monitoring/health",
+            "metric": "overall_status",
+            "display_name": "System Status"
+          }
+        ],
+        "thresholds": [
+          {"value": "healthy", "color": "green"},
+          {"value": "warning", "color": "yellow"},
+          {"value": "critical", "color": "red"}
+        ],
+        "position": {"x": 0, "y": 0, "w": 6, "h": 3}
+      },
+      {
+        "id": "processing_stats",
+        "title": "Processing Statistics (24h)",
+        "type": "stat_group",
+        "targets": [
+          {
+            "endpoint": "/api/v1/monitoring/stats?hours=24",
+            "metrics": [
+              {"path": "total_operations", "display_name": "Total Operations"},
+              {"path": "success_rate", "display_name": "Success Rate", "format": "percent"},
+              {"path": "error_rate", "display_name": "Error Rate", "format": "percent"},
+              {"path": "average_duration", "display_name": "Avg Duration", "format": "seconds"}
+            ]
+          }
+        ],
+        "position": {"x": 6, "y": 0, "w": 6, "h": 3}
+      },
+      {
+        "id": "system_resources",
+        "title": "System Resources",
+        "type": "timeseries",
+        "targets": [
+          {
+            "endpoint": "/api/v1/monitoring/metrics/system?hours=4",
+            "metrics": [
+              {"path": "metrics[].cpu_usage_percent", "display_name": "CPU Usage %"},
+              {"path": "metrics[].memory_usage_percent", "display_name": "Memory Usage %"},
+              {"path": "metrics[].disk_usage_percent", "display_name": "Disk Usage %"}
+            ]
+          }
+        ],
+        "y_axis": {"min": 0, "max": 100, "unit": "percent"},
+        "thresholds": [
+          {"value": 80, "color": "yellow"},
+          {"value": 95, "color": "red"}
+        ],
+        "position": {"x": 0, "y": 3, "w": 12, "h": 4}
+      },
+      {
+        "id": "processing_stages",
+        "title": "Processing Stage Performance",
+        "type": "bar_chart",
+        "targets": [
+          {
+            "endpoint": "/api/v1/monitoring/stats?hours=24",
+            "metrics": [
+              {"path": "stage_breakdown.upload.average_duration", "display_name": "Upload"},
+              {"path": "stage_breakdown.analysis.average_duration", "display_name": "Analysis"},
+              {"path": "stage_breakdown.preparation.average_duration", "display_name": "Preparation"},
+              {"path": "stage_breakdown.merging.average_duration", "display_name": "Merging"},
+              {"path": "stage_breakdown.compression.average_duration", "display_name": "Compression"},
+              {"path": "stage_breakdown.storage_upload.average_duration", "display_name": "Storage Upload"},
+              {"path": "stage_breakdown.cleanup.average_duration", "display_name": "Cleanup"}
+            ]
+          }
+        ],
+        "y_axis": {"unit": "seconds"},
+        "position": {"x": 0, "y": 7, "w": 6, "h": 4}
+      },
+      {
+        "id": "active_sessions",
+        "title": "Active Processing Sessions",
+        "type": "table",
+        "targets": [
+          {
+            "endpoint": "/api/v1/monitoring/sessions/active",
+            "columns": [
+              {"path": "active_sessions[].session_id", "display_name": "Session ID"},
+              {"path": "active_sessions[].stage", "display_name": "Stage"},
+              {"path": "active_sessions[].duration_minutes", "display_name": "Duration (min)", "format": "number"},
+              {"path": "active_sessions[].memory_usage_mb", "display_name": "Memory (MB)", "format": "number"},
+              {"path": "active_sessions[].user_id", "display_name": "User ID"}
+            ]
+          }
+        ],
+        "position": {"x": 6, "y": 7, "w": 6, "h": 4}
+      },
+      {
+        "id": "error_breakdown",
+        "title": "Error Breakdown (24h)",
+        "type": "pie_chart",
+        "targets": [
+          {
+            "endpoint": "/api/v1/monitoring/stats?hours=24",
+            "metric": "error_breakdown"
+          }
+        ],
+        "position": {"x": 0, "y": 11, "w": 6, "h": 4}
+      },
+      {
+        "id": "recent_alerts",
+        "title": "Recent Alerts",
+        "type": "alert_list",
+        "targets": [
+          {
+            "endpoint": "/api/v1/monitoring/alerts?limit=10",
+            "columns": [
+              {"path": "alerts[].level", "display_name": "Level"},
+              {"path": "alerts[].title", "display_name": "Title"},
+              {"path": "alerts[].message", "display_name": "Message"},
+              {"path": "alerts[].timestamp", "display_name": "Time", "format": "datetime"}
+            ]
+          }
+        ],
+        "color_mapping": {
+          "critical": "red",
+          "error": "orange",
+          "warning": "yellow",
+          "info": "blue"
+        },
+        "position": {"x": 6, "y": 11, "w": 6, "h": 4}
+      },
+      {
+        "id": "processing_throughput",
+        "title": "Processing Throughput",
+        "type": "timeseries",
+        "targets": [
+          {
+            "endpoint": "/api/v1/monitoring/stats?hours=24",
+            "metric": "total_operations",
+            "aggregation": "rate_per_hour"
+          }
+        ],
+        "y_axis": {"unit": "operations/hour"},
+        "position": {"x": 0, "y": 15, "w": 12, "h": 3}
+      }
+    ],
+    "alerts": [
+      {
+        "name": "System Critical",
+        "condition": "overall_status == 'critical'",
+        "severity": "critical",
+        "notification_channels": ["slack", "email"]
+      },
+      {
+        "name": "High Error Rate",
+        "condition": "error_rate > 0.1",
+        "severity": "warning",
+        "notification_channels": ["slack"]
+      },
+      {
+        "name": "High CPU Usage",
+        "condition": "cpu_usage_percent > 90",
+        "severity": "warning",
+        "notification_channels": ["slack"]
+      },
+      {
+        "name": "High Memory Usage",
+        "condition": "memory_usage_percent > 95",
+        "severity": "critical",
+        "notification_channels": ["slack", "email"]
+      },
+      {
+        "name": "Stuck Sessions",
+        "condition": "active_sessions[].duration_minutes > 30",
+        "severity": "warning",
+        "notification_channels": ["slack"]
+      },
+      {
+        "name": "Slow Processing",
+        "condition": "average_duration > 300",
+        "severity": "warning",
+        "notification_channels": ["slack"]
+      }
+    ],
+    "notification_channels": {
+      "slack": {
+        "webhook_url": "${SLACK_WEBHOOK_URL}",
+        "channel": "#media-processing-alerts",
+        "username": "Media Processing Monitor"
+      },
+      "email": {
+        "smtp_server": "${SMTP_SERVER}",
+        "smtp_port": 587,
+        "username": "${SMTP_USERNAME}",
+        "password": "${SMTP_PASSWORD}",
+        "from_email": "monitoring@yourcompany.com",
+        "to_emails": ["ops@yourcompany.com", "dev@yourcompany.com"]
+      }
+    }
+  },
+  "prometheus_config": {
+    "job_name": "media-processing",
+    "scrape_interval": "30s",
+    "metrics_path": "/api/v1/monitoring/metrics/prometheus",
+    "static_configs": [
+      {
+        "targets": ["localhost:8000"]
+      }
+    ],
+    "scrape_configs": [
+      {
+        "job_name": "media-processing-health",
+        "scrape_interval": "15s",
+        "metrics_path": "/api/v1/monitoring/health/prometheus",
+        "static_configs": [
+          {
+            "targets": ["localhost:8000"]
+          }
+        ]
+      }
+    ]
+  },
+  "grafana_dashboard": {
+    "dashboard": {
+      "id": null,
+      "title": "Media Processing Pipeline",
+      "tags": ["media-processing", "monitoring"],
+      "timezone": "browser",
+      "panels": [
+        {
+          "id": 1,
+          "title": "System Health",
+          "type": "stat",
+          "targets": [
+            {
+              "expr": "media_processing_system_health",
+              "legendFormat": "System Status"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "mappings": [
+                {"options": {"0": {"text": "Critical", "color": "red"}}},
+                {"options": {"1": {"text": "Warning", "color": "yellow"}}},
+                {"options": {"2": {"text": "Healthy", "color": "green"}}}
+              ]
+            }
+          },
+          "gridPos": {"h": 4, "w": 6, "x": 0, "y": 0}
+        },
+        {
+          "id": 2,
+          "title": "Processing Success Rate",
+          "type": "stat",
+          "targets": [
+            {
+              "expr": "media_processing_success_rate",
+              "legendFormat": "Success Rate"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "percentunit",
+              "thresholds": {
+                "steps": [
+                  {"color": "red", "value": 0},
+                  {"color": "yellow", "value": 0.9},
+                  {"color": "green", "value": 0.95}
+                ]
+              }
+            }
+          },
+          "gridPos": {"h": 4, "w": 6, "x": 6, "y": 0}
+        },
+        {
+          "id": 3,
+          "title": "System Resources",
+          "type": "timeseries",
+          "targets": [
+            {
+              "expr": "media_processing_cpu_usage",
+              "legendFormat": "CPU Usage %"
+            },
+            {
+              "expr": "media_processing_memory_usage",
+              "legendFormat": "Memory Usage %"
+            },
+            {
+              "expr": "media_processing_disk_usage",
+              "legendFormat": "Disk Usage %"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "percent",
+              "max": 100,
+              "thresholds": {
+                "steps": [
+                  {"color": "green", "value": 0},
+                  {"color": "yellow", "value": 80},
+                  {"color": "red", "value": 95}
+                ]
+              }
+            }
+          },
+          "gridPos": {"h": 8, "w": 12, "x": 0, "y": 4}
+        },
+        {
+          "id": 4,
+          "title": "Processing Stage Duration",
+          "type": "timeseries",
+          "targets": [
+            {
+              "expr": "media_processing_stage_duration{stage=\"upload\"}",
+              "legendFormat": "Upload"
+            },
+            {
+              "expr": "media_processing_stage_duration{stage=\"analysis\"}",
+              "legendFormat": "Analysis"
+            },
+            {
+              "expr": "media_processing_stage_duration{stage=\"merging\"}",
+              "legendFormat": "Merging"
+            },
+            {
+              "expr": "media_processing_stage_duration{stage=\"compression\"}",
+              "legendFormat": "Compression"
+            }
+          ],
+          "fieldConfig": {
+            "defaults": {
+              "unit": "s"
+            }
+          },
+          "gridPos": {"h": 8, "w": 12, "x": 0, "y": 12}
+        }
+      ],
+      "time": {
+        "from": "now-1h",
+        "to": "now"
+      },
+      "refresh": "30s"
+    }
+  },
+  "datadog_config": {
+    "checks": [
+      {
+        "name": "media_processing_health",
+        "init_config": {},
+        "instances": [
+          {
+            "url": "http://localhost:8000/api/v1/monitoring/health",
+            "method": "GET",
+            "timeout": 10,
+            "tags": ["service:media-processing", "environment:production"]
+          }
+        ]
+      }
+    ],
+    "custom_metrics": [
+      {
+        "metric_name": "media_processing.operations.total",
+        "metric_type": "count",
+        "endpoint": "/api/v1/monitoring/stats?hours=1",
+        "value_path": "total_operations",
+        "tags": ["service:media-processing"]
+      },
+      {
+        "metric_name": "media_processing.success_rate",
+        "metric_type": "gauge",
+        "endpoint": "/api/v1/monitoring/stats?hours=1",
+        "value_path": "success_rate",
+        "tags": ["service:media-processing"]
+      },
+      {
+        "metric_name": "media_processing.error_rate",
+        "metric_type": "gauge",
+        "endpoint": "/api/v1/monitoring/stats?hours=1",
+        "value_path": "error_rate",
+        "tags": ["service:media-processing"]
+      },
+      {
+        "metric_name": "media_processing.duration.average",
+        "metric_type": "gauge",
+        "endpoint": "/api/v1/monitoring/stats?hours=1",
+        "value_path": "average_duration",
+        "tags": ["service:media-processing"]
+      }
+    ]
+  },
+  "cloudwatch_config": {
+    "namespace": "MediaProcessing",
+    "metrics": [
+      {
+        "metric_name": "SystemHealth",
+        "endpoint": "/api/v1/monitoring/health",
+        "value_mapping": {
+          "healthy": 2,
+          "warning": 1,
+          "critical": 0
+        },
+        "dimensions": [
+          {"name": "Service", "value": "MediaProcessing"}
+        ]
+      },
+      {
+        "metric_name": "ProcessingSuccessRate",
+        "endpoint": "/api/v1/monitoring/stats?hours=1",
+        "value_path": "success_rate",
+        "unit": "Percent",
+        "dimensions": [
+          {"name": "Service", "value": "MediaProcessing"}
+        ]
+      },
+      {
+        "metric_name": "ProcessingErrorRate",
+        "endpoint": "/api/v1/monitoring/stats?hours=1",
+        "value_path": "error_rate",
+        "unit": "Percent",
+        "dimensions": [
+          {"name": "Service", "value": "MediaProcessing"}
+        ]
+      },
+      {
+        "metric_name": "ActiveSessions",
+        "endpoint": "/api/v1/monitoring/sessions/active",
+        "value_path": "total_active",
+        "unit": "Count",
+        "dimensions": [
+          {"name": "Service", "value": "MediaProcessing"}
+        ]
+      }
+    ],
+    "alarms": [
+      {
+        "alarm_name": "MediaProcessing-SystemCritical",
+        "metric_name": "SystemHealth",
+        "comparison_operator": "LessThanThreshold",
+        "threshold": 1,
+        "evaluation_periods": 2,
+        "period": 300,
+        "statistic": "Average",
+        "alarm_actions": ["arn:aws:sns:region:account:media-processing-alerts"]
+      },
+      {
+        "alarm_name": "MediaProcessing-HighErrorRate",
+        "metric_name": "ProcessingErrorRate",
+        "comparison_operator": "GreaterThanThreshold",
+        "threshold": 10,
+        "evaluation_periods": 3,
+        "period": 300,
+        "statistic": "Average",
+        "alarm_actions": ["arn:aws:sns:region:account:media-processing-alerts"]
+      }
+    ]
+  }
+}

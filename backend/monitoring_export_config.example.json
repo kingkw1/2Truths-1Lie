@@ -1,0 +1,47 @@
+{
+  "prometheus": {
+    "enabled": true,
+    "pushgateway_url": "http://localhost:9091",
+    "job_name": "media-processing",
+    "instance": "media-processing-01"
+  },
+  "datadog": {
+    "enabled": false,
+    "api_key": "your_datadog_api_key_here",
+    "app_key": "your_datadog_app_key_here",
+    "api_url": "https://api.datadoghq.com/api/v1",
+    "tags": {
+      "service": "media-processing",
+      "environment": "production",
+      "version": "1.0.0"
+    }
+  },
+  "cloudwatch": {
+    "enabled": false,
+    "namespace": "MediaProcessing",
+    "region": "us-east-1",
+    "aws_access_key_id": "your_aws_access_key_here",
+    "aws_secret_access_key": "your_aws_secret_key_here"
+  },
+  "influxdb": {
+    "enabled": false,
+    "url": "http://localhost:8086",
+    "database": "media_processing",
+    "username": "your_influxdb_username",
+    "password": "your_influxdb_password",
+    "retention_policy": "autogen"
+  },
+  "export_settings": {
+    "export_interval_seconds": 60,
+    "batch_size": 100,
+    "retry_attempts": 3,
+    "retry_delay_seconds": 5,
+    "timeout_seconds": 30
+  },
+  "metric_filters": {
+    "include_stages": ["upload", "analysis", "merging", "compression", "storage_upload", "cleanup"],
+    "include_error_codes": true,
+    "include_user_metrics": false,
+    "min_duration_threshold": 1.0
+  }
+}

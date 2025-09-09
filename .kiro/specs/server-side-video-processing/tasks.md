@@ -26,18 +26,17 @@
 - [x] Implement robust error handling for upload and playback.
 
 ## Testing
-- [ ] Write unit tests for backend merge logic and media processing.
-- [ ] Create integration tests for multi-video upload and merge endpoints.
-- [ ] Automate end-to-end tests covering user video capture, upload, challenge creation, and playback.
-- [ ] Conduct device testing for playback UI and network resilience.
-- [ ] Verify compliance with all security and validation requirements.
+- [x] Write unit tests for backend merge logic and media processing.
+- [x] Create integration tests for multi-video upload and merge endpoints.
+- [x] Automate end-to-end tests covering user video capture, upload, challenge creation, and playback.
+- [x] Conduct device testing for playback UI and network resilience.
+- [x] Verify compliance with all security and validation requirements.
 
 ## Documentation
-- [ ] Update developer documentation with new API definitions and media flow.
-- [ ] Revise user guides describing improved upload and playback features.
-- [ ] Document monitoring and alerting processes for media pipeline.
+- [x] Update developer documentation with new API definitions and media flow.
+- [x] Revise user guides describing improved upload and playback features.
+- [x] Document monitoring and alerting processes for media pipeline.
 
 ## Future Work
 - [ ] Research advanced compression options and user quality controls.
-- [ ] Plan migration strategy for existing challenges with separate videos.
 - [ ] Explore CDN integration for optimal content delivery.

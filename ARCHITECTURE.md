@@ -39,7 +39,11 @@
 - **JWT Authentication** - Secure stateless session management
 
 ### Key Backend Features
-- **📁 Media Upload** - Efficient video/audio file handling
+- **📁 Server-Side Video Processing** - FFmpeg-based video merging and compression
+- **🎬 Multi-Video Upload** - Chunked upload for three statement videos
+- **⚡ Asynchronous Processing** - Background video merge pipeline
+- **📐 Segment Metadata** - Precise timing data for video navigation
+- **🌐 CDN Integration** - Global content delivery with signed URLs
 - **🔒 Security** - Rate limiting, input validation, CORS
 - **📊 Analytics** - Game statistics and user engagement tracking
 - **🌐 API Documentation** - Auto-generated OpenAPI/Swagger docs

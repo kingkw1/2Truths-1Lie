@@ -37,6 +37,7 @@
 ## 👥 User Guides
 
 - **[User Media Guide](USER_MEDIA_GUIDE.md)** - Complete user guide for creating and sharing video challenges
+- **[Enhanced Upload & Playback Guide](ENHANCED_UPLOAD_PLAYBACK_GUIDE.md)** - Comprehensive guide to the new server-side processing and advanced streaming features
 
 ---
 

@@ -1,26 +1,8 @@
 # API Documentation for 2Truths-1Lie Mobile App
 
-## Base URL### POST `/statements`
-Submit a new "Two Truths and a Lie" record from mobile app.
+## Base URL
 
-**Request Body:**
-```json
-{
-  "userId": "string",
-  "statements": [
-    {"text": "string", "isLie": false},
-    {"text": "string", "isLie": false},
-    {"text": "string", "isLie": true}
-  ],
-  "mediaUrl": "string (optional)",
-  "mediaType": "video" | "audio" | "none",
-  "deviceInfo": {
-    "platform": "ios" | "android",
-    "version": "string",
-    "model": "string"
-  }
-}
-```ruths1lie.app/v1`
+`https://api.2truths1lie.app/v1`
 
 ---
 
@@ -167,7 +149,20 @@ Submit a guess for a game’s lie.
 
 ## Recent Updates
 
-### Mobile-Only Migration (Latest)
+### Server-Side Video Processing (Latest)
+- **Change**: Added server-side video merging and processing pipeline
+- **Impact**: Videos are now merged on the server using FFmpeg for optimal quality and storage efficiency
+- **Benefits**: 
+  - Single merged video file instead of three separate files
+  - Consistent video quality and compression across all platforms
+  - Segment-based playback with precise timing metadata
+  - Reduced storage costs and improved CDN performance
+- **New Endpoints**: 
+  - `POST /api/v1/challenge-videos/upload-for-merge/initiate` - Multi-video upload initiation
+  - `GET /api/v1/challenges/{id}/segments` - Segment metadata for playback
+  - See [Server-Side Video Processing API](SERVER_SIDE_VIDEO_PROCESSING_API.md) for complete documentation
+
+### Mobile-Only Migration
 - **Change**: Removed web-specific endpoints and headers
 - **Impact**: API now exclusively serves mobile React Native app
 - **Benefits**: 
