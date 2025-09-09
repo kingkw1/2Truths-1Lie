@@ -108,3 +108,8 @@ GoogleService-Info.plist
 *.sw?
 .venv/
 .venv/*
+
+*.tar.gz
+*.zip
+*.rar
+*.7z
