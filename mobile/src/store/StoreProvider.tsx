@@ -13,8 +13,7 @@ import { startGameSession } from './slices/gameSessionSlice';
 import { PlayerProgression } from '../types';
 import { mobileMediaIntegration } from '../services/mobileMediaIntegration';
 import { authService } from '../services/authService';
-// TEMPORARILY DISABLED: Upload service causes FormData issues
-// import { videoUploadService } from '../services/uploadService';
+import { videoUploadService } from '../services/uploadService';
 
 interface StoreProviderProps {
   children: React.ReactNode;
@@ -76,9 +75,8 @@ export const StoreProvider: React.FC<StoreProviderProps> = ({ children }) => {
         await authService.initialize();
         const authToken = authService.getAuthToken();
         if (authToken) {
-          // TEMPORARILY DISABLED: Upload service causes FormData issues
-          // videoUploadService.setAuthToken(authToken);
-          console.log('📝 Auth token ready for upload service (currently disabled)');
+          videoUploadService.setAuthToken(authToken);
+          console.log('✅ Auth token set for upload service - UPLOADS ENABLED!');
         }
       } catch (error) {
         console.error('StoreProvider initialization error:', error);

@@ -166,39 +166,56 @@ class S3MediaService:
             logger.error(f"Error searching for media_id {media_id}: {e}")
             return None
     
-    async def generate_signed_url(self, media_id: str, expires_in: int = 3600) -> str:
+    async def generate_signed_url(self, media_id_or_key: str, expires_in: int = 3600) -> str:
         """
-        Generate signed URL for secure video streaming
-        
+        Generate signed URL for secure video streaming.
+
+        This method accepts either a media_id (UUID stored in object metadata) or a direct
+        S3 object key (e.g. 'merged_videos/.../file.mp4'). If a key is provided (detected by
+        presence of a '/'), we presign that key directly. Otherwise we search for the
+        object key using the media_id metadata.
+
         Args:
-            media_id: Unique media identifier
+            media_id_or_key: Unique media identifier or direct S3 object key
             expires_in: URL expiration time in seconds (default: 1 hour)
-            
+
         Returns:
             str: Pre-signed URL for video streaming
         """
         try:
-            # Find S3 key for this media_id
-            s3_key = self.get_s3_key_from_media_id(media_id)
-            if not s3_key:
-                raise HTTPException(status_code=404, detail="Media not found")
-            
+            # If caller passed a direct S3 key (contains '/'), use it as-is.
+            if '/' in media_id_or_key or media_id_or_key.startswith('media/'):
+                s3_key = media_id_or_key
+            else:
+                # Otherwise treat it as a media_id and search for the object's key
+                s3_key = self.get_s3_key_from_media_id(media_id_or_key)
+                if not s3_key:
+                    raise HTTPException(status_code=404, detail="Media not found")
+
             # Generate pre-signed URL
             signed_url = self.s3_client.generate_presigned_url(
                 'get_object',
                 Params={'Bucket': self.bucket_name, 'Key': s3_key},
                 ExpiresIn=expires_in
             )
-            
-            logger.info(f"Generated signed URL for media_id: {media_id}")
+
+            logger.info(f"Generated signed URL for key/media: {media_id_or_key} -> {s3_key}")
             return signed_url
-            
+
         except ClientError as e:
-            logger.error(f"Failed to generate signed URL for {media_id}: {e}")
+            logger.error(f"Failed to generate signed URL for {media_id_or_key}: {e}")
+            # Prefer returning a 500 with AWS error message if available
+            aws_msg = e.response.get('Error', {}).get('Message') if hasattr(e, 'response') else str(e)
             raise HTTPException(
                 status_code=500,
-                detail=f"Failed to generate streaming URL: {e.response['Error']['Message']}"
+                detail=f"Failed to generate streaming URL: {aws_msg}"
             )
+        except HTTPException:
+            # Re-raise HTTPExceptions (e.g. 404 media not found)
+            raise
+        except Exception as e:
+            logger.error(f"Unexpected error generating signed URL for {media_id_or_key}: {e}")
+            raise HTTPException(status_code=500, detail=f"Failed to generate streaming URL: {str(e)}")
     
     async def delete_video_from_s3(self, media_id: str) -> bool:
         """

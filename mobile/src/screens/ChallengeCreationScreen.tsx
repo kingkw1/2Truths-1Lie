@@ -345,17 +345,17 @@ export const ChallengeCreationScreen: React.FC<ChallengeCreationScreenProps> = (
         merge_session_id: mergeResult.mergeSessionId,
         merged_video_metadata: mergeResult.segmentMetadata ? {
           total_duration: mergeResult.segmentMetadata.reduce((total, segment) =>
-            total + (segment as any).duration, 0) / 1000, // Sum actual durations and convert to seconds
+            total + (segment.endTime - segment.startTime), 0), // Use calculated durations (already in seconds)
           segments: mergeResult.segmentMetadata.map(segment => ({
             statement_index: segment.statementIndex,
-            start_time: segment.startTime, // Already in seconds, don't convert
-            end_time: segment.endTime, // Already in seconds, don't convert
-            duration: (segment as any).duration / 1000, // Use actual duration and convert to seconds
+            start_time: segment.startTime, // Already in seconds
+            end_time: segment.endTime, // Already in seconds
+            duration: segment.endTime - segment.startTime, // Calculate duration from start/end times
           })),
           video_file_id: mergeResult.mergedVideoUrl || '',
           compression_applied: true, // Assume compression was applied during merge
           original_total_duration: mergeResult.segmentMetadata.reduce((total, segment) =>
-            total + (segment as any).duration, 0) / 1000, // Sum actual durations and convert to seconds
+            total + (segment.endTime - segment.startTime), 0), // Use calculated durations (already in seconds)
         } : undefined,
       };
 

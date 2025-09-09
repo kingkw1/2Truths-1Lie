@@ -334,25 +334,45 @@ class WebAPIService implements APIServiceInterface {
   }
 
   async uploadMedia(file: Blob | string, metadata: any): Promise<APIResponse<{ url: string }>> {
-    // TEMPORARILY DISABLED: FormData usage causing launch issues
-    console.warn('⚠️ Media upload temporarily disabled due to FormData issues');
-    return {
-      success: false,
-      error: 'Media upload temporarily disabled - FormData compatibility issues',
-      timestamp: new Date()
-    };
-    
-    /*
-    const formData = new FormData();
-    formData.append('file', file as Blob);
-    formData.append('metadata', JSON.stringify(metadata));
+    try {
+      console.log('🚀 UPLOAD: Starting media upload process...');
+      console.log('📁 UPLOAD: File type:', typeof file);
+      console.log('📋 UPLOAD: Metadata:', metadata);
+      
+      // For React Native, we need to handle file URI differently
+      const formData = new FormData();
+      
+      if (typeof file === 'string') {
+        // File URI from React Native camera
+        formData.append('file', {
+          uri: file,
+          type: 'video/mp4',
+          name: 'video.mp4',
+        } as any);
+      } else {
+        // Blob from web
+        formData.append('file', file);
+      }
+      
+      formData.append('metadata', JSON.stringify(metadata));
 
-    return this.request<{ url: string }>('/media/upload', {
-      method: 'POST',
-      body: formData,
-      headers: {}, // Don't set Content-Type for FormData
-    });
-    */
+      console.log('📤 UPLOAD: FormData prepared, making request...');
+      
+      return this.request<{ url: string }>('/media/upload', {
+        method: 'POST',
+        body: formData,
+        headers: {
+          // Don't set Content-Type for FormData - let the browser/RN set it
+        },
+      });
+    } catch (error) {
+      console.error('❌ UPLOAD: Upload failed:', error);
+      return {
+        success: false,
+        error: error instanceof Error ? error.message : 'Upload failed',
+        timestamp: new Date()
+      };
+    }
   }
 
   async deleteMedia(url: string): Promise<APIResponse<boolean>> {
@@ -376,9 +396,10 @@ class WebAPIService implements APIServiceInterface {
 
 // Platform-specific API service instance
 const createAPIService = (): APIServiceInterface => {
-  // For React Native (current deployment) - use mock data
+  // For React Native (current deployment) - use REAL API now!
   if (Platform.OS === 'ios' || Platform.OS === 'android') {
-    return new MockAPIService();
+    console.log('🔗 API: Using WebAPIService for backend integration');
+    return new WebAPIService('http://192.168.50.111:8001/api/v1');
   }
   
   // For web (future implementation) - use real API

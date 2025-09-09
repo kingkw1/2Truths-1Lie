@@ -115,9 +115,9 @@ export class RealChallengeAPIService {
     // if (__DEV__) {
       // Development mode - use local backend
       if (Platform.OS === 'android') {
-        return 'http://192.168.50.111:8000'; // Updated to correct port 8000
+        return 'http://192.168.50.111:8001'; // Updated to correct port 8001
       } else {
-        return 'http://192.168.50.111:8000'; // Updated to use IP instead of localhost
+        return 'http://192.168.50.111:8001'; // Updated to use IP instead of localhost
       }
     // } else {
     //   // Production mode - use your production API

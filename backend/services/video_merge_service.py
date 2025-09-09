@@ -1304,12 +1304,12 @@ class VideoMergeService:
                     "segment_metadata": [
                         {
                             "statementIndex": seg.statement_index,
-                            "startTime": seg.start_time_ms,
-                            "endTime": seg.end_time_ms
+                            "startTime": seg.start_time,
+                            "endTime": seg.end_time
                         }
                         for seg in segment_metadata
                     ],
-                    "total_duration": sum(seg.end_time_ms - seg.start_time_ms for seg in segment_metadata),
+                    "total_duration": sum(seg.end_time - seg.start_time for seg in segment_metadata),
                     "metadata": final_result["metadata"]
                 }
                 

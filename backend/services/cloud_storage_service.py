@@ -124,14 +124,14 @@ class S3CloudStorageService(CloudStorageService):
                 try:
                     if self.region_name == 'us-east-1':
                         await asyncio.get_event_loop().run_in_executor(
-                            None, self.s3_client.create_bucket, {'Bucket': self.bucket_name}
+                            None, lambda: self.s3_client.create_bucket(Bucket=self.bucket_name)
                         )
                     else:
                         await asyncio.get_event_loop().run_in_executor(
-                            None, self.s3_client.create_bucket, {
-                                'Bucket': self.bucket_name,
-                                'CreateBucketConfiguration': {'LocationConstraint': self.region_name}
-                            }
+                            None, lambda: self.s3_client.create_bucket(
+                                Bucket=self.bucket_name,
+                                CreateBucketConfiguration={'LocationConstraint': self.region_name}
+                            )
                         )
                     
                     # Set CORS configuration for web access
@@ -148,10 +148,10 @@ class S3CloudStorageService(CloudStorageService):
                     }
                     
                     await asyncio.get_event_loop().run_in_executor(
-                        None, self.s3_client.put_bucket_cors, {
-                            'Bucket': self.bucket_name,
-                            'CORSConfiguration': cors_config
-                        }
+                        None, lambda: self.s3_client.put_bucket_cors(
+                            Bucket=self.bucket_name,
+                            CORSConfiguration=cors_config
+                        )
                     )
                     
                     logger.info(f"Created S3 bucket {self.bucket_name}")
@@ -182,12 +182,13 @@ class S3CloudStorageService(CloudStorageService):
             
             # Upload file
             await asyncio.get_event_loop().run_in_executor(
-                None, self.s3_client.put_object, {
-                    'Bucket': self.bucket_name,
-                    'Key': key,
-                    'Body': file_data,
+                None, 
+                lambda: self.s3_client.put_object(
+                    Bucket=self.bucket_name,
+                    Key=key,
+                    Body=file_data,
                     **extra_args
-                }
+                )
             )
             
             # Return public URL
@@ -224,12 +225,13 @@ class S3CloudStorageService(CloudStorageService):
                 # Simple upload for smaller files
                 file_data = file_stream.read()
                 await asyncio.get_event_loop().run_in_executor(
-                    None, self.s3_client.put_object, {
-                        'Bucket': self.bucket_name,
-                        'Key': key,
-                        'Body': file_data,
+                    None, 
+                    lambda: self.s3_client.put_object(
+                        Bucket=self.bucket_name,
+                        Key=key,
+                        Body=file_data,
                         **extra_args
-                    }
+                    )
                 )
             
             url = f"https://{self.bucket_name}.s3.{self.region_name}.amazonaws.com/{key}"
@@ -245,11 +247,12 @@ class S3CloudStorageService(CloudStorageService):
         try:
             # Initiate multipart upload
             response = await asyncio.get_event_loop().run_in_executor(
-                None, self.s3_client.create_multipart_upload, {
-                    'Bucket': self.bucket_name,
-                    'Key': key,
+                None, 
+                lambda: self.s3_client.create_multipart_upload(
+                    Bucket=self.bucket_name,
+                    Key=key,
                     **extra_args
-                }
+                )
             )
             upload_id = response['UploadId']
             
@@ -265,13 +268,14 @@ class S3CloudStorageService(CloudStorageService):
                     
                     # Upload part
                     part_response = await asyncio.get_event_loop().run_in_executor(
-                        None, self.s3_client.upload_part, {
-                            'Bucket': self.bucket_name,
-                            'Key': key,
-                            'PartNumber': part_number,
-                            'UploadId': upload_id,
-                            'Body': chunk
-                        }
+                        None, 
+                        lambda: self.s3_client.upload_part(
+                            Bucket=self.bucket_name,
+                            Key=key,
+                            PartNumber=part_number,
+                            UploadId=upload_id,
+                            Body=chunk
+                        )
                     )
                     
                     parts.append({
@@ -282,22 +286,24 @@ class S3CloudStorageService(CloudStorageService):
                 
                 # Complete multipart upload
                 await asyncio.get_event_loop().run_in_executor(
-                    None, self.s3_client.complete_multipart_upload, {
-                        'Bucket': self.bucket_name,
-                        'Key': key,
-                        'UploadId': upload_id,
-                        'MultipartUpload': {'Parts': parts}
-                    }
+                    None, 
+                    lambda: self.s3_client.complete_multipart_upload(
+                        Bucket=self.bucket_name,
+                        Key=key,
+                        UploadId=upload_id,
+                        MultipartUpload={'Parts': parts}
+                    )
                 )
                 
             except Exception as e:
                 # Abort multipart upload on error
                 await asyncio.get_event_loop().run_in_executor(
-                    None, self.s3_client.abort_multipart_upload, {
-                        'Bucket': self.bucket_name,
-                        'Key': key,
-                        'UploadId': upload_id
-                    }
+                    None, 
+                    lambda: self.s3_client.abort_multipart_upload(
+                        Bucket=self.bucket_name,
+                        Key=key,
+                        UploadId=upload_id
+                    )
                 )
                 raise e
                 
@@ -309,10 +315,15 @@ class S3CloudStorageService(CloudStorageService):
         """Generate signed URL for S3 object"""
         try:
             url = await asyncio.get_event_loop().run_in_executor(
-                None, self.s3_client.generate_presigned_url, 'get_object', {
-                    'Bucket': self.bucket_name,
-                    'Key': key
-                }, expires_in
+                None, 
+                lambda: self.s3_client.generate_presigned_url(
+                    'get_object',
+                    Params={
+                        'Bucket': self.bucket_name,
+                        'Key': key
+                    },
+                    ExpiresIn=expires_in
+                )
             )
             return url
             
@@ -324,10 +335,10 @@ class S3CloudStorageService(CloudStorageService):
         """Delete file from S3"""
         try:
             await asyncio.get_event_loop().run_in_executor(
-                None, self.s3_client.delete_object, {
-                    'Bucket': self.bucket_name,
-                    'Key': key
-                }
+                None, lambda: self.s3_client.delete_object(
+                    Bucket=self.bucket_name,
+                    Key=key
+                )
             )
             logger.info(f"Deleted file from S3: {key}")
             return True

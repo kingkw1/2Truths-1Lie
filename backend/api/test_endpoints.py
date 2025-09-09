@@ -15,6 +15,7 @@ from typing import List, Optional, Dict, Any
 import uuid
 import logging
 from services.s3_media_service import get_s3_media_service
+from urllib.parse import urlparse
 
 logger = logging.getLogger(__name__)
 from datetime import datetime
@@ -84,11 +85,37 @@ async def create_test_challenge(request: SimpleChallengeRequest):
         lie_statement_id = None
         for i, stmt in enumerate(request.statements):
             statement_id = str(uuid.uuid4())
-            
             # Use the media_file_id from the request if it's a real UUID, otherwise use test videos
-            if stmt.media_file_id and len(stmt.media_file_id) > 10 and '-' in stmt.media_file_id:
+            if stmt.media_file_id and (stmt.media_file_id.startswith("http://") or stmt.media_file_id.startswith("https://")):
+                # Already a full URL. If it's an S3 object URL, attempt to extract the object key and
+                # generate a presigned streaming URL. If presigning fails, fall back to the provided URL.
+                media_file_id = stmt.media_file_id
+                provided_url = media_file_id
+                s3_service = get_s3_media_service()
+                try:
+                    parsed = urlparse(provided_url)
+                    # path like '/merged_videos/.../file.mp4' -> remove leading slash
+                    s3_key = parsed.path.lstrip('/')
+                    real_streaming_url = await s3_service.generate_signed_url(s3_key)
+                    real_media_url = real_streaming_url
+                except Exception as e:
+                    # Couldn't presign (object might be public or key extraction failed) - fall back
+                    logger.warning(f"Could not presign provided URL, using it directly: {provided_url}: {e}")
+                    real_media_url = provided_url
+                    real_streaming_url = provided_url
+            elif stmt.media_file_id and len(stmt.media_file_id) > 10 and '-' in stmt.media_file_id:
                 # Real media file ID provided - use it directly
                 media_file_id = stmt.media_file_id
+                s3_service = get_s3_media_service()
+                try:
+                    real_streaming_url = await s3_service.generate_signed_url(media_file_id)
+                    real_media_url = real_streaming_url  # Use the same signed URL for both
+                except Exception as e:
+                    logger.error(f"Could not generate URL for media_file_id {media_file_id}: {e}")
+                    raise HTTPException(
+                        status_code=404,
+                        detail=f"Could not generate signed S3 URL for media_file_id {media_file_id}: {e}"
+                    )
             else:
                 # Fallback to test videos if no real media_file_id provided
                 available_videos = [
@@ -97,17 +124,16 @@ async def create_test_challenge(request: SimpleChallengeRequest):
                     "6404fa02-8dda-4c5e-bff5-cba64d045cb1",  # Statement 3
                 ]
                 media_file_id = available_videos[i] if i < len(available_videos) else available_videos[0]
-            
-            # Generate proper signed URL for the real uploaded video
-            try:
                 s3_service = get_s3_media_service()
-                real_streaming_url = await s3_service.generate_signed_url(media_file_id)
-                real_media_url = real_streaming_url  # Use the same signed URL for both
-            except Exception as e:
-                # Fallback to BigBuckBunny if real video not found
-                logger.warning(f"Could not generate URL for media_file_id {media_file_id}: {e}")
-                real_streaming_url = "https://commondatastorage.googleapis.com/gtv-videos-bucket/sample/BigBuckBunny.mp4"
-                real_media_url = real_streaming_url
+                try:
+                    real_streaming_url = await s3_service.generate_signed_url(media_file_id)
+                    real_media_url = real_streaming_url  # Use the same signed URL for both
+                except Exception as e:
+                    logger.error(f"Could not generate URL for media_file_id {media_file_id}: {e}")
+                    raise HTTPException(
+                        status_code=404,
+                        detail=f"Could not generate signed S3 URL for media_file_id {media_file_id}: {e}"
+                    )
             
             # Extract segment metadata for this specific statement if merged video
             statement_segment_metadata = None

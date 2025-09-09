@@ -200,9 +200,62 @@ export class MobileMediaIntegrationService {
     duration: number,
     statementIndex: number
   ): Promise<MediaCapture> {
-    // Upload service is disabled - return local media capture
-    console.log('📱 Upload service disabled, processing locally only');
-    return this.processRecordedMediaLocally(uri, duration, statementIndex);
+    try {
+      console.log('🚀 UPLOAD: Starting upload for statement', statementIndex);
+      console.log('📁 UPLOAD: File URI:', uri);
+      console.log('⏱️ UPLOAD: Duration:', duration, 'ms');
+
+      // Generate filename for upload
+      const filename = `statement_${statementIndex}_${Date.now()}.mp4`;
+
+      // Upload to backend
+      const uploadResult = await videoUploadService.uploadVideo(
+        uri,
+        filename,
+        duration,
+        {
+          maxFileSize: this.config.maxFileSize,
+          chunkSize: 1024 * 1024, // 1MB chunks
+          retryAttempts: 3
+        }
+      );
+
+      if (uploadResult.success && uploadResult.mediaId) {
+        console.log('✅ UPLOAD: Upload successful!');
+        console.log('🆔 UPLOAD: Media ID:', uploadResult.mediaId);
+        console.log('� UPLOAD: Streaming URL:', uploadResult.streamingUrl);
+
+        return {
+          type: 'video',
+          url: uploadResult.streamingUrl || uri,
+          duration,
+          fileSize: await this.getFileSize(uri),
+          mimeType: 'video/mp4',
+          storageType: uploadResult.storageType || 'cloud',
+          isUploaded: true
+        };
+      } else {
+        console.warn('⚠️ UPLOAD: Upload failed, falling back to local processing');
+        console.warn('❌ UPLOAD: Error:', uploadResult.error);
+        return this.processRecordedMediaLocally(uri, duration, statementIndex);
+      }
+    } catch (error) {
+      console.error('❌ UPLOAD: Upload error, falling back to local processing:', error);
+      return this.processRecordedMediaLocally(uri, duration, statementIndex);
+    }
+  }
+
+  /**
+   * Get file size for a given URI
+   */
+  private async getFileSize(uri: string): Promise<number> {
+    try {
+      const fileInfo = await FileSystem.getInfoAsync(uri);
+      return fileInfo.exists && 'size' in fileInfo ? fileInfo.size : 0;
+    } catch (error) {
+      console.warn('Failed to get file size:', error);
+      return 0;
+    }
   }
 
   /**
@@ -529,9 +582,9 @@ export class MobileMediaIntegrationService {
     duration: number,
     statementIndex: number
   ): Promise<MediaCapture> {
-    // Upload service is disabled - return local media capture
-    console.log('📱 Upload service disabled, processing for local merging');
-    return this.processRecordedMediaLocally(uri, duration, statementIndex);
+    // Use the upload-enabled processing
+    console.log('� MERGE: Processing video for server-side merging with upload');
+    return this.processRecordedMediaWithUpload(uri, duration, statementIndex);
   }
 
   /**
@@ -579,30 +632,81 @@ export class MobileMediaIntegrationService {
         await mergeStatusService.initialize(this.dispatch);
       }
 
-      // Upload service is disabled - create local merged video representation
-      console.log('📱 Upload service disabled, creating local merged video representation');
+      // Upload videos for server-side merging
+      console.log('🚀 MERGE: Starting upload of 3 videos for server-side merging...');
       
-      return {
-        success: true,
-        mergedVideoUrl: videos[0]?.uri || '', // Use first video as fallback
-        mergeSessionId: `local_merge_${Date.now()}`,
-        segmentMetadata: videos.map((video, index) => {
-          // Calculate realistic segment timing based on actual video durations
-          const videoDurationSeconds = (video.duration || 1000) / 1000; // Convert ms to seconds
-          const previousSegmentsDuration = videos.slice(0, index).reduce((sum, v) => 
-            sum + ((v.duration || 1000) / 1000), 0);
+      try {
+        // Use the dedicated upload-for-merge method
+        const mergeResult = await videoUploadService.uploadVideosForMerge(
+          videos,
+          {
+            maxFileSize: this.config.maxFileSize,
+            chunkSize: 1024 * 1024, // 1MB chunks
+            retryAttempts: 3
+          }
+        );
+        
+        if (mergeResult.success) {
+          console.log('✅ MERGE: Upload and server-side merging completed!');
+          console.log('🔗 MERGE: Merged video URL:', mergeResult.mergedVideoUrl);
+          console.log('🆔 MERGE: Merge session ID:', mergeResult.mergeSessionId);
           
           return {
-            id: `segment_${index}`,
-            statementIndex: index,
-            startTime: previousSegmentsDuration, // Start where previous segment ended
-            endTime: previousSegmentsDuration + videoDurationSeconds, // End based on actual duration
-            duration: video.duration || 1000, // Keep in milliseconds for compatibility
-            url: video.uri,
+            success: true,
+            mergedVideoUrl: mergeResult.mergedVideoUrl,
+            mergeSessionId: mergeResult.mergeSessionId || `merge_${Date.now()}`,
+            segmentMetadata: mergeResult.segmentMetadata?.map((segment, index) => ({
+              id: `segment_${index}`,
+              statementIndex: segment.statementIndex,
+              startTime: segment.startTime,
+              endTime: segment.endTime,
+              duration: videos[index].duration || 1000,
+              url: mergeResult.mergedVideoUrl || videos[index].uri,
+            })) || videos.map((video, index) => {
+              const videoDurationSeconds = (video.duration || 1000) / 1000;
+              const previousSegmentsDuration = videos.slice(0, index).reduce((sum, v) => 
+                sum + ((v.duration || 1000) / 1000), 0);
+              
+              return {
+                id: `segment_${index}`,
+                statementIndex: index,
+                startTime: previousSegmentsDuration,
+                endTime: previousSegmentsDuration + videoDurationSeconds,
+                duration: video.duration || 1000,
+                url: mergeResult.mergedVideoUrl || video.uri,
+              };
+            }),
+            error: undefined,
           };
-        }),
-        error: undefined,
-      };
+        } else {
+          throw new Error(`Upload/merge failed: ${mergeResult.error}`);
+        }
+        
+      } catch (uploadError) {
+        console.warn('⚠️ MERGE: Upload/merge failed, falling back to local representation:', uploadError);
+        
+        // Fallback to local merged video representation
+        return {
+          success: true,
+          mergedVideoUrl: videos[0]?.uri || '', // Use first video as fallback
+          mergeSessionId: `local_fallback_${Date.now()}`,
+          segmentMetadata: videos.map((video, index) => {
+            const videoDurationSeconds = (video.duration || 1000) / 1000;
+            const previousSegmentsDuration = videos.slice(0, index).reduce((sum, v) => 
+              sum + ((v.duration || 1000) / 1000), 0);
+            
+            return {
+              id: `segment_${index}`,
+              statementIndex: index,
+              startTime: previousSegmentsDuration,
+              endTime: previousSegmentsDuration + videoDurationSeconds,
+              duration: video.duration || 1000,
+              url: video.uri,
+            };
+          }),
+          error: undefined,
+        };
+      }
 
     } catch (error: any) {
       console.error('❌ MERGE: Failed to upload videos for merging:', error);

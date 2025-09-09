@@ -272,7 +272,7 @@ export class AuthService {
   private getApiBaseUrl(): string {
     // Force development URL for now
     console.log('🌐 AUTH: Using development URL');
-    return 'http://192.168.50.111:8000';
+    return 'http://192.168.50.111:8001';
   }
 
   /**
