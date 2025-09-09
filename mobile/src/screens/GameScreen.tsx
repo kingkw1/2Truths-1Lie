@@ -9,6 +9,7 @@ import {
   Alert,
   Modal,
   ActivityIndicator,
+  Platform,
 } from 'react-native';
 import { useAppDispatch, useAppSelector } from '../store';
 import {
@@ -120,6 +121,34 @@ const convertBackendChallenge = (backendChallenge: BackendChallenge): EnhancedCh
         storageType: stmt.storage_type as any,
         cloudStorageKey: stmt.cloud_storage_key,
       }));
+
+      // If all individual streaming URLs are identical and we have merged metadata, prefer merged strategy
+      const allUrls = individualMedia.map(m => m.streamingUrl);
+      const uniqueUrls = Array.from(new Set(allUrls.filter(Boolean)));
+
+      if (uniqueUrls.length === 1 && backendChallenge.merged_video_metadata) {
+        const mergedVideoUrl = uniqueUrls[0];
+        console.log('🎬 MERGED_DETECTION: All individual URLs identical; converting to merged video with segments');
+        const mergedVideo = {
+          type: 'video' as const,
+          streamingUrl: mergedVideoUrl,
+          duration: (backendChallenge.merged_video_metadata.total_duration || 0) * 1000,
+          mediaId: backendChallenge.merged_video_metadata.video_file_id,
+          isUploaded: true,
+          storageType: 'cloud' as any,
+          cloudStorageKey: `challenges/${backendChallenge.challenge_id}/merged.mp4`,
+          isMergedVideo: true,
+          segments: (backendChallenge.merged_video_metadata.segments || []).map((segment: any, index: number) => ({
+            statementIndex: segment.statement_index || index,
+            startTime: (segment.start_time || 0) * 1000,
+            endTime: (segment.end_time || 0) * 1000,
+            duration: (segment.duration || 0) * 1000,
+            url: mergedVideoUrl,
+          })),
+        };
+
+        return [mergedVideo];
+      }
 
       console.log('🎬 INDIVIDUAL_VIDEOS: Created individual videos (no merged video):', individualMedia.length);
       return individualMedia;
@@ -454,8 +483,11 @@ export const GameScreen: React.FC = () => {
       mergedVideoSegments: mergedVideo?.segments?.length || 0,
     });
 
+    const floatingButtonVisible = !!currentSession && !guessSubmitted && selectedStatement !== null;
+    const dynamicBottomPadding = bottomPadding + (floatingButtonVisible ? 88 : 0);
+
     return (
-      <ScrollView style={styles.gameplayContainer}>
+      <ScrollView style={[styles.gameplayContainer, { paddingBottom: dynamicBottomPadding }]}> 
         <Text style={styles.title}>Which statement is the lie?</Text>
         <Text style={styles.subtitle}>By {selectedChallenge?.creatorName}</Text>
         
@@ -538,11 +570,7 @@ export const GameScreen: React.FC = () => {
           ))}
         </View>
 
-        {!guessSubmitted && selectedStatement !== null && (
-          <TouchableOpacity style={styles.submitButton} onPress={handleSubmitGuess}>
-            <Text style={styles.submitButtonText}>Submit Guess</Text>
-          </TouchableOpacity>
-        )}
+  {/* submit button removed from scroll content; floating button rendered outside ScrollView */}
 
         {guessResult && (
           <View style={styles.resultContainer}>
@@ -558,6 +586,8 @@ export const GameScreen: React.FC = () => {
             </TouchableOpacity>
           </View>
         )}
+  {/* Dead white space at bottom to avoid content being hidden by floating button */}
+  <View style={styles.bottomSpacer} />
       </ScrollView>
     );
   };
@@ -613,9 +643,34 @@ export const GameScreen: React.FC = () => {
           }}
         />
       )}
+
+      {/* Floating submit button: visible during an active session when a statement is selected and no guess submitted */}
+      <FloatingSubmitButton
+        visible={!!currentSession && !guessSubmitted && selectedStatement !== null}
+        onPress={handleSubmitGuess}
+        text="Submit Guess"
+      />
     </SafeAreaView>
   );
 };
+
+// Floating submit button appears above system UI and is device-agnostic
+const FloatingSubmitButton: React.FC<{ visible: boolean; onPress: () => void; text: string }> = ({ visible, onPress, text }) => {
+  if (!visible) return null;
+  return (
+    <TouchableOpacity
+      style={styles.floatingSubmitButton}
+      onPress={onPress}
+      accessibilityLabel="Submit Guess"
+      testID="submit-guess-button"
+    >
+      <Text style={styles.floatingSubmitButtonText}>{text}</Text>
+    </TouchableOpacity>
+  );
+};
+
+// Platform-aware bottom padding so buttons aren't hidden behind system UI (Android nav bar)
+const bottomPadding = Platform.OS === 'android' ? 96 : 20;
 
 const styles = StyleSheet.create({
   container: {
@@ -709,6 +764,7 @@ const styles = StyleSheet.create({
   gameplayContainer: {
     flex: 1,
     padding: 20,
+    paddingBottom: bottomPadding,
   },
   statementCard: {
     backgroundColor: 'white',
@@ -940,5 +996,31 @@ const styles = StyleSheet.create({
     color: '#333',
     marginBottom: 10,
     textAlign: 'center',
+  },
+  floatingSubmitButton: {
+    position: 'absolute',
+    left: 20,
+    right: 20,
+    bottom: Platform.OS === 'android' ? 24 : 34,
+    backgroundColor: '#4a90e2',
+    padding: 16,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    elevation: 6,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+  },
+  floatingSubmitButtonText: {
+    color: 'white',
+    fontSize: 18,
+    fontWeight: 'bold',
+  },
+  bottomSpacer: {
+    height: 120,
+    backgroundColor: 'white',
+    width: '100%',
   },
 });

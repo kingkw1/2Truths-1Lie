@@ -35,6 +35,9 @@ export const SegmentedVideoPlayer: React.FC<SegmentedVideoPlayerProps> = ({
   autoPlay = false,
 }) => {
   const videoRef = useRef<Video>(null);
+  const endTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const selectedSegmentRef = useRef<number | null>(null);
+  const selectionTokenRef = useRef<number>(0);
   const [selectedSegment, setSelectedSegment] = useState<number | null>(null);
   const [isPlaying, setIsPlaying] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -43,7 +46,6 @@ export const SegmentedVideoPlayer: React.FC<SegmentedVideoPlayerProps> = ({
   const [currentPosition, setCurrentPosition] = useState<number>(0);
   const [videoDuration, setVideoDuration] = useState<number>(0);
   const [isVideoLoaded, setIsVideoLoaded] = useState(false);
-
   // Enhanced error handling
   const {
     error: playbackError,
@@ -69,6 +71,16 @@ export const SegmentedVideoPlayer: React.FC<SegmentedVideoPlayerProps> = ({
       },
     }
   );
+
+  // Cleanup timer on unmount
+  useEffect(() => {
+    return () => {
+      if (endTimerRef.current) {
+        clearTimeout(endTimerRef.current);
+        endTimerRef.current = null;
+      }
+    };
+  }, []);
 
   // Load the merged video on component mount
   useEffect(() => {
@@ -124,6 +136,37 @@ export const SegmentedVideoPlayer: React.FC<SegmentedVideoPlayerProps> = ({
           setSelectedSegment(currentSegmentIndex);
         }
       }
+      
+      // If a segment is selected, ensure we stop playback at its end
+      const curSelected = selectedSegmentRef.current;
+      if (curSelected !== null) {
+        const seg = segments[curSelected];
+        if (seg && typeof status.positionMillis === 'number') {
+          // If we've reached or passed the segment end, pause and clamp position
+          // Add a small epsilon to avoid floating point edge cases
+          const epsilon = 5; // ms
+          if (status.positionMillis >= seg.endTime - epsilon) {
+            if (videoRef.current && status.isPlaying) {
+              // Fire-and-forget pause to avoid making this handler async
+              void videoRef.current.pauseAsync().catch((err) => {
+                console.error('Error pausing at segment end:', err);
+              });
+              console.log(`🎬 SEGMENTED_PLAYER: Auto-paused at segment ${selectedSegment} end ${seg.endTime}ms`);
+            }
+
+            // Clamp the current position to the segment end time for UI consistency
+            setCurrentPosition(seg.endTime);
+            setIsPlaying(false);
+
+            // Clear safety timer if present
+            if (endTimerRef.current) {
+              clearTimeout(endTimerRef.current);
+              endTimerRef.current = null;
+              console.log('🎬 SEGMENTED_PLAYER: Cleared end timer after auto-pause');
+            }
+          }
+        }
+      }
     } else {
       setVideoStatus('error');
       if ('error' in status && status.error) {
@@ -148,15 +191,71 @@ export const SegmentedVideoPlayer: React.FC<SegmentedVideoPlayerProps> = ({
     }
 
     try {
-      setSelectedSegment(segmentIndex);
-      
+  // Bump selection token and track selected segment in ref to avoid stale timers
+  selectionTokenRef.current += 1;
+  const myToken = selectionTokenRef.current;
+  selectedSegmentRef.current = segmentIndex;
+  setSelectedSegment(segmentIndex);
+
+      // Clear any existing end timer early
+      if (endTimerRef.current) {
+        clearTimeout(endTimerRef.current);
+        endTimerRef.current = null;
+      }
+
       if (videoRef.current && isVideoLoaded) {
         // Seek to the start of the selected segment
-        await videoRef.current.setPositionAsync(segment.startTime);
-        await videoRef.current.playAsync();
-        
+        try {
+          await videoRef.current.setPositionAsync(Math.floor(segment.startTime));
+          console.log(`🎬 SEGMENTED_PLAYER: setPositionAsync OK for segment ${segmentIndex} -> ${Math.floor(segment.startTime)}ms`);
+        } catch (seekErr) {
+          console.error('🎬 SEGMENTED_PLAYER: setPositionAsync failed:', seekErr);
+        }
+
+        // Small delay to let the player settle after seeking before issuing play
+        await new Promise((res) => setTimeout(res, 80));
+
+        try {
+          await videoRef.current.playAsync();
+          console.log(`🎬 SEGMENTED_PLAYER: playAsync called for segment ${segmentIndex}`);
+        } catch (playErr) {
+          console.error('🎬 SEGMENTED_PLAYER: playAsync failed:', playErr);
+        }
+
+        // Debug current status after attempting to play
+        try {
+          const st = await videoRef.current.getStatusAsync();
+          console.log('🎬 SEGMENTED_PLAYER: post-play status:', {
+            isLoaded: st.isLoaded, isPlaying: (st as any).isPlaying, positionMillis: (st as any).positionMillis,
+          });
+        } catch (statusErr) {
+          console.warn('🎬 SEGMENTED_PLAYER: getStatusAsync failed:', statusErr);
+        }
+
         console.log(`🎬 SEGMENTED_PLAYER: Seeking to segment ${segmentIndex} at ${segment.startTime}ms`);
       }
+
+      // Schedule a safety timer to pause at segment end in case playback updates are delayed
+      const toEnd = Math.max(0, segment.endTime - (currentPosition || segment.startTime));
+      endTimerRef.current = setTimeout(() => {
+        // If selection token changed, this timer is stale
+        if (selectionTokenRef.current !== myToken) {
+          console.log('🎬 SEGMENTED_PLAYER: Ignoring stale end timer (token mismatch)');
+          return;
+        }
+
+        if (videoRef.current) {
+          void videoRef.current.pauseAsync().catch(err => console.error('Error pausing by timer:', err));
+        }
+        // Ensure UI state corresponds to this segment
+        setIsPlaying(false);
+        setCurrentPosition(segment.endTime);
+        // Clear this timer reference
+        if (endTimerRef.current) {
+          clearTimeout(endTimerRef.current);
+          endTimerRef.current = null;
+        }
+      }, toEnd + 150); // small buffer
 
       // Notify parent component
       onSegmentSelect?.(segmentIndex);
