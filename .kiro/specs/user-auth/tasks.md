@@ -1,5 +1,4 @@
 # User Authentication - Implementation Tasks
-
 - [ ] Develop REST API endpoints: login, logout, register, password reset, profile fetch/update  
 - [ ] Implement JWT-based authentication and token refresh mechanisms  
 - [ ] Integrate bcrypt or similar for secure password hashing  

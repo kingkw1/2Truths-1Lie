@@ -1,5 +1,4 @@
 # Emotion Analysis - Implementation Tasks
-
 - [ ] Design API endpoints and job queue for asynchronous emotion processing  
 - [ ] Integrate AffectLink API or open-source emotion recognition components  
 - [ ] Implement backend worker/service to process media and extract emotion features  
