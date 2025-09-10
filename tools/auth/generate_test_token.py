@@ -8,11 +8,11 @@ from pathlib import Path
 from datetime import datetime, timedelta
 
 # Add backend to path
-sys.path.append(str(Path(__file__).parent / 'backend'))
+sys.path.append(str(Path(__file__).parent.parent.parent / 'backend'))
 
 # Load environment variables
 def load_env_file():
-    env_path = Path(__file__).parent / 'backend' / '.env'
+    env_path = Path(__file__).parent.parent.parent / 'backend' / '.env'
     if env_path.exists():
         with open(env_path) as f:
             for line in f:
@@ -24,7 +24,7 @@ def load_env_file():
 load_env_file()
 
 try:
-    from backend.services.auth_service import create_access_token
+    from services.auth_service import create_access_token
     
     def generate_test_token():
         """Generate a test token with full media permissions"""

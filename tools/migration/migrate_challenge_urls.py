@@ -13,7 +13,7 @@ from pathlib import Path
 import sys
 
 # Add the backend directory to the Python path
-sys.path.insert(0, str(Path(__file__).parent))
+sys.path.insert(0, str(Path(__file__).parent.parent.parent / 'backend'))
 
 from services.migration_service import MediaMigrationService
 from services.challenge_service import ChallengeService

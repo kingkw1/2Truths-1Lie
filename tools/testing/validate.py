@@ -10,7 +10,7 @@ import hashlib
 from pathlib import Path
 
 # Add backend to path
-sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, str(Path(__file__).parent.parent.parent / 'backend'))
 
 from services.upload_service import ChunkedUploadService
 from models import UploadStatus

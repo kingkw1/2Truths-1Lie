@@ -16,7 +16,7 @@ import boto3
 from dataclasses import dataclass
 
 # Add backend to path for imports
-sys.path.append(str(Path(__file__).parent))
+sys.path.append(str(Path(__file__).parent.parent.parent / 'backend'))
 
 from services.monitoring_service import media_monitor
 from services.health_check_service import health_check_service
