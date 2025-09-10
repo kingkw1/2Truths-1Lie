@@ -222,36 +222,23 @@ describe('Challenge List UI Validation - Integration', () => {
   describe('API Integration', () => {
     it('should successfully fetch challenges from API', async () => {
       // Mock successful API response
-      mockRealChallengeAPI.getChallenges.mockResolvedValue({
-        success: true,
-        data: [convertToBackendChallenge(mockChallenge1)],
-        timestamp: new Date(),
-      });
+      mockRealChallengeAPI.getChallenges.mockResolvedValue([convertToBackendChallenge(mockChallenge1)]);
 
       // Call API
       const response = await realChallengeAPI.getChallenges(0, 20);
       
       // Verify API was called correctly
       expect(mockRealChallengeAPI.getChallenges).toHaveBeenCalledWith(0, 20);
-      expect(response.success).toBe(true);
-      expect(response.data).toHaveLength(1);
-      expect(response.data![0].challenge_id).toBe('challenge-1');
+      expect(response).toHaveLength(1);
+      expect(response[0].challenge_id).toBe('challenge-1');
     });
 
     it('should handle API errors gracefully', async () => {
-      // Mock API error
-      mockRealChallengeAPI.getChallenges.mockResolvedValue({
-        success: false,
-        error: 'Server error',
-        timestamp: new Date(),
-      });
+      // Mock API error - getChallenges throws an error
+      mockRealChallengeAPI.getChallenges.mockRejectedValue(new Error('Server error'));
 
-      // Call API
-      const response = await realChallengeAPI.getChallenges(0, 20);
-      
-      // Verify error handling
-      expect(response.success).toBe(false);
-      expect(response.error).toBe('Server error');
+      // Call API and expect it to throw
+      await expect(realChallengeAPI.getChallenges(0, 20)).rejects.toThrow('Server error');
     });
 
     it('should create new challenge successfully', async () => {
@@ -286,24 +273,16 @@ describe('Challenge List UI Validation - Integration', () => {
     it('should simulate complete refresh flow after challenge creation', async () => {
       // Initial state - load one challenge
       mockRealChallengeAPI.getChallenges
-        .mockResolvedValueOnce({
-          success: true,
-          data: [convertToBackendChallenge(mockChallenge1)],
-          timestamp: new Date(),
-        })
+        .mockResolvedValueOnce([convertToBackendChallenge(mockChallenge1)])
         // Second call after creation with both challenges
-        .mockResolvedValueOnce({
-          success: true,
-          data: [
-            convertToBackendChallenge(mockChallenge1),
-            convertToBackendChallenge(mockChallenge2),
-          ],
-          timestamp: new Date(),
-        });
+        .mockResolvedValueOnce([
+          convertToBackendChallenge(mockChallenge1),
+          convertToBackendChallenge(mockChallenge2),
+        ]);
 
       // Simulate initial load
       const initialResponse = await realChallengeAPI.getChallenges(0, 20);
-      expect(initialResponse.success).toBe(true);
+      expect(initialResponse).toHaveLength(1);
       
       // Update Redux state with initial challenges
       store.dispatch(loadChallenges([mockChallenge1]));
@@ -314,8 +293,7 @@ describe('Challenge List UI Validation - Integration', () => {
 
       // Simulate challenge creation success and refresh
       const refreshResponse = await realChallengeAPI.getChallenges(0, 20);
-      expect(refreshResponse.success).toBe(true);
-      expect(refreshResponse.data).toHaveLength(2);
+      expect(refreshResponse).toHaveLength(2);
       
       // Update Redux state with refreshed challenges
       store.dispatch(loadChallenges([mockChallenge1, mockChallenge2]));
@@ -331,17 +309,9 @@ describe('Challenge List UI Validation - Integration', () => {
     it('should handle refresh failure gracefully', async () => {
       // Initial successful load
       mockRealChallengeAPI.getChallenges
-        .mockResolvedValueOnce({
-          success: true,
-          data: [convertToBackendChallenge(mockChallenge1)],
-          timestamp: new Date(),
-        })
+        .mockResolvedValueOnce([convertToBackendChallenge(mockChallenge1)])
         // Failed refresh
-        .mockResolvedValueOnce({
-          success: false,
-          error: 'Network timeout',
-          timestamp: new Date(),
-        });
+        .mockRejectedValueOnce(new Error('Network timeout'));
 
       // Initial load
       const initialResponse = await realChallengeAPI.getChallenges(0, 20);
@@ -350,9 +320,8 @@ describe('Challenge List UI Validation - Integration', () => {
       let state = store.getState();
       expect(state.guessingGame.availableChallenges).toHaveLength(1);
 
-      // Failed refresh
-      const refreshResponse = await realChallengeAPI.getChallenges(0, 20);
-      expect(refreshResponse.success).toBe(false);
+      // Failed refresh should throw
+      await expect(realChallengeAPI.getChallenges(0, 20)).rejects.toThrow('Network timeout');
       
       // Update state with error
       store.dispatch(setChallengeLoadError({ 

@@ -199,11 +199,7 @@ describe('Challenge List UI Validation', () => {
   describe('Initial Challenge List Loading', () => {
     it('should load and display initial challenges on mount', async () => {
       // Mock API to return initial challenge
-      mockRealChallengeAPI.getChallenges.mockResolvedValue({
-        success: true,
-        data: [convertToBackendChallenge(mockChallenge1)],
-        timestamp: new Date(),
-      });
+      mockRealChallengeAPI.getChallenges.mockResolvedValue([convertToBackendChallenge(mockChallenge1)]);
 
       const { getByText, getByTestId } = render(
         <Provider store={store}>
@@ -227,11 +223,7 @@ describe('Challenge List UI Validation', () => {
       // Mock API with delay
       mockRealChallengeAPI.getChallenges.mockImplementation(() =>
         new Promise(resolve =>
-          setTimeout(() => resolve({
-            success: true,
-            data: [convertToBackendChallenge(mockChallenge1)],
-            timestamp: new Date(),
-          }), 100)
+          setTimeout(() => resolve([convertToBackendChallenge(mockChallenge1)]), 100)
         )
       );
 
@@ -252,11 +244,7 @@ describe('Challenge List UI Validation', () => {
 
     it('should show empty state when no challenges exist', async () => {
       // Mock API to return empty list
-      mockRealChallengeAPI.getChallenges.mockResolvedValue({
-        success: true,
-        data: [],
-        timestamp: new Date(),
-      });
+      mockRealChallengeAPI.getChallenges.mockResolvedValue([]);
 
       const { getByText } = render(
         <Provider store={store}>
@@ -275,20 +263,12 @@ describe('Challenge List UI Validation', () => {
     it('should refresh challenge list when new challenge is created', async () => {
       // Initial load with one challenge
       mockRealChallengeAPI.getChallenges
-        .mockResolvedValueOnce({
-          success: true,
-          data: [convertToBackendChallenge(mockChallenge1)],
-          timestamp: new Date(),
-        })
+        .mockResolvedValueOnce([convertToBackendChallenge(mockChallenge1)])
         // Second call after creation with both challenges
-        .mockResolvedValueOnce({
-          success: true,
-          data: [
-            convertToBackendChallenge(mockChallenge1),
-            convertToBackendChallenge(mockChallenge2),
-          ],
-          timestamp: new Date(),
-        });
+        .mockResolvedValueOnce([
+          convertToBackendChallenge(mockChallenge1),
+          convertToBackendChallenge(mockChallenge2),
+        ]);
 
       const { getByText, queryByText } = render(
         <Provider store={store}>
@@ -329,17 +309,9 @@ describe('Challenge List UI Validation', () => {
     it('should handle API errors during refresh gracefully', async () => {
       // Initial successful load
       mockRealChallengeAPI.getChallenges
-        .mockResolvedValueOnce({
-          success: true,
-          data: [convertToBackendChallenge(mockChallenge1)],
-          timestamp: new Date(),
-        })
+        .mockResolvedValueOnce([convertToBackendChallenge(mockChallenge1)])
         // Second call fails
-        .mockResolvedValueOnce({
-          success: false,
-          error: 'Network error',
-          timestamp: new Date(),
-        });
+        .mockRejectedValueOnce(new Error('Network error'));
 
       const { getByText } = render(
         <Provider store={store}>
@@ -379,19 +351,11 @@ describe('Challenge List UI Validation', () => {
 
       // Mock challenge list refresh after creation
       mockRealChallengeAPI.getChallenges
-        .mockResolvedValueOnce({
-          success: true,
-          data: [convertToBackendChallenge(mockChallenge1)],
-          timestamp: new Date(),
-        })
-        .mockResolvedValueOnce({
-          success: true,
-          data: [
-            convertToBackendChallenge(mockChallenge1),
-            convertToBackendChallenge(mockChallenge2),
-          ],
-          timestamp: new Date(),
-        });
+        .mockResolvedValueOnce([convertToBackendChallenge(mockChallenge1)])
+        .mockResolvedValueOnce([
+          convertToBackendChallenge(mockChallenge1),
+          convertToBackendChallenge(mockChallenge2),
+        ]);
 
       const { getByText } = render(
         <Provider store={store}>
@@ -425,18 +389,10 @@ describe('Challenge List UI Validation', () => {
 
     it('should maintain list state when challenge creation fails', async () => {
       // Mock failed challenge creation
-      mockRealChallengeAPI.createChallenge.mockResolvedValue({
-        success: false,
-        error: 'Creation failed',
-        timestamp: new Date(),
-      });
+      mockRealChallengeAPI.createChallenge.mockRejectedValue(new Error('Creation failed'));
 
       // Initial load
-      mockRealChallengeAPI.getChallenges.mockResolvedValue({
-        success: true,
-        data: [convertToBackendChallenge(mockChallenge1)],
-        timestamp: new Date(),
-      });
+      mockRealChallengeAPI.getChallenges.mockResolvedValue([convertToBackendChallenge(mockChallenge1)]);
 
       const { getByText } = render(
         <Provider store={store}>
@@ -466,17 +422,9 @@ describe('Challenge List UI Validation', () => {
 
       // Initial load
       mockRealChallengeAPI.getChallenges
-        .mockResolvedValueOnce({
-          success: true,
-          data: [convertToBackendChallenge(mockChallenge1)],
-          timestamp: new Date(),
-        })
+        .mockResolvedValueOnce([convertToBackendChallenge(mockChallenge1)])
         // Refresh with updated stats
-        .mockResolvedValueOnce({
-          success: true,
-          data: [convertToBackendChallenge(updatedChallenge1)],
-          timestamp: new Date(),
-        });
+        .mockResolvedValueOnce([convertToBackendChallenge(updatedChallenge1)]);
 
       const { getByText } = render(
         <Provider store={store}>
@@ -503,20 +451,12 @@ describe('Challenge List UI Validation', () => {
     it('should preserve challenge order based on API response', async () => {
       // Initial load with challenge1 first
       mockRealChallengeAPI.getChallenges
-        .mockResolvedValueOnce({
-          success: true,
-          data: [convertToBackendChallenge(mockChallenge1)],
-          timestamp: new Date(),
-        })
+        .mockResolvedValueOnce([convertToBackendChallenge(mockChallenge1)])
         // Refresh with challenge2 first (newer challenge)
-        .mockResolvedValueOnce({
-          success: true,
-          data: [
-            convertToBackendChallenge(mockChallenge2),
-            convertToBackendChallenge(mockChallenge1),
-          ],
-          timestamp: new Date(),
-        });
+        .mockResolvedValueOnce([
+          convertToBackendChallenge(mockChallenge2),
+          convertToBackendChallenge(mockChallenge1),
+        ]);
 
       const { getAllByText } = render(
         <Provider store={store}>
@@ -547,26 +487,14 @@ describe('Challenge List UI Validation', () => {
     it('should allow manual retry after failed refresh', async () => {
       // Initial successful load
       mockRealChallengeAPI.getChallenges
-        .mockResolvedValueOnce({
-          success: true,
-          data: [convertToBackendChallenge(mockChallenge1)],
-          timestamp: new Date(),
-        })
+        .mockResolvedValueOnce([convertToBackendChallenge(mockChallenge1)])
         // Failed refresh
-        .mockResolvedValueOnce({
-          success: false,
-          error: 'Network timeout',
-          timestamp: new Date(),
-        })
+        .mockRejectedValueOnce(new Error('Network timeout'))
         // Successful retry
-        .mockResolvedValueOnce({
-          success: true,
-          data: [
-            convertToBackendChallenge(mockChallenge1),
-            convertToBackendChallenge(mockChallenge2),
-          ],
-          timestamp: new Date(),
-        });
+        .mockResolvedValueOnce([
+          convertToBackendChallenge(mockChallenge1),
+          convertToBackendChallenge(mockChallenge2),
+        ]);
 
       const { getByText } = render(
         <Provider store={store}>
@@ -605,11 +533,7 @@ describe('Challenge List UI Validation', () => {
     it('should not cause memory leaks during frequent refreshes', async () => {
       // Mock multiple successful refreshes
       for (let i = 0; i < 5; i++) {
-        mockRealChallengeAPI.getChallenges.mockResolvedValueOnce({
-          success: true,
-          data: [convertToBackendChallenge(mockChallenge1)],
-          timestamp: new Date(),
-        });
+        mockRealChallengeAPI.getChallenges.mockResolvedValueOnce([convertToBackendChallenge(mockChallenge1)]);
       }
 
       const { getByText } = render(
@@ -641,11 +565,7 @@ describe('Challenge List UI Validation', () => {
         creator_id: `user-${index}`,
       }));
 
-      mockRealChallengeAPI.getChallenges.mockResolvedValue({
-        success: true,
-        data: largeChallengeList,
-        timestamp: new Date(),
-      });
+      mockRealChallengeAPI.getChallenges.mockResolvedValue(largeChallengeList);
 
       const { getAllByText } = render(
         <Provider store={store}>

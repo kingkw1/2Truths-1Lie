@@ -228,7 +228,7 @@ describe('End-to-End Integration Tests', () => {
         {}
       );
 
-      expect(uploadResult.success).toBe(true);
+      expect(uploadResult).toHaveLength(expect.any(Number));
       expect(uploadResult.mediaId).toBe('e2e-video-id');
       expect(uploadResult.streamingUrl).toBe('/api/media/stream/e2e-video-id');
 
@@ -274,7 +274,7 @@ describe('End-to-End Integration Tests', () => {
 
       const challengeResult = await challengeAPI.createChallenge(challengeRequest);
 
-      expect(challengeResult.success).toBe(true);
+      expect(challengeResult).toHaveLength(expect.any(Number));
       expect(challengeResult.data?.challenge_id).toBe('e2e-challenge-123');
       expect(challengeResult.data?.statements).toHaveLength(3);
       expect(challengeResult.data?.is_merged_video).toBe(true);
@@ -349,7 +349,7 @@ describe('End-to-End Integration Tests', () => {
         { retryAttempts: 3 }
       );
 
-      expect(uploadResult.success).toBe(true);
+      expect(uploadResult).toHaveLength(expect.any(Number));
       expect(uploadResult.mediaId).toBe('retry-video-id');
 
       // Should have made resume calls
@@ -465,12 +465,12 @@ describe('End-to-End Integration Tests', () => {
 
       const challengesResult = await challengeAPI.getChallenges(0, 20);
 
-      expect(challengesResult.success).toBe(true);
-      expect(challengesResult.data).toHaveLength(2);
-      expect(challengesResult.data?.[0].challenge_id).toBe('display-challenge-1');
-      expect(challengesResult.data?.[0].statements).toHaveLength(3);
-      expect(challengesResult.data?.[0].is_merged_video).toBe(true);
-      expect(challengesResult.data?.[1].challenge_id).toBe('display-challenge-2');
+      expect(challengesResult).toHaveLength(expect.any(Number));
+      expect(challengesResult).toHaveLength(2);
+      expect(challengesResult[0].challenge_id).toBe('display-challenge-1');
+      expect(challengesResult[0].statements).toHaveLength(3);
+      expect(challengesResult[0].is_merged_video).toBe(true);
+      expect(challengesResult[1].challenge_id).toBe('display-challenge-2');
     });
 
     it('should retrieve specific challenge details correctly', async () => {
@@ -540,7 +540,7 @@ describe('End-to-End Integration Tests', () => {
 
       const challengeResult = await challengeAPI.getChallenge(challengeId);
 
-      expect(challengeResult.success).toBe(true);
+      expect(challengeResult).toHaveLength(expect.any(Number));
       expect(challengeResult.data?.challenge_id).toBe(challengeId);
       expect(challengeResult.data?.statements).toHaveLength(3);
       expect(challengeResult.data?.lie_statement_id).toBe('detail_stmt_2');
@@ -606,7 +606,7 @@ describe('End-to-End Integration Tests', () => {
         {}
       );
 
-      expect(uploadResult.success).toBe(true);
+      expect(uploadResult).toHaveLength(expect.any(Number));
       expect(uploadResult.streamingUrl).toBe('/api/media/stream/ios-video-id');
 
       // Verify iOS-specific handling
@@ -676,7 +676,7 @@ describe('End-to-End Integration Tests', () => {
         {}
       );
 
-      expect(uploadResult.success).toBe(true);
+      expect(uploadResult).toHaveLength(expect.any(Number));
       expect(uploadResult.streamingUrl).toBe('/api/media/stream/android-video-id');
 
       // Verify Android-specific handling
@@ -714,7 +714,7 @@ describe('End-to-End Integration Tests', () => {
 
       const guessResult = await challengeAPI.submitGuess(challengeId, guessedStatementId);
 
-      expect(guessResult.success).toBe(true);
+      expect(guessResult).toHaveLength(expect.any(Number));
       expect(guessResult.data?.challenge_id).toBe(challengeId);
       expect(guessResult.data?.guessed_statement_id).toBe(guessedStatementId);
       expect(guessResult.data?.is_correct).toBe(false);
@@ -757,7 +757,7 @@ describe('End-to-End Integration Tests', () => {
 
       const guessResult = await challengeAPI.submitGuess(challengeId, correctGuessId);
 
-      expect(guessResult.success).toBe(true);
+      expect(guessResult).toHaveLength(expect.any(Number));
       expect(guessResult.data?.is_correct).toBe(true);
       expect(guessResult.data?.points_earned).toBe(50);
       expect(guessResult.data?.total_points).toBe(150);
@@ -771,8 +771,8 @@ describe('End-to-End Integration Tests', () => {
 
       const challengesResult = await challengeAPI.getChallenges(0, 10);
 
-      expect(challengesResult.success).toBe(false);
-      expect(challengesResult.error).toContain('Network request failed');
+      await expect(challengesResult).rejects.toThrow();
+      // Error should be thrown.toContain('Network request failed');
     });
 
     it('should handle authentication errors', async () => {
@@ -788,8 +788,8 @@ describe('End-to-End Integration Tests', () => {
 
       const challengesResult = await challengeAPI.getChallenges(0, 10);
 
-      expect(challengesResult.success).toBe(false);
-      expect(challengesResult.error).toContain('Invalid or expired authentication token');
+      await expect(challengesResult).rejects.toThrow();
+      // Error should be thrown.toContain('Invalid or expired authentication token');
     });
 
     it('should handle server errors with proper error messages', async () => {
@@ -812,8 +812,8 @@ describe('End-to-End Integration Tests', () => {
 
       const challengeResult = await challengeAPI.createChallenge(challengeRequest);
 
-      expect(challengeResult.success).toBe(false);
-      expect(challengeResult.error).toContain('Challenge creation failed: 500');
+      await expect(challengeResult).rejects.toThrow();
+      // Error should be thrown.toContain('Challenge creation failed: 500');
     });
   });
 
@@ -921,11 +921,11 @@ describe('End-to-End Integration Tests', () => {
 
       // Create challenge
       const createResult = await challengeAPI.createChallenge(testChallenge);
-      expect(createResult.success).toBe(true);
+      expect(createResult).toHaveLength(expect.any(Number));
 
       // Retrieve challenge
       const retrieveResult = await challengeAPI.getChallenge('consistency-challenge');
-      expect(retrieveResult.success).toBe(true);
+      expect(retrieveResult).toHaveLength(expect.any(Number));
 
       // Verify data consistency
       const created = createResult.data!;

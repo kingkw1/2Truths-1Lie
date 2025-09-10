@@ -919,7 +919,7 @@ describe('Complete E2E Workflow Tests', () => {
         await challengeAPI.getChallenges(0, 10);
         fail('Expected getChallenges to throw an error');
       } catch (error) {
-        expect(error.message).toContain('Network request failed');
+        expect((error as Error).message).toContain('Network request failed');
       }
     });
 
@@ -938,7 +938,7 @@ describe('Complete E2E Workflow Tests', () => {
         await challengeAPI.getChallenges(0, 10);
         fail('Expected getChallenges to throw an error');
       } catch (error) {
-        expect(error.message).toContain('Invalid or expired authentication token');
+        expect((error as Error).message).toContain('Invalid or expired authentication token');
       }
     });
 
@@ -964,7 +964,7 @@ describe('Complete E2E Workflow Tests', () => {
         await challengeAPI.createChallenge(challengeRequest);
         fail('Expected createChallenge to throw an error');
       } catch (error) {
-        expect(error.message).toContain('Challenge creation failed: 500');
+        expect((error as Error).message).toContain('Challenge creation failed: 500');
       }
     });
 

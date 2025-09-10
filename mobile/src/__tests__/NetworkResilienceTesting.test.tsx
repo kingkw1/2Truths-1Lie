@@ -1,6 +1,21 @@
 /**
  * Network Resilience Testing
- * Tests app behavior under various network conditions and connectivity scenarios
+ * Tests app behavior under vario};
+
+// Mock NetInfo for network state management
+jest.mock('@react-native-async-storage/async-storage', () => ({
+  getItem: jest.fn(),
+  setItem: jest.fn(),
+  removeItem: jest.fn(),
+}));
+
+jest.mock('@react-native-community/netinfo', () => {
+  const listeners: Array<(state: any) => void> = [];
+  
+  // Make listeners available globally for testing
+  (global as any).__mockNetworkListeners = listeners;
+  
+  return {nditions and connectivity scenarios
  */
 
 import React from 'react';
@@ -14,7 +29,7 @@ import challengeCreationReducer from '../store/slices/challengeCreationSlice';
 import { MediaCapture, VideoSegment } from '../types';
 
 // Network state types
-type NetworkState = 'online' | 'offline' | 'slow' | 'unstable' | 'limited';
+type NetworkState = 'online' | 'offline' | 'slow' | 'unstable';
 type ConnectionType = 'wifi' | 'cellular' | 'ethernet' | 'none';
 
 interface NetworkConfig {
@@ -59,19 +74,10 @@ const networkConfigs: Record<NetworkState, NetworkConfig> = {
     packetLoss: 15,
     isMetered: true,
   },
-  limited: {
-    state: 'limited',
-    connectionType: 'cellular',
-    bandwidth: 5,
-    latency: 100,
-    packetLoss: 2,
-    isMetered: true,
-  },
 };
 
 // Global test state
 declare global {
-  var __NETWORK_STATE__: NetworkState;
   var __NETWORK_SCENARIO__: string;
   var __CONNECTION_CHANGES__: number;
 }
@@ -84,31 +90,42 @@ jest.mock('@react-native-async-storage/async-storage', () => ({
 }));
 
 // Mock network-aware components
-const mockNetworkListeners: Array<(state: any) => void> = [];
-
-jest.mock('@react-native-community/netinfo', () => ({
-  fetch: jest.fn().mockImplementation(() => {
-    const networkState = global.__NETWORK_STATE__ || 'online';
-    const config = networkConfigs[networkState];
-    
-    return Promise.resolve({
-      isConnected: config.state !== 'offline',
-      isInternetReachable: config.state === 'online',
-      type: config.connectionType,
-      details: {
-        isConnectionExpensive: config.isMetered,
-        strength: config.bandwidth > 10 ? 'strong' : 'weak',
-      },
-    });
-  }),
-  addEventListener: jest.fn().mockImplementation((listener) => {
-    mockNetworkListeners.push(listener);
-    return () => {
-      const index = mockNetworkListeners.indexOf(listener);
-      if (index > -1) mockNetworkListeners.splice(index, 1);
-    };
-  }),
-}));
+jest.mock('@react-native-community/netinfo', () => {
+  const listeners: Array<(state: any) => void> = [];
+  
+  // Make listeners available globally for testing
+  (global as any).__mockNetworkListeners = listeners;
+  
+  return {
+    fetch: jest.fn().mockImplementation(() => {
+      const networkState = global.__NETWORK_STATE__ || 'online';
+      const networkConfigs = {
+        online: { state: 'online', connectionType: 'wifi', bandwidth: 100, latency: 20, packetLoss: 0, isMetered: false },
+        offline: { state: 'offline', connectionType: 'none', bandwidth: 0, latency: 0, packetLoss: 100, isMetered: false },
+        slow: { state: 'slow', connectionType: 'cellular', bandwidth: 1, latency: 300, packetLoss: 5, isMetered: true },
+        unstable: { state: 'unstable', connectionType: 'wifi', bandwidth: 20, latency: 200, packetLoss: 15, isMetered: true },
+      };
+      const config = networkConfigs[networkState] || networkConfigs.online;
+      
+      return Promise.resolve({
+        isConnected: config.state !== 'offline',
+        isInternetReachable: config.state === 'online',
+        type: config.connectionType,
+        details: {
+          isConnectionExpensive: config.isMetered,
+          strength: config.bandwidth > 10 ? 'strong' : 'weak',
+        },
+      });
+    }),
+    addEventListener: jest.fn().mockImplementation((listener) => {
+      listeners.push(listener);
+      return () => {
+        const index = listeners.indexOf(listener);
+        if (index > -1) listeners.splice(index, 1);
+      };
+    }),
+  };
+});
 
 // Mock Expo AV with network-aware behaviors
 jest.mock('expo-av', () => {
@@ -317,7 +334,7 @@ const mockSegments: VideoSegment[] = [
 ];
 
 // Helper function to simulate network state changes
-const simulateNetworkChange = (newState: NetworkState) => {
+const simulateNetworkChange = (newState: 'online' | 'offline' | 'slow' | 'unstable') => {
   global.__NETWORK_STATE__ = newState;
   global.__CONNECTION_CHANGES__ = (global.__CONNECTION_CHANGES__ || 0) + 1;
   
@@ -333,7 +350,10 @@ const simulateNetworkChange = (newState: NetworkState) => {
   };
   
   // Notify all listeners
-  mockNetworkListeners.forEach(listener => listener(networkInfo));
+  const mockNetworkListeners = (global as any).__mockNetworkListeners;
+  if (mockNetworkListeners && mockNetworkListeners.length > 0) {
+    mockNetworkListeners.forEach((listener: any) => listener(networkInfo));
+  }
 };
 
 describe('Network Resilience Testing', () => {
@@ -342,7 +362,10 @@ describe('Network Resilience Testing', () => {
     global.__NETWORK_STATE__ = 'online';
     global.__NETWORK_SCENARIO__ = 'NORMAL';
     global.__CONNECTION_CHANGES__ = 0;
-    mockNetworkListeners.length = 0;
+    const mockNetworkListeners = (global as any).__mockNetworkListeners;
+    if (mockNetworkListeners) {
+      mockNetworkListeners.length = 0;
+    }
   });
 
   describe('Online Network Conditions', () => {
@@ -691,7 +714,7 @@ describe('Network Resilience Testing', () => {
 
   describe('Metered Connection Handling', () => {
     beforeEach(() => {
-      global.__NETWORK_STATE__ = 'limited';
+      global.__NETWORK_STATE__ = 'slow';
     });
 
     it('detects metered connections and shows warnings', async () => {
@@ -801,7 +824,7 @@ describe('Network Resilience Testing', () => {
 
   describe('Error Recovery and User Guidance', () => {
     it('provides contextual error messages based on network state', async () => {
-      const networkStates: NetworkState[] = ['offline', 'slow', 'unstable'];
+      const networkStates: ('online' | 'offline' | 'slow' | 'unstable')[] = ['offline', 'slow', 'unstable'];
       
       for (const state of networkStates) {
         global.__NETWORK_STATE__ = state;
@@ -904,7 +927,7 @@ describe('Network Resilience Testing', () => {
       );
 
       // Rapidly change network states
-      const states: NetworkState[] = ['online', 'slow', 'offline', 'unstable', 'online'];
+      const states: ('online' | 'offline' | 'slow' | 'unstable')[] = ['online', 'slow', 'offline', 'unstable', 'online'];
       
       for (const state of states) {
         await act(async () => {

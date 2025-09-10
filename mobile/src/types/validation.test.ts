@@ -49,8 +49,8 @@ const testPlayerProgression: PlayerProgression = {
   longestStreak: 7,
   achievements: [],
   unlockedCosmetics: ['avatar_frame_001', 'celebration_confetti'],
-  createdAt: new Date('2024-01-01'),
-  lastUpdated: new Date()
+  createdAt: '2024-01-01T00:00:00.000Z',
+  lastUpdated: new Date().toISOString()
 };
 
 // Test Achievement interface
@@ -60,7 +60,7 @@ const testAchievement: Achievement = {
   name: 'First Steps',
   description: 'Create your first challenge',
   iconUrl: '/icons/first-challenge.png',
-  unlockedAt: new Date(),
+  unlockedAt: new Date().toISOString(),
   progress: 100,
   maxProgress: 100,
   isUnlocked: true

@@ -65,9 +65,9 @@ const TestChallengeListComponent: React.FC = () => {
       
       const response = await realChallengeAPI.getChallenges(0, 20);
       
-      if (response.success && response.data) {
+      if (response && Array.isArray(response)) {
         // Convert backend challenges to frontend format (simplified)
-        const enhancedChallenges: EnhancedChallenge[] = response.data.map(backendChallenge => ({
+        const enhancedChallenges: EnhancedChallenge[] = response.map(backendChallenge => ({
           id: backendChallenge.challenge_id,
           creatorId: backendChallenge.creator_id,
           creatorName: `User ${backendChallenge.creator_id.slice(0, 8)}`,
@@ -105,7 +105,7 @@ const TestChallengeListComponent: React.FC = () => {
         
         setChallenges(enhancedChallenges);
       } else {
-        setError(response.error || 'Failed to load challenges');
+        setError('Failed to load challenges');
       }
     } catch (err: any) {
       setError(err.message || 'Failed to load challenges');
@@ -295,11 +295,7 @@ describe('Challenge List UI Validation - Unit Tests', () => {
       // Mock API with delay
       mockRealChallengeAPI.getChallenges.mockImplementation(() => 
         new Promise(resolve => 
-          setTimeout(() => resolve({
-            success: true,
-            data: [mockChallenge1],
-            timestamp: new Date(),
-          }), 100)
+          setTimeout(() => resolve([mockChallenge1]), 100)
         )
       );
 
@@ -321,11 +317,7 @@ describe('Challenge List UI Validation - Unit Tests', () => {
 
     it('should display challenges after successful load', async () => {
       // Mock successful API response
-      mockRealChallengeAPI.getChallenges.mockResolvedValue({
-        success: true,
-        data: [mockChallenge1],
-        timestamp: new Date(),
-      });
+      mockRealChallengeAPI.getChallenges.mockResolvedValue([mockChallenge1]);
 
       const { getByTestId } = render(
         <Provider store={store}>
@@ -349,11 +341,7 @@ describe('Challenge List UI Validation - Unit Tests', () => {
 
     it('should display empty state when no challenges exist', async () => {
       // Mock API to return empty list
-      mockRealChallengeAPI.getChallenges.mockResolvedValue({
-        success: true,
-        data: [],
-        timestamp: new Date(),
-      });
+      mockRealChallengeAPI.getChallenges.mockResolvedValue([]);
 
       const { getByTestId } = render(
         <Provider store={store}>
@@ -369,11 +357,7 @@ describe('Challenge List UI Validation - Unit Tests', () => {
 
     it('should display error state on API failure', async () => {
       // Mock API error
-      mockRealChallengeAPI.getChallenges.mockResolvedValue({
-        success: false,
-        error: 'Network error',
-        timestamp: new Date(),
-      });
+      mockRealChallengeAPI.getChallenges.mockRejectedValue(new Error('Network error'));
 
       const { getByTestId } = render(
         <Provider store={store}>
@@ -392,17 +376,9 @@ describe('Challenge List UI Validation - Unit Tests', () => {
     it('should update challenge list when refreshed with new challenges', async () => {
       // Initial load with one challenge
       mockRealChallengeAPI.getChallenges
-        .mockResolvedValueOnce({
-          success: true,
-          data: [mockChallenge1],
-          timestamp: new Date(),
-        })
+        .mockResolvedValueOnce([mockChallenge1])
         // Second call after creation with both challenges
-        .mockResolvedValueOnce({
-          success: true,
-          data: [mockChallenge1, mockChallenge2],
-          timestamp: new Date(),
-        });
+        .mockResolvedValueOnce([mockChallenge1, mockChallenge2]);
 
       const { getByTestId, queryByTestId } = render(
         <Provider store={store}>
@@ -440,17 +416,9 @@ describe('Challenge List UI Validation - Unit Tests', () => {
     it('should handle refresh errors gracefully', async () => {
       // Initial successful load
       mockRealChallengeAPI.getChallenges
-        .mockResolvedValueOnce({
-          success: true,
-          data: [mockChallenge1],
-          timestamp: new Date(),
-        })
+        .mockResolvedValueOnce([mockChallenge1])
         // Second call fails
-        .mockResolvedValueOnce({
-          success: false,
-          error: 'Network timeout',
-          timestamp: new Date(),
-        });
+        .mockRejectedValueOnce(new Error('Network timeout'));
 
       const { getByTestId } = render(
         <Provider store={store}>
@@ -488,17 +456,9 @@ describe('Challenge List UI Validation - Unit Tests', () => {
 
       // Initial load
       mockRealChallengeAPI.getChallenges
-        .mockResolvedValueOnce({
-          success: true,
-          data: [mockChallenge1],
-          timestamp: new Date(),
-        })
+        .mockResolvedValueOnce([mockChallenge1])
         // Refresh with updated stats
-        .mockResolvedValueOnce({
-          success: true,
-          data: [updatedChallenge1],
-          timestamp: new Date(),
-        });
+        .mockResolvedValueOnce([updatedChallenge1]);
 
       const { getByTestId } = render(
         <Provider store={store}>
@@ -527,17 +487,9 @@ describe('Challenge List UI Validation - Unit Tests', () => {
     it('should preserve challenge order from API response', async () => {
       // Initial load with challenge1 first
       mockRealChallengeAPI.getChallenges
-        .mockResolvedValueOnce({
-          success: true,
-          data: [mockChallenge1],
-          timestamp: new Date(),
-        })
+        .mockResolvedValueOnce([mockChallenge1])
         // Refresh with challenge2 first (newer challenge)
-        .mockResolvedValueOnce({
-          success: true,
-          data: [mockChallenge2, mockChallenge1],
-          timestamp: new Date(),
-        });
+        .mockResolvedValueOnce([mockChallenge2, mockChallenge1]);
 
       const { getByTestId } = render(
         <Provider store={store}>
@@ -570,11 +522,7 @@ describe('Challenge List UI Validation - Unit Tests', () => {
     it('should handle multiple rapid refreshes without issues', async () => {
       // Mock multiple successful responses
       for (let i = 0; i < 5; i++) {
-        mockRealChallengeAPI.getChallenges.mockResolvedValueOnce({
-          success: true,
-          data: [mockChallenge1],
-          timestamp: new Date(),
-        });
+        mockRealChallengeAPI.getChallenges.mockResolvedValueOnce([mockChallenge1]);
       }
 
       const { getByTestId } = render(
@@ -613,11 +561,7 @@ describe('Challenge List UI Validation - Unit Tests', () => {
         creator_id: `user-${index}`,
       }));
 
-      mockRealChallengeAPI.getChallenges.mockResolvedValue({
-        success: true,
-        data: largeChallengeList,
-        timestamp: new Date(),
-      });
+      mockRealChallengeAPI.getChallenges.mockResolvedValue(largeChallengeList);
 
       const { getByTestId } = render(
         <Provider store={store}>
