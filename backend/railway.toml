@@ -1,3 +1,5 @@
 [build]
-builder = "docker"
+builder = "NIXPACKS"
 
+[phases.setup]
+nixPkgs = ["ffmpeg"]
