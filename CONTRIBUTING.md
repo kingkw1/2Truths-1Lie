@@ -2,6 +2,16 @@
 
 Thank you for your interest in contributing to our AI-powered mobile social game! We welcome bug fixes, feature improvements, mobile optimizations, and AI enhancements.
 
+## 📚 Before You Start
+
+**Read the consolidated documentation first!**
+
+- **[📚 Documentation Index](docs/consolidated/README.md)** - Find the right guide for your area
+- **[🎯 Project Overview](docs/consolidated/PROJECT_OVERVIEW.md)** - Understand the project
+- **[📱 Mobile Guide](docs/consolidated/MOBILE_GUIDE.md)** - Mobile development setup
+- **[🖥 Backend Guide](docs/consolidated/BACKEND_GUIDE.md)** - Backend development setup
+- **[🧪 Testing Guide](docs/consolidated/TESTING_GUIDE.md)** - Testing requirements
+
 ## 🚀 Quick Start for Contributors
 
 ### Prerequisites

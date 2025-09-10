@@ -1,184 +1,446 @@
-# API Documentation for 2Truths-1Lie Mobile App
+# 📋 API Documentation
+
+## Overview
+RESTful API documentation for the 2Truths-1Lie backend server. All endpoints are optimized for mobile usage with efficient data transfer and offline-first capabilities.
 
 ## Base URL
+- **Development**: `http://192.168.50.111:8001/api/v1`
+- **Production**: `https://api.2truths1lie.app/api/v1`
 
-`https://api.2truths1lie.app/v1`
-
----
-
-## Mobile App Architecture
-
-This API serves the **mobile-only** React Native/Expo application. All endpoints are optimized for mobile usage patterns including offline-first capabilities, efficient data transfer, and native mobile features.
-
-## Redux Store Structure
-
-### Challenge Creation Slice
-
-The `challengeCreationSlice` manages the state during the challenge creation workflow on mobile devices.
-
-**State Interface:**
-```typescript
-interface ChallengeCreationState {
-  currentChallenge: Partial<ChallengeCreation>;
-  isRecording: boolean;
-  recordingType: 'video' | 'audio' | null;
-  currentStatementIndex: number;
-  validationErrors: string[];
-  isSubmitting: boolean;
-  submissionSuccess: boolean;
-  previewMode: boolean;
-}
+## Authentication
+Most endpoints require JWT authentication via the `Authorization` header:
+```
+Authorization: Bearer <jwt_token>
 ```
 
-**Initial State:**
-- `currentChallenge` now includes 3 pre-initialized empty statements with IDs 'stmt_1', 'stmt_2', 'stmt_3'
-- Each statement has default values: `text: ''`, `isLie: false`, `confidence: 0`
-- `mediaData` array is initialized as empty
-- `isPublic` defaults to `true`
+## 🔐 Authentication Endpoints
 
-**Available Actions:**
-- `startNewChallenge()` - Reset to initial state
-- `updateStatement(index, statement)` - Update a specific statement
-- `setLieStatement(index)` - Mark a statement as the lie
-- `startRecording(type)` / `stopRecording()` - Control native mobile media recording
-- `setMediaData(media)` - Add media capture data from device camera/microphone
-- `setStatementMedia(index, media)` - Associate media with a statement
-- `validateChallenge()` - Validate current challenge state
-- `enterPreviewMode()` / `exitPreviewMode()` - Toggle preview mode
-- `startSubmission()` / `completeSubmission(success)` - Handle submission flow
+### POST `/auth/register`
+Register a new user account.
 
-## Mobile-Specific Considerations
-
-### Media Upload
-- **Native Recording**: All media captured using Expo Camera and Audio APIs
-- **Compression**: Client-side video/audio compression before upload
-- **Offline Support**: Media stored locally until network available
-- **Format Support**: Optimized for mobile formats (MP4, AAC)
-
----
-
-## Endpoints
-
-### POST `/statements`
-Submit a new “Two Truths and a Lie” record.
-
-**Request Body:**
-```
+**Request:**
+```json
 {
-  "userId": "string",
-  "statements": [
-    {"text": "string", "isLie": false},
-    {"text": "string", "isLie": false},
-    {"text": "string", "isLie": true}
-  ],
-  "mediaUrl": "string (optional)",
-  "mediaType": "video" | "audio" | "none"
+  "username": "user123",
+  "email": "user@example.com",
+  "password": "securepassword"
 }
 ```
 
 **Response:**
-- **201 Created**
-```
+```json
 {
-  "gameId": "string",
-  "status": "pending"
-}
-```
-- **400 Bad Request**
-
----
-
-### GET `/games/{gameId}`
-Fetch details of a specific game session, including guesses and stats.
-
-**Response:**
-```
-{
-  "gameId": "string",
-  "statements": [
-    {"text": "string", "mediaUrl": "string", "emotionScores": {"happy": 0.8, "sad": 0.1}, "isLie": false}
-  ],
-  "guesses": [
-    {"userId": "string", "guessIndex": 2, "correct": true}
-  ],
-  "scoreSummary": {
-    "totalGuesses": 35,
-    "correctGuesses": 27
+  "access_token": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9...",
+  "token_type": "bearer",
+  "expires_in": 3600,
+  "user": {
+    "id": "user_123",
+    "username": "user123",
+    "email": "user@example.com"
   }
 }
 ```
 
----
+### POST `/auth/login`
+Authenticate existing user.
 
-### POST `/games/{gameId}/guess`
-Submit a guess for a game’s lie.
-
-**Request Body:**
-```
+**Request:**
+```json
 {
-  "userId": "string",
-  "chosenIndex": 0
+  "username": "user123",
+  "password": "securepassword"
+}
+```
+
+**Response:** Same as register
+
+### POST `/auth/refresh`
+Refresh expired JWT token.
+
+**Request:**
+```json
+{
+  "refresh_token": "refresh_token_here"
+}
+```
+
+## 📁 Media Upload Endpoints
+
+### POST `/media/upload/start`
+Initialize chunked upload session.
+
+**Request:**
+```json
+{
+  "filename": "video_statement_1.mp4",
+  "file_size": 5242880,
+  "chunk_size": 1048576,
+  "file_hash": "sha256_hash",
+  "media_type": "video"
 }
 ```
 
 **Response:**
-- **200 OK**
-```
+```json
 {
-  "correct": true,
-  "updatedScore": 42
+  "upload_session_id": "upload_123456",
+  "chunk_urls": [
+    "https://signed-url-chunk-1",
+    "https://signed-url-chunk-2"
+  ],
+  "total_chunks": 5
 }
 ```
-- **404 Not Found**
-- **400 Bad Request**
 
----
+### POST `/media/upload/chunk`
+Upload individual file chunk.
 
-## Authentication
-- Requests require Bearer JWT token in header: `Authorization: Bearer {token}`
-- Optimized for mobile: Token refresh handled automatically by mobile client
-- Offline support: Cached authentication for temporary network loss
+**Request:** Binary chunk data to signed URL
 
-## Mobile App Integration Notes
-- All endpoints support mobile-specific headers for device identification
-- Rate limiting adjusted for mobile usage patterns
-- Response payloads optimized for mobile data usage
-- Support for background sync when app returns to foreground
+**Response:**
+```json
+{
+  "chunk_number": 1,
+  "status": "uploaded",
+  "etag": "chunk_etag"
+}
+```
 
----
+### POST `/media/upload/complete`
+Complete chunked upload and finalize file.
 
-## Recent Updates
+**Request:**
+```json
+{
+  "upload_session_id": "upload_123456",
+  "chunks": [
+    {"chunk_number": 1, "etag": "etag1"},
+    {"chunk_number": 2, "etag": "etag2"}
+  ]
+}
+```
 
-### Server-Side Video Processing (Latest)
-- **Change**: Added server-side video merging and processing pipeline
-- **Impact**: Videos are now merged on the server using FFmpeg for optimal quality and storage efficiency
-- **Benefits**: 
-  - Single merged video file instead of three separate files
-  - Consistent video quality and compression across all platforms
-  - Segment-based playback with precise timing metadata
-  - Reduced storage costs and improved CDN performance
-- **New Endpoints**: 
-  - `POST /api/v1/challenge-videos/upload-for-merge/initiate` - Multi-video upload initiation
-  - `GET /api/v1/challenges/{id}/segments` - Segment metadata for playback
-  - See [Server-Side Video Processing API](SERVER_SIDE_VIDEO_PROCESSING_API.md) for complete documentation
+**Response:**
+```json
+{
+  "media_file_id": "media_789",
+  "url": "https://cdn.example.com/video.mp4",
+  "duration_seconds": 10.5,
+  "file_size": 5242880,
+  "status": "ready"
+}
+```
 
-### Mobile-Only Migration
-- **Change**: Removed web-specific endpoints and headers
-- **Impact**: API now exclusively serves mobile React Native app
-- **Benefits**: 
-  - Simplified authentication flow for mobile
-  - Optimized response formats for mobile consumption
-  - Native mobile media handling integration
+### GET `/media/{media_file_id}`
+Get media file information.
 
-### Challenge Creation State Initialization
-- **Change**: Modified initial state to pre-populate 3 empty statements
-- **Impact**: Eliminates need for dynamic statement array initialization in mobile components
-- **Benefits**: 
-  - Consistent mobile UI state on component mount
-  - Simplified form handling logic for touch interfaces
-  - Better mobile UX with pre-structured statement inputs
+**Response:**
+```json
+{
+  "media_file_id": "media_789",
+  "url": "https://cdn.example.com/video.mp4",
+  "thumbnail_url": "https://cdn.example.com/thumb.jpg",
+  "duration_seconds": 10.5,
+  "file_size": 5242880,
+  "media_type": "video",
+  "created_at": "2025-09-10T12:00:00Z"
+}
+```
 
----
+## 🎬 Video Processing Endpoints
 
-## Contact for API Questions  
-Kingkw - kingkw@example.com  
+### POST `/merged-video/create`
+Create merged video from multiple statement videos.
+
+**Request:**
+```json
+{
+  "video_files": [
+    {"media_file_id": "media_1", "statement_index": 0},
+    {"media_file_id": "media_2", "statement_index": 1},
+    {"media_file_id": "media_3", "statement_index": 2}
+  ],
+  "merge_config": {
+    "transition_duration": 0.5,
+    "output_quality": "high"
+  }
+}
+```
+
+**Response:**
+```json
+{
+  "merged_video_id": "merged_456",
+  "status": "processing",
+  "estimated_completion": "2025-09-10T12:05:00Z"
+}
+```
+
+### GET `/merged-video/{merged_video_id}`
+Get merged video information and segment metadata.
+
+**Response:**
+```json
+{
+  "merged_video_id": "merged_456",
+  "url": "https://cdn.example.com/merged_video.mp4",
+  "status": "ready",
+  "total_duration": 31.5,
+  "segments": [
+    {
+      "statement_index": 0,
+      "start_time": 0.0,
+      "end_time": 10.5,
+      "media_file_id": "media_1"
+    },
+    {
+      "statement_index": 1,
+      "start_time": 11.0,
+      "end_time": 23.0,
+      "media_file_id": "media_2"
+    },
+    {
+      "statement_index": 2,
+      "start_time": 23.5,
+      "end_time": 32.0,
+      "media_file_id": "media_3"
+    }
+  ],
+  "created_at": "2025-09-10T12:00:00Z"
+}
+```
+
+## 🎮 Challenge Endpoints
+
+### POST `/challenges`
+Create a new challenge.
+
+**Request:**
+```json
+{
+  "title": "My Challenge",
+  "statements": [
+    {
+      "text": "I once met a celebrity",
+      "media_file_id": "media_1",
+      "duration_seconds": 10.5
+    },
+    {
+      "text": "I can speak 5 languages",
+      "media_file_id": "media_2",
+      "duration_seconds": 12.0
+    },
+    {
+      "text": "I've been to space",
+      "media_file_id": "media_3",
+      "duration_seconds": 8.5
+    }
+  ],
+  "lie_statement_index": 2,
+  "merged_video_id": "merged_456",
+  "tags": ["personal", "funny"],
+  "is_public": true
+}
+```
+
+**Response:**
+```json
+{
+  "challenge_id": "challenge_789",
+  "title": "My Challenge",
+  "status": "published",
+  "created_at": "2025-09-10T12:00:00Z",
+  "creator": {
+    "user_id": "user_123",
+    "username": "user123"
+  },
+  "video_url": "https://cdn.example.com/merged_video.mp4",
+  "segments": [...] // Same as merged video segments
+}
+```
+
+### GET `/challenges`
+List public challenges with pagination.
+
+**Query Parameters:**
+- `page` (default: 1)
+- `limit` (default: 20, max: 100)
+- `tags` (comma-separated)
+- `sort` (newest, popular, trending)
+
+**Response:**
+```json
+{
+  "challenges": [
+    {
+      "challenge_id": "challenge_789",
+      "title": "My Challenge",
+      "creator_username": "user123",
+      "thumbnail_url": "https://cdn.example.com/thumb.jpg",
+      "tags": ["personal", "funny"],
+      "stats": {
+        "total_guesses": 25,
+        "correct_guesses": 8,
+        "success_rate": 0.32
+      },
+      "created_at": "2025-09-10T12:00:00Z"
+    }
+  ],
+  "pagination": {
+    "page": 1,
+    "limit": 20,
+    "total": 150,
+    "has_next": true
+  }
+}
+```
+
+### GET `/challenges/{challenge_id}`
+Get detailed challenge information.
+
+**Response:**
+```json
+{
+  "challenge_id": "challenge_789",
+  "title": "My Challenge",
+  "creator": {
+    "user_id": "user_123",
+    "username": "user123"
+  },
+  "statements": [
+    {
+      "statement_index": 0,
+      "text": "I once met a celebrity"
+    },
+    {
+      "statement_index": 1,
+      "text": "I can speak 5 languages"
+    },
+    {
+      "statement_index": 2,
+      "text": "I've been to space"
+    }
+  ],
+  "video_url": "https://cdn.example.com/merged_video.mp4",
+  "segments": [...],
+  "stats": {
+    "total_guesses": 25,
+    "correct_guesses": 8,
+    "success_rate": 0.32
+  },
+  "tags": ["personal", "funny"],
+  "created_at": "2025-09-10T12:00:00Z"
+}
+```
+
+### POST `/challenges/{challenge_id}/guess`
+Submit a guess for a challenge.
+
+**Request:**
+```json
+{
+  "guessed_lie_index": 1,
+  "confidence": 0.8,
+  "reasoning": "The voice seemed nervous on statement 2"
+}
+```
+
+**Response:**
+```json
+{
+  "guess_id": "guess_456",
+  "correct": false,
+  "actual_lie_index": 2,
+  "points_earned": 0,
+  "feedback": {
+    "message": "Good try! The lie was actually statement 3.",
+    "explanation": "Statement 2 was true - they really do speak 5 languages!"
+  },
+  "stats": {
+    "your_success_rate": 0.65,
+    "challenge_success_rate": 0.32
+  }
+}
+```
+
+## 📊 Analytics Endpoints
+
+### GET `/analytics/user/stats`
+Get user performance statistics.
+
+**Response:**
+```json
+{
+  "user_stats": {
+    "challenges_created": 15,
+    "total_guesses": 120,
+    "correct_guesses": 78,
+    "success_rate": 0.65,
+    "points_earned": 1560,
+    "rank": "Expert Detector"
+  },
+  "recent_activity": [
+    {
+      "activity_type": "guess",
+      "challenge_id": "challenge_789",
+      "correct": true,
+      "points": 50,
+      "timestamp": "2025-09-10T11:30:00Z"
+    }
+  ]
+}
+```
+
+## 🔧 Utility Endpoints
+
+### GET `/health`
+Basic health check.
+
+**Response:**
+```json
+{
+  "status": "healthy",
+  "timestamp": "2025-09-10T12:00:00Z",
+  "version": "1.0.0"
+}
+```
+
+### GET `/health/database`
+Database connectivity check.
+
+### GET `/health/s3`
+S3 storage connectivity check.
+
+## 📱 Mobile-Specific Considerations
+
+### Offline Support
+- Media files cached locally until upload possible
+- Challenge data stored in AsyncStorage
+- Queue system for pending operations
+
+### Error Handling
+All endpoints return consistent error format:
+```json
+{
+  "error": {
+    "code": "VALIDATION_ERROR",
+    "message": "Invalid input data",
+    "details": {
+      "field": "statements",
+      "reason": "Must contain exactly 3 statements"
+    }
+  },
+  "timestamp": "2025-09-10T12:00:00Z"
+}
+```
+
+### Rate Limiting
+- Authentication: 5 requests/minute
+- Media Upload: 10 uploads/hour
+- Challenge Creation: 5 challenges/hour
+- Guessing: 100 guesses/hour
+
+## 🔗 Related Documentation
+- [Backend Development Guide](BACKEND_GUIDE.md)
+- [Mobile Development Guide](MOBILE_GUIDE.md)
+- [Testing Guide](TESTING_GUIDE.md)

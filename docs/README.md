@@ -1,57 +1,139 @@
-# Documentation Index - Mobile App Development
+# 📚 Documentation Index
 
-## 📱 Mobile Development & Deployment
+Welcome to the 2Truths-1Lie project documentation! This index provides organized access to all project documentation.
 
-### Android Build & Deployment
-- **[Android Build & Deployment Guide](android-build-deployment-guide.md)** - Complete guide for building and deploying React Native/Expo Android apps
-- **[Android Build Quick Reference](android-build-quick-reference.md)** - Quick EAS build commands and troubleshooting
+## 🚀 Getting Started
 
-### iOS Build & Deployment
-- **[Mobile Testing Guide](mobile-testing.md)** - Comprehensive iOS and Android testing approaches with Expo Go and simulators
+### For New Developers
+1. **[Project Overview](PROJECT_OVERVIEW.md)** - Start here for project understanding
+2. **[Developer Quick Start](../DEVELOPER_QUICK_START.md)** - Get running in 5 minutes
+3. **[Technical Architecture](../ARCHITECTURE.md)** - High-level system design
 
-## 🧪 Testing & QA
+### For Mobile Developers
+- **[Mobile Development Guide](MOBILE_GUIDE.md)** - Complete mobile development reference
+- **[Testing Guide](TESTING_GUIDE.md)** - Mobile testing strategies and setup
 
-- **[Testing Plan](testing-plan.md)** - Mobile-focused testing strategy for React Native/Expo
-- **[Mobile Testing](mobile-testing.md)** - Native mobile testing approaches and device validation
-- **[Advanced Testing QA Spec](advanced-testing-qa-spec.md)** - Advanced mobile QA specifications for app store deployment
+### For Backend Developers  
+- **[Backend Development Guide](BACKEND_GUIDE.md)** - Complete backend development reference
+- **[API Documentation](api.md)** - Complete API reference
 
-## 🔧 Development & API
+### For DevOps/Deployment
+- **[Deployment Guide](DEPLOYMENT_GUIDE.md)** - Mobile and backend deployment
+- **[Testing Guide](TESTING_GUIDE.md)** - Test automation and CI/CD
 
-- **[Backend Integration Plan](../BACKEND_INTEGRATION_PLAN.md)** - Current development roadmap and next steps
-- **[Media System Complete Guide](MEDIA_SYSTEM_COMPLETE_GUIDE.md)** - Complete guide for video upload and streaming system (**Production Ready**)
-- **[Segment-Based Challenge Flow](SEGMENT_BASED_CHALLENGE_FLOW.md)** - Technical documentation for merged video system with segment metadata
-- **[Segment-Based Developer Guide](SEGMENT_BASED_DEVELOPER_GUIDE.md)** - Developer integration guide for segment-based video system
-- **[API Documentation](api.md)** - Mobile-optimized backend API specifications
-- **[User Media Guide](USER_MEDIA_GUIDE.md)** - Complete user guide for creating and sharing video challenges
+## 📖 Documentation Structure
 
-## 📱 Mobile App Features
+### Core Documentation
+```
+docs/consolidated/
+├── PROJECT_OVERVIEW.md      # 🎯 Project summary and status
+├── MOBILE_GUIDE.md          # 📱 Mobile development guide
+├── BACKEND_GUIDE.md         # 🖥 Backend development guide
+├── api.md                   # 📋 API documentation
+├── TESTING_GUIDE.md         # 🧪 Testing strategies
+├── DEPLOYMENT_GUIDE.md      # 🚀 Deployment processes
+└── README.md               # 📚 This index file
+```
 
-- **Segment-based video recording** - Record three statements, automatically merged
-- **Interactive video playback** - Select and play individual statement segments
-- **Native camera and microphone recording**
-- **Offline-first mobile experience**
-- **iOS and Android app store deployment**
-- **React Native/Expo optimized performance**
-- **Mobile-specific UI/UX patterns**
+### Root Documentation
+```
+/
+├── README.md                # 🏠 Project homepage
+├── DEVELOPER_QUICK_START.md # ⚡ 5-minute setup guide
+├── ARCHITECTURE.md          # 🏗 Technical architecture
+└── CONTRIBUTING.md          # 🤝 Contribution guidelines
+```
 
-## 👥 User Guides
+## 🎯 Documentation by Use Case
 
-- **[User Media Guide](USER_MEDIA_GUIDE.md)** - Complete user guide for creating and sharing video challenges
-- **[Enhanced Upload & Playback Guide](ENHANCED_UPLOAD_PLAYBACK_GUIDE.md)** - Comprehensive guide to the new server-side processing and advanced streaming features
+### I want to...
+
+#### **Understand the Project**
+- [Project Overview](PROJECT_OVERVIEW.md) - What is 2Truths-1Lie?
+- [Technical Architecture](../ARCHITECTURE.md) - How is it built?
+
+#### **Start Development**
+- [Developer Quick Start](../DEVELOPER_QUICK_START.md) - Get running fast
+- [Mobile Guide](MOBILE_GUIDE.md) - Mobile development setup
+- [Backend Guide](BACKEND_GUIDE.md) - Backend development setup
+
+#### **Use the API**
+- [API Documentation](api.md) - Complete endpoint reference
+- [Backend Guide](BACKEND_GUIDE.md) - Authentication and integration
+
+#### **Write Tests**
+- [Testing Guide](TESTING_GUIDE.md) - Testing strategies and tools
+- [Mobile Guide](MOBILE_GUIDE.md) - Mobile testing specifics
+- [Backend Guide](BACKEND_GUIDE.md) - Backend testing specifics
+
+#### **Deploy the Application**
+- [Deployment Guide](DEPLOYMENT_GUIDE.md) - Production deployment
+- [Backend Guide](BACKEND_GUIDE.md) - Backend deployment details
+- [Mobile Guide](MOBILE_GUIDE.md) - Mobile app store deployment
+
+#### **Contribute to the Project**
+- [Contributing Guidelines](../CONTRIBUTING.md) - How to contribute
+- [Testing Guide](TESTING_GUIDE.md) - Testing your contributions
+
+## 📊 Current Project Status
+
+### ✅ Production Ready Components
+- **Video Recording**: Native mobile camera integration
+- **Video Processing**: Server-side merging with segment metadata
+- **File Upload**: Chunked uploads with resume capability
+- **Storage**: AWS S3 integration with CDN
+- **API**: RESTful endpoints with authentication
+- **Mobile App**: React Native app with Redux state management
+
+### 🎯 In Development
+- **Authentication**: JWT integration debugging
+- **Challenge UI**: Browse and gameplay screens
+- **AI Integration**: Emotion recognition features
+
+### 📋 Upcoming Features
+- **Social Features**: Leaderboards and sharing
+- **Push Notifications**: Game updates and engagement
+- **Offline Support**: Local storage and sync
+- **iOS Build**: Apple App Store deployment
+
+## 🔄 Documentation Maintenance
+
+### How to Update Documentation
+1. **Edit the source file** in `docs/consolidated/`
+2. **Test any code examples** included in the documentation
+3. **Update related cross-references** if structure changes
+4. **Submit PR** with documentation changes
+
+### Documentation Standards
+- **Clear headings** with emoji for visual scanning
+- **Code examples** that are tested and working
+- **Screenshots** for UI-related documentation
+- **Cross-references** to related documentation
+- **Up-to-date status** and version information
+
+## 🔗 External Resources
+
+### Development Tools
+- [React Native Documentation](https://reactnative.dev/docs/getting-started)
+- [Expo Documentation](https://docs.expo.dev/)
+- [FastAPI Documentation](https://fastapi.tiangolo.com/)
+- [Redux Toolkit Guide](https://redux-toolkit.js.org/)
+
+### Deployment Platforms
+- [EAS Build Documentation](https://docs.expo.dev/build/introduction/)
+- [Google Play Console](https://play.google.com/console/)
+- [AWS S3 Documentation](https://docs.aws.amazon.com/s3/)
 
 ---
 
-## Quick Start for New Mobile Developers
+## 🆘 Need Help?
 
-1. **Setup**: Follow [Mobile Testing Guide](mobile-testing.md) for Expo Go setup
-2. **Build**: Reference [Android Build Quick Reference](android-build-quick-reference.md) for deployment
-3. **Test**: Use [Testing Plan](testing-plan.md) for mobile testing workflows
-4. **Deploy**: Follow [Android Build & Deployment Guide](android-build-deployment-guide.md) for app store submission
+If you can't find what you're looking for:
 
-## Contributing
+1. **Check the appropriate guide** for your area (Mobile, Backend, Testing, Deployment)
+2. **Review the API documentation** for endpoint details
+3. **Look at the project overview** for high-level understanding
+4. **Check the troubleshooting sections** in relevant guides
 
-When adding new documentation:
-1. Create clear, actionable guides
-2. Include troubleshooting sections
-3. Add entry to this index
-4. Test all commands and procedures
+**Last Updated**: September 10, 2025  
+**Documentation Version**: 2.0 (Consolidated)

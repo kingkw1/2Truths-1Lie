@@ -31,6 +31,18 @@ cd mobile && npm install && npm start
 
 **📋 See [Developer Quick Start Guide](DEVELOPER_QUICK_START.md) for complete setup**
 
+## 📚 Documentation Hub
+
+**All documentation has been consolidated and organized!** 
+
+- **[📚 Complete Documentation Index](docs/README.md)** - Organized access to all docs
+- **[🎯 Project Overview](docs/PROJECT_OVERVIEW.md)** - High-level project summary
+- **[📱 Mobile Development](docs/MOBILE_GUIDE.md)** - React Native development guide
+- **[🖥 Backend Development](docs/BACKEND_GUIDE.md)** - Python FastAPI development guide
+- **[📋 API Reference](docs/api.md)** - Complete API documentation
+- **[🧪 Testing Guide](docs/TESTING_GUIDE.md)** - Testing strategies and tools
+- **[🚀 Deployment Guide](docs/DEPLOYMENT_GUIDE.md)** - Production deployment
+
 ### Current Status: **Enhanced Media System Production Ready** ✅
 - ✅ Server-side video processing with professional-grade merging
 - ✅ Individual video uploads with resume capability and smart retry
