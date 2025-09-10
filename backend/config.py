@@ -4,6 +4,7 @@ Configuration settings for the backend
 import os
 from pathlib import Path
 from typing import Optional
+from pydantic import ConfigDict
 from pydantic_settings import BaseSettings
 
 class Settings(BaseSettings):
@@ -101,8 +102,7 @@ class Settings(BaseSettings):
     CDN_CACHE_CONTROL: str = "public, max-age=86400"  # 24 hours default cache
     CDN_EDGE_LOCATIONS: list = ["us-east-1", "eu-west-1", "ap-southeast-1"]  # Primary edge locations
     
-    class Config:
-        env_file = ".env"
+    model_config = ConfigDict(env_file=".env")
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
