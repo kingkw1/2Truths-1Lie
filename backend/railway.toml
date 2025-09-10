@@ -2,4 +2,10 @@
 builder = "NIXPACKS"
 
 [phases.setup]
-nixPkgs = ["ffmpeg"]
+nixPkgs = ["ffmpeg", "ca-certificates"]
+
+[phases.build]
+includeNixPkgs = true
+
+[phases.install]
+includeNixPkgs = true
