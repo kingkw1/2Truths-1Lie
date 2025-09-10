@@ -96,6 +96,39 @@ docs/consolidated/
 - **Offline Support**: Local storage and sync
 - **iOS Build**: Apple App Store deployment
 
+## 🗂 Project Structure
+
+```
+/
+├── README.md                    # 🏠 Project homepage
+├── DEVELOPER_QUICK_START.md     # ⚡ 5-minute setup guide
+├── ARCHITECTURE.md              # 🏗 Technical architecture
+├── CONTRIBUTING.md              # 🤝 Contribution guidelines
+├── mobile/                      # 📱 React Native mobile app
+├── backend/                     # 🖥 Python FastAPI backend
+├── android/                     # 🤖 Android build configuration
+├── docs/                        # 📚 All documentation
+│   ├── README.md               # Documentation index (this file)
+│   ├── PROJECT_OVERVIEW.md     # Project summary
+│   ├── MOBILE_GUIDE.md         # Mobile development guide
+│   ├── BACKEND_GUIDE.md        # Backend development guide
+│   ├── api.md                  # API documentation
+│   ├── TESTING_GUIDE.md        # Testing strategies
+│   ├── DEPLOYMENT_GUIDE.md     # Deployment guide
+│   ├── HACKATHON.md           # Hackathon submission info
+│   ├── KIRO_HACKATHON.md      # Development process info
+│   └── archive/               # Archived documentation
+├── scripts/                     # 🛠 Development scripts
+│   ├── demo-setup.sh          # Demo environment setup
+│   ├── run_complete_e2e_tests.sh # E2E test runner
+│   └── test_complete_workflow.sh # Workflow testing
+├── tools/                       # 🔧 Development tools
+│   ├── generate_test_token.py  # JWT token generator
+│   ├── test_challenge_persistence.py # DB testing
+│   └── test_integration_runner.py # Integration tests
+└── assets/                      # 🎨 App icons and graphics
+```
+
 ## 🔄 Documentation Maintenance
 
 ### How to Update Documentation

@@ -8,7 +8,7 @@
     "start:mobile": "cd mobile && expo start",
     "start:backend": "cd backend && python main.py",
     "start:dev": "concurrently \"npm run start:backend\" \"npm run start:mobile\"",
-    "demo": "./demo-setup.sh",
+    "demo": "./scripts/demo-setup.sh",
     "mobile": "cd mobile && npx expo start --offline",
     "mobile:install": "cd mobile && npm install",
     "sync": "./sync-to-mobile.sh",
