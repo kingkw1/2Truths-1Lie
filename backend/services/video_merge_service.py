@@ -735,32 +735,37 @@ class VideoMergeService:
         # Get compression settings from config
         compression_settings = self._get_compression_settings(quality_preset)
         
-        # Build FFmpeg command with standard compression parameters
+        # Use more conservative compression parameters for Railway deployment
+        # Build FFmpeg command with Railway-optimized parameters
         cmd = [
             "ffmpeg",
             "-i", str(merged_path),
-            "-c:v", compression_settings["video_codec"],
-            "-preset", compression_settings["preset"],
-            "-crf", str(compression_settings["crf"]),
-            "-maxrate", compression_settings["max_bitrate"],
-            "-bufsize", compression_settings["buffer_size"],
-            "-c:a", compression_settings["audio_codec"],
-            "-b:a", compression_settings["audio_bitrate"],
+            "-c:v", "libx264",
+            "-preset", "fast",  # Use faster preset for Railway environment
+            "-crf", "23",  # Fixed CRF for consistency
+            "-maxrate", "1500k",  # Conservative bitrate for Railway
+            "-bufsize", "3000k",  # Conservative buffer
+            "-c:a", "aac",
+            "-b:a", "128k",
             "-movflags", "+faststart",  # Enable fast start for web streaming
             "-pix_fmt", "yuv420p",  # Ensure compatibility with most players
-            "-profile:v", "high",  # H.264 high profile for better compression
-            "-level", "4.0",  # H.264 level 4.0 for broad compatibility
+            "-profile:v", "baseline",  # Use baseline profile for better compatibility
+            "-level", "3.1",  # Lower H.264 level for broader compatibility
+            "-threads", "2",  # Limit threads for Railway environment
             "-y",  # Overwrite output file
             str(compressed_path)
         ]
         
-        logger.info(f"Compressing merged video with {quality_preset} quality preset")
+        logger.info(f"Compressing merged video with {quality_preset} quality preset (Railway-optimized)")
         logger.debug(f"Compression command: {' '.join(cmd)}")
         
         try:
             # Record compression start time for progress monitoring
             import time
             self._compression_start_time = time.time()
+            
+            # Add timeout for Railway environment
+            compression_timeout = 300  # 5 minutes timeout
             
             process = await asyncio.create_subprocess_exec(
                 *cmd,
@@ -769,12 +774,32 @@ class VideoMergeService:
             )
             
             # Monitor progress if callback provided
+            progress_task = None
             if progress_callback:
-                await self._monitor_compression_progress(
-                    process, merged_path, progress_callback
+                progress_task = asyncio.create_task(
+                    self._monitor_compression_progress(process, merged_path, progress_callback)
                 )
             
-            stdout, stderr = await process.communicate()
+            # Wait for compression with timeout
+            try:
+                stdout, stderr = await asyncio.wait_for(
+                    process.communicate(), 
+                    timeout=compression_timeout
+                )
+            except asyncio.TimeoutError:
+                # Kill the process if it times out
+                try:
+                    process.kill()
+                    await process.wait()
+                except:
+                    pass
+                raise VideoMergeError(
+                    f"Video compression timed out after {compression_timeout} seconds",
+                    "COMPRESSION_TIMEOUT"
+                )
+            finally:
+                if progress_task and not progress_task.done():
+                    progress_task.cancel()
             
             if process.returncode != 0:
                 error_msg = stderr.decode() if stderr else "Unknown FFmpeg error"

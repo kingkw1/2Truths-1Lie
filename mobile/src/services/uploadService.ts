@@ -5,6 +5,7 @@
 
 import * as FileSystem from 'expo-file-system';
 import { Platform } from 'react-native';
+import { getBackendBaseUrl } from '../config/apiConfig';
 
 
 export interface UploadProgress {
@@ -51,9 +52,10 @@ export class VideoUploadService {
   private activeUploads: Map<string, AbortController> = new Map();
 
   private constructor() {
-    // Force development URL for now
-    console.log('🌐 UPLOAD: Using development URL');
-    this.baseUrl = 'http://192.168.50.111:8001';
+    // Use the centralized API configuration
+    // This now points to the Railway production deployment
+    console.log('🌐 UPLOAD: Using production Railway URL');
+    this.baseUrl = getBackendBaseUrl();
   }
 
   public static getInstance(): VideoUploadService {

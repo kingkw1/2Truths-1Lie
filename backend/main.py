@@ -43,8 +43,11 @@ from config import settings
 
 app = FastAPI(
     title="2Truths-1Lie API",
-    description="Backend API for chunked media uploads and game management with AWS S3 integration",
-    version="1.0.0"
+    description="Backend API for chunked media uploads and game management with AWS S3 integration. "
+                "Interactive documentation available at /docs and /redoc endpoints.",
+    version="1.0.0",
+    docs_url="/docs",  # Swagger UI (default, but explicit for clarity)
+    redoc_url="/redoc"  # ReDoc documentation (default, but explicit for clarity)
 )
 
 # Include routers
@@ -94,6 +97,11 @@ async def health_check():
         "upload_directory": str(settings.UPLOAD_DIR),
         "max_file_size": settings.MAX_FILE_SIZE
     }
+
+# Note: FastAPI automatically serves documentation at:
+# - Swagger UI: /docs (interactive API testing)
+# - ReDoc: /redoc (clean documentation)
+# - OpenAPI spec: /openapi.json
 
 # Upload endpoints
 @app.post("/api/v1/upload/initiate")

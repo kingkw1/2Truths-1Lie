@@ -5,7 +5,22 @@ RESTful API documentation for the 2Truths-1Lie backend server. All endpoints are
 
 ## Base URL
 - **Development**: `http://192.168.50.111:8001/api/v1`
-- **Production**: `https://api.2truths1lie.app/api/v1`
+- **Production (Railway)**: `https://2truths-1lie-production.up.railway.app/api/v1`
+
+## Interactive Documentation
+The deployed backend provides comprehensive interactive documentation:
+
+- **Swagger UI**: https://2truths-1lie-production.up.railway.app/docs
+  - Interactive API testing and exploration
+  - Request/response examples
+  - Authentication testing
+  
+- **ReDoc**: https://2truths-1lie-production.up.railway.app/redoc  
+  - Clean, readable documentation
+  - Detailed schema information
+
+- **OpenAPI Spec**: https://2truths-1lie-production.up.railway.app/openapi.json
+  - Machine-readable API specification
 
 ## Authentication
 Most endpoints require JWT authentication via the `Authorization` header:

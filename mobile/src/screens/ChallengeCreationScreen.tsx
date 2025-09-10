@@ -320,6 +320,11 @@ export const ChallengeCreationScreen: React.FC<ChallengeCreationScreenProps> = (
         throw new Error(mergeResult.error || 'Failed to upload videos for merging');
       }
 
+      // Ensure we have a proper server URL, not a local file path
+      if (!mergeResult.mergedVideoUrl || mergeResult.mergedVideoUrl.startsWith('file://')) {
+        throw new Error('Server did not return a valid merged video URL. Please try again.');
+      }
+
       console.log('✅ SUBMIT: Videos uploaded and merged successfully');
       console.log('✅ SUBMIT: Merged video URL:', mergeResult.mergedVideoUrl);
       console.log('✅ SUBMIT: Segment metadata:', mergeResult.segmentMetadata);

@@ -4,6 +4,7 @@
  */
 
 import { Platform } from 'react-native';
+import { getApiBaseUrl } from '../config/apiConfig';
 
 // Types for your future API implementation
 export interface Challenge {
@@ -266,7 +267,7 @@ class MockAPIService implements APIServiceInterface {
 class WebAPIService implements APIServiceInterface {
   private baseURL: string;
   
-  constructor(baseURL: string = 'https://your-api.example.com') {
+  constructor(baseURL: string = getApiBaseUrl()) {
     this.baseURL = baseURL;
   }
 
@@ -399,7 +400,8 @@ const createAPIService = (): APIServiceInterface => {
   // For React Native (current deployment) - use REAL API now!
   if (Platform.OS === 'ios' || Platform.OS === 'android') {
     console.log('🔗 API: Using WebAPIService for backend integration');
-    return new WebAPIService('http://192.168.50.111:8001/api/v1');
+    // Use the centralized API configuration
+    return new WebAPIService();
   }
   
   // For web (future implementation) - use real API

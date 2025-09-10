@@ -4,6 +4,7 @@
  */
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import { getBackendBaseUrl } from '../config/apiConfig';
 
 export interface AuthUser {
   id: string;
@@ -270,9 +271,10 @@ export class AuthService {
    * Get API base URL based on environment
    */
   private getApiBaseUrl(): string {
-    // Force development URL for now
-    console.log('🌐 AUTH: Using development URL');
-    return 'http://192.168.50.111:8001';
+    // Use the centralized API configuration
+    // This now points to the Railway production deployment
+    console.log('🌐 AUTH: Using production Railway URL');
+    return getBackendBaseUrl();
   }
 
   /**

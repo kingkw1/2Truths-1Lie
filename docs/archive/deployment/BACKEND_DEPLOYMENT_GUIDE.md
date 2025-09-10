@@ -79,7 +79,7 @@ Railway deploys all containers with FFmpeg included.
 
 ### 6. **Wait for Deploy & Get Your Public URL**
 
-- Once deployed, you’ll get a Railway-provided `https://<project-id>.up.railway.app/` URL.
+- Once deployed, you’ll get a Railway-provided `2truths-1lie-production.up.railway.app` URL.
 - Test this URL in your browser; append `/docs` to confirm FastAPI swagger docs are live.
 
 ***

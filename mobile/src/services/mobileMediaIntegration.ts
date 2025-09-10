@@ -683,28 +683,14 @@ export class MobileMediaIntegrationService {
         }
         
       } catch (uploadError) {
-        console.warn('⚠️ MERGE: Upload/merge failed, falling back to local representation:', uploadError);
+        console.error('❌ MERGE: Upload/merge failed:', uploadError);
         
-        // Fallback to local merged video representation
+        // Don't fall back to local paths - let the error propagate
+        // This ensures the user sees the real error instead of creating a challenge
+        // with local file paths that will fail when trying to generate S3 URLs
         return {
-          success: true,
-          mergedVideoUrl: videos[0]?.uri || '', // Use first video as fallback
-          mergeSessionId: `local_fallback_${Date.now()}`,
-          segmentMetadata: videos.map((video, index) => {
-            const videoDurationSeconds = (video.duration || 1000) / 1000;
-            const previousSegmentsDuration = videos.slice(0, index).reduce((sum, v) => 
-              sum + ((v.duration || 1000) / 1000), 0);
-            
-            return {
-              id: `segment_${index}`,
-              statementIndex: index,
-              startTime: previousSegmentsDuration,
-              endTime: previousSegmentsDuration + videoDurationSeconds,
-              duration: video.duration || 1000,
-              url: video.uri,
-            };
-          }),
-          error: undefined,
+          success: false,
+          error: uploadError instanceof Error ? uploadError.message : 'Failed to upload and merge videos on server',
         };
       }
 
