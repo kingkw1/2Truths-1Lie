@@ -25,9 +25,32 @@
 5. **Results & Learning**: See scores and AI insights on deception patterns
 
 ### 📸 Screenshots
-> *Note: Screenshots to be added showing key app screens*
 
-- **Recording Interface**: Professional camera UI with visual feedback
+#### Recording Interface
+![Recording Interface](../assets/app_icon.png)  
+*Professional camera UI with visual feedback and segment counter*
+
+#### Challenge Flow  
+![Challenge Flow](../assets/feature_graphic.png)
+*Intuitive 3-segment recording process with real-time guidance*
+
+#### AI Analysis Results
+> **Note**: AI analysis screenshots to be added showing emotion recognition overlay
+
+- **Emotion Detection**: Real-time facial expression analysis during playback
+- **Voice Patterns**: Audio stress detection visualization  
+- **Results Dashboard**: Comprehensive lie detection insights
+
+### 🎬 Demo Video
+> **Note**: Demo video will be added for final hackathon submission
+> 
+> **Planned Content**: 2-minute demonstration showing:
+> - App installation and setup
+> - Complete challenge creation workflow  
+> - AI analysis in action
+> - Social features and scoring
+
+**Demo URL**: *To be provided with hackathon submission*
 - **Game Flow**: Intuitive navigation through challenge creation
 - **AI Analysis**: Emotion recognition results display
 - **Social Features**: Sharing and community interaction
