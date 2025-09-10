@@ -49,7 +49,7 @@
             "shrinkResources": true,
             "proguardFiles": [
               "proguard-android-optimize.txt",
-              "proguard-rules.pro"
+              "android/app/proguard-rules.pro"
             ]
           }
         }

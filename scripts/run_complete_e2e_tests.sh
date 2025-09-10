@@ -106,7 +106,7 @@ if [ -d "mobile" ] && [ -f "mobile/package.json" ]; then
     
     # Run mobile E2E tests
     print_color $BLUE "🧪 Running mobile E2E tests..."
-    if node run_e2e_tests.js; then
+    if node src/__tests__/run_e2e_tests.js; then
         MOBILE_SUCCESS=1
         PASSED_TESTS=$((PASSED_TESTS + 1))
     fi

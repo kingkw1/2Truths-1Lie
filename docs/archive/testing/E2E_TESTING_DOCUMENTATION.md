@@ -150,7 +150,7 @@ npm install
 
 #### Run All E2E Tests
 ```bash
-node run_e2e_tests.js
+node src/__tests__/run_e2e_tests.js
 ```
 
 #### Run Specific Test Files
@@ -300,7 +300,7 @@ jobs:
       - name: Run E2E tests
         run: |
           cd mobile
-          node run_e2e_tests.js
+          node src/__tests__/run_e2e_tests.js
 ```
 
 ### Local Development
