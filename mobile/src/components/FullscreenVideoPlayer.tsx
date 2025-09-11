@@ -48,6 +48,7 @@ export const FullscreenVideoPlayer: React.FC<FullscreenVideoPlayerProps> = ({
   const [currentPosition, setCurrentPosition] = useState(0);
   const [videoDuration, setVideoDuration] = useState(0);
   const [currentVideoUrl, setCurrentVideoUrl] = useState('');
+  const [hasReachedSegmentEnd, setHasReachedSegmentEnd] = useState(false);
 
   // Determine video source and type
   const hasMergedVideo = !!mergedVideo && segments.length > 0;
@@ -84,15 +85,25 @@ export const FullscreenVideoPlayer: React.FC<FullscreenVideoPlayerProps> = ({
       setCurrentPosition(status.positionMillis || 0);
       setVideoDuration(status.durationMillis || 0);
 
-      // Remove automatic segment detection to prevent loops
-      // Manual segment selection is handled by user taps only
+      // For merged video: pause when we reach the end of the current segment
+      if (hasMergedVideo && segments.length > 0 && selectedSegment !== undefined && selectedSegment !== null) {
+        const currentSegment = segments[selectedSegment];
+        if (currentSegment && status.positionMillis && status.positionMillis >= currentSegment.endTime) {
+          // Only pause and log once per segment
+          if (!hasReachedSegmentEnd) {
+            setHasReachedSegmentEnd(true);
+            videoRef.current?.pauseAsync();
+            console.log(`🎬 FULLSCREEN_PLAYER: Reached end of segment ${selectedSegment}, pausing`);
+          }
+        }
+      }
     } else {
       setIsLoading(false);
       if ('error' in status && status.error) {
         console.error('Video playback error:', status.error);
       }
     }
-  }, []);
+  }, [hasMergedVideo, segments, selectedSegment, hasReachedSegmentEnd]);
 
   // Load and play merged video segment
   const loadMergedVideoSegment = useCallback(async (segmentIndex: number) => {
@@ -124,6 +135,8 @@ export const FullscreenVideoPlayer: React.FC<FullscreenVideoPlayerProps> = ({
       if (autoPlay) {
         await videoRef.current.playAsync();
       }
+
+      console.log(`🎬 FULLSCREEN_PLAYER: Loaded segment ${segmentIndex} (${segment.startTime}ms - ${segment.endTime}ms)`);
 
     } catch (error) {
       console.error('Error loading merged video segment:', error);
@@ -182,6 +195,8 @@ export const FullscreenVideoPlayer: React.FC<FullscreenVideoPlayerProps> = ({
       }
       
       lastSelectedSegment.current = selectedSegment;
+      // Reset the segment end flag when loading a new segment
+      setHasReachedSegmentEnd(false);
       console.log(`🎬 FULLSCREEN_PLAYER: Loading segment ${selectedSegment}`);
       
       if (hasMergedVideo) {
