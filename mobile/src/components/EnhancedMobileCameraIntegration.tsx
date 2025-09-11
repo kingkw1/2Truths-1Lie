@@ -113,13 +113,13 @@ export const EnhancedMobileCameraIntegration: React.FC<EnhancedMobileCameraInteg
         Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
       }
 
-      // Show success message with processed media info
-      Alert.alert(
-        '✅ Recording Saved',
-        `Statement ${statementIndex + 1} has been recorded successfully!\n\nDuration: ${processedMedia.duration ? Math.round(processedMedia.duration / 1000) : 'Unknown'}s\nSize: ${processedMedia.fileSize ? (processedMedia.fileSize / (1024 * 1024)).toFixed(1) + 'MB' : 'Unknown'}`,
-        [{ text: 'Continue', style: 'default' }],
-        { cancelable: false }
-      );
+      // Removed "Recording Saved" pop-up notification as per UI requirements
+      // Alert.alert(
+      //   '✅ Recording Saved',
+      //   `Statement ${statementIndex + 1} has been recorded successfully!\n\nDuration: ${processedMedia.duration ? Math.round(processedMedia.duration / 1000) : 'Unknown'}s\nSize: ${processedMedia.fileSize ? (processedMedia.fileSize / (1024 * 1024)).toFixed(1) + 'MB' : 'Unknown'}`,
+      //   [{ text: 'Continue', style: 'default' }],
+      //   { cancelable: false }
+      // );
 
       // Call completion callback with processed media
       onComplete(processedMedia);

@@ -530,17 +530,17 @@ export const MobileCameraRecorder: React.FC<MobileCameraRecorderProps> = ({
       console.log('🎬 Calling onRecordingComplete callback');
       onRecordingComplete?.(mediaCapture);
 
-      // Show success feedback with platform-specific styling
-      const durationText = Math.round(finalDuration / 1000);
-      const sizeText = (mediaCapture.fileSize! / (1024 * 1024)).toFixed(1);
-      const storageType = mediaCapture.storageType || 'local';
-      
-      Alert.alert(
-        '✅ Recording Complete',
-        `Video ${storageType === 'cloud' ? 'uploaded' : 'recorded'} successfully!\n\nDuration: ${durationText}s\nSize: ${sizeText}MB`,
-        [{ text: 'OK', style: 'default' }],
-        { cancelable: false }
-      );
+      // Removed "Recording Complete" pop-up notification as per UI requirements
+      // const durationText = Math.round(finalDuration / 1000);
+      // const sizeText = (mediaCapture.fileSize! / (1024 * 1024)).toFixed(1);
+      // const storageType = mediaCapture.storageType || 'local';
+      // 
+      // Alert.alert(
+      //   '✅ Recording Complete',
+      //   `Video ${storageType === 'cloud' ? 'uploaded' : 'recorded'} successfully!\n\nDuration: ${durationText}s\nSize: ${sizeText}MB`,
+      //   [{ text: 'OK', style: 'default' }],
+      //   { cancelable: false }
+      // );
 
       // Success haptic feedback
       if (Platform.OS === 'ios') {
@@ -711,16 +711,16 @@ export const MobileCameraRecorder: React.FC<MobileCameraRecorderProps> = ({
       // Call callback
       onRecordingComplete?.(mediaCapture);
 
-      // Show success feedback with platform-specific styling
-      const durationText = Math.round(finalDuration / 1000);
-      const sizeText = (fileSize / (1024 * 1024)).toFixed(1);
-      
-      Alert.alert(
-        '✅ Recording Complete',
-        `Video recorded successfully!\n\nDuration: ${durationText}s\nSize: ${sizeText}MB`,
-        [{ text: 'OK', style: 'default' }],
-        { cancelable: false }
-      );
+      // Removed "Recording Complete" pop-up notification as per UI requirements
+      // const durationText = Math.round(finalDuration / 1000);
+      // const sizeText = (fileSize / (1024 * 1024)).toFixed(1);
+      // 
+      // Alert.alert(
+      //   '✅ Recording Complete',
+      //   `Video recorded successfully!\n\nDuration: ${durationText}s\nSize: ${sizeText}MB`,
+      //   [{ text: 'OK', style: 'default' }],
+      //   { cancelable: false }
+      // );
 
       // Success haptic feedback
       if (Platform.OS === 'ios') {

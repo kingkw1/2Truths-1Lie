@@ -2,7 +2,7 @@
 - [x] Refactor home screen navigation: replace existing layout with a choice menu allowing users to either create challenges or guess challenges. Remove any test backend connection button or code from the home screen component.
 
 ## Pop Ups
-- [ ] Disable "recording saved" and "recording complete" pop-up notifications globally.
+- [x] Disable "recording saved" and "recording complete" pop-up notifications globally.
 - [ ] Remove duplicate "challenge created" pop-ups; keep only the pop-up that provides relevant user information and remove the other debugging pop-up.
 
 ## Move the back button 
