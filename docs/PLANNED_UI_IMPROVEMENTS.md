@@ -42,12 +42,19 @@
 - [x] The circular indicator should complete a full circle exactly when the hold duration is met, providing intuitive and immediate feedback on the selection process.
 
 ## Simpler challenge creation UI
-- [ ] combine the lie-selection portion of the challenge creation with the preview challenge screen
-- [ ] remove the edit button 
-- [ ] Make the create challenge button a full width button, and make it say "submit challenge" rather than "create challenge (debug)"
+- [x] combine the lie-selection portion of the challenge creation with the preview challenge screen
+- [x] remove the edit button 
+- [x] Make the create challenge button a full width button, and make it say "submit challenge" rather than "create challenge (debug)"
+- [x] Implement full-screen video interface similar to challenge guessing screen
+- [x] Add clear header "Select the Lie" to guide users
+- [x] Add navigation buttons to switch between recorded statements
+- [x] Include prominent "Mark as Lie" button for current statement
+- [x] Provide "Submit Challenge" button that activates after lie selection
+- [x] Place "Retake" button for re-recording statements without leaving screen
+- [x] Remove separate preview screen entirely - consolidated into single interface
 
-## Statement Replay During Challenge Creation
-- [ ] Enable functionality for users to replay their recorded statement videos during the prewview challenge prtion of the challenge creation process for review before submission.
+## video playing during guess mode
+- [ ] video replay during making a guess sometimes plays a split second of the next statement
 
 ## Baloney Statement Feature
 - [ ] Add the ability for users to record a brief explanatory statement specifically about the lie within their challenge.

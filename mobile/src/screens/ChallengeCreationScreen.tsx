@@ -24,6 +24,7 @@ import {
 } from '../store/slices/challengeCreationSlice';
 import { MobileCameraRecorder } from '../components/MobileCameraRecorder';
 import { EnhancedMobileCameraIntegration } from '../components/EnhancedMobileCameraIntegration';
+import { FullscreenLieSelectionScreen } from './FullscreenLieSelectionScreen';
 import { MediaCapture } from '../types';
 import { realChallengeAPI } from '../services/realChallengeAPI';
 import { mobileMediaIntegration } from '../services/mobileMediaIntegration';
@@ -74,11 +75,12 @@ export const ChallengeCreationScreen: React.FC<ChallengeCreationScreenProps> = (
     individualRecordings,
   } = useAppSelector((state) => state.challengeCreation);
 
-  const [currentStep, setCurrentStep] = useState<'instructions' | 'recording' | 'lie-selection' | 'preview'>('instructions');
+  const [currentStep, setCurrentStep] = useState<'instructions' | 'recording' | 'fullscreen-lie-selection'>('instructions');
   const [currentStatementIndex, setCurrentStatementIndex] = useState(0);
   const [showCameraModal, setShowCameraModal] = useState(false);
   const [selectedLieIndex, setSelectedLieIndex] = useState<number | null>(null);
   const [isMergingVideos, setIsMergingVideos] = useState(false);
+  const [isRetakeMode, setIsRetakeMode] = useState(false); // Track if we're retaking vs initial recording
 
   // Enhanced error handling for challenge creation
   const { error: creationError, handleError: handleCreationError, clearError: clearCreationError } = useErrorHandling(
@@ -130,28 +132,37 @@ export const ChallengeCreationScreen: React.FC<ChallengeCreationScreenProps> = (
   const handleStartRecording = () => {
     setCurrentStep('recording');
     setCurrentStatementIndex(0);
+    setIsRetakeMode(false); // Ensure we're not in retake mode for initial recording
     setShowCameraModal(true);
   };
 
   const handleRecordingComplete = (media: MediaCapture) => {
     console.log('🎬 RECORDING_COMPLETE: Recording completed for statement', currentStatementIndex + 1);
     console.log('🎬 RECORDING_COMPLETE: Media:', JSON.stringify(media, null, 2));
+    console.log('🎬 RECORDING_COMPLETE: Is retake mode:', isRetakeMode);
 
     setShowCameraModal(false);
 
-    // Move to next statement or lie selection
-    if (currentStatementIndex < 2) {
-      console.log('🎬 RECORDING_COMPLETE: Moving to next statement', currentStatementIndex + 2);
-      setCurrentStatementIndex(currentStatementIndex + 1);
-      // Small delay before showing next camera to allow user to process success
-      setTimeout(() => {
-        setShowCameraModal(true);
-      }, 500);
+    if (isRetakeMode) {
+      // If we're retaking a statement, return to fullscreen lie selection
+      console.log('🎬 RECORDING_COMPLETE: Retake complete, returning to fullscreen lie selection');
+      setIsRetakeMode(false); // Reset retake mode
+      setCurrentStep('fullscreen-lie-selection');
     } else {
-      console.log('🎬 RECORDING_COMPLETE: All recordings complete, moving to lie selection');
-      // All recordings complete, move to lie selection step
-      // Do NOT trigger video merging yet - wait until preview/submit
-      setCurrentStep('lie-selection');
+      // Initial recording flow - move to next statement or lie selection
+      if (currentStatementIndex < 2) {
+        console.log('🎬 RECORDING_COMPLETE: Moving to next statement', currentStatementIndex + 2);
+        setCurrentStatementIndex(currentStatementIndex + 1);
+        // Small delay before showing next camera to allow user to process success
+        setTimeout(() => {
+          setShowCameraModal(true);
+        }, 500);
+      } else {
+        console.log('🎬 RECORDING_COMPLETE: All recordings complete, moving to fullscreen lie selection');
+        // All recordings complete, move to fullscreen lie selection step
+        // Do NOT trigger video merging yet - wait until preview/submit
+        setCurrentStep('fullscreen-lie-selection');
+      }
     }
   };
 
@@ -214,9 +225,8 @@ export const ChallengeCreationScreen: React.FC<ChallengeCreationScreenProps> = (
 
     dispatch(validateChallenge());
     if (validationErrors.length === 0) {
-      console.log('✅ PREVIEW: Validation passed, entering preview mode');
-      dispatch(enterPreviewMode());
-      setCurrentStep('preview');
+      console.log('✅ PREVIEW: Validation passed, staying in fullscreen interface');
+      // No longer navigate to separate preview - stay in fullscreen interface
     } else {
       console.log('❌ PREVIEW: Validation failed:', validationErrors);
       Alert.alert(
@@ -420,8 +430,22 @@ export const ChallengeCreationScreen: React.FC<ChallengeCreationScreenProps> = (
   };
 
   const handleRetakeVideo = (statementIndex: number) => {
+    console.log('🎬 RETAKE: Starting retake for statement', statementIndex + 1);
     setCurrentStatementIndex(statementIndex);
+    setIsRetakeMode(true); // Mark that we're in retake mode
     setShowCameraModal(true);
+  };
+
+  const handleCameraCancel = () => {
+    console.log('🎬 CAMERA_CANCEL: Camera cancelled, isRetakeMode:', isRetakeMode);
+    setShowCameraModal(false);
+    
+    if (isRetakeMode) {
+      // If we were retaking, reset retake mode and go back to fullscreen interface
+      setIsRetakeMode(false);
+      setCurrentStep('fullscreen-lie-selection');
+    }
+    // If not retake mode, stay in current step (recording flow continues normally)
   };
 
   const renderInstructions = () => (
@@ -445,13 +469,7 @@ export const ChallengeCreationScreen: React.FC<ChallengeCreationScreenProps> = (
         <View style={styles.instructionItem}>
           <Text style={styles.instructionNumber}>2</Text>
           <Text style={styles.instructionText}>
-            Choose which statement is the lie
-          </Text>
-        </View>
-        <View style={styles.instructionItem}>
-          <Text style={styles.instructionNumber}>3</Text>
-          <Text style={styles.instructionText}>
-            Preview and submit your challenge
+            Select which statement is the lie and submit
           </Text>
         </View>
       </View>
@@ -624,7 +642,7 @@ export const ChallengeCreationScreen: React.FC<ChallengeCreationScreenProps> = (
           disabled={isSubmitting}
           onPress={() => {
             dispatch(exitPreviewMode());
-            setCurrentStep('lie-selection');
+            setCurrentStep('fullscreen-lie-selection');
           }}
         >
           <Text style={styles.secondaryButtonText}>Edit</Text>
@@ -648,37 +666,88 @@ export const ChallengeCreationScreen: React.FC<ChallengeCreationScreenProps> = (
     </ScrollView>
   );
 
+  /**
+   * Render the new fullscreen lie selection interface
+   * This replaces both the lie selection and preview screens
+   */
+  const renderFullscreenLieSelection = () => {
+    // Check if we have all individual recordings
+    const hasAllIndividualRecordings = individualRecordings &&
+      [0, 1, 2].every(index =>
+        individualRecordings[index] &&
+        individualRecordings[index]?.type === 'video' &&
+        individualRecordings[index]?.url
+      );
+
+    if (!hasAllIndividualRecordings) {
+      // Fallback to traditional interface if recordings are missing
+      return (
+        <View style={styles.incompleteContainer}>
+          <Text style={styles.incompleteText}>
+            Please complete all video recordings first.
+          </Text>
+          <TouchableOpacity
+            style={styles.secondaryButton}
+            onPress={() => {
+              setCurrentStep('recording');
+              setShowCameraModal(true);
+            }}
+          >
+            <Text style={styles.secondaryButtonText}>Continue Recording</Text>
+          </TouchableOpacity>
+        </View>
+      );
+    }
+
+    return (
+      <FullscreenLieSelectionScreen
+        individualRecordings={individualRecordings}
+        onBack={() => setCurrentStep('instructions')}
+        onRetake={(statementIndex: number) => {
+          handleRetakeVideo(statementIndex);
+        }}
+        onSubmit={handleSubmit}
+      />
+    );
+  };
+
   const renderCurrentStep = () => {
     switch (currentStep) {
       case 'instructions':
         return renderInstructions();
-      case 'lie-selection':
-        return renderLieSelection();
-      case 'preview':
-        return renderPreview();
+      case 'fullscreen-lie-selection':
+        return renderFullscreenLieSelection();
       default:
         return renderInstructions();
     }
   };
 
   return (
-    <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
-        <TouchableOpacity onPress={onCancel}>
-          <Text style={styles.cancelButton}>← Back</Text>
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Create Challenge</Text>
-        <View style={styles.headerSpacer} />
-      </View>
+    <>
+      {currentStep === 'fullscreen-lie-selection' ? (
+        // Render fullscreen interface without container wrapping
+        renderFullscreenLieSelection()
+      ) : (
+        // Render traditional interface with header and container
+        <SafeAreaView style={styles.container}>
+          <View style={styles.header}>
+            <TouchableOpacity onPress={onCancel}>
+              <Text style={styles.cancelButton}>← Back</Text>
+            </TouchableOpacity>
+            <Text style={styles.headerTitle}>Create Challenge</Text>
+            <View style={styles.headerSpacer} />
+          </View>
 
-      {renderCurrentStep()}
+          {renderCurrentStep()}
+        </SafeAreaView>
+      )}
 
       {/* Enhanced Camera Recording Integration */}
       <EnhancedMobileCameraIntegration
         statementIndex={currentStatementIndex}
         isVisible={showCameraModal}
         onComplete={handleRecordingComplete}
-        onCancel={() => setShowCameraModal(false)}
+        onCancel={handleCameraCancel}
         onError={handleRecordingError}
       />
 
@@ -706,13 +775,13 @@ export const ChallengeCreationScreen: React.FC<ChallengeCreationScreenProps> = (
             ) : (
               <>
                 <Text style={[styles.loadingTitle, { color: '#34C759' }]}>✅ Challenge Created!</Text>
-                <Text style={styles.loadingSubtitle}>Returning to home screen...</Text>
+                <Text style={styles.loadingSubtitle}>Your challenge is ready to play!</Text>
               </>
             )}
           </View>
         </View>
       )}
-    </SafeAreaView>
+    </>
   );
 };
 
