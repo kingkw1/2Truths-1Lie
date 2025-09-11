@@ -9,8 +9,10 @@
 - [x] Add a visible loading indicator (such as a loading bar or spinner) that activates and displays while a challenge is being created, appearing at the end of the creation process until completion.
 - [x] Automatically navigate back to the home screen when after a challenge is created and the loading bar completes.
 
+## Guess challenge navigation
+- [x] Configure video player to automatically open when a player selects a guess to judge the statement.
+
 ## Large Scale Video Player UI Improvements
-- [ ] Configure video player to automatically open when a player selects a guess to judge the statement.
 - [ ] Remove any debugging information displayed above the merged video player on the challenge guessing screen.
 - [ ] Remove text labels or captions directly on or around the merged video player interface.
 - [ ] Remove the "hide video" button from the video player controls.

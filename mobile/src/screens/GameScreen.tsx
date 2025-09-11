@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import {
   View,
   Text,
@@ -192,6 +192,7 @@ export const GameScreen: React.FC<GameScreenProps> = ({ hideCreateButton = false
   const [showChallengeCreation, setShowChallengeCreation] = useState(false);
   const [showVideoPlayer, setShowVideoPlayer] = useState(false);
   const [isRetrying, setIsRetrying] = useState(false);
+  const gameplayScrollRef = useRef<ScrollView>(null);
 
   useEffect(() => {
     loadChallengesFromAPI();
@@ -498,7 +499,10 @@ export const GameScreen: React.FC<GameScreenProps> = ({ hideCreateButton = false
     const dynamicBottomPadding = bottomPadding + (floatingButtonVisible ? 88 : 0);
 
     return (
-      <ScrollView style={[styles.gameplayContainer, { paddingBottom: dynamicBottomPadding }]}> 
+      <ScrollView 
+        ref={gameplayScrollRef}
+        style={[styles.gameplayContainer, { paddingBottom: dynamicBottomPadding }]}
+      > 
         <Text style={styles.title}>Which statement is the lie?</Text>
         <Text style={styles.subtitle}>By {selectedChallenge?.creatorName}</Text>
         
@@ -562,7 +566,12 @@ export const GameScreen: React.FC<GameScreenProps> = ({ hideCreateButton = false
         {/* Statement Selection */}
         <View style={styles.statementsSection}>
           <Text style={styles.gameplaySectionTitle}>
-            {showVideoPlayer ? 'Make Your Guess:' : 'Read the statements and make your guess:'}
+            {showVideoPlayer 
+              ? 'Make Your Guess:' 
+              : hasAnyVideo 
+                ? 'Select a statement to judge (video will auto-play):' 
+                : 'Read the statements and make your guess:'
+            }
           </Text>
           
           {currentSession?.statements.map((statement: any, index: number) => (
@@ -572,7 +581,19 @@ export const GameScreen: React.FC<GameScreenProps> = ({ hideCreateButton = false
                 styles.statementCard,
                 selectedStatement === index && styles.selectedStatement,
               ]}
-              onPress={() => !guessSubmitted && setSelectedStatement(index)}
+              onPress={() => {
+                if (!guessSubmitted) {
+                  setSelectedStatement(index);
+                  // Automatically open video player when a statement is selected for guessing
+                  if (hasAnyVideo && !showVideoPlayer) {
+                    setShowVideoPlayer(true);
+                    // Scroll to the video player after a short delay to let it render
+                    setTimeout(() => {
+                      gameplayScrollRef.current?.scrollTo({ y: 0, animated: true });
+                    }, 100);
+                  }
+                }
+              }}
               disabled={guessSubmitted}
             >
               <Text style={styles.statementNumber}>Statement {index + 1}</Text>
