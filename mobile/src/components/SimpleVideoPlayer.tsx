@@ -126,11 +126,6 @@ export const SimpleVideoPlayer: React.FC<SimpleVideoPlayerProps> = ({
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Challenge Videos</Text>
-      <Text style={styles.description}>
-        Tap a statement to play its video
-      </Text>
-
       {/* Video Player */}
       <View style={styles.videoContainer}>
         <Video
@@ -198,18 +193,6 @@ export const SimpleVideoPlayer: React.FC<SimpleVideoPlayerProps> = ({
             </Text>
           </TouchableOpacity>
         ))}
-      </View>
-
-      {/* Status Info */}
-      <View style={styles.statusContainer}>
-        <Text style={styles.statusText}>
-          Status: {videoStatus} | Playing: {isPlaying ? 'Yes' : 'No'}
-        </Text>
-        {selectedSegment !== null && (
-          <Text style={styles.statusText}>
-            Current: Statement {selectedSegment + 1}
-          </Text>
-        )}
       </View>
     </View>
   );

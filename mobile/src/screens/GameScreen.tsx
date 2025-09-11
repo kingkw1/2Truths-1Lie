@@ -521,12 +521,6 @@ export const GameScreen: React.FC<GameScreenProps> = ({ hideCreateButton = false
         {/* Video Player - Merged Video with Segments */}
         {showVideoPlayer && hasMergedVideo && mergedVideo && (
           <View style={styles.videoPlayerContainer}>
-            <Text style={styles.debugText}>
-              Merged Video with {mergedVideo.segments?.length || 0} segments
-            </Text>
-            <Text style={styles.debugText}>
-              URL: {mergedVideo.streamingUrl?.substring(0, 80)}...
-            </Text>
             <SegmentedVideoPlayer
               key={`merged-video-${mergedVideo.mediaId}`}
               mergedVideo={mergedVideo}
@@ -543,14 +537,6 @@ export const GameScreen: React.FC<GameScreenProps> = ({ hideCreateButton = false
         {/* Video Player - Individual Videos */}
         {showVideoPlayer && !hasMergedVideo && hasIndividualVideos && (
           <View style={styles.videoPlayerContainer}>
-            <Text style={styles.debugText}>
-              Individual Videos: {individualVideos.length}
-            </Text>
-            {individualVideos.map((video, idx) => (
-              <Text key={idx} style={styles.debugText}>
-                Video {idx + 1}: {video.streamingUrl?.substring(0, 80)}...
-              </Text>
-            ))}
             <SimpleVideoPlayer
               key={`individual-videos-${individualVideos.map(v => v.mediaId).join('-')}`}
               individualVideos={individualVideos}

@@ -13,7 +13,7 @@
 - [x] Configure video player to automatically open when a player selects a guess to judge the statement.
 
 ## Large Scale Video Player UI Improvements
-- [ ] Remove any debugging information displayed above the merged video player on the challenge guessing screen.
+- [x] Remove any debugging information displayed above the merged video player on the challenge guessing screen.
 - [ ] Remove text labels or captions directly on or around the merged video player interface.
 - [ ] Remove the "hide video" button from the video player controls.
 - [ ] Set the video player to display the video in full-screen mode by default.

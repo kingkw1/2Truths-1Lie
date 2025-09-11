@@ -349,11 +349,6 @@ export const SegmentedVideoPlayer: React.FC<SegmentedVideoPlayerProps> = ({
 
   return (
     <View style={styles.container}>
-      <Text style={styles.title}>Merged Video Player</Text>
-      <Text style={styles.description}>
-        Navigate between segments or watch the full video
-      </Text>
-
       {/* Video Player */}
       <View style={styles.videoContainer}>
         <Video
@@ -474,21 +469,6 @@ export const SegmentedVideoPlayer: React.FC<SegmentedVideoPlayerProps> = ({
             </Text>
           </TouchableOpacity>
         ))}
-      </View>
-
-      {/* Status Info */}
-      <View style={styles.statusContainer}>
-        <Text style={styles.statusText}>
-          Status: {videoStatus} | Playing: {isPlaying ? 'Yes' : 'No'}
-        </Text>
-        {selectedSegment !== null && (
-          <Text style={styles.statusText}>
-            Current: Statement {segments[selectedSegment]?.statementIndex + 1}
-          </Text>
-        )}
-        <Text style={styles.statusText}>
-          Segments: {segments.length} | Duration: {formatTime(videoDuration)}
-        </Text>
       </View>
     </View>
   );
