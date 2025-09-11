@@ -1,27 +1,29 @@
-# general navigation
-- [ ] Home screen navigational flow: change homescreen to be a choice between creating challenges and trying to guess challenges. Remove the test backend connection.
+## General Navigation
+- Refactor home screen navigation: replace existing layout with a choice menu allowing users to either create challenges or guess challenges. Remove any test backend connection button or code from the home screen component.
 
-# pop ups
-- [ ] stop the "recording saved" & "recording complete" pop ups
-- [ ] There are 2 "challenge created" pop ups that happen when the challenge is created (although one was probably part of debugging and actually has information on it). remove the informative debugging one
+## Pop Ups
+- Disable "recording saved" and "recording complete" pop-up notifications globally.
+- Remove duplicate "challenge created" pop-ups; keep only the pop-up that provides relevant user information and remove the other debugging pop-up.
 
-# loading indicator
-- [ ] Add a "loading" indicator (loading bar)? at the end for when "creating challenge"
+## Loading Indicator
+- Add a visible loading indicator (such as a loading bar or spinner) that activates and displays while a challenge is being created, appearing at the end of the creation process until completion.
 
-# large scale improvements to video player UI
-- [ ] automatically open the video player for players to judge statement upon selecting a guess
-- [ ] remove debugging info from the challenge guess screen above the merged video player
-- [ ] remove merged video player text
-- [ ] remove hide video button
-- [ ] make the video player video full screen
-- [ ] make the statement playing and selection buttons on bottom of screen
-- [ ] rework statement playing and pausing
+## Large Scale Video Player UI Improvements
+- Configure video player to automatically open when a player selects a guess to judge the statement.
+- Remove any debugging information displayed above the merged video player on the challenge guessing screen.
+- Remove text labels or captions directly on or around the merged video player interface.
+- Remove the "hide video" button from the video player controls.
+- Set the video player to display the video in full-screen mode by default.
+- Position the statement playback and selection buttons at the bottom of the screen in a user-friendly layout.
+- Rework the playback controls for statements to improve play and pause functionality, ensuring intuitive interaction.
 
-# statement replay during challenge creation
-- [ ] allow player to be able to replay statement videos at the time of challenge creation
+## Statement Replay During Challenge Creation
+- Enable functionality for users to replay their recorded statement videos during the challenge creation process for review before submission.
 
-# Baloney statemnt
-- [ ] Allow users to record a brief statement as to the lie (?)
+## Baloney Statement Feature
+- Add the ability for users to record a brief explanatory statement specifically about the lie within their challenge.
 
-# Challenge naming
-- [ ] Allow users to name their challenge
+## Challenge Naming
+- Provide a text input field allowing users to name their challenge during creation, ensuring the name is saved and displayed appropriately.
+
+These prompts can be used directly as commit messages, feature branch intents, or as descriptive comments/commit prompts for Copilot-assisted code development.
