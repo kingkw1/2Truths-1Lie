@@ -105,30 +105,17 @@ export const ChallengeCreationScreen: React.FC<ChallengeCreationScreenProps> = (
   // Handle submission success
   useEffect(() => {
     if (submissionSuccess) {
-      // Removed duplicate "Challenge Created" pop-up to prevent multiple alerts
-      // The user-friendly alert is shown in GameScreen.tsx onComplete callback
-      // Alert.alert(
-      //   'Challenge Created!',
-      //   'Your challenge has been created successfully and is ready for others to play.',
-      //   [
-      //     {
-      //       text: 'Create Another',
-      //       onPress: () => {
-      //         dispatch(startNewChallenge());
-      //         setCurrentStep('instructions');
-      //         setCurrentStatementIndex(0);
-      //         setSelectedLieIndex(null);
-      //       },
-      //     },
-      //     {
-      //       text: 'Done',
-      //       onPress: onComplete,
-      //       style: 'default',
-      //     },
-      //   ]
-      // );
+      // Add a small delay to let users see the loading indicator complete
+      // then automatically navigate back to home screen
+      const navigationTimeout = setTimeout(() => {
+        if (onComplete) {
+          onComplete();
+        }
+      }, 1500); // 1.5 second delay to show completion
+
+      return () => clearTimeout(navigationTimeout);
     }
-  }, [submissionSuccess, onComplete, dispatch]);
+  }, [submissionSuccess, onComplete]);
 
   // REMOVED: Video merging functionality
   // The app now works with individual videos only, removing client-side merging
@@ -633,7 +620,8 @@ export const ChallengeCreationScreen: React.FC<ChallengeCreationScreenProps> = (
 
       <View style={styles.previewActions}>
         <TouchableOpacity
-          style={styles.secondaryButton}
+          style={[styles.secondaryButton, isSubmitting && styles.disabledButton]}
+          disabled={isSubmitting}
           onPress={() => {
             dispatch(exitPreviewMode());
             setCurrentStep('lie-selection');
@@ -643,7 +631,8 @@ export const ChallengeCreationScreen: React.FC<ChallengeCreationScreenProps> = (
         </TouchableOpacity>
 
         <TouchableOpacity
-          style={styles.primaryButton}
+          style={[styles.primaryButton, isSubmitting && styles.disabledButton]}
+          disabled={isSubmitting}
           onPress={() => {
             console.log('🎯 BUTTON: Submit button pressed!');
             console.log('🎯 BUTTON: isSubmitting:', isSubmitting);
@@ -652,7 +641,7 @@ export const ChallengeCreationScreen: React.FC<ChallengeCreationScreenProps> = (
           }}
         >
           <Text style={styles.primaryButtonText}>
-            Create Challenge (Debug)
+            {isSubmitting ? 'Creating Challenge...' : 'Create Challenge (Debug)'}
           </Text>
         </TouchableOpacity>
       </View>
@@ -700,6 +689,26 @@ export const ChallengeCreationScreen: React.FC<ChallengeCreationScreenProps> = (
             <ActivityIndicator size="large" color="#007AFF" />
             <Text style={styles.loadingTitle}>🎬 Processing Videos</Text>
             <Text style={styles.loadingSubtitle}>Merging your video statements...</Text>
+          </View>
+        </View>
+      )}
+
+      {/* Challenge Submission Loading Overlay */}
+      {(isSubmitting || submissionSuccess) && (
+        <View style={styles.loadingOverlay}>
+          <View style={styles.loadingContainer}>
+            {!submissionSuccess ? (
+              <>
+                <ActivityIndicator size="large" color="#007AFF" />
+                <Text style={styles.loadingTitle}>🚀 Creating Challenge</Text>
+                <Text style={styles.loadingSubtitle}>Finalizing your challenge...</Text>
+              </>
+            ) : (
+              <>
+                <Text style={[styles.loadingTitle, { color: '#34C759' }]}>✅ Challenge Created!</Text>
+                <Text style={styles.loadingSubtitle}>Returning to home screen...</Text>
+              </>
+            )}
           </View>
         </View>
       )}

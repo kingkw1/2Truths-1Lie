@@ -63,7 +63,16 @@ const AppContent: React.FC = () => {
         >
           <Text style={styles.backText}>← Back to Menu</Text>
         </TouchableOpacity>
-        <ChallengeCreationScreen />
+        <ChallengeCreationScreen 
+          onComplete={() => {
+            // Automatically navigate back to home screen after challenge creation
+            setCurrentScreen('home');
+          }}
+          onCancel={() => {
+            // Navigate back to home screen on cancel
+            setCurrentScreen('home');
+          }}
+        />
       </View>
     );
   }

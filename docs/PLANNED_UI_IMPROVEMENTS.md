@@ -5,11 +5,9 @@
 - [x] Disable "recording saved" and "recording complete" pop-up notifications globally.
 - [x] Remove duplicate "challenge created" pop-ups; keep only the pop-up that provides relevant user information and remove the other debugging pop-up.
 
-## Move the back button 
-- [ ] Move the back button on the guess challenge and create challenge to be less visually obstructive. Maybe bottom left
-
 ## Loading Indicator
-- [ ] Add a visible loading indicator (such as a loading bar or spinner) that activates and displays while a challenge is being created, appearing at the end of the creation process until completion.
+- [x] Add a visible loading indicator (such as a loading bar or spinner) that activates and displays while a challenge is being created, appearing at the end of the creation process until completion.
+- [x] Automatically navigate back to the home screen when after a challenge is created and the loading bar completes.
 
 ## Large Scale Video Player UI Improvements
 - [ ] Configure video player to automatically open when a player selects a guess to judge the statement.
@@ -21,10 +19,13 @@
 - [ ] Rework the playback controls for statements to improve play and pause functionality, ensuring intuitive interaction.
 
 ## Statement Replay During Challenge Creation
-- [ ] Enable functionality for users to replay their recorded statement videos during the challenge creation process for review before submission.
+- [ ] Enable functionality for users to replay their recorded statement videos during the prewview challenge prtion of the challenge creation process for review before submission.
 
 ## Baloney Statement Feature
 - [ ] Add the ability for users to record a brief explanatory statement specifically about the lie within their challenge.
+
+## Move the back button 
+- [ ] Move the back button on the guess challenge and create challenge to be less visually obstructive. Maybe bottom left
 
 ## Challenge Naming
 - [ ] Provide a text input field allowing users to name their challenge during creation, ensuring the name is saved and displayed appropriately.
