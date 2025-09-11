@@ -1,23 +1,23 @@
 /**
- * Demo Usage of Snapchat-Inspired Guess Challenge Interface
+ * FullscreenInterfaceExamples - Example usage of the fullscreen interface
  * 
- * This file demonstrates how to integrate the new fullscreen, 
- * Snapchat-style guess challenge interface into your app.
+ * This file contains example implementations and usage patterns for the
+ * modern fullscreen interface components.
  */
 
 import React from 'react';
-import { View, StyleSheet } from 'react-native';
+import { View, Text, StyleSheet } from 'react-native';
+import FullscreenGuessScreen from '../screens/FullscreenGuessScreen';
 import { GameScreen } from '../screens/GameScreen';
-import SnapchatGuessScreen from '../screens/SnapchatGuessScreen';
 
 // Example 1: Using the new interface within GameScreen
 export const ModernGameScreenExample = () => {
   return (
     <View style={styles.container}>
-      {/* GameScreen with Snapchat interface enabled (default) */}
+      {/* GameScreen with fullscreen interface enabled (default) */}
       <GameScreen 
         hideCreateButton={true}
-        useSnapchatInterface={true} // Enable new fullscreen interface
+        useFullscreenInterface={true} // Enable new fullscreen interface
         onBack={() => console.log('Navigate back to home')}
       />
     </View>
@@ -31,15 +31,15 @@ export const TraditionalGameScreenExample = () => {
       {/* GameScreen with traditional interface */}
       <GameScreen 
         hideCreateButton={false}
-        useSnapchatInterface={false} // Use traditional interface
+        useFullscreenInterface={false} // Use traditional interface
         onBack={() => console.log('Navigate back to home')}
       />
     </View>
   );
 };
 
-// Example 3: Direct usage of SnapchatGuessScreen component
-export const DirectSnapchatInterfaceExample = () => {
+// Example 3: Direct usage of FullscreenGuessScreen component
+export const DirectFullscreenInterfaceExample = () => {
   // Example challenge data structure
   const exampleChallenge = {
     id: 'example-challenge',
@@ -109,7 +109,7 @@ export const DirectSnapchatInterfaceExample = () => {
 
   return (
     <View style={styles.container}>
-      <SnapchatGuessScreen
+      <FullscreenGuessScreen
         challenge={exampleChallenge}
         onBack={() => console.log('Navigate back to challenge list')}
         onComplete={() => console.log('Challenge completed')}
@@ -133,7 +133,7 @@ const styles = StyleSheet.create({
  *    - Black background for cinematic feel
  *    - Hidden status bar for maximum immersion
  * 
- * 2. SNAPCHAT-STYLE INTERACTION
+ * 2. FULLSCREEN INTERACTION
  *    - Three circular buttons at bottom (1, 2, 3)
  *    - Tap to play video statement
  *    - Long-press to auto-submit guess
@@ -157,9 +157,9 @@ const styles = StyleSheet.create({
  *    - Adaptive to screen sizes
  * 
  * USAGE NOTES:
- * - Set useSnapchatInterface={true} in GameScreen for new interface
- * - Set useSnapchatInterface={false} for traditional interface  
- * - Direct SnapchatGuessScreen usage requires challenge data
+ * - Set useFullscreenInterface={true} in GameScreen for new interface
+ * - Set useFullscreenInterface={false} for traditional interface  
+ * - Direct FullscreenGuessScreen usage requires challenge data
  * - All guess submission and scoring logic is handled automatically
  * - Supports both merged videos with segments and individual videos
  */
@@ -167,5 +167,5 @@ const styles = StyleSheet.create({
 export default {
   ModernGameScreenExample,
   TraditionalGameScreenExample, 
-  DirectSnapchatInterfaceExample,
+  DirectFullscreenInterfaceExample,
 };

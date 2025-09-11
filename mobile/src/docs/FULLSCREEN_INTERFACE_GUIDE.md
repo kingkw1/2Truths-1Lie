@@ -1,8 +1,8 @@
-# Snapchat-Inspired Guess Challenge Interface
+# Modern Fullscreen Guess Challenge Interface
 
 ## Overview
 
-This implementation provides a modern, fullscreen, Snapchat-inspired interface for the "Guess Challenge" functionality in the 2Truths-1Lie mobile app. The interface prioritizes immersive video viewing and intuitive gesture-based interaction.
+This implementation provides a modern, fullscreen interface for the "Guess Challenge" functionality in the 2Truths-1Lie mobile app. The interface prioritizes immersive video viewing and intuitive gesture-based interaction.
 
 ## Key Features
 
@@ -12,7 +12,7 @@ This implementation provides a modern, fullscreen, Snapchat-inspired interface f
 - **Hidden status bar** during gameplay for complete immersion
 - **Adaptive video scaling** that works across different device sizes
 
-### 📱 Snapchat-Style Interaction Design
+### 📱 Fullscreen-Style Interaction Design
 - **Three circular statement selector buttons** positioned at the bottom of the screen
 - **Large touch targets** (80px diameter) optimized for thumb interaction
 - **Visual hierarchy** with clear statement numbering (1, 2, 3)
@@ -43,7 +43,7 @@ This implementation provides a modern, fullscreen, Snapchat-inspired interface f
 
 ### Core Components
 
-#### `SnapchatGuessScreen`
+#### `FullscreenGuessScreen`
 Main fullscreen interface component that orchestrates the entire experience.
 
 **Props:**
@@ -82,7 +82,7 @@ import { GameScreen } from './src/screens/GameScreen';
 
 const App = () => (
   <GameScreen 
-    useSnapchatInterface={true}  // Enable new interface
+    useFullscreenInterface={true}  // Enable new interface
     hideCreateButton={true}
     onBack={() => navigateToHome()}
   />
@@ -92,10 +92,10 @@ const App = () => (
 ### Option 2: Direct Component Usage
 
 ```tsx
-import SnapchatGuessScreen from './src/screens/SnapchatGuessScreen';
+import FullscreenGuessScreen from './src/screens/FullscreenGuessScreen';
 
 const ChallengeScreen = ({ challenge }) => (
-  <SnapchatGuessScreen
+  <FullscreenGuessScreen
     challenge={challenge}
     onBack={() => navigateBack()}
     onComplete={() => handleCompletion()}
@@ -107,7 +107,7 @@ const ChallengeScreen = ({ challenge }) => (
 
 ### Challenge Discovery
 1. User selects challenge from list (traditional interface)
-2. Challenge loads in fullscreen Snapchat interface
+2. Challenge loads in fullscreen Fullscreen interface
 3. Creator name and video placeholder shown initially
 
 ### Video Interaction
@@ -258,7 +258,7 @@ const ChallengeScreen = ({ challenge }) => (
 
 ## Contributing
 
-When contributing to the Snapchat interface:
+When contributing to the Fullscreen interface:
 
 1. **Follow the minimalist design philosophy** - Every UI element should serve a clear purpose
 2. **Maintain gesture consistency** - All interactions should feel natural and predictable  

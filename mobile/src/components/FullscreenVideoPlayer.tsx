@@ -1,5 +1,5 @@
 /**
- * Fullscreen Video Player for Snapchat-Style Interface
+ * Fullscreen Video Player for Modern Fullscreen Interface
  * 
  * Features:
  * - True fullscreen video display with no borders/padding

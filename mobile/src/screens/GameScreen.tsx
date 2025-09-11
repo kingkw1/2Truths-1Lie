@@ -27,7 +27,7 @@ import {
 } from '../store/slices/guessingGameSlice';
 import { EnhancedChallenge, GuessResult } from '../types';
 import { ChallengeCreationScreen } from './ChallengeCreationScreen';
-import SnapchatGuessScreen from './SnapchatGuessScreen';
+import FullscreenGuessScreen from './FullscreenGuessScreen';
 import AnimatedFeedback from '../shared/AnimatedFeedback';
 import SimpleVideoPlayer from '../components/SimpleVideoPlayer';
 import SegmentedVideoPlayer from '../components/SegmentedVideoPlayer';
@@ -173,13 +173,13 @@ const convertBackendChallenge = (backendChallenge: BackendChallenge): EnhancedCh
 interface GameScreenProps {
   hideCreateButton?: boolean;
   onBack?: () => void;
-  useSnapchatInterface?: boolean; // Flag to enable Snapchat-style interface
+  useFullscreenInterface?: boolean; // Flag to enable fullscreen interface
 }
 
 export const GameScreen: React.FC<GameScreenProps> = ({ 
   hideCreateButton = false, 
   onBack,
-  useSnapchatInterface = true, // Default to new interface
+  useFullscreenInterface = true, // Default to new interface
 }) => {
   const dispatch = useAppDispatch();
   const {
@@ -617,18 +617,19 @@ export const GameScreen: React.FC<GameScreenProps> = ({
     );
   };
 
-  // Check if we should use Snapchat interface for current challenge
-  const shouldUseSnapchatInterface = useSnapchatInterface && currentSession && selectedChallenge;
+  // Check if we should use fullscreen interface for current challenge
+  const shouldUseFullscreenInterface = useFullscreenInterface && currentSession && selectedChallenge;
 
   return (
     <>
-      {/* Use Snapchat-style fullscreen interface when enabled */}
-      {shouldUseSnapchatInterface ? (
-        <SnapchatGuessScreen
+      {/* Use fullscreen interface when enabled */}
+      {shouldUseFullscreenInterface ? (
+        <FullscreenGuessScreen
           challenge={selectedChallenge}
-          onBack={handleNewGame}
+          onBack={onBack || (() => {})}
           onComplete={() => {
-            console.log('Snapchat challenge completed');
+            console.log('Fullscreen challenge completed');
+            onBack?.();
           }}
         />
       ) : (

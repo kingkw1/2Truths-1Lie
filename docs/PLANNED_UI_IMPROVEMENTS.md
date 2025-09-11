@@ -24,7 +24,7 @@
 - [x] Position the statement playback and selection buttons at the bottom of the screen in a user-friendly layout.
 - [x] Rework the playback controls for statements to improve play and pause functionality, ensuring intuitive interaction.
 
-## Snapchat-Inspired Fullscreen Interface
+## Modern Fullscreen Interface
 - [x] Create immersive, fullscreen video display with no borders, padding, or cards
 - [x] Implement three circular statement selector buttons at bottom of screen
 - [x] Add tap-to-play video functionality with smooth animations
@@ -33,7 +33,7 @@
 - [x] Position all controls at bottom for modern, thumb-friendly mobile use
 - [x] Create gesture-driven interaction system (tap/hold)
 - [x] Preserve clean header with only back navigation
-- [x] Implement modern UI with Snapchat-like minimal design and intuitive statement selection
+- [x] Implement modern UI with fullscreen minimal design and intuitive statement selection
 
 ## Statement Replay During Challenge Creation
 - [ ] Enable functionality for users to replay their recorded statement videos during the prewview challenge prtion of the challenge creation process for review before submission.

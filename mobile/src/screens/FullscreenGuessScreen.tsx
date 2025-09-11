@@ -1,14 +1,14 @@
 /**
- * Snapchat-Inspired Guess Challenge Screen
+ * FullscreenGuessScreen - Modern fullscreen interface for challenge guessing
  * 
- * Features:
- * - Full-screen immersive video display
- * - Minimal UI with no borders, padding, or cards
- * - Three circular statement selector buttons at bottom
- * - Tap to play video, long-press to auto-submit guess
- * - Gesture-driven interaction (tap/hold)
- * - Modern thumb-friendly mobile interface
- * - Clean header with back navigation only
+ * This component provides a fullscreen experience for the guess challenge 
+ * functionality, featuring:
+ * - True fullscreen video playback without UI clutter
+ * - Three circular buttons positioned at bottom for thumb-friendly interaction
+ * - Tap to play video segments, long-press to submit guess
+ * - Immersive black background with minimal header (back button only)
+ * - Gesture-based interaction with haptic feedback
+ * - Redux integration for game state management
  */
 
 import React, { useState, useRef, useCallback, useEffect } from 'react';
@@ -42,7 +42,7 @@ import { EnhancedChallenge, MediaCapture, VideoSegment, GuessResult } from '../t
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 
-interface SnapchatGuessScreenProps {
+interface FullscreenGuessScreenProps {
   challenge: EnhancedChallenge;
   onBack: () => void;
   onComplete?: () => void;
@@ -94,7 +94,7 @@ const useLongPress = (callback: () => void, delay = 800) => {
   };
 };
 
-export const SnapchatGuessScreen: React.FC<SnapchatGuessScreenProps> = ({
+export const FullscreenGuessScreen: React.FC<FullscreenGuessScreenProps> = ({
   challenge,
   onBack,
   onComplete,
@@ -128,7 +128,7 @@ export const SnapchatGuessScreen: React.FC<SnapchatGuessScreenProps> = ({
   const handleStatementTap = useCallback((index: number) => {
     if (guessSubmitted) return;
     
-    console.log(`🔥 SNAPCHAT_SCREEN: Statement ${index + 1} tapped - playing video only`);
+    console.log(`🔥 FULLSCREEN_SCREEN: Statement ${index + 1} tapped - playing video only`);
     setSelectedStatement(index);
     setShowVideo(true);
 
@@ -141,7 +141,7 @@ export const SnapchatGuessScreen: React.FC<SnapchatGuessScreenProps> = ({
   const handleStatementLongPress = useCallback((index: number) => {
     if (guessSubmitted) return;
     
-    console.log(`🔥 SNAPCHAT_SCREEN: Statement ${index + 1} long-pressed - submitting guess`);
+    console.log(`🔥 FULLSCREEN_SCREEN: Statement ${index + 1} long-pressed - submitting guess`);
     setSelectedStatement(index);
     
     // Submit guess automatically on long press
@@ -525,4 +525,4 @@ const styles = StyleSheet.create({
   },
 });
 
-export default SnapchatGuessScreen;
+export default FullscreenGuessScreen;
