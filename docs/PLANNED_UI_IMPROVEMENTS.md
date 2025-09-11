@@ -35,6 +35,17 @@
 - [x] Preserve clean header with only back navigation
 - [x] Implement modern UI with fullscreen minimal design and intuitive statement selection
 
+## lie selection in guessing
+- [ ] Make the selection snappier -- there is a short delay after holding down button
+- [ ] Add text stating to hold down the button
+- [ ] Add an indicator for holding down the button -- a circular line indicator that fills out clockwise until it makes a complete circle, indicating the point when the hold time is long enough
+
+## Simpler challenge creation UI
+- [ ] combine the lie-selection portion of the challenge creation with the preview challenge screen
+- [ ] remove the edit button 
+- [ ] Make the create challenge button a full width button, and make it say "submit challenge" rather than "create challenge (debug)"
+
+
 ## Statement Replay During Challenge Creation
 - [ ] Enable functionality for users to replay their recorded statement videos during the prewview challenge prtion of the challenge creation process for review before submission.
 
