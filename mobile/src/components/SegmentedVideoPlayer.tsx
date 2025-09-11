@@ -355,7 +355,7 @@ export const SegmentedVideoPlayer: React.FC<SegmentedVideoPlayerProps> = ({
           ref={videoRef}
           style={styles.video}
           useNativeControls={false}
-          resizeMode={ResizeMode.CONTAIN}
+          resizeMode={ResizeMode.COVER} // Use COVER for better screen filling
           isLooping={false}
           onPlaybackStatusUpdate={handlePlaybackStatusUpdate}
         />
@@ -494,12 +494,15 @@ const styles = StyleSheet.create({
     color: '#666',
   },
   videoContainer: {
-    height: 300,
+    width: '100%',
+    height: 500, // Increased height for better portrait video display
     backgroundColor: '#000',
     borderRadius: 8,
     overflow: 'hidden',
     marginBottom: 20,
     position: 'relative',
+    // Use fixed dimensions that work well for portrait videos
+    maxHeight: '60%', // Take up most of the available screen height
   },
   video: {
     flex: 1,

@@ -30,9 +30,12 @@ const getAPIConfig = (): APIConfig => {
     timeout: 30000,
   };
 
-  // For now, use production configuration
-  // TODO: Implement proper environment detection for dev/staging/prod
-  const config = productionConfig;
+  // Environment-based configuration
+  // In development, use local backend for faster iteration
+  // In production, use Railway deployment
+  const isDevelopment = __DEV__; // React Native's built-in development flag
+  
+  const config = isDevelopment ? developmentConfig : productionConfig;
   
   console.log(`🌐 API Config: Using ${config.baseUrl} for backend API`);
   

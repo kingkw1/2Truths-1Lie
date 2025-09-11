@@ -247,7 +247,7 @@ export const FullscreenVideoPlayer: React.FC<FullscreenVideoPlayerProps> = ({
         ref={videoRef}
         style={styles.video}
         useNativeControls={false}
-        resizeMode={ResizeMode.COVER}
+        resizeMode={ResizeMode.COVER} // Use COVER for fullscreen experience
         isLooping={false}
         onPlaybackStatusUpdate={handlePlaybackStatusUpdate}
       />

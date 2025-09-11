@@ -896,10 +896,11 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   videoPlayerContainer: {
-    backgroundColor: 'white',
+    backgroundColor: '#000', // Black background for better video viewing
     borderRadius: 12,
     marginBottom: 20,
-    padding: 16,
+    marginHorizontal: 8, // Minimal horizontal margins
+    padding: 8, // Reduced padding for more video space
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,

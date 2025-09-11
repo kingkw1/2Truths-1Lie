@@ -1,5 +1,6 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, SafeAreaView } from 'react-native';
+import * as ScreenOrientation from 'expo-screen-orientation';
 import { StoreProvider } from './src/store/StoreProvider';
 import { GameScreen } from './src/screens/GameScreen';
 import { ChallengeCreationScreen } from './src/screens/ChallengeCreationScreen';
@@ -9,6 +10,25 @@ type Screen = 'game' | 'create' | 'home';
 
 const AppContent: React.FC = () => {
   const [currentScreen, setCurrentScreen] = useState<Screen>('home');
+
+  // Lock screen orientation to portrait
+  useEffect(() => {
+    const lockOrientation = async () => {
+      try {
+        await ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.PORTRAIT_UP);
+        console.log('📱 Screen orientation locked to portrait');
+      } catch (error) {
+        console.warn('Failed to lock screen orientation:', error);
+      }
+    };
+    
+    lockOrientation();
+    
+    // Cleanup function to unlock orientation when component unmounts
+    return () => {
+      ScreenOrientation.unlockAsync().catch(console.warn);
+    };
+  }, []);
 
   console.log('=== APP LOADING ===');
   console.log('If you see this in Expo logs, logging is working!');

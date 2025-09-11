@@ -433,6 +433,9 @@ export const MobileCameraRecorder: React.FC<MobileCameraRecorderProps> = ({
         quality: '720p' as const,
         maxDuration: 60, // 60 seconds max
         maxFileSize: 50 * 1024 * 1024, // 50MB max
+        // Force portrait orientation to match app orientation
+        orientation: 'portrait' as const,
+        stabilization: true, // Enable stabilization if available
       };
       
       console.log('📹 Starting camera recording with options:', recordingOptions);

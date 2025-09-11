@@ -486,7 +486,7 @@ class VideoMergeService:
                 video_info["videos"].append(video_data)
                 video_info["total_duration"] += duration
                 
-                # Update max resolution
+                # Update max resolution using actual dimensions
                 if width > video_info["max_resolution"]["width"]:
                     video_info["max_resolution"]["width"] = width
                 if height > video_info["max_resolution"]["height"]:
@@ -554,7 +554,7 @@ class VideoMergeService:
                 shutil.copy2(input_path, output_path)
                 logger.debug(f"Video {video_data['index']} copied without processing")
             else:
-                # Process video to normalize format
+                # Process video to normalize format (no rotation handling)
                 cmd = [
                     "ffmpeg",
                     "-i", str(input_path),
@@ -578,22 +578,41 @@ class VideoMergeService:
                         stderr=asyncio.subprocess.PIPE
                     )
                     
-                    stdout, stderr = await process.communicate()
+                    # Add timeout to prevent hanging (5 minutes max per video)
+                    try:
+                        stdout, stderr = await asyncio.wait_for(
+                            process.communicate(), 
+                            timeout=300.0
+                        )
+                    except asyncio.TimeoutError:
+                        process.kill()
+                        await process.wait()
+                        raise VideoMergeError(
+                            f"Video {video_data['index']} processing timed out after 5 minutes",
+                            "PROCESSING_TIMEOUT",
+                            retryable=True
+                        )
                     
                     if process.returncode != 0:
                         error_msg = stderr.decode() if stderr else "Unknown FFmpeg error"
+                        logger.error(f"FFmpeg failed for video {video_data['index']}: {error_msg}")
                         raise VideoMergeError(
                             f"Failed to prepare video {video_data['index']}: {error_msg}",
-                            "PREPARATION_ERROR"
+                            "PREPARATION_ERROR",
+                            retryable=True
                         )
                     
                     logger.debug(f"Video {video_data['index']} processed successfully")
                     
                 except Exception as e:
-                    raise VideoMergeError(
-                        f"Error preparing video {video_data['index']}: {str(e)}",
-                        "PREPARATION_ERROR"
-                    )
+                    if not isinstance(e, VideoMergeError):
+                        logger.error(f"Unexpected error processing video {video_data['index']}: {str(e)}")
+                        raise VideoMergeError(
+                            f"Error preparing video {video_data['index']}: {str(e)}",
+                            "PREPARATION_ERROR",
+                            retryable=True
+                        )
+                    raise
             
             prepared_videos.append(output_path)
         
