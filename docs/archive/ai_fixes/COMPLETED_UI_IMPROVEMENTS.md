@@ -60,13 +60,4 @@
 - [x] There are currently 2 statements at the bottom of the guessing interface: "tap to watch - hold to select and submit" and "hold down the button to tselect and submit your guess". I'd like you to reduce these to a single statement.
 - [x] When guessing, there is a bubble that indicates what statement is currently being watched. This bubble is currently underneath of the statement navigation circles. I'd like the statement bubble to be at the top of the screen instead. 
 
-## Baloney Statement Feature
-- [ ] Add the ability for users to record a brief explanatory statement specifically about the lie within their challenge.
-
-## Challenge Naming
-- [ ] Provide a text input field allowing users to name their challenge during creation, ensuring the name is saved and displayed appropriately.
-
-## Swipe navigation
-- [ ] Implement intuitive swipe navgiation to go between the main screens
-
 These prompts can be used directly as commit messages, feature branch intents, or as descriptive comments/commit prompts for Copilot-assisted code development.
