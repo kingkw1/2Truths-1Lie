@@ -3,10 +3,10 @@
 
 ## Pop Ups
 - [x] Disable "recording saved" and "recording complete" pop-up notifications globally.
-- [ ] Remove duplicate "challenge created" pop-ups; keep only the pop-up that provides relevant user information and remove the other debugging pop-up.
+- [x] Remove duplicate "challenge created" pop-ups; keep only the pop-up that provides relevant user information and remove the other debugging pop-up.
 
 ## Move the back button 
-- [ ] Move the back button on the guess challenge and create challenge to be less obstructive. Maybe bottom left
+- [ ] Move the back button on the guess challenge and create challenge to be less visually obstructive. Maybe bottom left
 
 ## Loading Indicator
 - [ ] Add a visible loading indicator (such as a loading bar or spinner) that activates and displays while a challenge is being created, appearing at the end of the creation process until completion.

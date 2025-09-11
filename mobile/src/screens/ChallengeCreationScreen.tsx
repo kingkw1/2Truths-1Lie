@@ -105,26 +105,28 @@ export const ChallengeCreationScreen: React.FC<ChallengeCreationScreenProps> = (
   // Handle submission success
   useEffect(() => {
     if (submissionSuccess) {
-      Alert.alert(
-        'Challenge Created!',
-        'Your challenge has been created successfully and is ready for others to play.',
-        [
-          {
-            text: 'Create Another',
-            onPress: () => {
-              dispatch(startNewChallenge());
-              setCurrentStep('instructions');
-              setCurrentStatementIndex(0);
-              setSelectedLieIndex(null);
-            },
-          },
-          {
-            text: 'Done',
-            onPress: onComplete,
-            style: 'default',
-          },
-        ]
-      );
+      // Removed duplicate "Challenge Created" pop-up to prevent multiple alerts
+      // The user-friendly alert is shown in GameScreen.tsx onComplete callback
+      // Alert.alert(
+      //   'Challenge Created!',
+      //   'Your challenge has been created successfully and is ready for others to play.',
+      //   [
+      //     {
+      //       text: 'Create Another',
+      //       onPress: () => {
+      //         dispatch(startNewChallenge());
+      //         setCurrentStep('instructions');
+      //         setCurrentStatementIndex(0);
+      //         setSelectedLieIndex(null);
+      //       },
+      //     },
+      //     {
+      //       text: 'Done',
+      //       onPress: onComplete,
+      //       style: 'default',
+      //     },
+      //   ]
+      // );
     }
   }, [submissionSuccess, onComplete, dispatch]);
 
@@ -388,29 +390,31 @@ export const ChallengeCreationScreen: React.FC<ChallengeCreationScreenProps> = (
         console.log('✅ CHALLENGE: Response success confirmed');
         dispatch(completeSubmission({ success: true }));
 
-        Alert.alert(
-          '🎉 Challenge Created!',
-          `Your challenge "${response.data.id}" has been created successfully! Other players can now guess which statement is the lie.`,
-          [
-            {
-              text: 'Create Another',
-              onPress: () => {
-                console.log('🔄 USER: Creating another challenge');
-                dispatch(startNewChallenge());
-                setCurrentStep('instructions');
-              }
-            },
-            {
-              text: 'Done',
-              style: 'cancel',
-              onPress: () => {
-                console.log('✅ USER: Done creating challenges');
-                // Navigate back or to challenges list
-                // navigation.goBack();
-              }
-            }
-          ]
-        );
+        // Removed debugging "Challenge Created" pop-up that shows technical details like challenge ID
+        // The user-friendly alert is shown in GameScreen.tsx onComplete callback
+        // Alert.alert(
+        //   '🎉 Challenge Created!',
+        //   `Your challenge "${response.data.id}" has been created successfully! Other players can now guess which statement is the lie.`,
+        //   [
+        //     {
+        //       text: 'Create Another',
+        //       onPress: () => {
+        //         console.log('🔄 USER: Creating another challenge');
+        //         dispatch(startNewChallenge());
+        //         setCurrentStep('instructions');
+        //       }
+        //     },
+        //     {
+        //       text: 'Done',
+        //       style: 'cancel',
+        //       onPress: () => {
+        //         console.log('✅ USER: Done creating challenges');
+        //         // Navigate back or to challenges list
+        //         // navigation.goBack();
+        //       }
+        //     }
+        //   ]
+        // );
       } else {
         console.error('❌ CHALLENGE: API returned unsuccessful response');
         console.error('❌ CHALLENGE: Error details:', response.error);
