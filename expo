@@ -1,0 +1,49 @@
+#!/usr/bin/env node
+
+// Custom expo command that ensures we always run from the mobile directory
+// This makes `npx expo start` work correctly from anywhere in the project
+
+const { spawn } = require('child_process');
+const path = require('path');
+const fs = require('fs');
+
+// Find the project root (where this script is located)
+const projectRoot = __dirname;
+const mobileDir = path.join(projectRoot, 'mobile');
+
+// Check if mobile directory exists
+if (!fs.existsSync(mobileDir)) {
+  console.error('❌ Mobile directory not found:', mobileDir);
+  process.exit(1);
+}
+
+// Change to mobile directory
+process.chdir(mobileDir);
+
+// Get the original expo command arguments
+const args = process.argv.slice(2);
+
+// Add --go flag if it's a start command and no mode is specified
+if (args[0] === 'start' && !args.includes('--dev-client') && !args.includes('--go')) {
+  args.push('--go');
+}
+
+console.log(`🚀 Running expo from ${mobileDir}`);
+console.log(`📝 Command: npx expo ${args.join(' ')}`);
+
+// Run the actual expo command from mobile directory
+const child = spawn('npx', ['expo', ...args], {
+  stdio: 'inherit',
+  cwd: mobileDir
+});
+
+// Forward the exit code
+child.on('close', (code) => {
+  process.exit(code);
+});
+
+// Handle errors
+child.on('error', (error) => {
+  console.error('❌ Failed to run expo:', error.message);
+  process.exit(1);
+});
