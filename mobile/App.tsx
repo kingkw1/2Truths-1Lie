@@ -5,58 +5,37 @@ import { GameScreen } from './src/screens/GameScreen';
 import { ChallengeCreationScreen } from './src/screens/ChallengeCreationScreen';
 import { ErrorBoundary } from './src/components/ErrorBoundary';
 
-type Screen = 'game' | 'create' | 'test';
+type Screen = 'game' | 'create' | 'home';
 
 const AppContent: React.FC = () => {
-  const [currentScreen, setCurrentScreen] = useState<Screen>('test');
+  const [currentScreen, setCurrentScreen] = useState<Screen>('home');
 
   console.log('=== APP LOADING ===');
   console.log('If you see this in Expo logs, logging is working!');
 
-  const testBackendConnection = async () => {
-    try {
-      console.log('🔄 Testing backend connection...');
-      const response = await fetch('http://192.168.50.111:8000/health');
-      console.log('📡 Health endpoint status:', response.status);
-      
-      if (response.ok) {
-        const data = await response.json();
-        console.log('🏥 Health check result:', data);
-        console.log('✅ Backend is ready for full app testing!');
-      }
-    } catch (err) {
-      console.error('❌ Backend connection test failed:', err);
-    }
-  };
-
-  if (currentScreen === 'test') {
+  if (currentScreen === 'home') {
     return (
       <SafeAreaView style={styles.container}>
         <Text style={styles.title}>2 Truths & 1 Lie</Text>
-        <Text style={styles.subtitle}>Choose App Mode</Text>
-        
-        <TouchableOpacity style={styles.button} onPress={testBackendConnection}>
-          <Text style={styles.buttonText}>Test Backend Connection</Text>
-        </TouchableOpacity>
+        <Text style={styles.subtitle}>What would you like to do?</Text>
         
         <TouchableOpacity 
-          style={[styles.button, styles.primaryButton]} 
+          style={[styles.menuButton, styles.primaryButton]} 
           onPress={() => setCurrentScreen('game')}
         >
-          <Text style={styles.buttonText}>🎮 Enter Game Mode</Text>
+          <Text style={styles.menuButtonIcon}>🎮</Text>
+          <Text style={styles.menuButtonText}>Guess Challenges</Text>
+          <Text style={styles.menuButtonDescription}>Play existing challenges and test your detective skills</Text>
         </TouchableOpacity>
         
         <TouchableOpacity 
-          style={[styles.button, styles.secondaryButton]} 
+          style={[styles.menuButton, styles.secondaryButton]} 
           onPress={() => setCurrentScreen('create')}
         >
-          <Text style={styles.buttonText}>📹 Create Challenge Mode</Text>
+          <Text style={styles.menuButtonIcon}>🎬</Text>
+          <Text style={styles.menuButtonText}>Create Challenge</Text>
+          <Text style={styles.menuButtonDescription}>Record your own two truths and a lie</Text>
         </TouchableOpacity>
-        
-        <Text style={styles.info}>
-          This is the full app with Redux store, video players, and backend integration.
-          {'\n\n'}Upload services are temporarily disabled to prevent FormData issues.
-        </Text>
       </SafeAreaView>
     );
   }
@@ -66,11 +45,11 @@ const AppContent: React.FC = () => {
       <View style={styles.fullScreen}>
         <TouchableOpacity 
           style={styles.backButton} 
-          onPress={() => setCurrentScreen('test')}
+          onPress={() => setCurrentScreen('home')}
         >
           <Text style={styles.backText}>← Back to Menu</Text>
         </TouchableOpacity>
-        <GameScreen />
+        <GameScreen hideCreateButton={true} />
       </View>
     );
   }
@@ -80,7 +59,7 @@ const AppContent: React.FC = () => {
       <View style={styles.fullScreen}>
         <TouchableOpacity 
           style={styles.backButton} 
-          onPress={() => setCurrentScreen('test')}
+          onPress={() => setCurrentScreen('home')}
         >
           <Text style={styles.backText}>← Back to Menu</Text>
         </TouchableOpacity>
@@ -122,15 +101,21 @@ const styles = StyleSheet.create({
   },
   subtitle: {
     fontSize: 18,
-    marginBottom: 30,
+    marginBottom: 40,
     textAlign: 'center',
     color: '#666',
   },
-  button: {
+  menuButton: {
     backgroundColor: '#007AFF',
-    padding: 15,
-    borderRadius: 8,
-    marginBottom: 15,
+    padding: 25,
+    borderRadius: 12,
+    marginBottom: 20,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
   },
   primaryButton: {
     backgroundColor: '#34C759',
@@ -138,11 +123,22 @@ const styles = StyleSheet.create({
   secondaryButton: {
     backgroundColor: '#FF9500',
   },
-  buttonText: {
+  menuButtonIcon: {
+    fontSize: 32,
+    marginBottom: 8,
+  },
+  menuButtonText: {
     color: 'white',
-    fontSize: 16,
+    fontSize: 18,
     fontWeight: 'bold',
     textAlign: 'center',
+    marginBottom: 6,
+  },
+  menuButtonDescription: {
+    color: 'rgba(255, 255, 255, 0.9)',
+    fontSize: 14,
+    textAlign: 'center',
+    lineHeight: 18,
   },
   backButton: {
     position: 'absolute',
@@ -156,12 +152,5 @@ const styles = StyleSheet.create({
   backText: {
     color: 'white',
     fontSize: 16,
-  },
-  info: {
-    fontSize: 14,
-    color: '#666',
-    textAlign: 'center',
-    marginTop: 30,
-    lineHeight: 20,
   },
 });

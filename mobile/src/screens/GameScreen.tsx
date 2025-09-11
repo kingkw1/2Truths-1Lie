@@ -169,7 +169,11 @@ const convertBackendChallenge = (backendChallenge: BackendChallenge): EnhancedCh
   };
 };
 
-export const GameScreen: React.FC = () => {
+interface GameScreenProps {
+  hideCreateButton?: boolean;
+}
+
+export const GameScreen: React.FC<GameScreenProps> = ({ hideCreateButton = false }) => {
   const dispatch = useAppDispatch();
   const {
     availableChallenges,
@@ -348,20 +352,27 @@ export const GameScreen: React.FC = () => {
 
   const renderChallengeList = () => (
     <ScrollView style={styles.challengeList}>
-      <Text style={styles.title}>Two Truths & a Lie</Text>
+      <Text style={styles.title}>
+        {hideCreateButton ? 'Choose a Challenge' : 'Two Truths & a Lie'}
+      </Text>
       
-      {/* Create Challenge Button */}
-      <TouchableOpacity
-        style={[styles.challengeCard, styles.createChallengeCard]}
-        onPress={() => setShowChallengeCreation(true)}
-      >
-        <Text style={styles.createChallengeTitle}>📹 Create New Challenge</Text>
-        <Text style={styles.createChallengeSubtitle}>
-          Record your own two truths and a lie
-        </Text>
-      </TouchableOpacity>
+      {/* Create Challenge Button - only show if not hidden */}
+      {!hideCreateButton && (
+        <TouchableOpacity
+          style={[styles.challengeCard, styles.createChallengeCard]}
+          onPress={() => setShowChallengeCreation(true)}
+        >
+          <Text style={styles.createChallengeTitle}>📹 Create New Challenge</Text>
+          <Text style={styles.createChallengeSubtitle}>
+            Record your own two truths and a lie
+          </Text>
+        </TouchableOpacity>
+      )}
 
-      <Text style={styles.sectionTitle}>Play Existing Challenges</Text>
+      {/* Section title - only show when not hiding create button */}
+      {!hideCreateButton && (
+        <Text style={styles.sectionTitle}>Play Existing Challenges</Text>
+      )}
       
       {/* Loading State */}
       {(isLoading || isRetrying) && (
