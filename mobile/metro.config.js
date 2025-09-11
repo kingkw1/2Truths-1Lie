@@ -2,15 +2,24 @@ const { getDefaultConfig } = require('expo/metro-config');
 
 const config = getDefaultConfig(__dirname);
 
-// Add polyfills for FormData and other Web APIs that Hermes doesn't support
-config.resolver.platforms = ['native', 'android', 'ios', 'web'];
+// Simplified config - polyfill is now in index.js directly
+// No need for additional module loading since we handle it in entry point
 
-// Ensure polyfills are loaded before other modules
-config.transformer.getTransformOptions = async () => ({
-  transform: {
-    experimentalImportSupport: false,
-    inlineRequires: true,
-  },
-});
+// Enable React Native 0.81 features
+config.resolver = {
+  ...config.resolver,
+  platforms: ['native', 'android', 'ios', 'web'],
+};
+
+// SDK 54 transformer settings
+config.transformer = {
+  ...config.transformer,
+  getTransformOptions: async () => ({
+    transform: {
+      experimentalImportSupport: true,
+      inlineRequires: false, // Ensure polyfills load properly
+    },
+  }),
+};
 
 module.exports = config;

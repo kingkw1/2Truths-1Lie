@@ -3,7 +3,7 @@
  * Handles secure video upload to backend with progress feedback
  */
 
-import * as FileSystem from 'expo-file-system';
+import * as FileSystem from 'expo-file-system/legacy';
 import { Platform } from 'react-native';
 import { getBackendBaseUrl } from '../config/apiConfig';
 

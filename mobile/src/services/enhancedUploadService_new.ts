@@ -3,7 +3,7 @@
  * Temporarily disabled FormData usage to fix launch issues
  */
 
-import * as FileSystem from 'expo-file-system';
+import * as FileSystem from 'expo-file-system/legacy';
 import { MediaCapture, VideoSegment } from '../types';
 
 export interface EnhancedUploadOptions {

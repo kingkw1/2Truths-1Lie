@@ -3,14 +3,14 @@
  */
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import * as FileSystem from 'expo-file-system';
+import * as FileSystem from 'expo-file-system/legacy';
 import { MediaMigrationService, LegacyMediaItem } from '../mediaMigrationService';
 import { videoUploadService } from '../uploadService';
 import { crossDeviceMediaService } from '../crossDeviceMediaService';
 
 // Mock dependencies
 jest.mock('@react-native-async-storage/async-storage');
-jest.mock('expo-file-system');
+jest.mock('expo-file-system/legacy');
 jest.mock('../uploadService');
 jest.mock('../crossDeviceMediaService');
 

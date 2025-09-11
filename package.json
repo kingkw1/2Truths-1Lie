@@ -2,7 +2,7 @@
   "name": "two-truths-one-lie-game",
   "version": "1.0.0",
   "description": "Two Truths and a Lie game with emotion analysis",
-  "main": "mobile/index.ts",
+  "main": "mobile/index.js",
   "scripts": {
     "start": "cd mobile && npx expo start",
     "start:mobile": "cd mobile && expo start",
@@ -28,18 +28,18 @@
     "@types/babel__core": "^7.20.5",
     "@types/jest": "^27.5.2",
     "@types/node": "^16.18.0",
-    "@types/react": "~19.0.10",
+    "@types/react": "~19.1.10",
     "typescript": "~5.8.3"
   },
   "dependencies": {
-    "@expo/metro-runtime": "~5.0.4",
+    "@expo/metro-runtime": "~6.1.1",
     "@reduxjs/toolkit": "^2.8.2",
-    "expo": "53.0.22",
-    "expo-dev-client": "~5.2.4",
-    "react": "19.0.0",
-    "react-dom": "19.0.0",
-    "react-native": "0.79.5",
-    "react-native-web": "^0.20.0",
+    "expo": "^54.0.1",
+    "expo-dev-client": "^6.0.11",
+    "react": "19.1.0",
+    "react-dom": "19.1.0",
+    "react-native": "0.81.4",
+    "react-native-web": "^0.21.0",
     "react-redux": "^8.1.0"
   },
   "keywords": [
