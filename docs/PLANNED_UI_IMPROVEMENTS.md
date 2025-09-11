@@ -36,15 +36,15 @@
 - [x] Implement modern UI with fullscreen minimal design and intuitive statement selection
 
 ## lie selection in guessing
-- [ ] Make the selection snappier -- there is a short delay after holding down button
-- [ ] Add text stating to hold down the button
-- [ ] Add an indicator for holding down the button -- a circular line indicator that fills out clockwise until it makes a complete circle, indicating the point when the hold time is long enough
+- [ ] Optimize the button hold detection to reduce or eliminate any delay, making the selection response instant and snappier upon holding down.
+- [x] Add clear instructional text near the selection buttons that informs users to "Hold down the button to select and submit your guess."
+- [x] Implement a circular progress indicator around or near the button that visually fills clockwise while the button is being held, clearly showing how much hold time remains until the guess is submitted.
+- [x] The circular indicator should complete a full circle exactly when the hold duration is met, providing intuitive and immediate feedback on the selection process.
 
 ## Simpler challenge creation UI
 - [ ] combine the lie-selection portion of the challenge creation with the preview challenge screen
 - [ ] remove the edit button 
 - [ ] Make the create challenge button a full width button, and make it say "submit challenge" rather than "create challenge (debug)"
-
 
 ## Statement Replay During Challenge Creation
 - [ ] Enable functionality for users to replay their recorded statement videos during the prewview challenge prtion of the challenge creation process for review before submission.

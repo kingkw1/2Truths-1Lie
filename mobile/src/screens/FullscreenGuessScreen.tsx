@@ -49,18 +49,29 @@ interface FullscreenGuessScreenProps {
 }
 
 // Custom hook for long press gesture detection
-const useLongPress = (callback: () => void, delay = 800) => {
+const useLongPress = (callback: () => void, delay = 600) => { // Reduced from 800ms to 600ms for snappier response
   const [isPressed, setIsPressed] = useState(false);
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const animatedValue = useRef(new Animated.Value(0)).current;
+  const progressValue = useRef(new Animated.Value(0)).current; // Separate value for smooth progress
 
   const startPress = useCallback(() => {
     setIsPressed(true);
     
-    // Start animation for visual feedback
-    Animated.timing(animatedValue, {
+    // Reset progress and start smooth animation
+    progressValue.setValue(0);
+    
+    // Start smooth progress animation for visual feedback
+    Animated.timing(progressValue, {
       toValue: 1,
       duration: delay,
+      useNativeDriver: false,
+    }).start();
+
+    // Start pulse animation for the button
+    Animated.timing(animatedValue, {
+      toValue: 1,
+      duration: 100, // Quick initial feedback
       useNativeDriver: false,
     }).start();
 
@@ -68,14 +79,15 @@ const useLongPress = (callback: () => void, delay = 800) => {
     timerRef.current = setTimeout(() => {
       callback();
       setIsPressed(false);
+      progressValue.setValue(0);
       animatedValue.setValue(0);
       
-      // Haptic feedback for successful long press
+      // Enhanced haptic feedback for successful long press
       if (Platform.OS === 'ios') {
-        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
+        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
       }
     }, delay);
-  }, [callback, delay, animatedValue]);
+  }, [callback, delay, animatedValue, progressValue]);
 
   const endPress = useCallback(() => {
     if (timerRef.current) {
@@ -83,14 +95,28 @@ const useLongPress = (callback: () => void, delay = 800) => {
       timerRef.current = null;
     }
     setIsPressed(false);
-    animatedValue.setValue(0);
-  }, [animatedValue]);
+    
+    // Reset animations smoothly
+    Animated.parallel([
+      Animated.timing(progressValue, {
+        toValue: 0,
+        duration: 150,
+        useNativeDriver: false,
+      }),
+      Animated.timing(animatedValue, {
+        toValue: 0,
+        duration: 150,
+        useNativeDriver: false,
+      }),
+    ]).start();
+  }, [animatedValue, progressValue]);
 
   return {
     isPressed,
     startPress,
     endPress,
     animatedValue,
+    progressValue, // Return progress value for circular indicator
   };
 };
 
@@ -202,7 +228,7 @@ export const FullscreenGuessScreen: React.FC<FullscreenGuessScreenProps> = ({
       handleStatementLongPress(index);
     }, [index]);
 
-    const customLongPressHandler = useLongPress(wrappedLongPressCallback, 800);
+    const customLongPressHandler = useLongPress(wrappedLongPressCallback, 600); // Reduced delay for snappier response
 
     return (
       <TouchableOpacity
@@ -214,32 +240,65 @@ export const FullscreenGuessScreen: React.FC<FullscreenGuessScreenProps> = ({
           pressStartTime.current = Date.now();
           longPressTriggered.current = false;
           customLongPressHandler.startPress();
+          
+          // Immediate haptic feedback on press start
+          if (Platform.OS === 'ios') {
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+          }
         }}
         onPressOut={() => {
           const pressDuration = Date.now() - pressStartTime.current;
           customLongPressHandler.endPress();
           
-          // If it was a short press (less than 300ms), trigger tap
-          if (pressDuration < 300 && !longPressTriggered.current) {
+          // If it was a short press (less than 200ms), trigger tap
+          if (pressDuration < 200 && !longPressTriggered.current) {
             handleStatementTap(index);
           }
         }}
         disabled={guessSubmitted}
         activeOpacity={0.8}
       >
-        {/* Long press progress ring animation */}
+        {/* Circular Progress Indicator */}
         <Animated.View
           style={[
-            styles.progressRing,
+            styles.circularProgress,
             {
-              borderColor: customLongPressHandler.animatedValue.interpolate({
+              opacity: customLongPressHandler.isPressed ? 1 : 0,
+            },
+          ]}
+        >
+          <Animated.View
+            style={[
+              styles.progressCircle,
+              {
+                transform: [
+                  {
+                    rotate: customLongPressHandler.progressValue.interpolate({
+                      inputRange: [0, 1],
+                      outputRange: ['0deg', '360deg'],
+                    }),
+                  },
+                ],
+              },
+            ]}
+          >
+            <View style={styles.progressArc} />
+          </Animated.View>
+        </Animated.View>
+
+        {/* Button glow effect during press */}
+        <Animated.View
+          style={[
+            styles.buttonGlow,
+            {
+              opacity: customLongPressHandler.animatedValue.interpolate({
                 inputRange: [0, 1],
-                outputRange: ['transparent', '#ffffff'],
+                outputRange: [0, 0.6],
               }),
               transform: [{
                 scale: customLongPressHandler.animatedValue.interpolate({
                   inputRange: [0, 1],
-                  outputRange: [1, 1.1],
+                  outputRange: [1, 1.05],
                 }),
               }],
             },
@@ -309,13 +368,20 @@ export const FullscreenGuessScreen: React.FC<FullscreenGuessScreenProps> = ({
           />
         </View>
         
-        {/* Instruction text */}
-        <Text style={styles.instructionText}>
-          {guessSubmitted 
-            ? 'Challenge complete!' 
-            : 'Tap to watch • Hold to guess'
-          }
-        </Text>
+        {/* Enhanced instruction text */}
+        <View style={styles.instructionContainer}>
+          <Text style={styles.instructionText}>
+            {guessSubmitted 
+              ? 'Challenge complete!' 
+              : 'Tap to watch • Hold to select and submit'
+            }
+          </Text>
+          {!guessSubmitted && (
+            <Text style={styles.holdInstructionText}>
+              Hold down the button to select and submit your guess
+            </Text>
+          )}
+        </View>
       </View>
 
       {/* Results feedback overlay */}
@@ -468,6 +534,19 @@ const styles = StyleSheet.create({
     textAlign: 'center',
     fontWeight: '500',
   },
+  instructionContainer: {
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    marginTop: 20,
+  },
+  holdInstructionText: {
+    color: 'rgba(255, 255, 255, 0.6)',
+    fontSize: 14,
+    textAlign: 'center',
+    fontWeight: '400',
+    marginTop: 8,
+    fontStyle: 'italic',
+  },
   resultsOverlay: {
     position: 'absolute',
     top: 0,
@@ -522,6 +601,45 @@ const styles = StyleSheet.create({
     color: '#ffffff',
     fontSize: 18,
     fontWeight: '600',
+  },
+  // Enhanced circular progress indicator styles
+  circularProgress: {
+    position: 'absolute',
+    width: 90,
+    height: 90,
+    borderRadius: 45,
+    top: -5,
+    left: -5,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  progressCircle: {
+    width: 86,
+    height: 86,
+    borderRadius: 43,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  progressArc: {
+    position: 'absolute',
+    width: 84,
+    height: 84,
+    borderRadius: 42,
+    borderWidth: 3,
+    borderColor: '#4CAF50', // Green progress color
+    borderTopColor: 'transparent',
+    borderRightColor: 'transparent',
+    borderBottomColor: 'transparent',
+    transform: [{ rotate: '-90deg' }], // Start from top
+  },
+  buttonGlow: {
+    position: 'absolute',
+    width: 86,
+    height: 86,
+    borderRadius: 43,
+    backgroundColor: 'rgba(255, 255, 255, 0.3)',
+    top: -3,
+    left: -3,
   },
 });
 
