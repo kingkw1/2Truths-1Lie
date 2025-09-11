@@ -328,15 +328,6 @@ export const FullscreenVideoPlayer: React.FC<FullscreenVideoPlayerProps> = ({
           </Text>
         </TouchableOpacity>
       )}
-
-      {/* Current Statement Indicator (bottom of screen) */}
-      {selectedSegment !== undefined && selectedSegment !== null && (
-        <View style={styles.statementIndicator}>
-          <Text style={styles.statementIndicatorText}>
-            Statement {selectedSegment + 1}
-          </Text>
-        </View>
-      )}
     </TouchableOpacity>
   );
 };
@@ -382,22 +373,6 @@ const styles = StyleSheet.create({
   },
   playPauseIcon: {
     fontSize: 32,
-  },
-  statementIndicator: {
-    position: 'absolute',
-    bottom: 120, // Above the statement selector buttons
-    left: 0,
-    right: 0,
-    alignItems: 'center',
-  },
-  statementIndicatorText: {
-    color: '#ffffff',
-    fontSize: 16,
-    fontWeight: '600',
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 20,
   },
   noVideoText: {
     color: '#ffffff',

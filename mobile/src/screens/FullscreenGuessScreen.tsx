@@ -322,11 +322,20 @@ export const FullscreenGuessScreen: React.FC<FullscreenGuessScreenProps> = ({
       {/* Hide status bar for true fullscreen experience */}
       <StatusBar hidden />
       
-      {/* Minimal header with only back button */}
+      {/* Minimal header with back button and statement indicator */}
       <SafeAreaView style={styles.header}>
         <TouchableOpacity onPress={onBack} style={styles.backButton}>
           <Text style={styles.backButtonText}>←</Text>
         </TouchableOpacity>
+        
+        {/* Statement indicator bubble at top */}
+        {selectedStatement !== null && !guessSubmitted && (
+          <View style={styles.topStatementIndicator}>
+            <Text style={styles.topStatementText}>
+              Statement {selectedStatement + 1}
+            </Text>
+          </View>
+        )}
       </SafeAreaView>
 
       {/* Full-screen video container */}
@@ -369,7 +378,7 @@ export const FullscreenGuessScreen: React.FC<FullscreenGuessScreenProps> = ({
           />
         </View>
         
-        {/* Enhanced instruction text */}
+        {/* Enhanced instruction text - consolidated to single line */}
         <View style={styles.instructionContainer}>
           <Text style={styles.instructionText}>
             {guessSubmitted 
@@ -377,11 +386,6 @@ export const FullscreenGuessScreen: React.FC<FullscreenGuessScreenProps> = ({
               : 'Tap to watch • Hold to select and submit'
             }
           </Text>
-          {!guessSubmitted && (
-            <Text style={styles.holdInstructionText}>
-              Hold down the button to select and submit your guess
-            </Text>
-          )}
         </View>
       </View>
 
@@ -454,6 +458,24 @@ const styles = StyleSheet.create({
     color: '#ffffff',
     fontSize: 24,
     fontWeight: 'bold',
+  },
+  topStatementIndicator: {
+    position: 'absolute',
+    top: Platform.OS === 'ios' ? 50 : 70,
+    left: 0,
+    right: 0,
+    alignItems: 'center',
+    zIndex: 1000,
+  },
+  topStatementText: {
+    backgroundColor: 'rgba(0, 0, 0, 0.8)',
+    color: '#ffffff',
+    fontSize: 16,
+    fontWeight: '600',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+    overflow: 'hidden',
   },
   videoContainer: {
     flex: 1,
@@ -539,14 +561,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 20,
     marginTop: 20,
-  },
-  holdInstructionText: {
-    color: 'rgba(255, 255, 255, 0.6)',
-    fontSize: 14,
-    textAlign: 'center',
-    fontWeight: '400',
-    marginTop: 8,
-    fontStyle: 'italic',
   },
   resultsOverlay: {
     position: 'absolute',

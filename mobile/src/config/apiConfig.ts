@@ -37,7 +37,9 @@ const getAPIConfig = (): APIConfig => {
   
   const config = isDevelopment ? developmentConfig : productionConfig;
   
+  console.log(`🌐 API Config: Environment=${isDevelopment ? 'DEVELOPMENT' : 'PRODUCTION'}`);
   console.log(`🌐 API Config: Using ${config.baseUrl} for backend API`);
+  console.log(`🌐 API Config: __DEV__ flag = ${__DEV__}`);
   
   return config;
 };
