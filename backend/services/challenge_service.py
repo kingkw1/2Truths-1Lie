@@ -35,6 +35,39 @@ class ChallengeService:
         self.rate_limiter = RateLimiter()
         self._load_data()
     
+    def _convert_segment_times_to_milliseconds(self, challenge: Challenge) -> Challenge:
+        """Convert segment times from seconds to milliseconds for frontend compatibility"""
+        if not challenge.merged_video_metadata or not challenge.merged_video_metadata.get("segments"):
+            return challenge
+        
+        segments = challenge.merged_video_metadata.get("segments", [])
+        converted_segments = []
+        
+        for segment in segments:
+            if isinstance(segment, dict):
+                converted_segment = segment.copy()
+                # Convert times from seconds to milliseconds if they appear to be in seconds
+                if "startTime" in converted_segment and converted_segment["startTime"] < 1000:
+                    converted_segment["startTime"] = int(converted_segment["startTime"] * 1000)
+                if "endTime" in converted_segment and converted_segment["endTime"] < 1000:
+                    converted_segment["endTime"] = int(converted_segment["endTime"] * 1000)
+                converted_segments.append(converted_segment)
+            else:
+                converted_segments.append(segment)
+        
+        # Create a copy of the challenge with converted segments
+        challenge_dict = challenge.model_dump()
+        challenge_dict["merged_video_metadata"]["segments"] = converted_segments
+        return Challenge(**challenge_dict)
+
+    def _load_data(self):
+        self.guesses: Dict[str, GuessSubmission] = {}
+        self.challenges_file = settings.TEMP_DIR / "challenges.json"
+        self.guesses_file = settings.TEMP_DIR / "guesses.json"
+        self.moderation_service = ModerationService()
+        self.rate_limiter = RateLimiter()
+        self._load_data()
+    
     def _load_data(self):
         """Load challenges and guesses from disk"""
         try:
@@ -351,6 +384,11 @@ class ChallengeService:
             challenge.view_count += 1
             challenge.updated_at = datetime.utcnow()
             await self._save_challenges()
+            # Convert segment times to milliseconds for frontend compatibility
+            return self._convert_segment_times_to_milliseconds(challenge)
+        elif challenge:
+            # Convert segment times to milliseconds for frontend compatibility
+            return self._convert_segment_times_to_milliseconds(challenge)
         return challenge
     
     async def get_challenge_segment_metadata(self, challenge_id: str) -> Optional[Dict[str, Any]]:

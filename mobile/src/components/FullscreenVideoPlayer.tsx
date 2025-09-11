@@ -49,6 +49,7 @@ export const FullscreenVideoPlayer: React.FC<FullscreenVideoPlayerProps> = ({
   const [videoDuration, setVideoDuration] = useState(0);
   const [currentVideoUrl, setCurrentVideoUrl] = useState('');
   const [hasReachedSegmentEnd, setHasReachedSegmentEnd] = useState(false);
+  const segmentTimerRef = useRef<NodeJS.Timeout | null>(null);
 
   // Determine video source and type
   const hasMergedVideo = !!mergedVideo && segments.length > 0;
@@ -88,12 +89,32 @@ export const FullscreenVideoPlayer: React.FC<FullscreenVideoPlayerProps> = ({
       // For merged video: pause when we reach the end of the current segment
       if (hasMergedVideo && segments.length > 0 && selectedSegment !== undefined && selectedSegment !== null) {
         const currentSegment = segments[selectedSegment];
-        if (currentSegment && status.positionMillis && status.positionMillis >= currentSegment.endTime) {
-          // Only pause and log once per segment
-          if (!hasReachedSegmentEnd) {
-            setHasReachedSegmentEnd(true);
-            videoRef.current?.pauseAsync();
-            console.log(`🎬 FULLSCREEN_PLAYER: Reached end of segment ${selectedSegment}, pausing`);
+        if (currentSegment && status.positionMillis) {
+          // Aggressive approach to prevent video bleed:
+          // 1. Larger buffer before segment end
+          const segmentEndBuffer = 300; // increased from 150ms to 300ms
+          const effectiveEndTime = currentSegment.endTime - segmentEndBuffer;
+          
+          // 2. Warning zone to prepare for end
+          const warningZone = 500; // 500ms before actual end
+          const warningTime = currentSegment.endTime - warningZone;
+          
+          if (status.positionMillis >= effectiveEndTime) {
+            // Only pause and log once per segment
+            if (!hasReachedSegmentEnd) {
+              setHasReachedSegmentEnd(true);
+              
+              // Immediately pause AND seek back if we've gone past the intended end
+              videoRef.current?.pauseAsync();
+              
+              // If we've somehow gone past the actual end time, seek back to prevent bleed
+              if (status.positionMillis >= currentSegment.endTime) {
+                console.log(`🎬 FULLSCREEN_PLAYER: Video went past segment end (${status.positionMillis}ms >= ${currentSegment.endTime}ms), seeking back`);
+                videoRef.current?.setPositionAsync(effectiveEndTime);
+              }
+              
+              console.log(`🎬 FULLSCREEN_PLAYER: Reached end of segment ${selectedSegment} (${status.positionMillis}ms >= ${effectiveEndTime}ms), pausing`);
+            }
           }
         }
       }
@@ -134,6 +155,27 @@ export const FullscreenVideoPlayer: React.FC<FullscreenVideoPlayerProps> = ({
       await videoRef.current.setPositionAsync(segment.startTime);
       if (autoPlay) {
         await videoRef.current.playAsync();
+        
+        // Set up a safety timer to force-pause the video
+        // This acts as a backup in case the playback status callback misses the end
+        const segmentDuration = segment.endTime - segment.startTime;
+        const safetyBuffer = 200; // Stop 200ms before the actual end
+        const timerDuration = Math.max(100, segmentDuration - safetyBuffer);
+        
+        // Clear any existing timer
+        if (segmentTimerRef.current) {
+          clearTimeout(segmentTimerRef.current);
+        }
+        
+        segmentTimerRef.current = setTimeout(async () => {
+          console.log(`🎬 SAFETY_TIMER: Force-pausing segment ${segmentIndex} after ${timerDuration}ms`);
+          try {
+            await videoRef.current?.pauseAsync();
+            setHasReachedSegmentEnd(true);
+          } catch (error) {
+            console.error('Error in safety timer pause:', error);
+          }
+        }, timerDuration);
       }
 
       console.log(`🎬 FULLSCREEN_PLAYER: Loaded segment ${segmentIndex} (${segment.startTime}ms - ${segment.endTime}ms)`);
@@ -194,6 +236,12 @@ export const FullscreenVideoPlayer: React.FC<FullscreenVideoPlayerProps> = ({
         return;
       }
       
+      // Clear any existing safety timer when switching segments
+      if (segmentTimerRef.current) {
+        clearTimeout(segmentTimerRef.current);
+        segmentTimerRef.current = null;
+      }
+      
       lastSelectedSegment.current = selectedSegment;
       // Reset the segment end flag when loading a new segment
       setHasReachedSegmentEnd(false);
@@ -206,6 +254,15 @@ export const FullscreenVideoPlayer: React.FC<FullscreenVideoPlayerProps> = ({
       }
     }
   }, [selectedSegment, hasMergedVideo, hasIndividualVideos, loadMergedVideoSegment, loadIndividualVideo]);
+
+  // Cleanup timer on unmount
+  useEffect(() => {
+    return () => {
+      if (segmentTimerRef.current) {
+        clearTimeout(segmentTimerRef.current);
+      }
+    };
+  }, []);
 
   // Toggle play/pause
   const togglePlayPause = useCallback(async () => {

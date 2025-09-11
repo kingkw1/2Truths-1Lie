@@ -1348,8 +1348,8 @@ class VideoMergeService:
                     "segment_metadata": [
                         {
                             "statementIndex": seg.statement_index,
-                            "startTime": seg.start_time,
-                            "endTime": seg.end_time
+                            "startTime": int(seg.start_time * 1000),  # Convert seconds to milliseconds
+                            "endTime": int(seg.end_time * 1000)       # Convert seconds to milliseconds
                         }
                         for seg in segment_metadata
                     ],
