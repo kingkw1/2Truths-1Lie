@@ -626,10 +626,15 @@ export const GameScreen: React.FC<GameScreenProps> = ({
       {shouldUseFullscreenInterface ? (
         <FullscreenGuessScreen
           challenge={selectedChallenge}
-          onBack={onBack || (() => {})}
+          onBack={() => {
+            // Return to challenge browser instead of home screen
+            console.log('Returning to challenge browser');
+            handleNewGame();
+          }}
           onComplete={() => {
             console.log('Fullscreen challenge completed');
-            onBack?.();
+            // Return to challenge browser instead of home screen
+            handleNewGame();
           }}
         />
       ) : (

@@ -211,8 +211,9 @@ export const FullscreenGuessScreen: React.FC<FullscreenGuessScreenProps> = ({
 
   const handleNewGame = useCallback(() => {
     dispatch(endGuessingSession());
-    onBack();
-  }, [dispatch, onBack]);
+    // Instead of going back to home screen, trigger completion to return to challenge browser
+    onComplete?.();
+  }, [dispatch, onComplete]);
 
   // Statement button component with gesture handling
   const StatementButton: React.FC<{

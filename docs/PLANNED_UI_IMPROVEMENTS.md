@@ -36,7 +36,7 @@
 - [x] Implement modern UI with fullscreen minimal design and intuitive statement selection
 
 ## lie selection in guessing
-- [ ] Optimize the button hold detection to reduce or eliminate any delay, making the selection response instant and snappier upon holding down.
+- [x] Optimize the button hold detection to reduce or eliminate any delay, making the selection response instant and snappier upon holding down.
 - [x] Add clear instructional text near the selection buttons that informs users to "Hold down the button to select and submit your guess."
 - [x] Implement a circular progress indicator around or near the button that visually fills clockwise while the button is being held, clearly showing how much hold time remains until the guess is submitted.
 - [x] The circular indicator should complete a full circle exactly when the hold duration is met, providing intuitive and immediate feedback on the selection process.
