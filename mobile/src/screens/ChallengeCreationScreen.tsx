@@ -665,7 +665,7 @@ export const ChallengeCreationScreen: React.FC<ChallengeCreationScreenProps> = (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
         <TouchableOpacity onPress={onCancel}>
-          <Text style={styles.cancelButton}>Cancel</Text>
+          <Text style={styles.cancelButton}>← Back</Text>
         </TouchableOpacity>
         <Text style={styles.headerTitle}>Create Challenge</Text>
         <View style={styles.headerSpacer} />

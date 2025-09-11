@@ -1,6 +1,10 @@
 ## Home Screen Navigation
 - [x] Refactor home screen navigation: replace existing layout with a choice menu allowing users to either create challenges or guess challenges. Remove any test backend connection button or code from the home screen component.
 
+## Move the back button 
+- [x] Remove the "back to menu" pop up button on the guess challenge and create challenge to be less visually obstructive
+- [x] Make the "Guess Challenges" page top bar that has "Two truths and a lie" and back button more closely match the style of the "Create challenge" page. Make it say "Guess challenge" in the center and have a cancel button on the left, rather than a back button on the right. 
+
 ## Pop Ups
 - [x] Disable "recording saved" and "recording complete" pop-up notifications globally.
 - [x] Remove duplicate "challenge created" pop-ups; keep only the pop-up that provides relevant user information and remove the other debugging pop-up.
@@ -25,9 +29,6 @@
 
 ## Baloney Statement Feature
 - [ ] Add the ability for users to record a brief explanatory statement specifically about the lie within their challenge.
-
-## Move the back button 
-- [ ] Move the back button on the guess challenge and create challenge to be less visually obstructive. Maybe bottom left
 
 ## Challenge Naming
 - [ ] Provide a text input field allowing users to name their challenge during creation, ensuring the name is saved and displayed appropriately.

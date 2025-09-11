@@ -43,13 +43,10 @@ const AppContent: React.FC = () => {
   if (currentScreen === 'game') {
     return (
       <View style={styles.fullScreen}>
-        <TouchableOpacity 
-          style={styles.backButton} 
-          onPress={() => setCurrentScreen('home')}
-        >
-          <Text style={styles.backText}>← Back to Menu</Text>
-        </TouchableOpacity>
-        <GameScreen hideCreateButton={true} />
+        <GameScreen 
+          hideCreateButton={true} 
+          onBack={() => setCurrentScreen('home')}
+        />
       </View>
     );
   }
@@ -57,12 +54,6 @@ const AppContent: React.FC = () => {
   if (currentScreen === 'create') {
     return (
       <View style={styles.fullScreen}>
-        <TouchableOpacity 
-          style={styles.backButton} 
-          onPress={() => setCurrentScreen('home')}
-        >
-          <Text style={styles.backText}>← Back to Menu</Text>
-        </TouchableOpacity>
         <ChallengeCreationScreen 
           onComplete={() => {
             // Automatically navigate back to home screen after challenge creation
@@ -148,18 +139,5 @@ const styles = StyleSheet.create({
     fontSize: 14,
     textAlign: 'center',
     lineHeight: 18,
-  },
-  backButton: {
-    position: 'absolute',
-    top: 50,
-    left: 20,
-    zIndex: 100,
-    backgroundColor: 'rgba(0,0,0,0.7)',
-    padding: 10,
-    borderRadius: 5,
-  },
-  backText: {
-    color: 'white',
-    fontSize: 16,
   },
 });

@@ -171,9 +171,10 @@ const convertBackendChallenge = (backendChallenge: BackendChallenge): EnhancedCh
 
 interface GameScreenProps {
   hideCreateButton?: boolean;
+  onBack?: () => void;
 }
 
-export const GameScreen: React.FC<GameScreenProps> = ({ hideCreateButton = false }) => {
+export const GameScreen: React.FC<GameScreenProps> = ({ hideCreateButton = false, onBack }) => {
   const dispatch = useAppDispatch();
   const {
     availableChallenges,
@@ -613,12 +614,11 @@ export const GameScreen: React.FC<GameScreenProps> = ({ hideCreateButton = false
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>Two Truths & a Lie</Text>
-        {currentSession && (
-          <TouchableOpacity onPress={handleNewGame}>
-            <Text style={styles.backButton}>← Back</Text>
-          </TouchableOpacity>
-        )}
+        <TouchableOpacity onPress={currentSession ? handleNewGame : onBack}>
+          <Text style={styles.backButton}>← Back</Text>
+        </TouchableOpacity>
+        <Text style={styles.headerTitle}>Guess Challenge</Text>
+        <View style={styles.headerSpacer} />
       </View>
       
       {!currentSession ? renderChallengeList() : renderGameplay()}
@@ -706,6 +706,8 @@ const styles = StyleSheet.create({
     fontSize: 24,
     fontWeight: 'bold',
     color: 'white',
+    flex: 1,
+    textAlign: 'center',
   },
   backButton: {
     fontSize: 16,
@@ -1040,5 +1042,8 @@ const styles = StyleSheet.create({
     height: 120,
     backgroundColor: 'white',
     width: '100%',
+  },
+  headerSpacer: {
+    width: 60, // Match the approximate width of the back button for centering
   },
 });
