@@ -18,11 +18,22 @@
 
 ## Large Scale Video Player UI Improvements
 - [x] Remove any debugging information displayed above the merged video player on the challenge guessing screen.
-- [ ] Remove text labels or captions directly on or around the merged video player interface.
-- [ ] Remove the "hide video" button from the video player controls.
-- [ ] Set the video player to display the video in full-screen mode by default.
-- [ ] Position the statement playback and selection buttons at the bottom of the screen in a user-friendly layout.
-- [ ] Rework the playback controls for statements to improve play and pause functionality, ensuring intuitive interaction.
+- [x] Remove text labels or captions directly on or around the merged video player interface.
+- [x] Remove the "hide video" button from the video player controls.
+- [x] Set the video player to display the video in full-screen mode by default.
+- [x] Position the statement playback and selection buttons at the bottom of the screen in a user-friendly layout.
+- [x] Rework the playback controls for statements to improve play and pause functionality, ensuring intuitive interaction.
+
+## Snapchat-Inspired Fullscreen Interface
+- [x] Create immersive, fullscreen video display with no borders, padding, or cards
+- [x] Implement three circular statement selector buttons at bottom of screen
+- [x] Add tap-to-play video functionality with smooth animations
+- [x] Implement long-press gesture to auto-submit guess with haptic feedback
+- [x] Remove extraneous buttons, overlays, and debugging information
+- [x] Position all controls at bottom for modern, thumb-friendly mobile use
+- [x] Create gesture-driven interaction system (tap/hold)
+- [x] Preserve clean header with only back navigation
+- [x] Implement modern UI with Snapchat-like minimal design and intuitive statement selection
 
 ## Statement Replay During Challenge Creation
 - [ ] Enable functionality for users to replay their recorded statement videos during the prewview challenge prtion of the challenge creation process for review before submission.

@@ -27,6 +27,7 @@ import {
 } from '../store/slices/guessingGameSlice';
 import { EnhancedChallenge, GuessResult } from '../types';
 import { ChallengeCreationScreen } from './ChallengeCreationScreen';
+import SnapchatGuessScreen from './SnapchatGuessScreen';
 import AnimatedFeedback from '../shared/AnimatedFeedback';
 import SimpleVideoPlayer from '../components/SimpleVideoPlayer';
 import SegmentedVideoPlayer from '../components/SegmentedVideoPlayer';
@@ -172,9 +173,14 @@ const convertBackendChallenge = (backendChallenge: BackendChallenge): EnhancedCh
 interface GameScreenProps {
   hideCreateButton?: boolean;
   onBack?: () => void;
+  useSnapchatInterface?: boolean; // Flag to enable Snapchat-style interface
 }
 
-export const GameScreen: React.FC<GameScreenProps> = ({ hideCreateButton = false, onBack }) => {
+export const GameScreen: React.FC<GameScreenProps> = ({ 
+  hideCreateButton = false, 
+  onBack,
+  useSnapchatInterface = true, // Default to new interface
+}) => {
   const dispatch = useAppDispatch();
   const {
     availableChallenges,
@@ -611,64 +617,81 @@ export const GameScreen: React.FC<GameScreenProps> = ({ hideCreateButton = false
     );
   };
 
+  // Check if we should use Snapchat interface for current challenge
+  const shouldUseSnapchatInterface = useSnapchatInterface && currentSession && selectedChallenge;
+
   return (
-    <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
-        <TouchableOpacity onPress={currentSession ? handleNewGame : onBack}>
-          <Text style={styles.backButton}>← Back</Text>
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Guess Challenge</Text>
-        <View style={styles.headerSpacer} />
-      </View>
-      
-      {!currentSession ? renderChallengeList() : renderGameplay()}
-      
-      {/* Challenge Creation Modal */}
-      <Modal
-        visible={showChallengeCreation}
-        animationType="slide"
-        presentationStyle="fullScreen"
-      >
-        <ChallengeCreationScreen
+    <>
+      {/* Use Snapchat-style fullscreen interface when enabled */}
+      {shouldUseSnapchatInterface ? (
+        <SnapchatGuessScreen
+          challenge={selectedChallenge}
+          onBack={handleNewGame}
           onComplete={() => {
-            setShowChallengeCreation(false);
-            Alert.alert(
-              'Challenge Created!',
-              'Your challenge is now available for others to play.',
-              [{ 
-                text: 'OK', 
-                style: 'default',
-                onPress: () => {
-                  // Refresh the challenge list to show the new challenge
-                  loadChallengesFromAPI();
-                }
-              }]
-            );
+            console.log('Snapchat challenge completed');
           }}
-          onCancel={() => setShowChallengeCreation(false)}
         />
-      </Modal>
+      ) : (
+        /* Traditional interface with header and layout */
+        <SafeAreaView style={styles.container}>
+          <View style={styles.header}>
+            <TouchableOpacity onPress={currentSession ? handleNewGame : onBack}>
+              <Text style={styles.backButton}>← Back</Text>
+            </TouchableOpacity>
+            <Text style={styles.headerTitle}>Guess Challenge</Text>
+            <View style={styles.headerSpacer} />
+          </View>
+          
+          {!currentSession ? renderChallengeList() : renderGameplay()}
+          
+          {/* Challenge Creation Modal */}
+          <Modal
+            visible={showChallengeCreation}
+            animationType="slide"
+            presentationStyle="fullScreen"
+          >
+            <ChallengeCreationScreen
+              onComplete={() => {
+                setShowChallengeCreation(false);
+                Alert.alert(
+                  'Challenge Created!',
+                  'Your challenge is now available for others to play.',
+                  [{ 
+                    text: 'OK', 
+                    style: 'default',
+                    onPress: () => {
+                      // Refresh the challenge list to show the new challenge
+                      loadChallengesFromAPI();
+                    }
+                  }]
+                );
+              }}
+              onCancel={() => setShowChallengeCreation(false)}
+            />
+          </Modal>
 
-      {/* Animated Feedback */}
-      {guessResult && (
-        <AnimatedFeedback
-          result={guessResult}
-          currentStreak={currentStreak}
-          showStreakAnimation={currentStreak > 1}
-          onAnimationComplete={() => {
-            console.log('✅ Animation completed, clearing result');
-            dispatch(clearGuessResult());
-          }}
-        />
+          {/* Animated Feedback */}
+          {guessResult && (
+            <AnimatedFeedback
+              result={guessResult}
+              currentStreak={currentStreak}
+              showStreakAnimation={currentStreak > 1}
+              onAnimationComplete={() => {
+                console.log('✅ Animation completed, clearing result');
+                dispatch(clearGuessResult());
+              }}
+            />
+          )}
+
+          {/* Floating submit button: visible during an active session when a statement is selected and no guess submitted */}
+          <FloatingSubmitButton
+            visible={!!currentSession && !guessSubmitted && selectedStatement !== null}
+            onPress={handleSubmitGuess}
+            text="Submit Guess"
+          />
+        </SafeAreaView>
       )}
-
-      {/* Floating submit button: visible during an active session when a statement is selected and no guess submitted */}
-      <FloatingSubmitButton
-        visible={!!currentSession && !guessSubmitted && selectedStatement !== null}
-        onPress={handleSubmitGuess}
-        text="Submit Guess"
-      />
-    </SafeAreaView>
+    </>
   );
 };
 
