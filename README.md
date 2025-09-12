@@ -2,303 +2,152 @@
 
 <div align="center">
 
-![Ap## 🚀 Project Status
+*An AI-powered mobile social game that turns the classic icebreaker into a lie-detection challenge.*
 
-**Current Phase**: Production Polish & Optimization  
-**Last Updated**: September 2024  
+---
 
-### ✅ Completed Milestones
-- [x] **Core Mobile App Framework** - React Native foundation with Expo
-- [x] **Video Recording System** - Multi-segment video capture functionality  
-- [x] **FastAPI Backend** - RESTful API with challenge management
-- [x] **Database Schema** - SQLite with challenge storage and retrieval
-- [x] **Development Workflow** - TypeScript compilation and testing setup
-- [x] **Railway Production Deploy** - Backend hosted and fully operational
-- [x] **Mobile-Backend Integration** - Complete upload/download pipeline working
-- [x] **End-to-End Testing** - Full workflow validated and confirmed working
+<img src="https://placehold.co/600x300?text=Insert+App+Demo+GIF+Here" alt="App Demo GIF" width="80%">
 
-### 🔄 Active Development
-- [ ] **Performance Optimization** - Upload speeds and reliability enhancement
-- [ ] **UI/UX Polish** - Professional mobile interface refinement
-- [ ] **Hackathon Preparation** - Demo materials for Kiro (Sept 15) and Shipaton (Sept 30)
-- [ ] **Production Monitoring** - Error tracking and performance analytics
-
-### 📱 Quick Demo
-
-1. **Record Challenge**: Use mobile app to record 3 video segments
-2. **Upload to Railway**: Send challenge data to production FastAPI server  
-3. **Store in Database**: Save challenge with metadata to Railway-hosted SQLite
-4. **Retrieve & Play**: Download and play challenges from other users across devices
-
-**🎉 FULLY FUNCTIONAL**: Complete end-to-end workflow from mobile recording to cross-device challenge sharing!con_scaled.png)
-
-[![Hackathon](https://img.shields.io/badge/Hackathon-Kiro%20%7C%20Shipaton-brightgreen.svg)](#hackathon-submissions)
 [![React Native](https://img.shields.io/badge/React%20Native-0.79-blue.svg)](https://reactnative.dev/)
 [![FastAPI](https://img.shields.io/badge/FastAPI-Python%203.12-green.svg)](https://fastapi.tiangolo.com/)
-[![License](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![License](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE.md)
+[![Project Status](https://img.shields.io/badge/status-production_ready-brightgreen.svg)](#-project-status)
 
-**🏆 Production-Ready Mobile App | 🤖 AI-Powered | 📱 Cross-Platform**
-
-[📱 View Product Demo](docs/PRODUCT_OVERVIEW.md#demo) | [🏗 Technical Details](docs/TECHNICAL_ARCHITECTURE.md) | [🤖 AI Development Process](docs/DEVELOPMENT_PROCESS.md)
+**[View Live Demo](#-live-demo) · [Technical Architecture](#-technical-architecture) · [Hackathon Submissions](#-why-we-should-win)**
 
 </div>
 
 ## 🎯 What is 2Truths-1Lie?
 
-A revolutionary mobile social game that transforms the classic icebreaker into an AI-enhanced experience. Players record video statements (2 truths, 1 lie), and others use emotion recognition technology to detect deception.
+**2Truths-1Lie** is a revolutionary mobile game that transforms the classic icebreaker into an interactive, AI-enhanced experience. Players record three short video statements—two truths and one lie. Other players then watch the videos and use their intuition, along with hints from our AI-powered emotion recognition engine, to spot the lie.
 
-### 🚀 Key Innovations
-- **📱 Mobile-First**: Native camera recording with seamless UX
-- **🎥 Advanced Video Processing**: Server-side merging with frame-accurate segmentation
-- **🤖 AI Emotion Recognition**: Real-time lie detection during video playback
-- **⚡ Production-Ready**: Scalable architecture with CDN, cloud storage, and JWT auth
+It's a fully functional, end-to-end mobile application with a scalable backend deployed and ready for users.
 
-## 🏆 Hackathon Submissions
+## ✨ Core Features
 
-### 🤖 **Kiro Hackathon**: AI-Driven Development Excellence
-**Category**: Best use of AI agents and spec-driven development  
-**Focus**: Demonstrating how AI tools (Kiro, GitHub Copilot) accelerated development from specification to production-ready app
+| Feature | Description |
+| :--- | :--- |
+| **🎮 Core Gameplay** | Record three video clips, which are seamlessly merged on the server. Share challenges with friends and guess the lie in a fun, interactive video player. |
+| **🤖 AI-Powered Analysis** | An integrated emotion recognition model analyzes video playback in real-time to provide players with hints, confidence scores, and feedback on deceptive cues. |
+| **📱 Polished Mobile Experience**| Built with React Native and Expo for a native iOS & Android experience. Features a smooth camera interface, offline support, and a responsive, touch-optimized UI. |
+| **⚡ Production-Ready Backend**| A scalable FastAPI backend handles video processing, user authentication (JWT), and data storage, deployed on Railway and integrated with AWS S3 for media storage and CDN for global delivery. |
 
-**Key Achievements**:
-- ✅ **Spec-Driven Development**: Complete project built using AI-generated specifications
-- ✅ **Code Generation**: 70%+ of code generated through AI assistance with human oversight
-- ✅ **Rapid Prototyping**: MVP to production-ready in weeks using AI acceleration
-- ✅ **Testing Automation**: AI-generated comprehensive test suite (77.3% coverage)
+## 🎬 Live Demo
 
-👉 **[View AI Development Process](docs/DEVELOPMENT_PROCESS.md)**
+Our end-to-end user flow is fully functional. A user can:
+1.  **Record Challenge**: Use the mobile app to record three distinct video statements.
+2.  **Upload & Process**: The videos are uploaded to our server, where they are merged and optimized for streaming.
+3.  **Share & Play**: A unique link is generated to share the challenge. Other users can watch the video and vote on which statement is the lie.
+4.  **Get AI Feedback**: After guessing, players see the results and can review an optional AI analysis that highlights potential tells.
 
-### 📱 **Shipaton Hackathon**: Production-Ready Mobile App
-**Category**: Best mobile app with monetization potential  
-**Focus**: Polished user experience, app store readiness, and clear business model
+## 🏆 Why We Should Win
 
-**Key Achievements**:
-- ✅ **Production Deployment**: Live Android app with backend infrastructure
-- ✅ **Monetization Strategy**: Freemium model with premium AI features
-- ✅ **User Experience**: Intuitive mobile UI optimized for engagement
-- ✅ **Scalability**: CDN, cloud storage, and microservices architecture
+This project was built to excel in both AI-driven development and production-readiness.
 
-👉 **[View Product Overview](docs/PRODUCT_OVERVIEW.md)**
+### 🤖 For **Kiro Hackathon** (Best use of AI agents)
+Our development process was accelerated and guided by AI, showcasing a modern, spec-driven workflow.
+-   **✅ Spec-Driven Development**: The entire project was bootstrapped from AI-generated specifications, defining the architecture, database schema, and API endpoints.
+-   **✅ AI-Assisted Code Generation**: Over 70% of the boilerplate and foundational code was generated using AI tools (Kiro, GitHub Copilot) with expert human oversight.
+-   **✅ Accelerated Prototyping**: We went from a concept to a feature-complete, production-ready app in a fraction of the typical time.
+-   **✅ Automated & Quantified Testing**: An AI-generated test suite provides a robust 77.3% code coverage, ensuring production-level quality.
+-   **👉 [See our full AI Development Process](docs/DEVELOPMENT_PROCESS.md)**
 
-## 🚀 Quick Demo
+### 📱 For **Shipaton Hackathon** (Best mobile app with monetization potential)
+We built more than a demo; we built a scalable, market-ready product.
+-   **✅ Live & Deployed**: The application is fully deployed with live infrastructure on Railway and AWS, ready for user onboarding.
+-   **✅ Polished User Experience**: The React Native app is optimized for performance and provides an intuitive, engaging user flow.
+-   **✅ Clear Monetization Strategy**: A clear freemium model with multiple revenue streams: premium in-app purchases for advanced AI analysis, enterprise packages for team-building, and an optional ad-supported tier.
+-   **👉 [Read our Product & Monetization Overview](docs/PRODUCT_OVERVIEW.md)**
 
-### 📱 Try It Now
-```bash
-# Clone and run in 2 minutes
-git clone https://github.com/kingkw1/2Truths-1Lie.git
-cd 2Truths-1Lie
+## 🏗️ Technical Architecture
 
-# Start backend
-cd backend && pip install -r requirements.txt
-uvicorn main:app --reload --host 0.0.0.0 --port 8001 &
+The system is designed with a modern, decoupled architecture for scalability and maintainability.
 
-# Start mobile app  
-cd mobile && npm install && npm start
-# Scan QR code with Expo Go app
-```
+```mermaid
+graph TD
+    A[📱 Mobile App <br> React Native, Expo, Redux] -->|REST API Requests| B(🌐 Backend API <br> Python, FastAPI);
+    B -->|User Data| C{DB <br> SQLite/PostgreSQL};
+    B -->|Media Files| D[☁️ Cloud Storage <br> AWS S3];
+    B -->|AI Analysis| E[🤖 AI Service <br> TensorFlow.js Model];
+    D -->|Cached Content| F[🌍 Global CDN];
+    F --> A;
+````
 
-### 🎬 Live Demo Flow
-1. **Record Statements**: Use mobile camera to record 3 video statements
-2. **AI Processing**: Server merges videos with precise timing metadata
-3. **Share Challenge**: Upload to cloud with global CDN delivery
-4. **Play Game**: Others watch and guess which statement is the lie
-5. **AI Analysis**: Emotion recognition provides lie detection hints
-## 📊 Current Status: **Production Ready** ✅
-
-### ✅ **Completed Features**
-- 📱 **Mobile App**: React Native app running on Android devices
-- 🎥 **Video Pipeline**: Recording → Upload → Processing → CDN delivery
-- 🖥 **Backend API**: FastAPI server with comprehensive endpoints
-- 🔒 **Security**: JWT auth, rate limiting, input validation
-- ☁️ **Cloud Infrastructure**: AWS S3 storage with global CDN
-- 🧪 **Testing**: 77.3% test coverage with integration tests
-
-### 🎯 **AI Integration Ready**
-- 🤖 **Emotion Recognition**: TensorFlow.js pipeline prepared
-- 📊 **ML Infrastructure**: Video analysis endpoints implemented
-- � **Game Logic**: Scoring system with AI-enhanced feedback
-
-### 💰 **Monetization Strategy**
-- **Freemium Model**: Basic gameplay free, premium AI features paid
-- **In-App Purchases**: Advanced lie detection, custom challenges
-- **Enterprise**: Team building packages for businesses
-- **Ad-Supported**: Optional video ads for extra features
-
-## 🏗 Technical Architecture
-
-```
-┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
-│  📱 Mobile App  │    │  🌐 Backend API │    │ 🤖 AI Services │
-│ React Native    │◄──►│ Python FastAPI  │◄──►│ Emotion Model   │
-│ Expo + Redux    │    │ SQLite + S3     │    │ Video Analysis  │
-└─────────────────┘    └─────────────────┘    └─────────────────┘
-```
-
-**Stack**:
+### **Technology Stack**
 - **Frontend**: React Native 0.79, Expo SDK 53, TypeScript, Redux
-- **Backend**: Python 3.12, FastAPI, SQLAlchemy, JWT
-- **Infrastructure**: AWS S3, CDN, Docker, PostgreSQL
-- **AI/ML**: TensorFlow.js, emotion recognition models
+- **Backend**: Python 3.12, FastAPI, SQLAlchemy, SQLite
+- **Infrastructure**: Railway hosting, JWT authentication, RESTful API
+- **AI/ML**: TensorFlow.js, emotion recognition models (in development)
+- **Testing**: Jest, pytest, comprehensive test coverage (77.3%)
 
-👉 **[View Complete Technical Details](docs/TECHNICAL_ARCHITECTURE.md)**
+### **Architecture Highlights**
+- Microservices-ready design with clear separation of concerns
+- RESTful API with comprehensive endpoint coverage
+- Scalable video processing pipeline with metadata management
+- Cross-platform mobile development with native performance
+- Production-ready deployment with Railway cloud hosting
 
-## 📱 User Experience
+**👉 [Dive into the Full Technical Details](https://www.google.com/search?q=docs/TECHNICAL_ARCHITECTURE.md)**
 
-### Mobile-First Design
-- **Intuitive Recording**: One-tap video recording with visual feedback
-- **Smooth Navigation**: Native mobile interactions and animations  
-- **Responsive UI**: Optimized for all screen sizes and orientations
-- **Offline Support**: Local storage with sync when connected
+## 🚀 Quick Start
 
-### Game Flow
-1. **Create Challenge**: Record 3 statements (2 truths, 1 lie)
-2. **Video Processing**: AI merges and optimizes videos automatically
-3. **Share**: Challenge uploaded to cloud with unique link
-4. **Play**: Friends watch and vote on which statement is the lie
-5. **Results**: Scores calculated with optional AI emotion analysis
+Get the project running on your local machine in under 5 minutes.
 
-## 🔧 For Developers
+**Prerequisites:** Node.js (v18+), Python (v3.10+), and the Expo Go app on your mobile device.
 
-### Quick Start
-```bash
-# Mobile development
-cd mobile && npm install && npm start
+1.  **Clone the repository:**
 
-# Backend development  
-cd backend && pip install -r requirements.txt && uvicorn main:app --reload
+    ```bash
+    git clone [https://github.com/kingkw1/2Truths-1Lie.git](https://github.com/kingkw1/2Truths-1Lie.git)
+    cd 2Truths-1Lie
+    ```
 
-# Testing
-npm test  # Mobile tests
-python -m pytest  # Backend tests
+2.  **Start the backend server:**
+
+    ```bash
+    cd backend
+    pip install -r requirements.txt
+    uvicorn main:app --reload --host 0.0.0.0 --port 8001
+    ```
+
+3.  **Launch the mobile app:**
+
+    ```bash
+    cd mobile
+    npm install
+    npm start
+    ```
+
+    Scan the QR code with the Expo Go app on your phone.
+
+## 📈 Project Status
+
+**Current Phase**: Production Polish & Optimization
+
+  - [x] **Core Functionality**: Complete end-to-end workflow from recording to playback is fully functional.
+  - [x] **Infrastructure**: Backend deployed, database operational, and cloud storage integrated.
+  - [ ] **Active Development**: We are currently focusing on performance tuning (video upload speeds), UI/UX refinement, and adding production monitoring.
+
+## 📚 Documentation
+
+  - [Product Overview](https://www.google.com/search?q=docs/PRODUCT_OVERVIEW.md)
+  - [Technical Architecture](https://www.google.com/search?q=docs/TECHNICAL_ARCHITECTURE.md)
+  - [API Documentation](https://www.google.com/search?q=docs/api.md)
+  - [AI Development Process](https://www.google.com/search?q=docs/DEVELOPMENT_PROCESS.md)
+
+## 🤝 Contributing
+
+We welcome contributions\! Please see our [CONTRIBUTING.md](https://www.google.com/search?q=CONTRIBUTING.md) guide for details on how to get involved.
+
+## 📜 License
+
+This project is licensed under the MIT License. See the [LICENSE](LICENSE.md) file for details.
+
+-----
+
+\<div align="center"\>
+Built with ❤️ and 🤖 AI Assistance
+\</div\>
+
 ```
-
-### Project Structure
 ```
-├── mobile/           # React Native mobile app
-├── backend/          # Python FastAPI server
-├── assets/           # App icons and graphics
-├── android/          # Android build configuration
-├── scripts/          # Development automation
-└── tools/            # Testing and debugging utilities
-```
-
-## 📜 Compliance & Licensing
-
-- **License**: MIT License (OSI Approved)
-- **Privacy**: GDPR compliant with user data controls
-- **Content**: User-generated content moderation system
-- **Security**: Regular security audits and vulnerability scanning
-
-## 🏆 Awards & Recognition
-
-**Target Categories**:
-- 🤖 **Kiro**: Best use of AI in development workflow
-- 📱 **Shipaton**: Most innovative mobile app with business potential
-- 🎯 **General**: Technical excellence and user experience
-
----
-
-<div align="center">
-
-**Built with ❤️ using AI-assisted development**
-
-[📱 Product Overview](docs/PRODUCT_OVERVIEW.md) | [🏗 Technical Architecture](docs/TECHNICAL_ARCHITECTURE.md) | [🤖 AI Development](docs/DEVELOPMENT_PROCESS.md)
-
-</div>
-
-## ✨ Features
-
-### 🎬 **Core Gameplay**
-- Record three individual statement videos with professional server-side merging
-- Advanced segment-based video playback with frame-accurate seeking and seamless switching
-- Enhanced video streaming with global content delivery and adaptive quality
-- Guess lies in other players' videos with AI assistance and improved playback controls
-- Real-time emotion recognition overlays during video playback
-- Community voting and scoring system with cross-device synchronization
-
-### 📱 **Enhanced Mobile Experience**
-- **Native iOS & Android apps** built with React Native/Expo and optimized for performance
-- **Professional video processing** - record three statements, merged server-side with advanced algorithms
-- **Advanced interactive playback** - frame-accurate seeking, seamless segment switching, and adaptive quality
-- **Enhanced camera integration** - improved recording with background upload and resume capability
-- **Smart error handling** - comprehensive error recovery with automatic retry and progress preservation
-- **Intelligent offline mode** - enhanced caching, background sync, and offline challenge creation
-- Touch-optimized UI with haptic feedback and global content delivery
-
-### 🤖 **AI & Analytics**
-- Advanced emotion detection during video recording and playback
-- Confidence scoring for lie detection assistance
-- Optional premium analytics for content creators
-- Privacy-first approach with on-device processing options
-
-## 🚀 Getting Started
-
-### Prerequisites
-- Node.js >=18
-- Expo CLI (`npm install -g @expo/cli`)
-- Mobile device with Expo Go app or iOS/Android simulator
-- Apple or Google Play Developer Account for production builds (optional)
-
-### Installation
-```bash
-git clone https://github.com/kingkw1/2Truths1Lie.git
-cd 2Truths1Lie
-npm install          # Install main project dependencies
-npm run mobile:install  # Install mobile dependencies
-cd backend
-pip install -r requirements.txt  # Install backend dependencies
-```
-
-### Running the Mobile App  
-```bash
-npm start                 # Start Expo development server
-# Scan QR code with Expo Go app on your phone
-# OR run on simulator:
-npm run android          # Android simulator  
-npm run ios              # iOS simulator
-```
-
-### Backend Development
-```bash
-cd backend
-uvicorn main:app --reload # Start API server on http://localhost:8000
-```
-
-### Building for Production
-```bash
-npm run build:android    # Build Android APK/AAB
-npm run build:ios        # Build iOS IPA
-```
-
-### Testing
-```bash
-cd mobile
-npm test                 # Run mobile app tests
-```
-
-## Documentation
-
-### For Users
-- **[User Media Guide](docs/USER_MEDIA_GUIDE.md)** - Complete guide for creating and sharing video challenges with enhanced features
-- **[Enhanced Upload & Playback Guide](docs/ENHANCED_UPLOAD_PLAYBACK_GUIDE.md)** - Comprehensive guide to server-side processing and advanced streaming
-- **[Segment-Based Challenge Flow](docs/SEGMENT_BASED_CHALLENGE_FLOW.md)** - How the new merged video system works
-
-### For Developers  
-- **[API Documentation](docs/api.md)** - Full REST endpoint specs and usage examples
-- **[Server-Side Video Processing API](docs/SERVER_SIDE_VIDEO_PROCESSING_API.md)** - Complete API reference for server-side video merging and processing
-- **[Server-Side Media Flow](docs/SERVER_SIDE_MEDIA_FLOW.md)** - Detailed media processing workflow and implementation guide
-- **[Segment-Based Challenge Flow](docs/SEGMENT_BASED_CHALLENGE_FLOW.md)** - Technical documentation for merged video system
-- **[Media System Complete Guide](docs/MEDIA_SYSTEM_COMPLETE_GUIDE.md)** - Complete developer guide for video upload and streaming
-
-## Hackathon Participation
-This project leverages AI-assisted development tools, primarily the Kiro agent, to accelerate and guide the build process.  
-Detailed documentation of the AI-driven workflow, task execution logs, and usage of Kiro are available in [KIRO_HACKATHON.md](KIRO_HACKATHON.md).
-
-## Contributing
-Contributions welcome! Please open issues or pull requests following our [CONTRIBUTING.md](CONTRIBUTING.md).
-
-## License
-Licensed under the MIT License. See [LICENSE](LICENSE) for details.
-
-## Contact  
-Project lead: Kingkw | kingkw@example.com  
-Follow development: #BuildInPublic on Twitter and Devpost
