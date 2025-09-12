@@ -1,6 +1,3 @@
-<!-- ARCHIVED - DO NOT USE - Moved to archive September 10, 2025 -->
-<!-- This file is historical documentation only. See main docs/ folder for current information -->
-
 # Mobile Development Plan - Comprehensive Roadmap & Status
 
 **Project Status**: Production-Ready Mobile App  
@@ -183,7 +180,6 @@ The app has successfully completed all core development phases and is now produc
 - **Accessibility**: Touch-friendly design with proper target sizes
 - **Cross-Device**: Responsive design working across Android devices
 
-
 **Status**: Ready for Phase 7 - Production Polish & Optimization
 
 ## � ACTIVE PHASE - Phase 7: Production Polish & Optimization
@@ -194,7 +190,7 @@ The app has successfully completed all core development phases and is now produc
 
 ### 🎯 Production Polish Strategy
 
-With full end-to-end functionality confirmed, focus shifts to polish, documentation, and hackathon preparation. The core technical challenge is solved - now we optimize for presentation and user experience.
+With full end-to-end functionality confirmed, focus shifts to polish, documentation, and hackathon preparation. The core technical challenge is solved—now we optimize for presentation and user experience.
 
 ### 📋 Phase 7 Objectives
 
@@ -220,211 +216,179 @@ With full end-to-end functionality confirmed, focus shifts to polish, documentat
 - [ ] **Onboarding**: Create smooth first-user experience flow
 - [ ] **Performance Feedback**: Real-time upload progress and status updates
 
-#### 7.3 Documentation & Demo Preparation
+#### 7.3 Documentation & Demo Preparation  
 **Objective**: Prepare compelling hackathon presentations
 
-**Critical Tasks**:
-- [ ] **Demo Video**: Create polished demo showcasing end-to-end workflow
-- [ ] **Technical Documentation**: Update all docs to reflect Railway integration success
-- [ ] **Architecture Diagrams**: Visual documentation of mobile ↔ Railway ↔ database flow
-- [ ] **Hackathon Presentations**: Prepare materials for both Kiro and Shipaton
-- [ ] **Performance Metrics**: Document system performance and capabilities
+**Critical Tasks**:  
+- [ ] **Demo Video**: Create polished demo showcasing end-to-end workflow  
+- [ ] **Technical Documentation**: Update all docs to reflect Railway integration success  
+- [ ] **Architecture Diagrams**: Visual documentation of mobile ↔ Railway ↔ database flow  
+- [ ] **Hackathon Presentations**: Prepare materials for both Kiro and Shipaton  
+- [ ] **Performance Metrics**: Document system performance and capabilities  
 - [ ] **User Guide**: Simple guide for judges/users to test the app
 
-#### 7.4 System Monitoring & Analytics
+#### 7.4 System Monitoring & Analytics  
 **Objective**: Demonstrate production-readiness
 
-**Important Tasks**:
-- [ ] **Error Monitoring**: Implement comprehensive error tracking
-- [ ] **Usage Analytics**: Track key user engagement metrics
-- [ ] **Performance Monitoring**: Monitor Railway backend and mobile app performance
-- [ ] **Health Checks**: Automated system health monitoring
+**Important Tasks**:  
+- [ ] **Error Monitoring**: Implement comprehensive error tracking  
+- [ ] **Usage Analytics**: Track key user engagement metrics  
+- [ ] **Performance Monitoring**: Monitor Railway backend and mobile app performance  
+- [ ] **Health Checks**: Automated system health monitoring  
 - [ ] **Scalability Testing**: Test system under multiple concurrent users
----
 
-### 🏆 Hackathon Preparation Priorities
-
-#### For Kiro Hackathon (Sept 15)
-**Focus**: AI-Assisted Development Excellence
-- [ ] Document how AI tools accelerated development from spec to production
-- [ ] Showcase TypeScript error resolution using AI assistance
-- [ ] Demonstrate rapid Railway integration with AI guidance
-- [ ] Highlight testing strategy developed with AI assistance
-
-#### For Shipaton Hackathon (Sept 30)  
-**Focus**: Production Mobile App
-- [ ] Polish mobile UI/UX for app store readiness
-- [ ] Demonstrate monetization potential and business model
-- [ ] Show scalability and production architecture
-- [ ] Create compelling product demonstration
-
-### ✅ Success Criteria for Phase 7
-- [ ] **Demo-Ready**: App works flawlessly for live demonstrations
-- [ ] **Professional UI**: Polished interface that impresses users and judges
-- [ ] **Reliable Performance**: System handles demo scenarios without issues
-- [ ] **Complete Documentation**: All technical and user documentation updated
-- [ ] **Monitoring Active**: Real-time monitoring of system health and performance
-- [ ] **Hackathon Materials**: All presentation materials and demos prepared
-
----
-- [ ] App handles network errors gracefully with retry options
-- [ ] Challenges can be retrieved and played back from server
-- [ ] Full end-to-end workflow: Record → Upload → Share → Play
-- [ ] Offline functionality with background sync
-
-### Testing Strategy for Backend Integration
-- **API Integration Tests**: Validate all backend communication
-- **Upload Flow Testing**: Complete upload process validation
-- **Error Scenario Testing**: Network failures, server errors, timeout handling
-- **Performance Testing**: Memory usage during uploads, large file handling
-- **Offline Testing**: Local storage and sync functionality
-
----
+***
 
 ## 🏆 UPCOMING PHASES
 
-### 📋 Phase 6: Production Polish & Optimization (Sept 12-15)
-**Timeline**: September 12-15, 2025  
-**Goal**: Final app polish and performance optimization for hackathon submission
-
-#### Component Testing Enhancement
-- **Component-Level Testing**: Add comprehensive UI component tests
-- **End-to-End UI Testing**: Complete user journey validation
-- **Performance Optimization**: Battery usage, memory efficiency, startup time
-- **Accessibility Compliance**: Screen reader support, touch target sizing
-- **Cross-Device Testing**: Test on multiple Android devices and screen sizes
-
-### 🚀 Phase 7: Hackathon Preparation (Sept 15)
-**Timeline**: September 15, 2025 (KiRo Hackathon Deadline)
+### 🚀 Phase 8: Hackathon Preparation (Sept 15)  
+**Timeline**: September 15, 2025 (KiRo Hackathon Deadline)  
 **Goal**: Final submission preparation and demo readiness
 
-#### Submission Deliverables
-- **Demo Video**: Comprehensive app demonstration
-- **Technical Documentation**: Complete API and architecture docs
-- **Deployment Package**: Final app build and installation instructions
-- **Presentation Materials**: Pitch deck and technical overview
+#### Priorities For Kiro Hackathon (Sept 15)  
+**Focus**: AI-Assisted Development Excellence  
+- [ ] Document how AI tools accelerated development from spec to production  
+- [ ] Showcase TypeScript error resolution using AI assistance  
+- [ ] Demonstrate rapid Railway integration with AI guidance  
+- [ ] Highlight testing strategy developed with AI assistance
+
+#### Submission Deliverables  
+- **Demo Video**: Comprehensive app demonstration  
+- **Technical Documentation**: Complete API and architecture docs  
+- **Deployment Package**: Final app build and installation instructions  
+- **Presentation Materials**: Pitch deck and technical overview  
 - **User Guide**: End-user documentation and tutorials
 
-### 📱 Phase 8: Extended Features (Sept 16-30)
-**Timeline**: September 16-30, 2025 (Shipaton Hackathon)
+### ✅ Success Criteria for Phase 8  
+- [ ] **Demo-Ready**: App works flawlessly for live demonstrations  
+- [ ] **Professional UI**: Polished interface that impresses users and judges  
+- [ ] **Reliable Performance**: System handles demo scenarios without issues  
+- [ ] **Complete Documentation**: All technical and user documentation updated  
+- [ ] **Monitoring Active**: Real-time monitoring of system health and performance  
+- [ ] **Hackathon Materials**: All presentation materials and demos prepared
+
+#### Enhanced KiRo Submission Materials  
+- **Professional Demo Video Production**: Showcase complete workflow on both Android and iOS  
+  - Side-by-side cross-platform functionality demonstration  
+  - Feature parity highlights showing consistent user experience  
+  - AI integration potential and Kiro compatibility across platforms  
+  - Technical excellence demonstration with cross-platform architecture  
+- **Comprehensive Documentation**: Technical documentation and setup instructions  
+  - Cross-platform setup and installation guides  
+  - iOS and Android build documentation with EAS integration  
+  - Architecture documentation highlighting React Native/Expo excellence  
+- **Public Repository Preparation**: Clean, documented codebase with comprehensive README  
+  - Cross-platform development workflow instructions  
+  - Platform-specific build and deployment guides  
+  - Code quality demonstration with testing and CI/CD integration  
+- **Enhanced Presentation Materials**: Pitch deck highlighting cross-platform technical superiority
+
+### 📱 Phase 9a: Extended Features (Sept 16-30)  
+**Timeline**: September 16-30, 2025 (Shipaton Hackathon)  
 **Goal**: Advanced features and platform expansion
 
-#### Advanced Features
-- **Full Upload Pipeline**: Enable complete video upload and processing
-- **Enhanced Playback**: Advanced video player with segment seeking
-- **Social Features**: Challenge sharing and multiplayer improvements
-- **Analytics Integration**: User behavior tracking and insights
-- **iOS Support**: Cross-platform mobile development
+#### Advanced Features  
+- **Monetization**
+- **Social Features**: Challenge sharing and multiplayer improvements  
+- **Analytics Integration**: User behavior tracking and insights  
+- **iOS Support**: Cross-platform mobile development  
 - **Performance Optimization**: Memory usage, battery efficiency, startup time
 
-### 📱 Phase 5b: iOS Development & Cross-Platform Integration (Sept 12-14)
+### 📱 Phase 9b: iOS Development & Cross-Platform Integration (Sept 12-14)  
 **Timeline**: September 12-14, 2025  
 **Goal**: Full iOS platform support with comprehensive cross-platform validation
 
-#### iOS Configuration & Setup
-- **Complete Expo iOS Configuration**: Finalize `app.json` with iOS-specific settings
-  - Bundle identifier: `com.kingkw1.twotruthsoneliegame`
-  - iOS permissions: Camera and microphone usage descriptions
-  - App icons and splash screens optimized for iOS (iPhone + iPad)
-  - Universal app support with proper scaling and layouts
-- **Apple Developer Account Verification**: Confirm credentials and certificates
+#### iOS Configuration & Setup  
+- **Complete Expo iOS Configuration**: Finalize `app.json` with iOS-specific settings  
+  - Bundle identifier: `com.kingkw1.twotruthsoneliegame`  
+  - iOS permissions: Camera and microphone usage descriptions  
+  - App icons and splash screens optimized for iOS (iPhone + iPad)  
+  - Universal app support with proper scaling and layouts  
+- **Apple Developer Account Verification**: Confirm credentials and certificates  
 - **EAS CLI Configuration**: Set up Expo Application Services for iOS builds
 
-#### Comprehensive iOS Testing & Validation
-- **Target Device Coverage**: Focus on iPhone 12+ and iOS 16+ for optimal compatibility
-- **Expo Go Comprehensive Testing**: Full functionality validation on iPhone/iPad
-  - Camera recording and video capture validation across device sizes
-  - Challenge creation workflow completeness and user experience
-  - Navigation and state management testing with iOS gestures
-  - Performance validation: startup time, memory usage, battery efficiency
-- **Cross-Platform Feature Parity**: Ensure 95%+ feature consistency between platforms
+#### Comprehensive iOS Testing & Validation  
+- **Target Device Coverage**: Focus on iPhone 12+ and iOS 16+ for optimal compatibility  
+- **Expo Go Comprehensive Testing**: Full functionality validation on iPhone/iPad  
+  - Camera recording and video capture validation across device sizes  
+  - Challenge creation workflow completeness and user experience  
+  - Navigation and state management testing with iOS gestures  
+  - Performance validation: startup time, memory usage, battery efficiency  
+- **Cross-Platform Feature Parity**: Ensure 95%+ feature consistency between platforms  
 - **iOS-Specific Optimization**: Address platform-specific performance and UX issues
 
-#### Build Pipeline & Beta Preparation
-- **EAS Build Generation**: Create production-ready iOS `.ipa` builds
-- **TestFlight Preparation**: Set up beta testing distribution with early submission strategy
-- **Apple Review Timeline Monitoring**: Proactive scheduling for potential review delays
-- **Cross-Platform Documentation**: Complete setup and deployment guides for both platforms
-  - iOS-specific installation and build instructions
-  - Cross-platform development workflow documentation
+#### Build Pipeline & Beta Preparation  
+- **EAS Build Generation**: Create production-ready iOS `.ipa` builds  
+- **TestFlight Preparation**: Set up beta testing distribution with early submission strategy  
+- **Apple Review Timeline Monitoring**: Proactive scheduling for potential review delays  
+- **Cross-Platform Documentation**: Complete setup and deployment guides for both platforms  
+  - iOS-specific installation and build instructions  
+  - Cross-platform development workflow documentation  
   - Demo screenshots and videos featuring both platforms
 
-**Success Metrics for Phase 5b**:
-- [ ] App functionality 100% identical on iOS and Android
-- [ ] Camera recording works flawlessly on iPhone/iPad (all target devices)
-- [ ] Performance meets targets: <3 sec startup, <100MB memory on iOS
-- [ ] No iOS-specific crashes or critical bugs during comprehensive testing
-- [ ] EAS build pipeline operational and validated for iOS deployment
-- [ ] TestFlight ready for immediate beta distribution
+**Success Metrics for Phase 9b**:  
+- [ ] App functionality 100% identical on iOS and Android  
+- [ ] Camera recording works flawlessly on iPhone/iPad (all target devices)  
+- [ ] Performance meets targets: <3 sec startup, <100MB memory on iOS  
+- [ ] No iOS-specific crashes or critical bugs during comprehensive testing  
+- [ ] EAS build pipeline operational and validated for iOS deployment  
+- [ ] TestFlight ready for immediate beta distribution  
 - [ ] Cross-platform documentation complete with iOS integration
 
-### 🏆 Phase 5c: KiRo Submission Preparation (Sept 13-15)
-**Timeline**: September 13-15, 2025  
-**Goal**: Hackathon submission showcasing professional cross-platform excellence
-
-#### Enhanced KiRo Submission Materials
-- **Professional Demo Video Production**: Showcase complete workflow on both Android and iOS
-  - Side-by-side cross-platform functionality demonstration
-  - Feature parity highlights showing consistent user experience
-  - AI integration potential and Kiro compatibility across platforms
-  - Technical excellence demonstration with cross-platform architecture
-- **Comprehensive Documentation**: Technical documentation and setup instructions
-  - Cross-platform setup and installation guides
-  - iOS and Android build documentation with EAS integration
-  - Architecture documentation highlighting React Native/Expo excellence
-- **Public Repository Preparation**: Clean, documented codebase with comprehensive README
-  - Cross-platform development workflow instructions
-  - Platform-specific build and deployment guides
-  - Code quality demonstration with testing and CI/CD integration
-- **Enhanced Presentation Materials**: Pitch deck highlighting cross-platform technical superiority
-
-### 🚀 Phase 6: Shipaton Preparation & Store Deployment (Sept 15-30)
+### 🚀 Phase 10: Shipaton Preparation & Store Deployment (Sept 15-30)  
 **Timeline**: September 15-30, 2025  
 **Goal**: Google Play Store and Apple App Store publication for Shipaton hackathon
 
-#### iOS App Store Deployment
-- **EAS Build for iOS**: Generate production `.ipa` build
-  - Configure iOS certificates and provisioning profiles
-  - Build with EAS: `eas build --platform ios --profile production`
-  - Download and validate `.ipa` file
-- **TestFlight Beta Testing**: Distribute to beta testers
-  - Upload build to App Store Connect
-  - Add internal and external testers
-  - Gather feedback and fix any iOS-specific issues
-- **App Store Submission**: Complete Apple App Store submission
-  - Configure app metadata (name, description, keywords, privacy policy)
-  - Upload required screenshots for iPhone and iPad
-  - Complete compliance forms and age ratings
+#### Priorities For Shipaton Hackathon (Sept 30)  
+**Focus**: Production Mobile App  
+- [ ] Polish mobile UI/UX for app store readiness  
+- [ ] Demonstrate monetization potential and business model  
+- [ ] Show scalability and production architecture  
+- [ ] Create compelling product demonstration
+
+#### iOS App Store Deployment  
+- **EAS Build for iOS**: Generate production `.ipa` build  
+  - Configure iOS certificates and provisioning profiles  
+  - Build with EAS: `eas build --platform ios --profile production`  
+  - Download and validate `.ipa` file  
+- **TestFlight Beta Testing**: Distribute to beta testers  
+  - Upload build to App Store Connect  
+  - Add internal and external testers  
+  - Gather feedback and fix any iOS-specific issues  
+- **App Store Submission**: Complete Apple App Store submission  
+  - Configure app metadata (name, description, keywords, privacy policy)  
+  - Upload required screenshots for iPhone and iPad  
+  - Complete compliance forms and age ratings  
   - Submit for Apple review (1-3 day review process)
 
-#### Android Play Store Optimization
-- **Google Play Console**: Finalize Android store listing
-  - Optimize screenshots, descriptions, and keywords
-  - Complete developer account verification
-  - Set up closed testing track for 14-day requirement
-- **Play Store Publication**: Release production Android build
-  - Upload final APK/AAB to production track
-  - Configure store listing and promotional materials
+#### Android Play Store Optimization  
+- **Google Play Console**: Finalize Android store listing  
+  - Optimize screenshots, descriptions, and keywords  
+  - Complete developer account verification  
+  - Set up closed testing track for 14-day requirement  
+- **Play Store Publication**: Release production Android build  
+  - Upload final APK/AAB to production track  
+  - Configure store listing and promotional materials  
   - Launch to public availability
 
-#### Production Readiness & Monitoring
-- **Error Monitoring & Analytics**: Sentry integration and crash reporting
-- **Performance Monitoring**: Real-time performance metrics for both platforms
-- **Security Hardening**: Data encryption and secure storage validation
+#### Production Readiness & Monitoring  
+- **Error Monitoring & Analytics**: Sentry integration and crash reporting  
+- **Performance Monitoring**: Real-time performance metrics for both platforms  
+- **Security Hardening**: Data encryption and secure storage validation  
 - **Privacy Compliance**: GDPR/CCPA compliance and privacy policy updates
 
-#### App Store Optimization
-- **Store Listing Optimization**: Screenshots, descriptions, keywords
-- **App Icons & Assets**: High-quality graphics and promotional materials
-- **User Onboarding Flow**: First-time user experience optimization
+#### App Store Optimization  
+- **Store Listing Optimization**: Screenshots, descriptions, keywords  
+- **App Icons & Assets**: High-quality graphics and promotional materials  
+- **User Onboarding Flow**: First-time user experience optimization  
 - **App Store Review Preparation**: Compliance with store guidelines
 
-#### Advanced Features & Post-Hackathon Enhancements
-- **User Authentication**: Registration, login, and profile management
-- **Social Features**: Challenge sharing and friend connections across platforms
-- **Monetization Integration**: In-app purchases and premium features (iOS and Android)
-- **Advanced Analytics**: User behavior tracking and insights across platforms
-- **iOS-Specific UX Enhancements**: Platform-optimized interactions and design refinements
+#### Advanced Features & Post-Hackathon Enhancements  
+- **User Authentication**: Registration, login, and profile management  
+- **Social Features**: Challenge sharing and friend connections across platforms  
+- **Monetization Integration**: In-app purchases and premium features (iOS and Android)  
+- **Advanced Analytics**: User behavior tracking and insights across platforms  
+- **iOS-Specific UX Enhancements**: Platform-optimized interactions and design refinements  
 - **Long-term Cross-Platform Quality**: Ongoing feature parity and optimization
 
 ---
@@ -454,13 +418,6 @@ With full end-to-end functionality confirmed, focus shifts to polish, documentat
 
 ## 📊 DEVELOPMENT SCHEDULE & MILESTONES
 
-### 🎯 Immediate Actions (August 30 - September 1)
-**Status**: IN PROGRESS
-- **✅ Mobile app functional** on Android device (completed)
-- **🔄 Backend integration start** - Challenge upload service development
-- **📋 Google Play Console setup** - Early deployment for 14-day testing window
-- **🔄 API client development** - Backend connectivity implementation
-
 ### 🚀 Feature Completion Sprint (September 1 - 8)
 **Goal**: Complete backend integration and core functionality
 - **Complete challenge upload** - Full video upload pipeline
@@ -477,14 +434,6 @@ With full end-to-end functionality confirmed, focus shifts to polish, documentat
 - **Component testing fixes** - Resolve React Native Testing Library issues
 - **Android multi-device testing** - Compatibility across Android devices
 
-### 📱 iOS Development Phase (September 12 - 14)
-**Goal**: Cross-platform support and iOS compatibility
-- **iOS configuration** - Expo app.json setup with iOS permissions and assets
-- **Expo Go testing** - Full functionality validation on iPhone/iPad
-- **Cross-platform validation** - Feature parity between Android and iOS
-- **EAS Build preparation** - iOS build pipeline setup
-- **iOS-specific optimizations** - Platform-specific bug fixes and performance
-
 ### 🏆 KiRo Submission Phase (September 13 - 15)
 **Goal**: Hackathon submission with cross-platform demonstration
 - **Demo video production** - Professional showcase of Android and iOS functionality
@@ -492,6 +441,17 @@ With full end-to-end functionality confirmed, focus shifts to polish, documentat
 - **Public repository finalization** - Clean, documented codebase
 - **KiRo hackathon submission** - Submit by September 15 deadline
 - **Presentation materials** - Pitch deck highlighting cross-platform excellence
+
+### 📱 iOS Development Phase (September 16 - 23)
+**Goal**: Cross-platform support and iOS compatibility
+- **iOS configuration** - Expo app.json setup with iOS permissions and assets
+- **Expo Go testing** - Full functionality validation on iPhone/iPad
+- **Cross-platform validation** - Feature parity between Android and iOS
+- **EAS Build preparation** - iOS build pipeline setup
+- **iOS-specific optimizations** - Platform-specific bug fixes and performance
+
+### Monetization Phase (September 16 - 23)
+- TODO
 
 ### 🚢 Shipaton Store Deployment (September 15 - 30)
 **Goal**: Production deployment to both app stores
@@ -533,7 +493,7 @@ With full end-to-end functionality confirmed, focus shifts to polish, documentat
 - **Performance Profiling**: App startup, memory usage, battery efficiency
 - **Store Compliance Testing**: App store guideline adherence
 
-#### Phase 5b Testing (iOS Development & Cross-Platform Integration)
+#### Phase 9b Testing (iOS Development & Cross-Platform Integration)
 - **Cross-Platform Feature Parity Testing**: Comprehensive validation of 95%+ consistency
   - Side-by-side functionality comparison on Android vs iOS
   - User experience flow validation across platforms
@@ -679,31 +639,40 @@ The mobile app has successfully completed all foundational phases with:
 
 
 --- 
-## PLANNED GAMEPLAY FEATURES
+## Planned Gameplay Features and Roadmap
 
-### User authentication
+Our future development roadmap includes a clear set of prioritized gameplay and platform enhancements to extend functionality and user engagement beyond the current production-ready core:
 
-### Challenge board enhancements (user name, challenge name, popularity, recommendations)
+- **User Authentication**  
+  Implement secure user registration, login, logout, and profile management with JWT-based authentication, biometric support, email verification, and password recovery optimized for mobile devices.
 
-### Monetization
+- **Challenge Board Enhancements**  
+  Add features such as user and challenge names, popularity-based sorting, and personalized recommendations for improved discovery and social engagement.
 
-### Emotion Analysis Integration
+- **Monetization Integration**  
+  Incorporate a freemium model with in-app purchases, including premium AI features and custom challenges, supported by RevenueCat or equivalent platforms for seamless cross-platform payments.
 
-### Progression and Rewards  
+- **Emotion Analysis API Full Integration**  
+  Complete the connection to AffectLink’s emotion recognition API to enable real-time and batch emotion scoring, with confidence indicators and fallback modes, enriching gameplay with AI-driven lie detection.
 
-### Error Handling and Resilience  
+- **Progression and Rewards System**  
+  Design and implement leveling, experience points, badges, cosmetic unlocks, and leaderboards to incentivize continued play and social competition.
 
-### Performance and Optimization  
+- **Baloney Statement Feature**  
+  Enable users to record a brief explanatory “baloney” statement supporting their lie, adding depth and personality to challenges.
 
-### Comprehensive Testing Suite 
+- **Swipe Navigation Implementation**  
+  Develop intuitive gesture-based navigation between main screens to enhance UX fluidity and mobile friendliness.
 
-### Analytics, Monitoring, and Reporting  
+- **Error Handling and Resilience Improvements**  
+  Expand network retry strategies, offline queuing with synchronization, graceful degradation for AI/media failures, and enhanced user-facing error messages.
 
-### Baloney Statement Feature
-- [ ] Add the ability for users to record a brief explanatory statement specifically about the lie within their challenge.
+- **Performance and Optimization**  
+  Optimize client-side rendering, media upload speeds, memory usage, battery consumption, and server caching to ensure smooth, scalable operation.
 
-### Challenge Naming
-- [ ] Provide a text input field allowing users to name their challenge during creation, ensuring the name is saved and displayed appropriately.
+- **Comprehensive Testing Suite**  
+  Extend unit, integration, end-to-end, cross-platform, accessibility, and UI responsiveness tests to cover all new modules and features, targeting >90% test coverage.
 
-### Swipe navigation
-- [ ] Implement intuitive swipe navgiation to go between the main screens
+- **Analytics, Monitoring, and Reporting**  
+  Integrate detailed event tracking for gameplay, retention, and monetization metrics, along with backend health monitoring and privacy-compliant logging to support data-driven improvements.
+
