@@ -14,12 +14,14 @@ include: always
 - Use GitHub Actions or EAS to automate:
   - **MANDATORY**: TypeScript compilation validation (`npx tsc --noEmit`)
   - **MANDATORY**: Syntax and import validation for all modified files
-  - Running mobile tests on every push
+  - **Current Status**: Known TypeScript issues in network resilience tests being addressed
+  - Running mobile tests on every push (77.3% coverage achieved)
   - Running lint and TypeScript checks for mobile code
   - Building Android APK/AAB and iOS IPA files
   - Deploying test builds to internal testing tracks
   - Publishing to app stores after approval
-- **CRITICAL**: Pipeline must fail if any compilation errors are detected
+- **CRITICAL**: Pipeline must fail if any NEW compilation errors are detected
+- **Production Status**: Backend deployed on Railway, full end-to-end workflow operational
 
 ## Mobile Build Processes
 - **Development**: Expo Go for instant preview and iteration

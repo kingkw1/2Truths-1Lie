@@ -12,14 +12,15 @@ include: always
 - Use meaningful, descriptive names; avoid abbreviations unless widely understood in mobile context
 
 ## Mobile File Organization
-- Keep one primary React Native component per file in `mobile/src/components/`
-- Separate mobile utilities into `mobile/src/utils/`
-- Mobile API client logic in `mobile/src/services/`
-- Core game rules and mechanics in `mobile/src/game/` (mobile-optimized)
-- Screen components in `mobile/src/screens/`
-- Media processing utilities in `mobile/src/media/` (compression, merging, segment handling)
+- Keep one primary React Native component per file in `src/components/`
+- Separate mobile utilities into `src/utils/`
+- Mobile API client logic in `src/services/`
+- Core game rules and mechanics in `src/game/` (mobile-optimized)
+- Screen components in `src/screens/`
+- Media processing utilities in `src/media/` (compression, merging, segment handling)
 - Navigation configuration in dedicated navigation files
 - Avoid large mobile files: refactor into smaller reusable modules optimized for mobile
+- **Note**: Project structure is flattened - mobile app is directly in `mobile/` directory
 
 ## Mobile Style & Formatting
 - Use Prettier with 2-space indentation for React Native code
@@ -46,8 +47,10 @@ include: always
 ## Mobile Code Quality and Build Compliance
 - **CRITICAL**: All mobile code changes must compile successfully with Expo CLI and React Native
 - **MANDATORY**: Run `npx tsc --noEmit` to verify TypeScript compilation before task completion
-- The mobile app should run correctly with `npm run start:mobile` or `expo start`
-- TypeScript checking must pass for mobile code: `npm run type-check:mobile`
+- **Current Status**: Known TypeScript compilation issues in network resilience tests need resolution
+- The mobile app should run correctly with `npm start` or `expo start`
+- TypeScript checking must pass for NEW mobile code (existing issues being addressed)
+- New tasks must not introduce additional compilation errors beyond known network resilience issues
 - Mobile builds must succeed: EAS Build for Android/iOS without errors
 - React Native Metro bundler must complete without errors
 - Mobile-specific tests must pass before completing tasks

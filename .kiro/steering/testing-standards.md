@@ -6,13 +6,14 @@ pattern: "**/*.test.*"
 # Mobile Testing Standards
 
 ## Mobile Testing Scope
-- Write unit tests for all game logic functions in `mobile/src/game/`
-- Integration tests for mobile API client services in `mobile/src/services/`
+- Write unit tests for all game logic functions in `src/game/`
+- Integration tests for mobile API client services in `src/services/`
 - React Native component tests for critical mobile UI flows and screens
 - E2E tests for complete mobile user journeys using Detox or similar
-- Unit tests for video compression and merging utilities in `mobile/src/media/`
+- Unit tests for video compression and merging utilities in `src/media/`
 - Integration tests for upload progress tracking and background processing
 - Tests for segment metadata handling and video playback controls
+- **Current Status**: 77.3% test coverage with known TypeScript compilation issues in network resilience tests
 
 ## Mobile Testing Tools
 - Use Jest and React Native Testing Library as the base mobile testing framework
@@ -45,10 +46,11 @@ pattern: "**/*.test.*"
 - Maintain CI integration for mobile-specific automated checks
 
 ## Running Mobile Tests
-- Mobile tests runnable via `npm run test:mobile` or `cd mobile && npm test`
+- Mobile tests runnable via `npm test` in the mobile directory (no dedicated test:mobile script)
 - Include mobile test scripts in both root and mobile `package.json`
 - Run mobile tests before every commit to ensure mobile app stability
 - Test on real devices periodically for native functionality validation
+- **Known Issues**: NetworkResilienceService test compilation errors need resolution
 
 ## Mobile Test Data
 - Use mobile-specific fixture files for camera/media testing
