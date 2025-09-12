@@ -6,14 +6,14 @@
   "when": {
     "type": "fileCreated",
     "patterns": [
-      "mobile/src/components/**/*.tsx",
-      "mobile/src/screens/**/*.tsx",
-      "mobile/src/services/**/*.ts",
+      "src/components/**/*.tsx",
+      "src/screens/**/*.tsx",
+      "src/services/**/*.ts",
       "backend/**/*.py"
     ]
   },
   "then": {
     "type": "askAgent",
-    "prompt": "For the newly created mobile file, create a Jest test file with React Native Testing Library setup.  \nInclude mobile-specific imports and placeholder test cases for the default export or main function.  \nFor React Native components, include rendering tests and mobile interaction testing.  \nFor Python backend files, include mobile API endpoint testing.  \nIf a test file already exists, do not overwrite."
+    "prompt": "For the newly created mobile file, create a Jest test file with React Native Testing Library setup in the flattened project structure.  \nInclude mobile-specific imports and placeholder test cases for the default export or main function.  \nFor React Native components, include rendering tests and mobile interaction testing.  \nFor Python backend files, include Railway backend API endpoint testing.  \nIf a test file already exists, do not overwrite.  \nNote: Current test coverage is 77.3%, avoid adding tests that duplicate existing coverage or introduce TypeScript compilation errors."
   }
 }

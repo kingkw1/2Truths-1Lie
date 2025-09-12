@@ -1,40 +1,22 @@
 {
   "enabled": true,
   "name": "Update Mobile Task Status on File Changes",
-  "description": "Automatically marks mobile development tasks as 'In Progress' when files related to mobile specification tasks are saved in mobile/src/ or backend/ directories",
-  "version": "1",
-  "when": {
-    "type": "fileEdited",
-    "patterns": [
-      "mobile/src/components/**/*",
-      "mobile/src/screens/**/*",
-      "mobile/src/store/**/*",
-      "mobile/src/services/**/*",
-      "mobile/src/types/**/*",
-      "mobile/src/hooks/**/*",
-      "backend/**/*"
-    ]
-  },
-  "then": {
-    "type": "askAgent",
-    "prompt": "Detect which mobile spec task corresponds to the saved file based on mobile task descriptions or mobile file naming patterns.  \nUpdate that task's status to 'In Progress' in the spec's tasks.md file.  \nFocus on mobile-specific development tasks including React Native components, mobile services, and mobile backend APIs."
-  }
-}
-  "name": "Update Task Status on File Changes",
-  "description": "Automatically marks associated tasks as 'In Progress' when files related to specification tasks are saved in src/game/, src/components/, or other relevant directories",
+  "description": "Automatically marks mobile development tasks as 'In Progress' when files related to mobile specification tasks are saved in the flattened project structure",
   "version": "1",
   "when": {
     "type": "fileEdited",
     "patterns": [
       "src/components/**/*",
+      "src/screens/**/*",
       "src/store/**/*",
       "src/services/**/*",
       "src/types/**/*",
-      "src/hooks/**/*"
+      "src/hooks/**/*",
+      "backend/**/*"
     ]
   },
   "then": {
     "type": "askAgent",
-    "prompt": "Detect which spec task corresponds to the saved file based on task descriptions or file naming.  \nUpdate that task’s status to 'In Progress' in the spec’s tasks.md file.\n"
+    "prompt": "Detect which mobile spec task corresponds to the saved file based on mobile task descriptions or mobile file naming patterns in the flattened project structure.  \nUpdate that task's status to 'In Progress' in the spec's tasks.md file.  \nFocus on mobile-specific development tasks including React Native components, mobile services, and Railway backend APIs.  \nNote: Project is in Phase 7 (Production Polish & Optimization) with core functionality complete and 77.3% test coverage achieved."
   }
 }

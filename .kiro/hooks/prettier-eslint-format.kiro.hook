@@ -6,14 +6,14 @@
   "when": {
     "type": "fileEdited",
     "patterns": [
-      "mobile/src/**/*.js",
-      "mobile/src/**/*.ts", 
-      "mobile/src/**/*.tsx",
+      "src/**/*.js",
+      "src/**/*.ts", 
+      "src/**/*.tsx",
       "backend/**/*.py"
     ]
   },
   "then": {
     "type": "askAgent",
-    "prompt": "For TypeScript/JavaScript files: Run Prettier to format the mobile code with React Native formatting rules.  \nThen run ESLint with React Native and mobile-specific autofix rules, and save the file if modifications were made.  \nFor Python files: Run Black formatter and flake8 linting for backend code."
+    "prompt": "For TypeScript/JavaScript files: Run Prettier to format the mobile code with React Native formatting rules in the flattened project structure.  \nThen run ESLint with React Native and mobile-specific autofix rules, and save the file if modifications were made.  \nFor Python files: Run Black formatter and flake8 linting for Railway backend code.  \nEnsure formatting doesn't introduce TypeScript compilation errors - there are known issues in network resilience tests that should be avoided."
   }
 }
