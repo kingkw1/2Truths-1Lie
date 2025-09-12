@@ -241,7 +241,7 @@ With full end-to-end functionality confirmed, focus shifts to polish, documentat
 
 ## 🏆 UPCOMING PHASES
 
-### 🚀 Phase 8: Hackathon Preparation (Sept 15)  
+### 🚀 Phase 8: Kiro Hackathon Preparation (Sept 15)  
 **Timeline**: September 15, 2025 (KiRo Hackathon Deadline)  
 **Goal**: Final submission preparation and demo readiness
 
@@ -253,19 +253,21 @@ With full end-to-end functionality confirmed, focus shifts to polish, documentat
 - [ ] Highlight testing strategy developed with AI assistance
 
 #### Submission Deliverables  
-- **Demo Video**: Comprehensive app demonstration  
-- **Technical Documentation**: Complete API and architecture docs  
-- **Deployment Package**: Final app build and installation instructions  
-- **Presentation Materials**: Pitch deck and technical overview  
-- **User Guide**: End-user documentation and tutorials
+- **Demo Video:** Comprehensive demonstration (≤3 minutes), highlighting gameplay, polish, and AI/monetization flows
+- **Technical Documentation:** API/architecture docs, including monetization integrations
+- **Deployment Package:** Final builds and installation instructions for iOS/Android
+- **Presentation Materials:** Pitch deck, hackathon strategy, and product overview  
+- **User Guide:** Step-by-step instructions, including how to access premium features using promo/free-trial codes
 
-### ✅ Success Criteria for Phase 8  
-- [ ] **Demo-Ready**: App works flawlessly for live demonstrations  
-- [ ] **Professional UI**: Polished interface that impresses users and judges  
-- [ ] **Reliable Performance**: System handles demo scenarios without issues  
-- [ ] **Complete Documentation**: All technical and user documentation updated  
-- [ ] **Monitoring Active**: Real-time monitoring of system health and performance  
-- [ ] **Hackathon Materials**: All presentation materials and demos prepared
+### ✅ Success Criteria for Phase 8
+- [ ] **Monetization-Ready:** RevenueCat-powered purchases activated and functional on both stores  
+- [ ] **Demo-Ready:** Flawless live/demo scenario execution including in-app purchase flow and premium unlock  
+- [ ] **Professional UI:** Shipaton-polished interfaces, store-compliant assets, and onboarding  
+- [ ] **Reliable Performance:** Robust upload, purchase, and entitlement validation flows  
+- [ ] **Documentation Complete:** Judges and testers can access/write/test all features, with required promo/free-trial access for premium features  
+- [ ] **Store Listing Complete:** 1024×1024 icon, screenshots (min. 1179×2556, no device frames), descriptions submitted  
+- [ ] **Monitoring Active:** Real-time backend and purchase event analytics/integrity checks  
+- [ ] **Public-Ready Materials:** All hackathon materials, social links, and demos prepared and available
 
 #### Enhanced KiRo Submission Materials  
 - **Professional Demo Video Production**: Showcase complete workflow on both Android and iOS  
@@ -283,19 +285,23 @@ With full end-to-end functionality confirmed, focus shifts to polish, documentat
   - Code quality demonstration with testing and CI/CD integration  
 - **Enhanced Presentation Materials**: Pitch deck highlighting cross-platform technical superiority
 
-### 📱 Phase 9a: Extended Features (Sept 16-30)  
-**Timeline**: September 16-30, 2025 (Shipaton Hackathon)  
-**Goal**: Advanced features and platform expansion
+### 📱 Phase 9a: RevenueCat Monetization Features  
+**Timeline:** September 16–19, 2025 (Shipaton Monetization Sprint)  
+**Goal:** Shipaton-eligible in-app monetization, judge-accessible premium features, and store compliance
 
-#### Advanced Features  
-- **Monetization**
-- **Social Features**: Challenge sharing and multiplayer improvements  
-- **Analytics Integration**: User behavior tracking and insights  
-- **iOS Support**: Cross-platform mobile development  
-- **Performance Optimization**: Memory usage, battery efficiency, startup time
+#### Monetization Integration – Critical Tasks  
+- Integrate RevenueCat SDK for iOS and Android with full purchase/restore flows
+- Back-end API for receipt verification and entitlement management
+- UI for in-app "Store," purchase, promo/redeem, and displaying entitlement/premium status
+- Promo code and free-trial logic implemented per Devpost and Shipaton rules; ensure judges can unlock and test premium
+- Purchase events tracked, confirmed, and analytics visible in both app logs and RevenueCat dashboard
+- Unit/integration tests for all monetization and entitlement logic
+- Ensure receipt validation and personal data security (GDPR/CCPA-compliant, secure backend storage, no leaks)
+- Update documentation for testers/admin judges on how to unlock and validate premium access
+- Prepare required submission metadata: store URLs, promo/free-trial access, 1024×1024 icon, 1179×2556+ screenshots, appropriate keywords/descriptions, and privacy policy
 
-### 📱 Phase 9b: iOS Development & Cross-Platform Integration (Sept 12-14)  
-**Timeline**: September 12-14, 2025  
+### 📱 Phase 9b: iOS Development & Cross-Platform Integration
+**Timeline**: September 16-19, 2025  
 **Goal**: Full iOS platform support with comprehensive cross-platform validation
 
 #### iOS Configuration & Setup  
@@ -335,10 +341,35 @@ With full end-to-end functionality confirmed, focus shifts to polish, documentat
 - [ ] TestFlight ready for immediate beta distribution  
 - [ ] Cross-platform documentation complete with iOS integration
 
-### 🚀 Phase 10: Shipaton Preparation & Store Deployment (Sept 15-30)  
-**Timeline**: September 15-30, 2025  
-**Goal**: Google Play Store and Apple App Store publication for Shipaton hackathon
+### 📱 Phase 10: Extended Features (Sept 20–27)
+**Timeline:** September 20–27, 2025  
+**Goal:** Continued improvements, analytics, and advanced features for Shipaton polish and distinction
 
+#### Advanced Features  
+- **Analytics:** User purchase/retention/engagement/event tracking  
+- **Social:** Sharing, leaderboards, multiplayer  
+- **Performance:** Further optimize memory, load time, and battery  
+- **Rewards:** Add progression/reward mechanisms post-IAP integration
+
+### 🚀 Phase 11: Shipaton Submission & Store Deployment (Sept 27–30)
+**Timeline:** September 27–30, 2025  
+**Goal:** Live production releases, Shipaton-eligible demo submission, and store optimization
+
+#### Shipaton Submission and Store Readiness  
+- **iOS Publish:** App Store Connect, TestFlight, and production submission (incl. promo/free trial for judges)
+- **Android Publish:** Google Play production track, closed test as needed for reviewers
+- **Store Assets:** Screenshots, icon, privacy/compliance, descriptions
+- **Demo Video:** Shows RevenueCat purchase flow and all premium features  
+- **Final Submission:** URLs to both stores, unique features/capabilities summary, and correct build/marketing assets  
+- **Award Eligibility:** Prepare hackathon/Shipaton materials for HAMM Award (best monetization), Build&Grow (growth post-ship), Design, Vibes, #BuildInPublic, etc.
+- **Promo Code Distribution:** Ensure all judges/testers can access premium content per hackathon guidelines
+
+#### Post-Submission Support & Optimization  
+- **Error Monitoring:** Live Sentry or equivalent for crash analytics  
+- **Performance Tracking:** RevenueCat/Store/Server logs for integrity and purchase behavior  
+- **User Feedback:** Rapid response path for issues/bugs found during judging
+
+**
 #### Priorities For Shipaton Hackathon (Sept 30)  
 **Focus**: Production Mobile App  
 - [ ] Polish mobile UI/UX for app store readiness  
@@ -386,82 +417,74 @@ With full end-to-end functionality confirmed, focus shifts to polish, documentat
 #### Advanced Features & Post-Hackathon Enhancements  
 - **User Authentication**: Registration, login, and profile management  
 - **Social Features**: Challenge sharing and friend connections across platforms  
-- **Monetization Integration**: In-app purchases and premium features (iOS and Android)  
 - **Advanced Analytics**: User behavior tracking and insights across platforms  
 - **iOS-Specific UX Enhancements**: Platform-optimized interactions and design refinements  
 - **Long-term Cross-Platform Quality**: Ongoing feature parity and optimization
 
----
-
 ## 🛡️ RISK MANAGEMENT & CONTINGENCY PLANNING
 
-### iOS Development Risk Mitigation
-- **Early iOS Exploration (Phase 5)**: Proactive issue identification during Android polish
-- **Contingency Buffer**: Built-in 1-day buffer between Android completion and iOS start
-- **Apple Review Timeline Management**: Early TestFlight submission with timeline monitoring
-- **Cross-Platform Testing Overlap**: Parallel testing to catch integration issues early
-- **EAS Build Pipeline Validation**: Pre-tested build process before critical submission dates
+### iOS Development & Monetization Risk Mitigation
+- **Early iOS & RevenueCat Integration (Phase 5–9):** Begin iOS platform and RevenueCat SDK integration as early as feasible, enabling early detection of device- or store-specific IAP and entitlement issues.
+- **Contingency Buffer:** Maintain at least a 1-day buffer between Android/monetization completion and iOS TestFlight/App Store submission deadlines.
+- **Apple/Google Review Readiness:** Monitor App Store Connect and Google Play Console review queues daily once submitted; address feedback/failures rapidly and have legal/privacy documentation pre-reviewed.
+- **Promo/Free Trial Access for Judging:** Test all promo code and free trial flows before final submission to guarantee all premium/unlockable features are easily demo-accessible by judges without setup friction.
+- **Parallel Cross-Platform Build/Monetization Testing:** Ensure all in-app purchase, entitlement restore, and premium flows are tested in parallel and independently on both Android (Google Play) and iOS (App Store/TestFlight) devices.
+- **Pre-Validated EAS+RevenueCat Pipeline:** Run successful end-to-end EAS (Expo Application Services) build + RevenueCat test purchase flows before critical submission dates.
+- **Store Asset/Submission Pre-Approval:** Prepare 1024x1024 icons, vertical 1179px+ screenshots, and completed metadata one week before final Shipaton/Store deadline.
 
-### Hackathon Deadline Contingencies
-- **KiRo Submission Flexibility**: Demo video can showcase Android-only if iOS faces delays
-- **Shipaton iOS Backup Plan**: Google Play deployment can proceed independently if iOS approval delays
-- **Feature Scope Management**: Core functionality prioritized over platform-specific enhancements
-- **Documentation Readiness**: Cross-platform guides prepared regardless of iOS completion status
+### Hackathon Deadline & Submission Contingencies
+- **KiRo Submission Flexibility:** Demo video and submission can focus on Android if iOS review or monetization encounters delays, provided minimum Shipaton requirements are still fulfilled.
+- **Shipaton iOS/Android Redundancy:** If iOS approval is delayed, ensure Android deployment is complete for at least one eligible live store listing; coordinate with Shipaton organizers regarding expected review times or access codes.
+- **Monetization Feature Scope Management:** Prioritize and deliver required in-app purchases, free trial access, and promo code redemptions before considering advanced/secondary features.
+- **Documentation & Judge Access Readiness:** Complete all cross-platform (iOS/Android) store guides, promo code distribution, and end-user testing documentation independent of store status.
 
-### Technical Risk Management
-- **Device Coverage Strategy**: Focus on iPhone 12+ and iOS 16+ for reliable compatibility
-- **Performance Monitoring**: Continuous validation of <3 sec startup and <100MB memory targets
-- **Cross-Platform Parity Validation**: Automated testing to ensure 95%+ feature consistency
-- **Apple Developer Account Preparation**: Pre-verified credentials and certificates
+### Technical & Compliance Risk Management
+- **Device Coverage & Monetization Testing:** Focus QA on iPhone 12+ and iOS 16+, but validate RevenueCat purchase flows on all supported Play/App Store device types/tiers.
+- **Performance & Compliance Monitoring:** Continuously check sub-3sec startup and <100MB memory, event logs for purchase/entitlement errors, and perform mock GDPR/CCPA audits.
+- **Automated Purchase & Parity Validation:** Implement automated and manual tests to verify RevenueCat IAP functionality and feature unlock parity (premium features, entitlements) across platforms after each deploy/build.
+- **Legal/Privacy Readiness:** Ensure all privacy and purchasing disclosures are present in-app and on store listings, and that any new privacy changes (iOS 16+, recent Play Store requirements) are addressed with final test builds.
+- **RevenueCat Dashboard Monitoring:** Actively monitor the RevenueCat dashboard and analytics for abnormal patterns or failed test purchases.
 
----
+***
 
 ## 📊 DEVELOPMENT SCHEDULE & MILESTONES
 
-### 🚀 Feature Completion Sprint (September 1 - 8)
-**Goal**: Complete backend integration and core functionality
-- **Complete challenge upload** - Full video upload pipeline
-- **API integration testing** - Comprehensive backend communication validation
-- **Performance optimization** - Memory, battery, and network efficiency
-- **Error handling completion** - Robust offline and network error scenarios
-- **Initial Play Store testing** - Closed testing track deployment
+### 🚀 Feature Completion Sprint (September 1–8)
+**Goal:** Complete backend, upload, and full challenge flow foundation  
+- Implement and validate full video upload pipeline and challenge creation/retrieval.
+- Comprehensive backend API and upload integration testing (all error paths, slow/unstable network).
+- Initial RevenueCat SDK integration POC and entitlement UI stubbed.
+- Early closed testing track deployment in Google Play Console.
 
-### � Production Polish Phase (September 8 - 12)
-**Goal**: Core app polish and performance optimization
-- **UI/UX refinement** - Animations, theming, and visual consistency
-- **Performance optimization** - Memory usage, battery efficiency, startup time
-- **Accessibility enhancements** - Screen reader support and navigation
-- **Component testing fixes** - Resolve React Native Testing Library issues
-- **Android multi-device testing** - Compatibility across Android devices
+### 🛠️ Production Polish & Pre-Monetization Phase (September 8–12)
+**Goal:** App polish, stability, and initial in-app monetization readiness  
+- UI/UX finalization (polished animations, theming, onboarding).
+- Intensive performance testing (memory, battery, startup profile, crash logs).
+- Accessibility sweep (screen reader checks, color contrasts).
+- RevenueCat integration: store/connect SDK, entitlement cache, and basic premium flows stubbed.
+- Android multi-device (and device tier) validation for challenge, UI, and IAP function.
 
-### 🏆 KiRo Submission Phase (September 13 - 15)
-**Goal**: Hackathon submission with cross-platform demonstration
-- **Demo video production** - Professional showcase of Android and iOS functionality
-- **Technical documentation** - Comprehensive setup and deployment guides
-- **Public repository finalization** - Clean, documented codebase
-- **KiRo hackathon submission** - Submit by September 15 deadline
-- **Presentation materials** - Pitch deck highlighting cross-platform excellence
+### 🏆 KiRo Submission Phase (September 13–15)
+**Goal:** Polish for hackathon cross-platform demo and submit initial Shipaton artifacts  
+- Produce and submit professional demo video highlighting all core and premium (IAP-unlocked) features, on both platforms if possible.
+- Update/readme docs for RevenueCat integration specifics, premium unlock workflow, judge/test instructions, and build/launch steps.
+- Submit to KiRo/Shipaton with working promo/free trial code flow for judges.
 
-### 📱 iOS Development Phase (September 16 - 23)
-**Goal**: Cross-platform support and iOS compatibility
-- **iOS configuration** - Expo app.json setup with iOS permissions and assets
-- **Expo Go testing** - Full functionality validation on iPhone/iPad
-- **Cross-platform validation** - Feature parity between Android and iOS
-- **EAS Build preparation** - iOS build pipeline setup
-- **iOS-specific optimizations** - Platform-specific bug fixes and performance
+### 📱 Monetization & iOS Development Phase (September 16–19)
+**Goal:** Shipaton-compliant, judge-accessible monetization and iOS parity  
+- Finalize RevenueCat SDK implementation, including purchase/restore/entitlement UIs and backend verification.
+- Implement and QA promo code and free-trial flows for Shipaton judging access (per rules).
+- Cross-platform checks for premium unlocks with RevenueCat test purchases/restores.
+- iOS: Confirm Expo Go/iPhone/iPad builds work with full camera, challenge, and IAP flows.
+- Parallel EAS/TestFlight/App Store review/test submission with all required store assets.
 
-### Monetization Phase (September 16 - 23)
-- TODO
-
-### 🚢 Shipaton Store Deployment (September 15 - 30)
-**Goal**: Production deployment to both app stores
-- **Google Play Store publication** - Live app deployment
-- **Performance monitoring** - Analytics and crash reporting
-- **Store optimization** - Listing, screenshots, and metadata
-- **Shipaton submission** - Submit by September 30 deadline
-- **Advanced features** - Authentication, monetization (if time permits)
-
----
+### 🚢 Shipaton Store Deployment (September 20–30)
+**Goal:** Production release, app store public demo, and award eligibility  
+- Submit both iOS and Android apps to respective app stores, using EAS and correct profiles.
+- Final performance monitoring and bug fixes based on live QA and crash/error analytics.
+- Store optimization: upload all final screenshots, privacy/legal text, and icon assets.
+- Provide all required marketing/demonstration artifacts (code, docs, video, store URLs, promo/free-trial access) for Shipaton evaluation.
+- Deliver authentication and any additional advanced features (progression, analytics, rewards) as bonus, time permitting.
 
 ## 🛠 TESTING STRATEGY & QUALITY ASSURANCE
 
@@ -493,6 +516,20 @@ With full end-to-end functionality confirmed, focus shifts to polish, documentat
 - **Performance Profiling**: App startup, memory usage, battery efficiency
 - **Store Compliance Testing**: App store guideline adherence
 
+#### Phase 6 Testing (Store Deployment)
+- **Production Environment Testing**: Live backend integration validation on both platforms
+- **TestFlight Beta Testing**: iOS user feedback and bug identification
+- **Load Testing**: Multiple concurrent users and high traffic scenarios on both platforms
+- **Security Testing**: Data encryption and secure storage validation
+- **Analytics Testing**: Event tracking and monitoring system validation for iOS and Android
+- **User Acceptance Testing**: Real user feedback and usability validation across platforms
+
+#### Phase 8 Testing (KiRo Submission Preparation)  
+- **Demo Validation Testing**: Ensure demo video accurately represents both platforms
+- **Documentation Testing**: Validate setup instructions work on both iOS and Android
+- **Public Repository Testing**: Verify build processes work from clean repository state
+- **Cross-Platform Showcase Testing**: Validate feature parity demonstrations
+
 #### Phase 9b Testing (iOS Development & Cross-Platform Integration)
 - **Cross-Platform Feature Parity Testing**: Comprehensive validation of 95%+ consistency
   - Side-by-side functionality comparison on Android vs iOS
@@ -506,20 +543,6 @@ With full end-to-end functionality confirmed, focus shifts to polish, documentat
   - Proactive identification of platform-specific issues
   - Early configuration validation with Expo Go
   - Cross-platform integration testing
-
-#### Phase 5c Testing (KiRo Submission Preparation)  
-- **Demo Validation Testing**: Ensure demo video accurately represents both platforms
-- **Documentation Testing**: Validate setup instructions work on both iOS and Android
-- **Public Repository Testing**: Verify build processes work from clean repository state
-- **Cross-Platform Showcase Testing**: Validate feature parity demonstrations
-
-#### Phase 6 Testing (Store Deployment)
-- **Production Environment Testing**: Live backend integration validation on both platforms
-- **TestFlight Beta Testing**: iOS user feedback and bug identification
-- **Load Testing**: Multiple concurrent users and high traffic scenarios on both platforms
-- **Security Testing**: Data encryption and secure storage validation
-- **Analytics Testing**: Event tracking and monitoring system validation for iOS and Android
-- **User Acceptance Testing**: Real user feedback and usability validation across platforms
 
 ### Testing Coverage Goals
 - **Core Functionality**: 100% (currently achieved through Redux integration)
