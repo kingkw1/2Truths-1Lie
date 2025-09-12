@@ -7,78 +7,74 @@ This plan prioritizes strengthening test coverage on critical workflows—partic
 
 ## Implementation Phases (Reordered by priority)
 
-### Phase 1: Coverage Expansion & Core Workflow Stabilization (High Priority, 2-3 weeks)
+### Phase 1: Test Infrastructure Stabilization & Coverage Expansion (High Priority, 2-3 weeks)
 
 #### Automated (Kiro-enabled) Tasks:
-- [ ] Identify coverage gaps from existing reports; generate targeted tests for recording workflows including start, pause, resume, error recovery.
-- [ ] Augment challenge creation tests: input validation, media attachment, lie selection logic, and state transitions.
-- [ ] Expand upload flow tests with success, failure, retry, and network disruption scenarios.
-- [ ] Enhance gameplay tests: video playback accuracy, guess submission, scoring logic, and UI feedback.
-- [ ] Implement redux slice tests covering recording state, upload metadata, and gameplay guessing states.
-- [ ] Automate testing of error and edge-case handling within these workflows.
+- [ ] Fix mobile Jest configuration to resolve Expo module import issues and enable test execution
+- [ ] Implement comprehensive mobile test mocking infrastructure for Expo modules
+- [ ] Expand critical workflow test coverage to >90% for recording, creation, upload, and gameplay
+- [ ] Implement Redux state management tests for all core application states
 
 #### Manual Tasks:
-- [ ] Review automated test results and refine test scenarios for uncovered scenarios.
-- [ ] Human validation of test stability and realistic scenarios (device testing, delays).
-- [ ] Code review of new tests ensuring maintainability and adherence to standards.
+- [ ] Review automated test results and refine test scenarios for uncovered scenarios
+- [ ] Human validation of test stability and realistic scenarios (device testing, delays)
+- [ ] Code review of new tests ensuring maintainability and adherence to standards
 
 ***
 
-### Phase 2: End-to-End User Journey Automation (4-6 weeks)
+### Phase 2: End-to-End Testing Framework Implementation (4-6 weeks)
 
 #### Automated:
-- [ ] Automate entire creator journey: registration, recording, challenge preview & submission, including error and edge cases.
-- [ ] Automate guesser journey: browse, video playback, guess input, scoring updates.
-- [ ] Automate social interactions: sharing, commenting, reporting flows.
-- [ ] Integrate network condition simulations: offline mode, packet loss, slow network.
-- [ ] Implement cross-platform test runs on iOS and Android devices and emulators via Detox/Cypress.
+- [ ] Set up Detox for React Native E2E testing with iOS and Android configurations
+- [ ] Implement core user journey automation for creator and guesser workflows
+- [ ] Add network condition simulation testing for offline and connectivity scenarios
 
-#### Manual:
-- [ ] Define and tune user journey steps from UX perspective.
-- [ ] Manual exploratory testing especially for edge-case network and permission flows.
+#### Manual Tasks:
+- [ ] Define and tune user journey steps from UX perspective
+- [ ] Manual exploratory testing for edge-case network and permission flows
+- [ ] Cross-platform validation on physical devices
 
 ***
 
-### Phase 3: Performance and Load Testing (3-4 weeks)
+### Phase 3: Performance and Load Testing Implementation (3-4 weeks)
 
 #### Automated:
-- [ ] Implement load tests simulating 100+ concurrent challenge creators and 500+ guessers using Artillery/JMeter.
-- [ ] Run API rate limiting stress scenarios.
-- [ ] Automate front-end performance monitoring (Lighthouse CI, RUM).
-- [ ] Build pipeline integration for performance tests with pass/fail thresholds.
+- [ ] Set up Artillery load testing infrastructure for API stress testing
+- [ ] Implement Lighthouse CI for automated frontend performance monitoring
+- [ ] Build performance testing pipeline integration with CI/CD and reporting
 
-#### Manual:
-- [ ] Monitor performance dashboards, interpret results.
-- [ ] Conduct manual stress tests on devices prone to low resources.
-- [ ] Triage and optimize based on bottlenecks identified.
+#### Manual Tasks:
+- [ ] Monitor performance dashboards and interpret results
+- [ ] Conduct manual stress tests on resource-constrained devices
+- [ ] Triage and optimize based on identified bottlenecks
 
 ***
 
-### Phase 4: Production Monitoring & Observability (2-3 weeks)
+### Phase 4: Production Monitoring & Observability Implementation (2-3 weeks)
 
 #### Automated:
-- [ ] Implement error tracking with Sentry/Bugsnag integrated in app and backend.
-- [ ] Deploy MetricsCollector to capture real-time business KPIs.
-- [ ] Automate alert rules for high-severity errors and service degradations.
-- [ ] Generate periodic reports on error trends and system health.
+- [ ] Implement Sentry error tracking and monitoring for mobile app and backend
+- [ ] Deploy business metrics collection system with real-time KPI dashboards
+- [ ] Configure production alerting system with health checks and escalation rules
 
-#### Manual:
-- [ ] Configure alert thresholds and escalation paths.
-- [ ] Regularly review logs and reports, assign triage.
+#### Manual Tasks:
+- [ ] Configure alert thresholds and escalation paths
+- [ ] Regularly review logs and reports for trend analysis
+- [ ] Establish incident response procedures
 
 ***
 
-### Phase 5: Security and Compliance Testing (4 weeks)
+### Phase 5: Security and Compliance Testing Implementation (4 weeks)
 
 #### Automated:
-- [ ] Run OWASP top 10 vulnerability scans using automated tools.
-- [ ] Automate testing of privacy compliance workflows and data handling.
-- [ ] Simulate attacks on file uploads and API endpoints for injection and auth bypass.
+- [ ] Implement OWASP ZAP automated security scanning for vulnerability detection
+- [ ] Add GDPR and COPPA privacy compliance testing workflows
+- [ ] Create security testing pipeline with CI/CD integration and reporting
 
-#### Manual:
-- [ ] Security audit and penetration tests by specialist.
-- [ ] Compliance review and documentation updates.
-- [ ] Address legal and regulatory requirements.
+#### Manual Tasks:
+- [ ] Conduct security audit and penetration testing
+- [ ] Review compliance documentation and legal requirements
+- [ ] Address regulatory requirements and security findings
 
 ***
 
@@ -86,22 +82,24 @@ This plan prioritizes strengthening test coverage on critical workflows—partic
 
 | Phase | Task Type          | Description                             | Examples                          |
 |-------|--------------------|-------------------------------------|----------------------------------|
-| 1     | Automated (Kiro)    | Writing and executing test suites    | Unit tests, integration tests    |
+| 1     | Automated (Kiro)    | Test infrastructure fixes and coverage | Jest config, mocking, unit tests |
 |       | Manual             | Scenario review, validation          | Exploratory testing, code review |
-| 2     | Automated (Kiro)    | End-to-end journey scripts            | Detox, Cypress tests              |
-|       | Manual             | UI tuning, permission edge cases     | Manual usability testing          |
-| 3     | Automated (Kiro)    | Load test definition and execution   | Artillery, Lighthouse             |
-|       | Manual             | Bottleneck analysis and optimization | Manual profiling                 |
-| 4     | Automated (Kiro)    | Monitoring setup and reporting       | Sentry integration, dashboards   |
-|       | Manual             | Alert tuning, report analysis        | Incident response                |
-| 5     | Automated (Kiro)    | Vulnerability scans                  | OWASP scans                      |
-|       | Manual             | Pen testing and compliance review    | Security audit                    |
+| 2     | Automated (Kiro)    | E2E framework setup and journey tests | Detox setup, user journey automation |
+|       | Manual             | UX validation, device testing        | Manual usability testing          |
+| 3     | Automated (Kiro)    | Load test setup and performance monitoring | Artillery, Lighthouse CI |
+|       | Manual             | Performance analysis and optimization | Manual profiling                 |
+| 4     | Automated (Kiro)    | Monitoring setup and alerting        | Sentry integration, dashboards   |
+|       | Manual             | Alert tuning, incident response      | Operational procedures           |
+| 5     | Automated (Kiro)    | Security scanning and compliance     | OWASP scans, automated validation |
+|       | Manual             | Security audit and compliance review | Penetration testing              |
 
 ***
 
 ## Prioritized Next Steps
 
-1. Launch **Phase 1 Coverage Expansion** with targeted, Kiro-driven automated tests on recording, creation, upload, and playback.
-2. Concurrently enable manual test plan reviews and initiate exploratory device testing.
-3. Upon phase 1 completion, advance to **Phase 2 E2E automation**, prioritize flows for upcoming hackathon demo.
-4. Maintain ongoing manual and automated triage to ensure test health.
+1. **Start with Phase 1**: Fix the broken mobile test infrastructure to enable reliable test execution
+2. **Focus on critical workflows**: Prioritize test coverage for recording, creation, upload, and gameplay flows
+3. **Build incrementally**: Each phase builds on the previous, ensuring stable foundation before advancing
+4. **Maintain quality gates**: Ensure all tests pass and coverage thresholds are met before proceeding
+
+**This workflow focuses on implementation tasks only. The actual execution should be done through separate task-by-task implementation.**
