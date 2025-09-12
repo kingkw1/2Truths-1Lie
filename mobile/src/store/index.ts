@@ -9,6 +9,7 @@ import challengeCreationReducer from './slices/challengeCreationSlice';
 import gameSessionReducer from './slices/gameSessionSlice';
 import playerProgressionReducer from './slices/playerProgressionSlice';
 import uiReducer from './slices/uiSlice';
+import networkReducer from './slices/networkSlice';
 
 if (__DEV__) {
   console.log('⚡ Configuring simplified mobile Redux store...');
@@ -21,6 +22,7 @@ const store = configureStore({
     gameSession: gameSessionReducer,
     playerProgression: playerProgressionReducer,
     ui: uiReducer,
+    network: networkReducer,
   },
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware({

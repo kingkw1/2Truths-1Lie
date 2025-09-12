@@ -97,9 +97,9 @@ const convertBackendChallenge = (backendChallenge: BackendChallenge): EnhancedCh
                 isMergedVideo: true,
                 segments: (mergedMetadata.segments || []).map((segment: any, index: number) => ({
                   statementIndex: segment.statement_index || index,
-                  startTime: (segment.start_time || 0) * 1000, // Convert seconds to milliseconds
-                  endTime: (segment.end_time || 0) * 1000, // Convert seconds to milliseconds
-                  duration: (segment.duration || 0) * 1000, // Convert seconds to milliseconds
+                  startTime: segment.start_time > 1000 ? Math.round(segment.start_time) : Math.round((segment.start_time || 0) * 1000), // Convert seconds to milliseconds if needed
+                  endTime: segment.end_time > 1000 ? Math.round(segment.end_time) : Math.round((segment.end_time || 0) * 1000), // Convert seconds to milliseconds if needed
+                  duration: segment.duration > 1000 ? Math.round(segment.duration) : Math.round((segment.duration || 0) * 1000), // Convert seconds to milliseconds if needed
                   url: mergedVideoUrl,
                 })),
               };
@@ -141,9 +141,9 @@ const convertBackendChallenge = (backendChallenge: BackendChallenge): EnhancedCh
           isMergedVideo: true,
           segments: (backendChallenge.merged_video_metadata.segments || []).map((segment: any, index: number) => ({
             statementIndex: segment.statement_index || index,
-            startTime: (segment.start_time || 0) * 1000,
-            endTime: (segment.end_time || 0) * 1000,
-            duration: (segment.duration || 0) * 1000,
+            startTime: segment.start_time > 1000 ? Math.round(segment.start_time) : Math.round((segment.start_time || 0) * 1000),
+            endTime: segment.end_time > 1000 ? Math.round(segment.end_time) : Math.round((segment.end_time || 0) * 1000),
+            duration: segment.duration > 1000 ? Math.round(segment.duration) : Math.round((segment.duration || 0) * 1000),
             url: mergedVideoUrl,
           })),
         };
