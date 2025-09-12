@@ -2,222 +2,110 @@
 
 ## Architecture Overview
 
-### Testing Infrastructure Stack
+### Testing Infrastructure Stack  
 ```
-┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
-│   E2E Testing   │    │  Load Testing   │    │   Monitoring    │
-│ Cypress/Playwright│   │ Artillery/JMeter│    │ Sentry/DataDog  │
-└─────────────────┘    └─────────────────┘    └─────────────────┘
-         │                       │                       │
-         ├───────────────────────┼───────────────────────┤
-         │                                               │
-┌─────────────────────────────────────────────────────────────────┐
-│                     CI/CD Pipeline Integration                   │
-│          GitHub Actions / Test Automation Workflows             │
-└─────────────────────────────────────────────────────────────────┘
-         │                                               │
-┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
-│  Backend APIs   │    │  Frontend App   │    │  Mobile Apps    │
-│   (FastAPI)     │    │    (React)      │    │ (React Native)  │
-└─────────────────┘    └─────────────────┘    └─────────────────┘
+┌─────────────────┐    ┌───────────────────┐    ┌───────────────────┐
+│   E2E Testing   │    │   Load & Stress   │    │  Monitoring &     │
+│ Cypress /       │    │   Testing         │    │  Observability    │
+│ Playwright      │    │ Artillery /       │    │  Sentry / DataDog │
+│ Detox           │    │ JMeter            │    │                   │
+└─────────────────┘    └───────────────────┘    └───────────────────┘
+         │                     │                       │
+         ├─────────────────────┼───────────────────────┤
+         │                                         
+┌───────────────────────────────────────────────────────────────┐
+│                  CI/CD Pipeline Integration                    │
+│              GitHub Actions / Jenkins / GitLab CI              │
+└───────────────────────────────────────────────────────────────┘
+         │
+┌─────────────────────┐    ┌────────────────────┐    ┌────────────────────┐
+│     Backend APIs     │    │    Frontend App     │    │     Mobile Apps     │
+│      (FastAPI)       │    │     (React)         │    │   (React Native)    │
+└─────────────────────┘    └────────────────────┘    └────────────────────┘
 ```
+
+***
 
 ## Component Design
 
-### 1. Enhanced Moderation Testing Framework
+### 1. Enhanced Moderation Testing Framework  
+Focused on robustness in content handling and abuse prevention.
 
-#### ModerationTestSuite Class
-```typescript
-interface ModerationTestCase {
-  content: string | ChallengeData;
-  expectedStatus: ModerationStatus;
-  category: 'edge-case' | 'spam' | 'malformed' | 'unicode';
-  severity: 'low' | 'medium' | 'high' | 'critical';
-}
+- **Modular test classes** support complex edge case generation, concurrency, and language/encoding validation.
 
-class ModerationTestSuite {
-  executeEdgeCaseTests(): Promise<TestResults>;
-  validateUnicodeHandling(): Promise<TestResults>;
-  testConcurrentModeration(): Promise<TestResults>;
-  generateMalformedDataTests(): Promise<TestResults>;
-}
+### 2. End-to-End Testing Framework (Expanded for Coverage)  
+
+#### User Journey Orchestrator  
+- Executes fully automated scenarios covering:  
+  - Video recording lifecycle (start, pause, retake, submit)  
+  - Challenge creation form inputs, validations, and submission  
+  - Upload flows including error recovery and network failure simulations  
+  - Play mode: video playback, guessing, scoring, and leaderboard updates  
+
+#### Mobile Testing Interface  
+- Supports a wide matrix of devices, OS versions, and network conditions  
+- Includes detailed coverage of permission workflows, error states, and UX feedback  
+- Integrates targeted tests for coverage gaps identified in core workflows  
+
+***
+
+### 3. Performance & Load Testing Framework  
+Continues to validate backend and client system under load, with expanded focus on stress testing upload capacity and gameplay concurrency.
+
+***
+
+### 4. Production Monitoring & Observability System  
+Robust error tracking, alerting, and business metric collection, with synthesis of test coverage insights and production telemetry.
+
+- **Error Tracking Service** captures detailed runtime issues with enhanced user context and session replay.
+- **Metrics Collector** monitors engagement, retention, success metrics of core flows, and quality indicators.
+
+***
+
+## Coverage Strengthening Strategy (New Section)
+
+### Objectives:
+
+- Increase test coverage to >90% in critical functionalities relating to:  
+  - Video capture and recording reliability  
+  - Challenge creation flow validation  
+  - Media upload robustness and error handling  
+  - Gameplay interaction and scoring accuracy  
+
+### Approach:
+
+- **Comprehensive unit and integration test expansion** covering uncovered edge cases and async flows.
+- **Augmented mocking strategies** for device APIs and external services to simulate failure modes.
+- **Layered test suites:**  
+  - Redux state tests covering all transitions and validation states  
+  - Component interaction tests where possible to improve UI coverage  
+  - End-to-end tests orchestrating full user scenarios with varying inputs and failures  
+- **Regular coverage audits** feeding back into backlog prioritization.
+
+***
+
+## Data Flow for Coverage Tracking
+
+```
+Coverage Analysis Tools --> Reports & Dashboards
+         ↑
+Test Execution (Unit / Integration / E2E)
+         ↑
+Test Code & Automation Suites
 ```
 
-#### Test Data Factory
-```typescript
-class ModerationTestDataFactory {
-  generateSophisticatedSpam(): ModerationTestCase[];
-  generateMalformedChallenges(): ModerationTestCase[];
-  generateUnicodeContent(): ModerationTestCase[];
-  generateConcurrentScenarios(): ModerationTestCase[];
-}
-```
+***
 
-### 2. End-to-End Testing Framework
+## Security, Compliance, and Maintainability (Retained As-Is)
 
-#### User Journey Orchestrator
-```typescript
-interface UserJourney {
-  name: string;
-  steps: JourneyStep[];
-  expectedOutcome: JourneyOutcome;
-  platforms: Platform[];
-}
+- Isolation of test environments, data anonymization
+- Compliance with GDPR, COPPA, and security standards
+- Continuous maintenance of tests and refactoring for test health
 
-class E2ETestOrchestrator {
-  executeChallengeCreatorJourney(): Promise<JourneyResult>;
-  executeChallengeGuesserJourney(): Promise<JourneyResult>;
-  executeSocialInteractionJourney(): Promise<JourneyResult>;
-  runCrossPlatformTests(): Promise<PlatformResults>;
-}
-```
+***
 
-#### Mobile Testing Interface
-```typescript
-interface MobileTestConfig {
-  devices: DeviceSpec[];
-  networkConditions: NetworkCondition[];
-  permissions: PermissionTest[];
-}
+## Next Steps
 
-class MobileTestRunner {
-  testCameraRecording(device: DeviceSpec): Promise<TestResult>;
-  testNetworkConditions(condition: NetworkCondition): Promise<TestResult>;
-  testPermissionWorkflows(permission: PermissionTest): Promise<TestResult>;
-  validatePerformanceMetrics(device: DeviceSpec): Promise<PerformanceMetrics>;
-}
-```
-
-### 3. Performance Testing Framework
-
-#### Load Test Manager
-```typescript
-interface LoadTestScenario {
-  name: string;
-  virtualUsers: number;
-  duration: Duration;
-  rampUpTime: Duration;
-  targetEndpoints: ApiEndpoint[];
-}
-
-class LoadTestManager {
-  executeChallengeSubmissionLoad(): Promise<LoadTestResults>;
-  executeGuessingLoad(): Promise<LoadTestResults>;
-  executeRateLimitStressTest(): Promise<LoadTestResults>;
-  validateDatabasePerformance(): Promise<DbPerformanceMetrics>;
-}
-```
-
-#### Performance Monitor
-```typescript
-interface PerformanceThresholds {
-  responseTime: number; // ms
-  throughput: number;   // requests/second
-  errorRate: number;    // percentage
-  cpuUsage: number;     // percentage
-  memoryUsage: number;  // MB
-}
-
-class PerformanceMonitor {
-  collectMetrics(): Promise<PerformanceMetrics>;
-  validateThresholds(metrics: PerformanceMetrics): ValidationResult;
-  generatePerformanceReport(): Promise<PerformanceReport>;
-}
-```
-
-### 4. Production Monitoring System
-
-#### Error Tracking Service
-```typescript
-interface ErrorEvent {
-  timestamp: Date;
-  severity: 'info' | 'warning' | 'error' | 'critical';
-  message: string;
-  stackTrace: string;
-  userContext: UserContext;
-  sessionReplay?: SessionReplayData;
-}
-
-class ErrorTrackingService {
-  captureError(error: ErrorEvent): void;
-  triggerAlert(error: ErrorEvent): Promise<void>;
-  generateErrorReport(): Promise<ErrorReport>;
-  correlateUserSessions(userId: string): Promise<SessionData[]>;
-}
-```
-
-#### Business Metrics Collector
-```typescript
-interface BusinessMetrics {
-  challengeCreationRate: number;
-  challengeCompletionRate: number;
-  userRetentionRate: number;
-  averageSessionDuration: number;
-  contentModerationEffectiveness: number;
-}
-
-class MetricsCollector {
-  collectEngagementMetrics(): Promise<EngagementMetrics>;
-  trackFunnelConversions(): Promise<FunnelMetrics>;
-  measureContentQuality(): Promise<QualityMetrics>;
-  generateDashboard(): Promise<DashboardData>;
-}
-```
-
-## Data Flow Design
-
-### Test Execution Pipeline
-```
-Test Trigger → Test Discovery → Environment Setup → Test Execution → Results Collection → Report Generation → Cleanup
-     ↓              ↓               ↓                ↓                  ↓                  ↓             ↓
-  Schedule      Test Registry    Docker/K8s      Parallel Exec      Metrics Store      Dashboard      Resource Cleanup
-```
-
-### Monitoring Data Pipeline  
-```
-Application Events → Event Aggregation → Metrics Processing → Alerting Rules → Dashboard Display
-       ↓                    ↓                   ↓                ↓               ↓
-   Log Streams         Time Series DB      Alert Manager     Notification      Real-time UI
-```
-
-## Security Considerations
-
-### Test Environment Security
-- Isolated test environments with production-like data (anonymized)
-- Secure credential management for test automation
-- Test data cleanup procedures to prevent data leaks
-- Access controls for test results and monitoring data
-
-### Compliance Testing
-- GDPR compliance validation for user data handling
-- COPPA compliance for potential underage users  
-- Security penetration testing with ethical hacking practices
-- Data retention policy enforcement testing
-
-## Scalability Design
-
-### Horizontal Scaling
-- Containerized test execution for parallel scaling
-- Load balancer configuration for performance testing
-- Database sharding considerations for high-volume testing
-- CDN testing for global content delivery
-
-### Vertical Scaling  
-- Resource allocation optimization for test execution
-- Memory management for large test suites
-- CPU optimization for concurrent test execution
-- Storage optimization for test artifacts and logs
-
-## Integration Points
-
-### CI/CD Integration
-- GitHub Actions workflow integration
-- Quality gate enforcement in deployment pipeline  
-- Automated rollback triggers based on quality metrics
-- Staging environment promotion criteria
-
-### Third-Party Integrations
-- Sentry/Rollbar for error tracking
-- DataDog/New Relic for performance monitoring
-- Cypress Cloud for E2E test orchestration
-- Artillery Cloud for distributed load testing
+- Integrate coverage goals and detailed test scope into CI pipeline quality gates.
+- Leverage test results for adaptive test expansion.
+- Prioritize backlog tickets for coverage improvements aligned with demo and production risk areas.

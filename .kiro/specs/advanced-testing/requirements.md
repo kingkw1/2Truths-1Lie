@@ -1,106 +1,100 @@
 # Advanced Testing & Quality Assurance
 
-## Overview
-This specification defines comprehensive testing and quality assurance measures to be implemented after core gameplay functionality is complete and mobile-deployed. This builds upon existing solid testing foundation to create enterprise-grade quality assurance.
+## Overview  
+This specification defines comprehensive testing and quality assurance measures to be implemented following the completion of core gameplay functionality and mobile deployment. It builds upon the existing solid testing foundation to establish enterprise-grade quality assurance, with an expanded focus on increasing test coverage on critical workflows essential for user experience and hackathon demos.
 
 ## Core Requirements
 
-### REQ-1: Enhanced Content Moderation Testing
-**Priority: High**  
-**Description**: Comprehensive testing of content moderation pipeline edge cases and sophisticated abuse scenarios  
-**Acceptance Criteria**:
-- All moderation edge cases handle malformed data gracefully
-- Unicode and multilingual content processed correctly  
-- Sophisticated spam patterns detected with >95% accuracy
-- Concurrent moderation scenarios resolved without conflicts
-- False positive rate <0.1% for legitimate content
+### REQ-1: Enhanced Content Moderation Testing  
+**Priority:** High  
+**Description:** Comprehensive testing of the moderation pipeline, ensuring robustness against diverse content inputs and abuse patterns.  
+**Acceptance Criteria:**  
+- All moderation edge cases handle malformed and adversarial data gracefully.  
+- Unicode and multilingual content correctly processed.  
+- Detection of sophisticated spam patterns with over 95% accuracy.  
+- Concurrent moderation scenarios resolved without conflicts.  
+- False positive moderation rate below 0.1% for legitimate content.
 
 ### REQ-2: End-to-End User Journey Automation  
-**Priority: High**  
-**Description**: Complete automation of critical user workflows from challenge creation to scoring  
-**Acceptance Criteria**:
-- Challenge creator journey fully automated (registration → recording → publishing)
-- Challenge guesser journey fully automated (browse → guess → scoring → leaderboard)
-- Social interaction flows automated (sharing, inviting, commenting, reporting)
-- Cross-platform mobile testing on iOS and Android devices
-- Network condition testing (3G, 4G, WiFi, offline scenarios)
+**Priority:** High  
+**Description:** Complete automation of key user workflows to validate functional correctness and usability.  
+**Acceptance Criteria:**  
+- Automated testing of the full challenge creator journey: registration, recording, submission, publishing.  
+- Automated testing of the guesser’s journey: discovery, video playback, guess selection, scoring, and leaderboard updates.  
+- Automation of social interaction flows: challenge sharing, invitations, commenting, reporting.  
+- Cross-platform mobile testing coverage on iOS and Android devices across supported OS versions.  
+- Network condition simulations: offline, slow network, intermittent connectivity scenarios included.
 
-### REQ-3: Performance & Load Testing
-**Priority: Medium**  
-**Description**: System performance validation under realistic and stress load conditions  
-**Acceptance Criteria**:
-- API handles 50 concurrent challenge creators without degradation
-- System supports 500 concurrent users guessing on challenges  
-- Rate limiting blocks 100% of abuse attempts under load
-- Video upload stress testing completes without data corruption
-- Frontend performance maintains >90 Lighthouse score under load
+### **REQ-2a: Expanded Critical Workflow Test Coverage**  
+**Priority:** High  
+**Description:** Strengthen test coverage specifically on the critical workflows involved in challenge creation, video recording, upload, and gameplay to ensure robustness in hackathon demo scenarios and real-world usage.  
+**Acceptance Criteria:**  
+- Test coverage exceeds 90% on all components involved in recording, editing, and submitting video statements.  
+- Comprehensive tests cover success, failure, and edge cases in video upload and processing.  
+- Coverage extends to user interactions during gameplay, including video playback, guessing accuracy, and result display.  
+- Recovery behaviors tested for error handling during media capture and upload failures.  
+- Inclusion of tests validating Redux state transitions and UI feedback related to these workflows.  
 
-### REQ-4: Production Monitoring & Observability
-**Priority: Medium**  
-**Description**: Comprehensive error tracking, alerting, and business metrics collection  
-**Acceptance Criteria**:
-- Error tracking captures <0.1% unhandled error rate
-- Critical errors trigger alerts within 1 minute
-- Real-time dashboard displays key business metrics
-- User session replay available for debugging reported issues
-- Automated weekly quality reports generated
+### REQ-3: Performance & Load Testing  
+**Priority:** Medium  
+**Description:** Validate system stability and responsiveness under anticipated and stress loads.  
+**Acceptance Criteria:**  
+- Backend API sustains 50 simultaneous challenge creators without performance degradation.  
+- System supports 500 concurrent guessers with smooth experience.  
+- Effective rate limiting against abuse scenarios under load.  
+- Video upload process handled reliably during high traffic.  
+- Frontend maintains a Lighthouse score above 90 under simulated load.
 
-### REQ-5: Security & Compliance Testing
-**Priority: Low**  
-**Description**: Security penetration testing and data privacy compliance validation  
-**Acceptance Criteria**:
-- Zero critical or high-severity vulnerabilities found
-- OWASP Top 10 compliance validated
-- User data properly encrypted and GDPR-compliant
-- File upload security prevents malicious media execution
-- Session management and authentication cannot be bypassed
+### REQ-4: Production Monitoring & Observability  
+**Priority:** Medium  
+**Description:** Implement and verify monitoring for error tracking and business health metrics.  
+**Acceptance Criteria:**  
+- Real-time capture of errors, with a maximum of 0.1% unhandled errors in production.  
+- Critical errors trigger alerts within one minute for rapid response.  
+- Dashboard displays key business metrics, including challenge creation and engagement rates.  
+- User session replay functionality available for enhanced debugging.  
+- Automated generation and distribution of weekly quality and performance reports.
+
+### REQ-5: Security & Compliance  
+**Priority:** Low  
+**Description:** Ensure platform security and regulatory compliance through rigorous testing.  
+**Acceptance Criteria:**  
+- No critical or high-severity vulnerabilities discovered in penetration tests.  
+- Full OWASP Top 10 compliance.  
+- Cookies, tokens, and session management adhere to industry standards.  
+- Privacy compliance guaranteed (GDPR, COPPA).  
+- Prevention of malicious media upload exploits.
 
 ## Implementation Dependencies
 
-### Prerequisites
-- Core gameplay flow (Tasks 6-8) completed and mobile-deployed
-- Basic backend API testing in place (already complete)
-- Initial user feedback collected from MVP deployment
-- Production environment configured and operational
+### Prerequisites  
+- Core gameplay flows fully developed and deployed.  
+- Baseline backend API tests established.  
+- Initial user feedback incorporated from MVP.  
+- Production environment operational.
 
 ### Technical Dependencies  
-- Cypress or Playwright for E2E testing
-- Artillery or JMeter for load testing
-- Sentry or Rollbar for error tracking
-- Performance monitoring service (New Relic, DataDog, or custom)
-- Mobile testing framework (Detox for React Native or Appium)
+- Automated E2E tools: Cypress, Playwright, Detox.  
+- Load and stress testing: Artillery, JMeter.  
+- Monitoring platforms: Sentry, DataDog (or equivalent).  
+- Source control and CI/CD integration with GitHub Actions or similar.
 
 ## Success Metrics
 
-### Quality Targets
-- **System Uptime**: 99.9%+ availability
-- **User Satisfaction**: 4.5+ star rating average
-- **Bug Escape Rate**: <1 critical bug per month in production  
-- **Performance**: <3 second loading time 95th percentile
-- **Security**: Zero successful attacks on user data
+### Quality and Coverage Targets  
+- Automated test coverage increased across critical workflows to >= 90%.  
+- End-to-end test suite executes within 5 minutes reliably.  
+- Achieve 100% automation of core user journey tests relevant to demos and submissions.  
+- Maintain production error rate below 0.1%.  
+- User satisfaction metrics indicate minimal workflow discovered bugs post-release.
 
-### Coverage Targets
-- **Unit Test Coverage**: 85%+ for critical business logic
-- **E2E Test Coverage**: 100% of critical user journeys
-- **API Test Coverage**: 100% of public API endpoints
-- **Mobile Test Coverage**: 95%+ of target device/OS combinations
+### Non-Functional Targets  
+- Test suite flakiness remains below 1%.  
+- CI/CD pipelines enforce coverage thresholds and report regressions.  
+- Responsive monitoring and alerting infrastructure engaged for production.
 
-## Non-Functional Requirements
-
-### Performance Requirements
-- E2E test suite completes in <5 minutes
-- Load tests simulate 5x expected traffic without system failure
-- Moderation pipeline processes 100 submissions/second
-- Mobile app startup time <3 seconds on mid-range devices
-
-### Reliability Requirements  
-- Test suite has <1% flaky test failure rate
-- Automated tests run successfully in CI/CD pipeline 95%+ of time
-- Production monitoring detects issues before user impact
-- Rollback procedures tested and validated monthly
-
-### Maintainability Requirements
-- Test code follows same quality standards as production code
-- Test documentation updated with each new test implementation
-- Regular test debt assessment and cleanup performed
-- Test framework upgrades planned and executed quarterly
+## Next Steps  
+- Define detailed test scenarios addressing both normal and edge cases covering recording, creation, and gameplay workflows.  
+- Prioritize automated test implementation in the current sprint aligned with demo preparation.  
+- Continuously analyze coverage reports, incrementing tests to close gaps.  
+- Leverage Kiro specs to manage requirements, design, and tasks for coverage enhancement.
