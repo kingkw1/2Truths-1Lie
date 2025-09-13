@@ -114,3 +114,5 @@ GoogleService-Info.plist
 *.rar
 *.7z
 *.bak
+
+*.db
