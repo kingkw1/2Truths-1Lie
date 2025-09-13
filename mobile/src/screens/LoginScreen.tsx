@@ -138,7 +138,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
           <View style={styles.header}>
             {onBack && (
               <TouchableOpacity onPress={onBack} style={styles.backButton}>
-                <Text style={styles.backButtonText}>← Back</Text>
+                <Text style={styles.backButtonText}>← Continue as Guest</Text>
               </TouchableOpacity>
             )}
             <Text style={styles.title}>Sign In</Text>

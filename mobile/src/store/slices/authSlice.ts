@@ -184,6 +184,21 @@ const authSlice = createSlice({
       state.isAuthenticated = false;
       state.lastAuthAction = null;
     },
+    exitAuthFlow: (state) => {
+      console.log('🏠 exitAuthFlow action called - returning to main app');
+      console.log('🔍 Auth state check:', {
+        hasUser: !!state.user,
+        isGuest: state.isGuest,
+        tokenValidated: state.tokenValidated
+      });
+      // Return to main app if user has a valid session (guest or authenticated)
+      if (state.user) {
+        console.log('✅ Setting isAuthenticated to true');
+        state.isAuthenticated = true;
+      } else {
+        console.log('❌ No user found, cannot return to main app');
+      }
+    },
   },
   extraReducers: (builder) => {
     // Initialize auth
@@ -334,6 +349,7 @@ export const {
   syncAuthState,
   setPermissions,
   triggerAuthFlow,
+  exitAuthFlow,
 } = authSlice.actions;
 
 // Selectors

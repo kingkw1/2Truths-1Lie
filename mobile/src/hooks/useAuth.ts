@@ -23,6 +23,7 @@ export interface AuthActions {
   refreshAuth: () => Promise<void>;
   checkAuthStatus: () => AuthState;
   triggerAuthFlow: () => void;
+  exitAuthFlow: () => void;
 }
 
 export const useAuth = (): AuthState & AuthActions => {
@@ -83,6 +84,7 @@ export const useAuth = (): AuthState & AuthActions => {
     refreshAuth,
     checkAuthStatus,
     triggerAuthFlow: reduxAuth.triggerAuthFlow,
+    exitAuthFlow: reduxAuth.exitAuthFlow,
   };
 };
 

@@ -161,7 +161,7 @@ export const SignupScreen: React.FC<SignupScreenProps> = ({
           <View style={styles.header}>
             {onBack && (
               <TouchableOpacity onPress={onBack} style={styles.backButton}>
-                <Text style={styles.backButtonText}>← Back</Text>
+                <Text style={styles.backButtonText}>← Continue as Guest</Text>
               </TouchableOpacity>
             )}
             <Text style={styles.title}>Create Account</Text>

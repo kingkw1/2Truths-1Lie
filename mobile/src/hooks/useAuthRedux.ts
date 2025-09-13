@@ -16,6 +16,7 @@ import {
   clearAuthError,
   syncAuthState,
   triggerAuthFlow,
+  exitAuthFlow,
   selectAuth,
   selectUser,
   selectIsAuthenticated,
@@ -48,6 +49,7 @@ export interface UseAuthReduxReturn {
   clearError: () => void;
   syncState: () => void;
   triggerAuthFlow: () => void;
+  exitAuthFlow: () => void;
   
   // Utility functions
   hasPermission: (permission: string) => boolean;
@@ -113,6 +115,10 @@ export const useAuthRedux = (): UseAuthReduxReturn => {
     dispatch(triggerAuthFlow());
   }, [dispatch]);
 
+  const exitAuthFlowAction = useCallback(() => {
+    dispatch(exitAuthFlow());
+  }, [dispatch]);
+
   // Utility functions
   const hasPermission = useCallback((permission: string): boolean => {
     return permissions.includes(permission) || permissions.includes('admin');
@@ -160,6 +166,7 @@ export const useAuthRedux = (): UseAuthReduxReturn => {
     clearError,
     syncState,
     triggerAuthFlow: triggerAuthFlowAction,
+    exitAuthFlow: exitAuthFlowAction,
     
     // Utility functions
     hasPermission,

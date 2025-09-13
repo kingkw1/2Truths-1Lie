@@ -15,7 +15,7 @@ import { Alert } from 'react-native';
 const Stack = createStackNavigator<AuthStackParamList>();
 
 export const AuthNavigator: React.FC = () => {
-  const { refreshAuth, user, isGuest } = useAuth();
+  const { refreshAuth, user, isGuest, exitAuthFlow } = useAuth();
   const [hasShownGuestMigrationPrompt, setHasShownGuestMigrationPrompt] = useState(false);
 
   // Enhanced auth success handler with guest user migration
@@ -34,6 +34,13 @@ export const AuthNavigator: React.FC = () => {
     
     // Refresh auth state to trigger navigation update
     await refreshAuth();
+  };
+
+  // Handler to go back to main app as guest
+  const handleBackToMainApp = () => {
+    console.log('📱 Returning to main app as guest');
+    // Exit the auth flow and return to main app
+    exitAuthFlow();
   };
 
   // Enhanced navigation handlers with better UX
@@ -80,6 +87,7 @@ export const AuthNavigator: React.FC = () => {
           <LoginScreen
             onLoginSuccess={handleAuthSuccess}
             onNavigateToSignup={() => handleNavigateToSignup(navigation)}
+            onBack={handleBackToMainApp}
             initialEmail={route.params?.email}
             guestMigration={route.params?.guestMigration || isGuest}
             returnTo={route.params?.returnTo}
@@ -98,7 +106,7 @@ export const AuthNavigator: React.FC = () => {
           <SignupScreen
             onSignupSuccess={handleAuthSuccess}
             onNavigateToLogin={() => handleNavigateToLogin(navigation)}
-            onBack={() => handleBackToLogin(navigation)}
+            onBack={handleBackToMainApp}
             initialEmail={route.params?.email}
             guestMigration={route.params?.guestMigration || isGuest}
             returnTo={route.params?.returnTo}
