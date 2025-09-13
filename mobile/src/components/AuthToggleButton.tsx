@@ -158,24 +158,33 @@ export const AuthToggleButton: React.FC<AuthToggleButtonProps> = ({
     }
   }, [user?.email, hasLoggedInThisSession]);
 
-  // Determine button state: show "Sign Out" if user has logged in this session
-  const showSignOut = hasLoggedInThisSession;
+  // Determine button state: show "Sign Out" if user has logged in this session AND is not a guest
+  const showSignOut = hasLoggedInThisSession && !isGuest;
   const showSignIn = !showSignOut;
+  
+  console.log('📱 AuthToggleButton: Button state:', { 
+    hasLoggedInThisSession, 
+    isGuest, 
+    showSignOut, 
+    showSignIn,
+    userEmail: user?.email 
+  });
 
   const handlePress = async () => {
     try {
       if (showSignOut) {
-        // User wants to sign out - clear session and use onAuthAction (which should be logout)
+        // User wants to sign out - clear session and logout directly
+        console.log('📱 AuthToggleButton: Handling sign out...');
         setHasLoggedInThisSession(false);
         await AsyncStorage.removeItem('hasLoggedInThisSession');
         await AsyncStorage.removeItem('lastLoginEmail');
         await AsyncStorage.removeItem('lastLoginTime');
-        // Call the onAuthAction callback which should handle logout and navigation
-        onAuthAction(); 
+        // Use logout from useAuth directly instead of onAuthAction
+        await logout();
       } else {
-        // User wants to sign in - DON'T call onAuthAction, just use triggerAuthFlow
+        // User wants to sign in - use triggerAuthFlow
+        console.log('📱 AuthToggleButton: Handling sign in...');
         triggerAuthFlow();
-        // Don't call onAuthAction() here since it will trigger logout
       }
     } catch (error) {
       console.error('📱 AuthToggleButton: Error in handlePress:', error);
