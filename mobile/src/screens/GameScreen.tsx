@@ -183,8 +183,11 @@ export const GameScreen: React.FC<GameScreenProps> = ({
   onBack,
   useFullscreenInterface = true, // Default to new interface
 }) => {
+  console.log('🏠🏠🏠 GAMESCREEN: Component rendered! 🏠🏠🏠');
+  console.log('🏠 GAMESCREEN: hideCreateButton =', hideCreateButton);
+  
   const dispatch = useAppDispatch();
-  const { isAuthenticated, isGuest } = useAuth();
+  const { isAuthenticated, isGuest, triggerAuthFlow } = useAuth();
   const {
     availableChallenges,
     selectedChallenge,
@@ -203,6 +206,11 @@ export const GameScreen: React.FC<GameScreenProps> = ({
   const [showVideoPlayer, setShowVideoPlayer] = useState(false);
   const [isRetrying, setIsRetrying] = useState(false);
   const gameplayScrollRef = useRef<ScrollView>(null);
+
+  // Debug logging for challenge creation modal state
+  useEffect(() => {
+    console.log('🎯 MODAL_STATE: showChallengeCreation changed to:', showChallengeCreation);
+  }, [showChallengeCreation]);
 
   useEffect(() => {
     loadChallengesFromAPI();
@@ -345,10 +353,16 @@ export const GameScreen: React.FC<GameScreenProps> = ({
   };
 
   const handleCreateChallenge = () => {
+    console.log('🚨🚨🚨 CREATE_CHALLENGE: BUTTON CLICKED! 🚨🚨🚨');
+    console.log('🚨🚨🚨 This should definitely appear in logs if button is working 🚨🚨🚨');
+    console.log('🎯 CREATE_CHALLENGE: Auth state:', { isAuthenticated, isGuest });
+    console.log('🎯 CREATE_CHALLENGE: Should block?', (!isAuthenticated || isGuest));
+    
     if (!isAuthenticated || isGuest) {
+      console.log('🚨 CREATE_CHALLENGE: Blocking user - showing auth popup');
       Alert.alert(
         'Sign In Required',
-        'You need to sign in with an account to create challenges. Guest users can play challenges but cannot create them.',
+        'Please sign in to create a challenge',
         [
           {
             text: 'Cancel',
@@ -358,9 +372,8 @@ export const GameScreen: React.FC<GameScreenProps> = ({
             text: 'Sign In',
             style: 'default',
             onPress: () => {
-              // You can navigate to auth screen here if needed
-              // For now, just inform the user
-              console.log('User wants to sign in to create challenges');
+              console.log('Navigating to sign in page...');
+              triggerAuthFlow();
             },
           },
         ]
@@ -368,6 +381,7 @@ export const GameScreen: React.FC<GameScreenProps> = ({
       return;
     }
     
+    console.log('✅ CREATE_CHALLENGE: User authenticated - proceeding to creation');
     // User is authenticated, proceed with challenge creation
     setShowChallengeCreation(true);
   };

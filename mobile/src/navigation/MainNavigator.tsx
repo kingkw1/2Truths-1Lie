@@ -20,7 +20,7 @@ interface MainNavigatorProps {
 }
 
 const HomeScreen: React.FC<{ navigation: any; onLogout: () => void }> = ({ navigation, onLogout }) => {
-  const { user, isAuthenticated, isGuest } = useAuth();
+  const { user, isAuthenticated, isGuest, triggerAuthFlow } = useAuth();
 
   return (
     <SafeAreaView style={styles.container}>
@@ -60,7 +60,36 @@ const HomeScreen: React.FC<{ navigation: any; onLogout: () => void }> = ({ navig
         
         <TouchableOpacity 
           style={[styles.menuButton, styles.secondaryButton]} 
-          onPress={() => navigation.navigate('Create')}
+          onPress={() => {
+            console.log('🎯 CREATE_BUTTON: Create Challenge button pressed in HomeScreen');
+            console.log('🎯 CREATE_BUTTON: Auth state:', { isAuthenticated, isGuest });
+            
+            if (!isAuthenticated || isGuest) {
+              console.log('🚨 CREATE_BUTTON: Blocking guest user - showing auth popup');
+              Alert.alert(
+                'Sign In Required',
+                'Please sign in to create a challenge',
+                [
+                  {
+                    text: 'Cancel',
+                    style: 'cancel',
+                  },
+                  {
+                    text: 'Sign In',
+                    style: 'default',
+                    onPress: () => {
+                      console.log('🎯 CREATE_BUTTON: Navigating to auth...');
+                      triggerAuthFlow();
+                    },
+                  },
+                ]
+              );
+              return;
+            }
+            
+            console.log('✅ CREATE_BUTTON: User authenticated - navigating to Create');
+            navigation.navigate('Create');
+          }}
         >
           <Text style={styles.menuButtonIcon}>🎬</Text>
           <Text style={styles.menuButtonText}>Create Challenge</Text>
