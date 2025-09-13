@@ -1,24 +1,38 @@
 # Mobile User Authentication - MVP Requirements
 
-## User Story 1: Simple Email/Password Signup and Login
+## User Story: Account Creation
 
-WHEN a user launches the app  
-THE SYSTEM SHALL allow users to create an account using a unique email and password  
-AND allow users to login with email and password  
-AND provide clear error feedback for invalid credentials or duplicate emails  
-AND assign each user a unique ID tied to their account
+WHEN a new user provides a unique email and a valid password to the signup screen
+THE SYSTEM SHALL create a new user account tied to that email
 
-## User Story 2: Token-Based Session Management
+WHEN a new user provides an email that already exists in the system
+THE SYSTEM SHALL display a clear error message indicating the email is already in use
 
-THE SYSTEM SHALL use JWT tokens for session authentication  
-AND securely store JWT tokens on the client side  
-AND require valid token for access to protected API endpoints  
-AND support logout by clearing client-side tokens
+## User Story: User Login
 
-## Non-Goals for MVP (To Be Implemented Later)
+WHEN a registered user provides their correct email and password to the login screen
+THE SYSTEM SHALL authenticate the user successfully
 
-- Biometric login (Touch ID, Face ID, fingerprint)  
-- Password reset or recovery flows  
-- Email verification or confirmation flows  
-- Profile management or editing  
-- Advanced security mechanisms like device detect, rate limiting
+WHEN a user provides an incorrect email or password
+THE SYSTEM SHALL display a clear error message for invalid credentials
+
+## User Story: Session Management
+
+WHEN a user successfully signs up or logs in
+THE SYSTEM SHALL issue a JWT token for session authentication
+AND the client application SHALL securely store this token
+
+WHEN a user makes a request to a protected API endpoint with a valid JWT token
+THE SYSTEM SHALL grant access
+
+WHEN a user makes a request to a protected API endpoint with an invalid or missing JWT token
+THE SYSTEM SHALL deny access with an unauthorized error
+
+WHEN a user initiates a logout action
+THE SYSTEM SHALL clear the stored JWT token from the client device
+
+## Non-Goals for MVP
+
+- Biometric login
+- Password reset or recovery flows
+- Email verification flows
