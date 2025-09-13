@@ -644,7 +644,7 @@ export const GameScreen: React.FC<GameScreenProps> = ({
         <SafeAreaView style={styles.container}>
           <AuthStatusBanner
             showForGuests={true}
-            guestMessage="Sign in to save your game progress and compete with friends"
+            guestMessage="Sign in to save your game progress"
             onAuthAction={() => {
               // Navigate back to trigger auth flow
               if (onBack) onBack();

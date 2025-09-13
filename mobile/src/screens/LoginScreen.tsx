@@ -144,7 +144,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
             <Text style={styles.title}>Sign In</Text>
             <Text style={styles.subtitle}>
               {guestMigration 
-                ? 'Sign in to save your progress and continue playing'
+                ? 'Sign in to continue with your account'
                 : 'Welcome back! Sign in to your account'
               }
             </Text>
@@ -226,17 +226,6 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
               loadingText="Signing In..."
               style={styles.signInButton}
             />
-
-            {/* Sign Up Link */}
-            <View style={styles.signUpContainer}>
-              <Text style={styles.signUpText}>Don't have an account? </Text>
-              <TouchableOpacity
-                onPress={onNavigateToSignup}
-                disabled={isLoading}
-              >
-                <Text style={styles.signUpLink}>Sign up</Text>
-              </TouchableOpacity>
-            </View>
           </View>
         </ScrollView>
       </KeyboardAvoidingView>

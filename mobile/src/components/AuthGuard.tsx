@@ -56,23 +56,8 @@ export const AuthGuard: React.FC<AuthGuardProps> = ({
     );
   }
 
-  // Show guest prompt if user is guest and prompt is enabled
-  if (showGuestPrompt && isGuest && onAuthPrompt) {
-    return (
-      <View style={styles.container}>
-        {children}
-        <View style={styles.guestPromptContainer}>
-          <Text style={styles.guestPromptText}>
-            Sign in to save your progress and compete with friends
-          </Text>
-          <TouchableOpacity style={styles.guestPromptButton} onPress={onAuthPrompt}>
-            <Text style={styles.guestPromptButtonText}>Sign In</Text>
-          </TouchableOpacity>
-        </View>
-      </View>
-    );
-  }
-
+  // Guest prompt is now handled by the top toggle button, so we don't show bottom prompt
+  // This prevents duplicate sign-in buttons and cleans up the UI
   return <>{children}</>;
 };
 

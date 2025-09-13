@@ -168,7 +168,7 @@ export const SignupScreen: React.FC<SignupScreenProps> = ({
             <Text style={styles.subtitle}>
               {guestMigration 
                 ? 'Create an account to save your progress and unlock all features'
-                : 'Sign up to save your progress and compete with friends'
+                : 'Create your account to get started'
               }
             </Text>
             {guestMigration && (
