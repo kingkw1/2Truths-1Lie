@@ -28,6 +28,7 @@ import {
   pauseMediaRecording,
   resumeMediaRecording,
   updateRecordingDuration,
+  resetMediaState,
 } from '../store/slices/challengeCreationSlice';
 import { useEnhancedErrorHandling } from '../hooks/useEnhancedErrorHandling';
 import { CameraErrorHandler } from './CameraErrorHandler';
@@ -73,7 +74,7 @@ export const EnhancedMobileCameraRecorder: React.FC<EnhancedMobileCameraRecorder
   onRecordingComplete,
   onError,
   onCancel,
-  maxDuration = 60,
+  maxDuration = 30,
   minDuration = 1,
   quality = 'medium',
 }) => {
@@ -521,6 +522,11 @@ export const EnhancedMobileCameraRecorder: React.FC<EnhancedMobileCameraRecorder
         throw new Error(`Recording too short. Minimum duration is ${minDuration} seconds.`);
       }
 
+      // Check maximum duration (30 seconds)
+      if (recordingDuration > 30) {
+        throw new Error('DURATION_TOO_LONG');
+      }
+
       // All validation passed
       onRecordingComplete(uri);
       
@@ -528,6 +534,27 @@ export const EnhancedMobileCameraRecorder: React.FC<EnhancedMobileCameraRecorder
 
     } catch (error: any) {
       console.error('🚨 ENHANCED_CAMERA: Failed to process recording:', error);
+      
+      // Special handling for duration exceeded error
+      if (error.message === 'DURATION_TOO_LONG') {
+        Alert.alert(
+          '⏱️ Recording Too Long',
+          'Please keep your videos under 30 seconds to avoid large file uploads. Please record this statement again.',
+          [
+            { 
+              text: 'Record Again', 
+              style: 'default',
+              onPress: () => {
+                // Reset recording state to allow re-recording
+                dispatch(resetMediaState({ statementIndex }));
+                // Don't call onRecordingComplete since we want to stay on this statement
+              }
+            }
+          ],
+          { cancelable: false }
+        );
+        return;
+      }
       
       await handleEnhancedError(error, 'process_recording', {
         operation: 'recording',

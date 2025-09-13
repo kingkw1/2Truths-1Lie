@@ -27,6 +27,7 @@ import {
   setMediaRecordingError,
   setStatementMedia,
   updateRecordingDuration,
+  resetMediaState,
 } from '../store/slices/challengeCreationSlice';
 import { mobileMediaIntegration } from '../services/mobileMediaIntegration';
 import { MediaCapture } from '../types';
@@ -431,7 +432,7 @@ export const MobileCameraRecorder: React.FC<MobileCameraRecorderProps> = ({
       // Start actual camera recording
       const recordingOptions = {
         quality: '720p' as const,
-        maxDuration: 60, // 60 seconds max
+        maxDuration: 30, // 30 seconds max to prevent large uploads
         maxFileSize: 50 * 1024 * 1024, // 50MB max
         // Force portrait orientation to match app orientation
         orientation: 'portrait' as const,
@@ -516,10 +517,15 @@ export const MobileCameraRecorder: React.FC<MobileCameraRecorderProps> = ({
       const actualDuration = Date.now() - startTime.current;
       console.log(`Recording duration check: timer=${recordingDuration}ms, actual=${actualDuration}ms`);
       
-      // Use the larger of the two duration calculations and validate minimum duration
+      // Use the larger of the two duration calculations and validate duration constraints
       const finalDuration = Math.max(recordingDuration, actualDuration);
       if (finalDuration < 500) { // Reduced to 0.5 seconds for more lenient validation
         throw new Error('Recording is too short. Please record for at least 0.5 seconds.');
+      }
+      
+      // Validate maximum duration (30 seconds = 30,000 milliseconds)
+      if (finalDuration > 30000) {
+        throw new Error('DURATION_TOO_LONG');
       }
 
       // Process recording with upload through mobile media integration
@@ -553,6 +559,28 @@ export const MobileCameraRecorder: React.FC<MobileCameraRecorderProps> = ({
       }
     } catch (error: any) {
       console.error('Recording processing error:', error);
+      
+      // Special handling for duration exceeded error
+      if (error.message === 'DURATION_TOO_LONG') {
+        Alert.alert(
+          '⏱️ Recording Too Long',
+          'Please keep your videos under 30 seconds to avoid large file uploads. Please record this statement again.',
+          [
+            { 
+              text: 'Record Again', 
+              style: 'default',
+              onPress: () => {
+                // Reset recording state to allow re-recording
+                setCurrentError(null);
+                dispatch(resetMediaState({ statementIndex }));
+                // Don't call onRecordingComplete since we want to stay on this statement
+              }
+            }
+          ],
+          { cancelable: false }
+        );
+        return;
+      }
       
       let errorMessage = `Processing recording failed: ${error.message || error}`;
       let errorType = CameraErrorType.RECORDING_FAILED;
