@@ -86,10 +86,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
       console.log('✅ Login successful');
       
       setLoadingMessage('Login successful!');
-      const successMessage = guestMigration 
-        ? 'Welcome back! Your progress has been saved to your account.'
-        : 'Welcome back! You have been signed in successfully.';
-      showSuccess(successMessage);
+      showSuccess('Welcome back! You have been signed in successfully.');
       
       // Small delay to show success message
       setTimeout(() => {
@@ -148,13 +145,6 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
                 : 'Welcome back! Sign in to your account'
               }
             </Text>
-            {guestMigration && (
-              <View style={styles.migrationNotice}>
-                <Text style={styles.migrationText}>
-                  🎮 Your current game progress will be saved to your account
-                </Text>
-              </View>
-            )}
           </View>
 
           {/* Form */}
@@ -367,19 +357,5 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#007AFF',
     fontWeight: '600',
-  },
-  migrationNotice: {
-    backgroundColor: '#e8f4fd',
-    borderWidth: 1,
-    borderColor: '#007AFF',
-    borderRadius: 8,
-    padding: 12,
-    marginTop: 16,
-  },
-  migrationText: {
-    color: '#007AFF',
-    fontSize: 14,
-    textAlign: 'center',
-    fontWeight: '500',
   },
 });

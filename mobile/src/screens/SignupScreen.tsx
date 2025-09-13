@@ -180,13 +180,6 @@ export const SignupScreen: React.FC<SignupScreenProps> = ({
                 : 'Create your account to get started'
               }
             </Text>
-            {guestMigration && (
-              <View style={styles.migrationNotice}>
-                <Text style={styles.migrationText}>
-                  🎮 Your current game progress will be saved to your new account
-                </Text>
-              </View>
-            )}
           </View>
 
           {/* Form */}
@@ -464,19 +457,5 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#007AFF',
     fontWeight: '600',
-  },
-  migrationNotice: {
-    backgroundColor: '#e8f4fd',
-    borderWidth: 1,
-    borderColor: '#007AFF',
-    borderRadius: 8,
-    padding: 12,
-    marginTop: 16,
-  },
-  migrationText: {
-    color: '#007AFF',
-    fontSize: 14,
-    textAlign: 'center',
-    fontWeight: '500',
   },
 });
