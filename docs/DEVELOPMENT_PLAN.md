@@ -666,42 +666,44 @@ The mobile app has successfully completed all foundational phases with:
 
 Our future development roadmap includes a clear set of prioritized gameplay and platform enhancements to extend functionality and user engagement beyond the current production-ready core:
 
-- **MVP User Authentication**
-  Focus on a simple, secure email/password sign-up and login flow. This gives every user a unique identity.
-  
-- **MVP Content Moderation**
-  A simple "Report" button on each video that flags it in a database for your manual review is a critical safety feature and a must-have for launch.
+- **MVP User Authentication**  
+  Deliver a secure, minimal authentication system enabling users to sign up and log in with email and password only. This establishes unique identity and access control, meeting launch needs with a fast implementation scope.
+
+- **MVP Content Moderation**  
+  Implement a fundamental moderation control featuring a "Report" button on each video. Reports flag content for manual review and removal, providing essential safety and compliance capability for release.
 
 - **Challenge Board Enhancements**  
-  Add features such as user and challenge names, popularity-based sorting, and personalized recommendations for improved discovery and social engagement.
+  Add personalization such as user and challenge names, popularity sorting, and AI-driven recommendations to improve content discoverability and social engagement.
 
 - **Monetization Integration**  
-  Incorporate a freemium model with in-app purchases, including premium AI features and custom challenges, supported by RevenueCat or equivalent platforms for seamless cross-platform payments.
-
-- **User Authentication**  
-  Implement secure user registration, login, logout, and profile management with JWT-based authentication, biometric support, email verification, and password recovery optimized for mobile devices.
-
-- **Emotion Analysis API Full Integration**  
-  Complete the connection to AffectLink’s emotion recognition API to enable real-time and batch emotion scoring, with confidence indicators and fallback modes, enriching gameplay with AI-driven lie detection.
+  Integrate a freemium revenue model offering premium AI features and customizable challenges through RevenueCat or a similar cross-platform payment platform.
 
 - **Progression and Rewards System**  
-  Design and implement leveling, experience points, badges, cosmetic unlocks, and leaderboards to incentivize continued play and social competition.
+  Develop leveling, achievements, cosmetic unlocks, and leaderboards to incentivize retention and competition over time.
 
-- **Baloney Statement Feature**  
-  Enable users to record a brief explanatory “baloney” statement supporting their lie, adding depth and personality to challenges.
+- **Error Handling and Resilience Enhancements**  
+  Advance network retry strategies, offline support with queue synchronization, graceful degradation under failures, and user-focused error feedback.
 
-- **Swipe Navigation Implementation**  
-  Develop intuitive gesture-based navigation between main screens to enhance UX fluidity and mobile friendliness.
-
-- **Error Handling and Resilience Improvements**  
-  Expand network retry strategies, offline queuing with synchronization, graceful degradation for AI/media failures, and enhanced user-facing error messages.
-
-- **Performance and Optimization**  
-  Optimize client-side rendering, media upload speeds, memory usage, battery consumption, and server caching to ensure smooth, scalable operation.
+- **Performance Optimization**  
+  Refine client rendering, video upload throughput, memory management, battery consumption, and backend caching for scalability and smooth experience.
 
 - **Comprehensive Testing Suite**  
-  Extend unit, integration, end-to-end, cross-platform, accessibility, and UI responsiveness tests to cover all new modules and features, targeting >90% test coverage.
+  Expand coverage with unit, integration, end-to-end, cross-platform, and accessibility tests targeting 90%+ coverage for new and existing features.
 
 - **Analytics, Monitoring, and Reporting**  
-  Integrate detailed event tracking for gameplay, retention, and monetization metrics, along with backend health monitoring and privacy-compliant logging to support data-driven improvements.
+  Integrate detailed user engagement and monetization telemetry plus backend health monitoring, supporting data-driven product evolution and quality assurance.
 
+- **Emotion Analysis API Integration**  
+  Connect the AffectLink emotion recognition API for real-time and batch analysis of user video content, enabling AI-powered lie detection cues and dynamic gameplay enhancements.
+
+- **Comprehensive User Authentication**  
+  Upgrade from MVP with full-featured authentication support including: user profile management, password recovery, biometric login (e.g., Touch ID, Face ID), email verification, session refresh, and robust security policies.
+
+- **Comprehensive Content Moderation**  
+  Enhance basic reporting with automated abuse detection, policy enforcement, user blocking, admin dashboards for moderation management, and integration of advanced moderation workflows.
+
+- **Baloney Statement Feature**  
+  Enable users to record a short supplemental statement to justify their lie choice, adding personality and storytelling dimension.
+
+- **Swipe Navigation Implementation**  
+  Implement gesture-based navigation to allow fluid and intuitive transitions between main app screens.
