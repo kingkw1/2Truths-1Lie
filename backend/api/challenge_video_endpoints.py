@@ -4,6 +4,7 @@ Challenge Video API Endpoints - Multi-video upload for server-side merging
 from fastapi import APIRouter, HTTPException, Depends, UploadFile, File, Form, Request, status
 from fastapi.responses import JSONResponse, FileResponse, StreamingResponse
 from typing import List, Optional, Dict, Any
+from pathlib import Path
 import logging
 import uuid
 from datetime import datetime
@@ -80,8 +81,11 @@ async def initiate_multi_video_upload(
         try:
             filenames = json.loads(video_filenames)
             file_sizes = json.loads(video_file_sizes)
-            durations = json.loads(video_durations)
+            durations_ms = json.loads(video_durations)  # Mobile app sends durations in milliseconds
             mime_types = json.loads(video_mime_types)
+            
+            # Convert durations from milliseconds to seconds
+            durations = [duration_ms / 1000.0 for duration_ms in durations_ms]
         except json.JSONDecodeError as e:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
