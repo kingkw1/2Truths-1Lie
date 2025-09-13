@@ -10,7 +10,6 @@ import {
   Text,
   StyleSheet,
   View,
-  Alert,
 } from 'react-native';
 import { useAuth } from '../hooks/useAuth';
 
@@ -29,42 +28,13 @@ export const AuthToggleButton: React.FC<AuthToggleButtonProps> = ({
 
   const handlePress = () => {
     if (isGuest) {
-      // Show sign in prompt for guests
-      Alert.alert(
-        'Sign In',
-        'Sign in to save your progress and unlock all features. Your current session will be preserved.',
-        [
-          {
-            text: 'Cancel',
-            style: 'cancel',
-          },
-          {
-            text: 'Sign In',
-            style: 'default',
-            onPress: () => {
-              console.log('🔄 User requested sign in from toggle button - using triggerAuthFlow');
-              triggerAuthFlow();
-            },
-          },
-        ]
-      );
+      // Directly trigger auth flow for guests
+      console.log('🔄 User requested sign in from toggle button - using triggerAuthFlow');
+      triggerAuthFlow();
     } else {
-      // Show sign out confirmation for authenticated users
-      Alert.alert(
-        'Sign Out',
-        'Are you sure you want to sign out? You can always sign back in later.',
-        [
-          { text: 'Cancel', style: 'cancel' },
-          {
-            text: 'Sign Out',
-            style: 'destructive',
-            onPress: () => {
-              console.log('🔄 User signed out from toggle button');
-              onAuthAction();
-            },
-          },
-        ]
-      );
+      // Directly trigger sign out for authenticated users
+      console.log('🔄 User signed out from toggle button');
+      onAuthAction();
     }
   };
 
