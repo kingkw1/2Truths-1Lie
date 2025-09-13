@@ -13,6 +13,7 @@ from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from services.challenge_service import challenge_service
 from services.upload_service import ChunkedUploadService
 from services.cloud_storage_service import create_cloud_storage_service, CloudStorageError
+from services.database_service import db_service
 from models import (
     CreateChallengeRequest, 
     Challenge, 
@@ -111,6 +112,36 @@ async def get_current_user_optional(credentials: Optional[HTTPAuthorizationCrede
 
 # Initialize upload service for challenge creation
 upload_service = ChunkedUploadService()
+
+def enrich_challenge_with_creator_name(challenge: Challenge) -> dict:
+    """Enrich challenge with creator name from database"""
+    challenge_dict = challenge.model_dump()
+    
+    try:
+        # Try to get creator name from database
+        creator_id = challenge.creator_id
+        
+        # Handle both integer and string creator IDs
+        if creator_id.isdigit():
+            user_info = db_service.get_user_by_id(int(creator_id))
+            if user_info and user_info.get("name"):
+                challenge_dict["creator_name"] = user_info["name"]
+            else:
+                # Fallback to email if name not available
+                challenge_dict["creator_name"] = user_info.get("email", f"User {creator_id[:8]}") if user_info else f"User {creator_id[:8]}"
+        else:
+            # Non-numeric creator_id (guest users, etc.)
+            if creator_id.startswith("guest_"):
+                challenge_dict["creator_name"] = "Guest User"
+            else:
+                challenge_dict["creator_name"] = f"User {creator_id[:8]}"
+                
+    except Exception as e:
+        logger.warning(f"Failed to get creator name for challenge {challenge.challenge_id}, creator_id {challenge.creator_id}: {e}")
+        # Fallback to generic name
+        challenge_dict["creator_name"] = f"User {challenge.creator_id[:8]}"
+    
+    return challenge_dict
 
 
 @router.post("/", response_model=Challenge, status_code=status.HTTP_201_CREATED)
@@ -222,10 +253,10 @@ async def list_challenges_authenticated(
         
         logger.debug(f"Retrieved {len(challenges)} challenges for authenticated user")
         
-        # Enhance challenges with merged video data
+        # Enhance challenges with merged video data and creator names
         enhanced_challenges = []
         for challenge in challenges:
-            challenge_dict = challenge.model_dump()
+            challenge_dict = enrich_challenge_with_creator_name(challenge)
             
             # Generate signed URLs for statement media
             if challenge_dict.get("statements"):
@@ -329,10 +360,10 @@ async def list_challenges_public(
         
         logger.debug(f"Retrieved {len(challenges)} public challenges")
         
-        # Enhance challenges with signed URLs for video access
+        # Enhance challenges with signed URLs for video access and creator names
         enhanced_challenges = []
         for challenge in challenges:
-            challenge_dict = challenge.model_dump()
+            challenge_dict = enrich_challenge_with_creator_name(challenge)
             
             # Generate signed URLs for statement media
             if challenge_dict.get("statements"):

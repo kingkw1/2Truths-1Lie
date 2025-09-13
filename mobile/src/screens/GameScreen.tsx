@@ -41,7 +41,7 @@ const convertBackendChallenge = (backendChallenge: BackendChallenge): EnhancedCh
   return {
     id: backendChallenge.challenge_id,
     creatorId: backendChallenge.creator_id,
-    creatorName: `User ${backendChallenge.creator_id.slice(0, 8)}`, // Generate display name from ID
+    creatorName: backendChallenge.creator_name || `User ${backendChallenge.creator_id.slice(0, 8)}`, // Use backend name or fallback
     statements: backendChallenge.statements.map((stmt, index) => ({
       id: stmt.statement_id,
       text: `Statement ${index + 1}`, // Backend doesn't store statement text yet
