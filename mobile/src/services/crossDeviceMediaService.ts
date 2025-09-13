@@ -55,11 +55,10 @@ export class CrossDeviceMediaService {
         this.lastSyncTime = new Date(lastSync);
       }
 
-      // Perform initial sync if user is authenticated
-      if (authService.isAuthenticated()) {
-        await this.syncMediaLibrary();
-      }
-
+      // Note: We don't perform initial sync here anymore
+      // Let authentication complete first, then sync will be triggered
+      // by auth state changes in the middleware or components
+      
       console.log('📱 Cross-device media service initialized');
     } catch (error) {
       console.error('Failed to initialize cross-device media service:', error);

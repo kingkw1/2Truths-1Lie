@@ -91,7 +91,7 @@ describe('Authentication Flow Integration Tests', () => {
         id: 'user_123',
         name: 'Test User',
         email: 'test@example.com',
-        createdAt: new Date(),
+        createdAt: new Date().toISOString(),
       };
 
       mockAuthService.login.mockResolvedValue(mockUser);
@@ -243,7 +243,7 @@ describe('Authentication Flow Integration Tests', () => {
         id: 'user_123',
         name: 'Test User',
         email: 'test@example.com',
-        createdAt: new Date(),
+        createdAt: new Date().toISOString(),
       };
 
       mockAuthService.signup.mockResolvedValue(mockUser);
@@ -363,7 +363,7 @@ describe('Authentication Flow Integration Tests', () => {
       mockAuthService.getAuthStatus.mockReturnValue({
         isAuthenticated: false,
         isGuest: true,
-        user: { id: 'guest_123', name: 'Guest User', createdAt: new Date() },
+        user: { id: 'guest_123', name: 'Guest User', createdAt: new Date().toISOString() },
         hasValidToken: true,
       });
 
@@ -384,7 +384,7 @@ describe('Authentication Flow Integration Tests', () => {
       mockAuthService.getAuthStatus.mockReturnValue({
         isAuthenticated: true,
         isGuest: false,
-        user: { id: 'user_123', name: 'Test User', email: 'test@example.com', createdAt: new Date() },
+        user: { id: 'user_123', name: 'Test User', email: 'test@example.com', createdAt: new Date().toISOString() },
         hasValidToken: true,
       });
 
@@ -403,7 +403,7 @@ describe('Authentication Flow Integration Tests', () => {
       mockAuthService.getAuthStatus.mockReturnValue({
         isAuthenticated: false,
         isGuest: true,
-        user: { id: 'guest_123', name: 'Guest User', createdAt: new Date() },
+        user: { id: 'guest_123', name: 'Guest User', createdAt: new Date().toISOString() },
         hasValidToken: true,
       });
 
@@ -479,7 +479,7 @@ describe('Authentication Flow Integration Tests', () => {
           id: 'user_123',
           name: 'Test User',
           email: 'test@example.com',
-          createdAt: new Date(),
+          createdAt: new Date().toISOString(),
         });
 
       const mockOnLoginSuccess = jest.fn();
@@ -610,7 +610,7 @@ describe('Authentication Flow Integration Tests', () => {
           id: 'user_123',
           name: 'Test User',
           email: 'test@example.com',
-          createdAt: new Date(),
+          createdAt: new Date().toISOString(),
         });
       });
 
@@ -659,7 +659,7 @@ describe('Authentication Flow Integration Tests', () => {
           id: 'user_123',
           name: 'Test User',
           email: 'test@example.com',
-          createdAt: new Date(),
+          createdAt: new Date().toISOString(),
         });
       });
 

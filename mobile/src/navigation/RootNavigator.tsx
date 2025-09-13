@@ -12,18 +12,29 @@ import { MainNavigator } from './MainNavigator';
 import { RootStackParamList } from './types';
 import { useAuth } from '../hooks/useAuth';
 import { navigationManager } from './navigationUtils';
+import { AuthProvider } from '../components/AuthProvider';
 import { View, ActivityIndicator, StyleSheet, Text, Animated } from 'react-native';
 
 const Stack = createStackNavigator<RootStackParamList>();
 
 export const RootNavigator: React.FC = () => {
+  return (
+    <AuthProvider>
+      <RootNavigatorContent />
+    </AuthProvider>
+  );
+};
+
+const RootNavigatorContent: React.FC = () => {
   const { isAuthenticated, isLoading, logout, user } = useAuth();
   const navigationRef = useRef<NavigationContainerRef<RootStackParamList>>(null);
   const fadeAnim = useRef(new Animated.Value(1)).current;
 
   // Initialize navigation manager
   useEffect(() => {
-    navigationManager.setNavigationRef(navigationRef);
+    if (navigationRef) {
+      navigationManager.setNavigationRef(navigationRef);
+    }
   }, []);
 
   // Update navigation state when auth changes

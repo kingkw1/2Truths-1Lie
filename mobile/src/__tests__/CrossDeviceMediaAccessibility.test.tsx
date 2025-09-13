@@ -359,7 +359,7 @@ describe('Cross-Device Media Accessibility', () => {
       const user2MediaIds = ['media-3', 'media-4'];
 
       // Simulate user 1 login
-      mockAuth.getCurrentUser.mockReturnValue({ id: 'user-1', name: 'User 1', createdAt: new Date() });
+      mockAuth.getCurrentUser.mockReturnValue({ id: 'user-1', name: 'User 1', createdAt: new Date().toISOString() });
       mockAsyncStorage.getItem.mockImplementation((key) => {
         if (key === 'mediaLibraryCache') {
           return Promise.resolve(JSON.stringify(user1MediaIds.map(id => ({ mediaId: id }))));
@@ -374,7 +374,7 @@ describe('Cross-Device Media Accessibility', () => {
       // Simulate user logout and user 2 login
       await crossDeviceService.onUserLogout();
       
-      mockAuth.getCurrentUser.mockReturnValue({ id: 'user-2', name: 'User 2', createdAt: new Date() });
+      mockAuth.getCurrentUser.mockReturnValue({ id: 'user-2', name: 'User 2', createdAt: new Date().toISOString() });
       mockAsyncStorage.getItem.mockImplementation((key) => {
         if (key === 'mediaLibraryCache') {
           return Promise.resolve(JSON.stringify(user2MediaIds.map(id => ({ mediaId: id }))));
@@ -394,7 +394,7 @@ describe('Cross-Device Media Accessibility', () => {
       const mediaId = 'user-specific-media';
       
       // User 1 should have access
-      mockAuth.getCurrentUser.mockReturnValue({ id: 'user-1', name: 'User 1', createdAt: new Date() });
+      mockAuth.getCurrentUser.mockReturnValue({ id: 'user-1', name: 'User 1', createdAt: new Date().toISOString() });
       mockUploadService.verifyMediaAccess.mockResolvedValue({
         accessible: true,
         deviceCompatible: true,
@@ -405,7 +405,7 @@ describe('Cross-Device Media Accessibility', () => {
       expect(result.accessible).toBe(true);
 
       // User 2 should not have access to user 1's media
-      mockAuth.getCurrentUser.mockReturnValue({ id: 'user-2', name: 'User 2', createdAt: new Date() });
+      mockAuth.getCurrentUser.mockReturnValue({ id: 'user-2', name: 'User 2', createdAt: new Date().toISOString() });
       mockUploadService.verifyMediaAccess.mockResolvedValue({
         accessible: false,
         deviceCompatible: true,

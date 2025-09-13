@@ -122,7 +122,7 @@ describe('SignupScreen', () => {
       id: 'user123',
       name: 'testuser',
       email: 'test@example.com',
-      createdAt: new Date(),
+      createdAt: new Date().toISOString(),
     });
 
     const { getByPlaceholderText, getByText } = render(

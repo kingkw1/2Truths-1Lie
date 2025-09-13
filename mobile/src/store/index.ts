@@ -35,7 +35,7 @@ const store = configureStore({
         ignoredPaths: [
           'guessingGame.availableChallenges.0.createdAt', 
           'guessingGame.availableChallenges.0.lastPlayed',
-          'auth.user.createdAt', // Auth user createdAt is a Date object
+          // 'auth.user.createdAt' - Fixed: now uses ISO string instead of Date object
         ],
       },
     }).concat(authMiddleware),

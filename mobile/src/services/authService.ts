@@ -11,7 +11,7 @@ export interface AuthUser {
   name: string;
   email?: string;
   avatar?: string;
-  createdAt: Date;
+  createdAt: string;
 }
 
 export interface AuthResponse {
@@ -108,7 +108,7 @@ export class AuthService {
       const guestUser: AuthUser = {
         id: `guest_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
         name: 'Guest User',
-        createdAt: new Date(),
+        createdAt: new Date().toISOString(),
       };
 
       this.currentUser = guestUser;
@@ -128,7 +128,7 @@ export class AuthService {
       const guestUser: AuthUser = {
         id: `guest_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
         name: 'Guest User',
-        createdAt: new Date(),
+        createdAt: new Date().toISOString(),
       };
 
       const guestToken = `local_guest_token_${guestUser.id}`;
@@ -495,7 +495,7 @@ export class AuthService {
         id: data.user.id,
         name: data.user.email.split('@')[0] || 'User',
         email: data.user.email,
-        createdAt: new Date(data.user.created_at),
+        createdAt: data.user.created_at,
       };
     }
 
@@ -504,7 +504,7 @@ export class AuthService {
       id: email.split('@')[0] || 'User',
       name: email.split('@')[0] || 'User',
       email: email.trim().toLowerCase(),
-      createdAt: new Date(),
+      createdAt: new Date().toISOString(),
     };
   }
 

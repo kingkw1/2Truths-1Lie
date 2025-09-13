@@ -71,13 +71,9 @@ export const StoreProvider: React.FC<StoreProviderProps> = ({ children }) => {
         // Initialize mobile media integration service with Redux dispatch
         mobileMediaIntegration.initialize(store.dispatch);
         
-        // Initialize auth service and set token for upload service
-        await authService.initialize();
-        const authToken = authService.getAuthToken();
-        if (authToken) {
-          videoUploadService.setAuthToken(authToken);
-          console.log('✅ Auth token set for upload service - UPLOADS ENABLED!');
-        }
+        // The AuthProvider component will initialize authentication via Redux
+        // No need to initialize authService directly here anymore
+        // This prevents duplicate initialization calls
       } catch (error) {
         console.error('StoreProvider initialization error:', error);
       }

@@ -95,7 +95,7 @@ describe('Authentication Loading States and Error Handling Tests', () => {
           id: 'user_123',
           name: 'Test User',
           email: 'test@example.com',
-          createdAt: new Date(),
+          createdAt: new Date().toISOString(),
         });
       });
 
@@ -145,7 +145,7 @@ describe('Authentication Loading States and Error Handling Tests', () => {
           id: 'user_123',
           name: 'Test User',
           email: 'test@example.com',
-          createdAt: new Date(),
+          createdAt: new Date().toISOString(),
         });
       });
 
@@ -194,7 +194,7 @@ describe('Authentication Loading States and Error Handling Tests', () => {
           id: 'user_123',
           name: 'Test User',
           email: 'test@example.com',
-          createdAt: new Date(),
+          createdAt: new Date().toISOString(),
         });
       });
 
@@ -241,7 +241,7 @@ describe('Authentication Loading States and Error Handling Tests', () => {
           id: 'user_123',
           name: 'Test User',
           email: 'test@example.com',
-          createdAt: new Date(),
+          createdAt: new Date().toISOString(),
         });
       });
 
@@ -436,7 +436,7 @@ describe('Authentication Loading States and Error Handling Tests', () => {
           id: 'user_123',
           name: 'Test User',
           email: 'test@example.com',
-          createdAt: new Date(),
+          createdAt: new Date().toISOString(),
         });
 
       const mockProps = {
@@ -724,7 +724,7 @@ describe('Authentication Loading States and Error Handling Tests', () => {
           id: 'user_123',
           name: 'Test User',
           email: 'test@example.com',
-          createdAt: new Date(),
+          createdAt: new Date().toISOString(),
         });
       });
 

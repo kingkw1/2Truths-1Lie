@@ -45,7 +45,7 @@ describe('Comprehensive Authentication Test Suite', () => {
         id: 'user_123',
         name: 'Test User',
         email: 'test@example.com',
-        createdAt: new Date(),
+        createdAt: new Date().toISOString(),
       };
 
       mockAuthService.login.mockResolvedValue(mockUser);
@@ -81,7 +81,7 @@ describe('Comprehensive Authentication Test Suite', () => {
       const mockAuthStatus = {
         isAuthenticated: true,
         isGuest: false,
-        user: { id: 'user_123', name: 'Test User', email: 'test@example.com', createdAt: new Date() },
+        user: { id: 'user_123', name: 'Test User', email: 'test@example.com', createdAt: new Date().toISOString() },
         hasValidToken: true,
       };
 
@@ -89,7 +89,7 @@ describe('Comprehensive Authentication Test Suite', () => {
 
       const status = mockAuthService.getAuthStatus();
       expect(status.isAuthenticated).toBe(true);
-      expect(status.user.email).toBe('test@example.com');
+      expect(status.user?.email).toBe('test@example.com');
     });
 
     it('should test logout functionality', async () => {
@@ -172,7 +172,7 @@ describe('Comprehensive Authentication Test Suite', () => {
         id: 'user_123',
         name: 'Test User',
         email: 'test@example.com',
-        createdAt: new Date(),
+        createdAt: new Date().toISOString(),
       });
 
       const result = await loginCall;
@@ -196,7 +196,7 @@ describe('Comprehensive Authentication Test Suite', () => {
       mockAuthService.getAuthStatus.mockReturnValue({
         isAuthenticated: false,
         isGuest: true,
-        user: { id: 'guest_123', name: 'Guest User', createdAt: new Date() },
+        user: { id: 'guest_123', name: 'Guest User', createdAt: new Date().toISOString() },
         hasValidToken: true,
       });
 
@@ -208,7 +208,7 @@ describe('Comprehensive Authentication Test Suite', () => {
       mockAuthService.getAuthStatus.mockReturnValue({
         isAuthenticated: true,
         isGuest: false,
-        user: { id: 'user_123', name: 'Test User', email: 'test@example.com', createdAt: new Date() },
+        user: { id: 'user_123', name: 'Test User', email: 'test@example.com', createdAt: new Date().toISOString() },
         hasValidToken: true,
       });
 
@@ -230,8 +230,8 @@ describe('Comprehensive Authentication Test Suite', () => {
           isAuthenticated: state.authenticated,
           isGuest: !state.authenticated,
           user: state.authenticated 
-            ? { id: 'user_123', name: 'Test User', email: 'test@example.com', createdAt: new Date() }
-            : { id: 'guest_123', name: 'Guest User', createdAt: new Date() },
+            ? { id: 'user_123', name: 'Test User', email: 'test@example.com', createdAt: new Date().toISOString() }
+            : { id: 'guest_123', name: 'Guest User', createdAt: new Date().toISOString() },
           hasValidToken: true,
         });
 
@@ -250,7 +250,7 @@ describe('Comprehensive Authentication Test Suite', () => {
           id: 'user_123',
           name: 'Test User',
           email: 'test@example.com',
-          createdAt: new Date(),
+          createdAt: new Date().toISOString(),
         });
 
       // First attempt
@@ -322,8 +322,8 @@ describe('Comprehensive Authentication Test Suite', () => {
           isAuthenticated,
           isGuest: !isAuthenticated,
           user: isAuthenticated 
-            ? { id: 'user_123', name: 'Test User', email: 'test@example.com', createdAt: new Date() }
-            : { id: 'guest_123', name: 'Guest User', createdAt: new Date() },
+            ? { id: 'user_123', name: 'Test User', email: 'test@example.com', createdAt: new Date().toISOString() }
+            : { id: 'guest_123', name: 'Guest User', createdAt: new Date().toISOString() },
           hasValidToken: true,
         });
 
@@ -340,7 +340,7 @@ describe('Comprehensive Authentication Test Suite', () => {
         id: 'user_123',
         name: 'Test User',
         email: 'test@example.com',
-        createdAt: new Date(),
+        createdAt: new Date().toISOString(),
       });
 
       // Test multiple auth operations

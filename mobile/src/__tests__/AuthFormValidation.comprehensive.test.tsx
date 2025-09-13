@@ -532,7 +532,7 @@ describe('Comprehensive Authentication Form Validation Tests', () => {
         id: 'user_123',
         name: 'Test User',
         email: 'test@example.com',
-        createdAt: new Date(),
+        createdAt: new Date().toISOString(),
       });
 
       const mockProps = {
@@ -603,7 +603,7 @@ describe('Comprehensive Authentication Form Validation Tests', () => {
         id: 'user_123',
         name: 'Test User',
         email: 'test@example.com',
-        createdAt: new Date(),
+        createdAt: new Date().toISOString(),
       });
 
       await waitFor(() => {

@@ -29,7 +29,7 @@ describe('useAuth Hook', () => {
     mockAuthService.getAuthStatus.mockReturnValue({
       isAuthenticated: false,
       isGuest: true,
-      user: { id: 'guest_123', name: 'Guest User', createdAt: new Date() },
+      user: { id: 'guest_123', name: 'Guest User', createdAt: new Date().toISOString() },
       hasValidToken: true,
     });
 
@@ -39,7 +39,7 @@ describe('useAuth Hook', () => {
   });
 
   it('provides auth state after initialization', async () => {
-    const mockUser = { id: 'user_123', name: 'Test User', email: 'test@example.com', createdAt: new Date() };
+    const mockUser = { id: 'user_123', name: 'Test User', email: 'test@example.com', createdAt: new Date().toISOString() };
     
     mockAuthService.initialize.mockResolvedValue();
     mockAuthService.getAuthStatus.mockReturnValue({
@@ -62,7 +62,7 @@ describe('useAuth Hook', () => {
   });
 
   it('handles login correctly', async () => {
-    const mockUser = { id: 'user_123', name: 'Test User', email: 'test@example.com', createdAt: new Date() };
+    const mockUser = { id: 'user_123', name: 'Test User', email: 'test@example.com', createdAt: new Date().toISOString() };
     
     mockAuthService.initialize.mockResolvedValue();
     mockAuthService.login.mockResolvedValue(mockUser);
@@ -70,7 +70,7 @@ describe('useAuth Hook', () => {
       .mockReturnValueOnce({
         isAuthenticated: false,
         isGuest: true,
-        user: { id: 'guest_123', name: 'Guest User', createdAt: new Date() },
+        user: { id: 'guest_123', name: 'Guest User', createdAt: new Date().toISOString() },
         hasValidToken: true,
       })
       .mockReturnValueOnce({
@@ -91,7 +91,7 @@ describe('useAuth Hook', () => {
   });
 
   it('handles signup correctly', async () => {
-    const mockUser = { id: 'user_123', name: 'Test User', email: 'test@example.com', createdAt: new Date() };
+    const mockUser = { id: 'user_123', name: 'Test User', email: 'test@example.com', createdAt: new Date().toISOString() };
     
     mockAuthService.initialize.mockResolvedValue();
     mockAuthService.signup.mockResolvedValue(mockUser);
@@ -99,7 +99,7 @@ describe('useAuth Hook', () => {
       .mockReturnValueOnce({
         isAuthenticated: false,
         isGuest: true,
-        user: { id: 'guest_123', name: 'Guest User', createdAt: new Date() },
+        user: { id: 'guest_123', name: 'Guest User', createdAt: new Date().toISOString() },
         hasValidToken: true,
       })
       .mockReturnValueOnce({
@@ -126,13 +126,13 @@ describe('useAuth Hook', () => {
       .mockReturnValueOnce({
         isAuthenticated: true,
         isGuest: false,
-        user: { id: 'user_123', name: 'Test User', email: 'test@example.com', createdAt: new Date() },
+        user: { id: 'user_123', name: 'Test User', email: 'test@example.com', createdAt: new Date().toISOString() },
         hasValidToken: true,
       })
       .mockReturnValueOnce({
         isAuthenticated: false,
         isGuest: true,
-        user: { id: 'guest_456', name: 'Guest User', createdAt: new Date() },
+        user: { id: 'guest_456', name: 'Guest User', createdAt: new Date().toISOString() },
         hasValidToken: true,
       });
 
@@ -151,7 +151,7 @@ describe('useAuth Hook', () => {
     mockAuthService.getAuthStatus.mockReturnValue({
       isAuthenticated: false,
       isGuest: true,
-      user: { id: 'guest_123', name: 'Guest User', createdAt: new Date() },
+      user: { id: 'guest_123', name: 'Guest User', createdAt: new Date().toISOString() },
       hasValidToken: true,
     });
 

@@ -8,7 +8,7 @@ import { RootStackParamList, AuthStackParamList, MainStackParamList, NavigationS
 
 export class NavigationManager {
   private static instance: NavigationManager;
-  private navigationRef: React.RefObject<NavigationContainerRef<RootStackParamList>> | null = null;
+  private navigationRef: React.RefObject<NavigationContainerRef<RootStackParamList> | null> | null = null;
   private navigationState: NavigationState = {
     isAuthenticated: false,
     currentRoute: 'Auth',
@@ -21,7 +21,7 @@ export class NavigationManager {
     return NavigationManager.instance;
   }
 
-  setNavigationRef(ref: React.RefObject<NavigationContainerRef<RootStackParamList>>) {
+  setNavigationRef(ref: React.RefObject<NavigationContainerRef<RootStackParamList> | null>) {
     this.navigationRef = ref;
   }
 

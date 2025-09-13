@@ -31,13 +31,13 @@ describe('authMiddleware', () => {
       id: 'test-user',
       name: 'Test User',
       email: 'test@example.com',
-      createdAt: new Date(),
+      createdAt: new Date().toISOString(),
     });
     mockAuthService.signup.mockResolvedValue({
       id: 'new-user',
       name: 'New User',
       email: 'new@example.com',
-      createdAt: new Date(),
+      createdAt: new Date().toISOString(),
     });
     mockAuthService.logout.mockResolvedValue();
     mockAuthService.getCurrentUser.mockReturnValue(null);
@@ -90,7 +90,7 @@ describe('authMiddleware', () => {
       const guestUser = {
         id: 'guest-123',
         name: 'Guest User',
-        createdAt: new Date(),
+        createdAt: new Date().toISOString(),
       };
       
       mockAuthService.getCurrentUser.mockReturnValue(guestUser);
@@ -114,7 +114,7 @@ describe('authMiddleware', () => {
       const guestUser = {
         id: 'guest-123',
         name: 'Guest User',
-        createdAt: new Date(),
+        createdAt: new Date().toISOString(),
       };
 
       const initAction = {
@@ -238,7 +238,7 @@ describe('authMiddleware', () => {
         id: 'test-user',
         name: 'Test User',
         email: 'test@example.com',
-        createdAt: new Date(),
+        createdAt: new Date().toISOString(),
       };
 
       // First login - should start session

@@ -39,7 +39,7 @@ describe('LoginScreen', () => {
       id: 'user1',
       name: 'Test User',
       email: 'test@example.com',
-      createdAt: new Date(),
+      createdAt: new Date().toISOString(),
     });
 
     // Test that the auth service mock is properly configured

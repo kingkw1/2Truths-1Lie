@@ -86,14 +86,14 @@ describe('End-to-End Authentication Tests', () => {
       const guestUser = {
         id: 'guest_123',
         name: 'Guest User',
-        createdAt: new Date(),
+        createdAt: new Date().toISOString(),
       };
 
       const authenticatedUser = {
         id: 'user_123',
         name: 'Test User',
         email: 'test@example.com',
-        createdAt: new Date(),
+        createdAt: new Date().toISOString(),
       };
 
       // Start as guest user
@@ -145,14 +145,14 @@ describe('End-to-End Authentication Tests', () => {
       const guestUser = {
         id: 'guest_123',
         name: 'Guest User',
-        createdAt: new Date(),
+        createdAt: new Date().toISOString(),
       };
 
       const authenticatedUser = {
         id: 'user_123',
         name: 'Test User',
         email: 'test@example.com',
-        createdAt: new Date(),
+        createdAt: new Date().toISOString(),
       };
 
       // Mock guest user with some game progress
@@ -200,13 +200,13 @@ describe('End-to-End Authentication Tests', () => {
         id: 'user_123',
         name: 'Test User',
         email: 'test@example.com',
-        createdAt: new Date(),
+        createdAt: new Date().toISOString(),
       };
 
       const guestUser = {
         id: 'guest_456',
         name: 'Guest User',
-        createdAt: new Date(),
+        createdAt: new Date().toISOString(),
       };
 
       // Start authenticated
@@ -253,13 +253,13 @@ describe('End-to-End Authentication Tests', () => {
         id: 'user_123',
         name: 'Test User',
         email: 'test@example.com',
-        createdAt: new Date(),
+        createdAt: new Date().toISOString(),
       };
 
       const guestUser = {
         id: 'guest_456',
         name: 'Guest User',
-        createdAt: new Date(),
+        createdAt: new Date().toISOString(),
       };
 
       // Start authenticated
@@ -313,7 +313,7 @@ describe('End-to-End Authentication Tests', () => {
       const guestUser = {
         id: 'guest_123',
         name: 'Guest User',
-        createdAt: new Date(),
+        createdAt: new Date().toISOString(),
       };
 
       mockAuthService.getAuthStatus.mockReturnValue({
@@ -353,7 +353,7 @@ describe('End-to-End Authentication Tests', () => {
       const guestUser = {
         id: 'guest_fallback',
         name: 'Guest User',
-        createdAt: new Date(),
+        createdAt: new Date().toISOString(),
       };
 
       mockAuthService.getAuthStatus.mockReturnValue({
@@ -382,7 +382,7 @@ describe('End-to-End Authentication Tests', () => {
         id: 'user_123',
         name: 'Test User',
         email: 'test@example.com',
-        createdAt: new Date(),
+        createdAt: new Date().toISOString(),
       };
 
       mockAuthService.getAuthStatus.mockReturnValue({
@@ -411,21 +411,21 @@ describe('End-to-End Authentication Tests', () => {
 
       // Auth state should remain consistent
       expect(mockAuthService.getAuthStatus().isAuthenticated).toBe(true);
-      expect(mockAuthService.getAuthStatus().user.email).toBe('test@example.com');
+      expect(mockAuthService.getAuthStatus().user?.email).toBe('test@example.com');
     });
 
     it('should handle rapid auth state changes', async () => {
       const guestUser = {
         id: 'guest_123',
         name: 'Guest User',
-        createdAt: new Date(),
+        createdAt: new Date().toISOString(),
       };
 
       const authenticatedUser = {
         id: 'user_123',
         name: 'Test User',
         email: 'test@example.com',
-        createdAt: new Date(),
+        createdAt: new Date().toISOString(),
       };
 
       // Start as guest
@@ -489,19 +489,19 @@ describe('End-to-End Authentication Tests', () => {
       const testScenarios = [
         {
           name: 'Fresh app start',
-          user: { id: 'guest_1', name: 'Guest User', createdAt: new Date() },
+          user: { id: 'guest_1', name: 'Guest User', createdAt: new Date().toISOString() },
           isAuthenticated: false,
           isGuest: true,
         },
         {
           name: 'Returning authenticated user',
-          user: { id: 'user_1', name: 'Test User', email: 'test@example.com', createdAt: new Date() },
+          user: { id: 'user_1', name: 'Test User', email: 'test@example.com', createdAt: new Date().toISOString() },
           isAuthenticated: true,
           isGuest: false,
         },
         {
           name: 'Expired session',
-          user: { id: 'guest_2', name: 'Guest User', createdAt: new Date() },
+          user: { id: 'guest_2', name: 'Guest User', createdAt: new Date().toISOString() },
           isAuthenticated: false,
           isGuest: true,
         },
@@ -541,14 +541,14 @@ describe('End-to-End Authentication Tests', () => {
       const guestUser = {
         id: 'guest_123',
         name: 'Guest User',
-        createdAt: new Date(),
+        createdAt: new Date().toISOString(),
       };
 
       const authenticatedUser = {
         id: 'user_123',
         name: 'Test User',
         email: 'test@example.com',
-        createdAt: new Date(),
+        createdAt: new Date().toISOString(),
       };
 
       // Simulate multiple rapid state changes

@@ -138,7 +138,7 @@ describe('Enhanced Navigation Patterns', () => {
     it('should show loading state with user context', () => {
       mockUseAuth.mockReturnValue(createAuthMock({
         isLoading: true,
-        user: { id: '1', name: 'Test User', email: 'test@example.com', createdAt: new Date() },
+        user: { id: '1', name: 'Test User', email: 'test@example.com', createdAt: new Date().toISOString() },
       }));
 
       const { getByText } = render(<RootNavigator />);
@@ -158,7 +158,7 @@ describe('Enhanced Navigation Patterns', () => {
     it('should show main navigator when authenticated', () => {
       mockUseAuth.mockReturnValue(createAuthMock({
         isAuthenticated: true,
-        user: { id: '1', name: 'Test User', email: 'test@example.com', createdAt: new Date() },
+        user: { id: '1', name: 'Test User', email: 'test@example.com', createdAt: new Date().toISOString() },
         hasValidToken: true,
       }));
 
@@ -211,7 +211,7 @@ describe('Enhanced Navigation Patterns', () => {
 
     it('should handle guest migration flow', () => {
       mockUseAuth.mockReturnValue(createAuthMock({
-        user: { id: '1', name: 'Guest User', email: undefined, createdAt: new Date() },
+        user: { id: '1', name: 'Guest User', email: undefined, createdAt: new Date().toISOString() },
         isGuest: true,
       }));
 
@@ -235,7 +235,7 @@ describe('Enhanced Navigation Patterns', () => {
           id: '1', 
           name: isGuest ? 'Guest' : 'Test User', 
           email: isGuest ? undefined : 'test@example.com',
-          createdAt: new Date()
+          createdAt: new Date().toISOString()
         },
         isGuest,
         hasValidToken: !isGuest,

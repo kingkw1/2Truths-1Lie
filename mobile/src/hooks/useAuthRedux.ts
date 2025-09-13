@@ -123,14 +123,15 @@ export const useAuthRedux = (): UseAuthReduxReturn => {
     return passwordRegex.test(password);
   }, []);
 
-  // Auto-initialize on mount if not already initialized
-  useEffect(() => {
-    if (!user && !isLoading && !error) {
-      initialize().catch((err) => {
-        console.warn('Auto-initialization failed:', err);
-      });
-    }
-  }, [user, isLoading, error, initialize]);
+  // Auto-initialize on mount if not already initialized - Removed to prevent duplicate initialization
+  // The initialization should be handled by AuthProvider or StoreProvider, not here
+  // useEffect(() => {
+  //   if (!user && !isLoading && !error) {
+  //     initialize().catch((err) => {
+  //       console.warn('Auto-initialization failed:', err);
+  //     });
+  //   }
+  // }, [user, isLoading, error, initialize]);
 
   return {
     // State

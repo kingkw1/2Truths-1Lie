@@ -76,7 +76,7 @@ describe('authSlice', () => {
         id: 'test-user',
         name: 'Test User',
         email: 'test@example.com',
-        createdAt: new Date(),
+        createdAt: new Date().toISOString(),
       };
 
       mockAuthService.getAuthStatus.mockReturnValue({
@@ -111,7 +111,7 @@ describe('authSlice', () => {
           id: 'test-user',
           name: 'Test User',
           email: 'test@example.com',
-          createdAt: new Date(),
+          createdAt: new Date().toISOString(),
         };
 
         mockAuthService.initialize.mockResolvedValue();
@@ -155,7 +155,7 @@ describe('authSlice', () => {
           id: 'test-user',
           name: 'Test User',
           email: 'test@example.com',
-          createdAt: new Date(),
+          createdAt: new Date().toISOString(),
         };
 
         mockAuthService.login.mockResolvedValue(mockUser);
@@ -192,7 +192,7 @@ describe('authSlice', () => {
           id: 'new-user',
           name: 'New User',
           email: 'new@example.com',
-          createdAt: new Date(),
+          createdAt: new Date().toISOString(),
         };
 
         mockAuthService.signup.mockResolvedValue(mockUser);
@@ -225,7 +225,7 @@ describe('authSlice', () => {
         const guestUser = {
           id: 'guest-123',
           name: 'Guest User',
-          createdAt: new Date(),
+          createdAt: new Date().toISOString(),
         };
 
         mockAuthService.logout.mockResolvedValue();
@@ -281,7 +281,7 @@ describe('authSlice', () => {
           id: 'test-user',
           name: 'Test User',
           email: 'test@example.com',
-          createdAt: new Date(),
+          createdAt: new Date().toISOString(),
         };
 
         const updatedUser = {
@@ -313,7 +313,7 @@ describe('authSlice', () => {
           id: 'test',
           name: 'Test',
           email: 'test@example.com',
-          createdAt: new Date(),
+          createdAt: new Date().toISOString(),
         }), 100))
       );
       mockAuthService.getUserPermissions.mockResolvedValue([]);
@@ -335,7 +335,7 @@ describe('authSlice', () => {
         id: 'test',
         name: 'Test',
         email: 'test@example.com',
-        createdAt: new Date(),
+        createdAt: new Date().toISOString(),
       });
       mockAuthService.getUserPermissions.mockResolvedValue([]);
 

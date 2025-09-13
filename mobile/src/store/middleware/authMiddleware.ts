@@ -6,6 +6,8 @@
 import { Middleware } from '@reduxjs/toolkit';
 import { startGameSession, endGameSession } from '../slices/gameSessionSlice';
 import { authService } from '../../services/authService';
+import { videoUploadService } from '../../services/uploadService';
+import { mobileMediaIntegration } from '../../services/mobileMediaIntegration';
 
 /**
  * Auth middleware that handles authentication-related side effects
@@ -99,6 +101,26 @@ function handleAuthInitialization(store: any, authState: any, gameSessionState: 
   // Start game session for authenticated users
   if (authState.isAuthenticated && authState.user && !gameSessionState.currentSession) {
     store.dispatch(startGameSession({ playerId: authState.user.id }));
+  }
+
+  // Set auth token for upload service
+  const authToken = authService.getAuthToken();
+  if (authToken) {
+    videoUploadService.setAuthToken(authToken);
+    console.log('✅ Auth token set for upload service - UPLOADS ENABLED!');
+  }
+
+  // Initialize mobile media integration after auth is ready
+  if (authState.isAuthenticated) {
+    console.log('🔄 Starting media library sync...');
+    mobileMediaIntegration.syncMediaLibrary()
+      .then(() => {
+        console.log('✅ Media library sync completed');
+      })
+      .catch((error) => {
+        // Don't throw error here as auth was successful
+        console.error('⚠️ Media sync failed:', error.message);
+      });
   }
 
   console.log('✅ Auth initialization completed:', {
