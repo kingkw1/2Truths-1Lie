@@ -1,22 +1,30 @@
 # Content Moderation - MVP Implementation Tasks
 
-### Tasks Kiro Can Automate (Spec-to-Code, Testing, API Generation)
+## Implementation Status
+**Backend Service**: ✅ Complete - Comprehensive `ModerationService` with content filtering, status enums, and extensive test coverage  
+**Data Models**: ✅ Complete - Challenge model includes moderation status fields (`PENDING_MODERATION`, `MODERATED`)  
+**Missing**: API endpoints for reporting and admin review, plus mobile UI for user reporting
 
-- [ ] Extend the `Video` data model to include a `status` field with possible values 'live', 'reported', 'removed'
-- [ ] Generate the `POST /api/videos/{id}/report` API endpoint to update a video's status to 'reported'
-- [ ] Generate the admin-only `GET /api/admin/reports` endpoint to fetch all videos with a 'reported' status
-- [ ] Implement a basic notification trigger (e.g., logging a message or emitting an event) when a video is reported
-- [ ] Generate the "Report" button component for the frontend video player/challenge screen
-- [ ] Generate the API client function in the mobile app to call the report endpoint
-- [ ] Create a basic confirmation modal UI that appears after the user taps the report button
-- [ ] Generate backend unit and integration tests for both the public report endpoint and the admin reports endpoint
-- [ ] Generate frontend tests to verify the report button's presence and the confirmation flow
+### Tasks Kiro Can Automate (API Implementation, UI Integration, Testing)
 
-### Tasks To Perform Manually (Configuration, Deployment, Review)
+- [ ] Create `POST /api/v1/challenges/{challenge_id}/report` endpoint with existing ModerationService integration
+- [ ] Create `GET /api/v1/admin/moderation/reports` endpoint to fetch challenges pending moderation
+- [ ] Create `PUT /api/v1/admin/moderation/challenges/{challenge_id}` endpoint for admin review actions
+- [ ] Integrate reporting API endpoints with existing challenge status workflow and database models
+- [ ] Add report button/menu option to existing FullscreenGuessScreen and GameScreen video players
+- [ ] Create report reason selection modal component matching backend ModerationReason enum values
+- [ ] Generate API client functions in mobile app for challenge reporting and status checking
+- [ ] Create report confirmation UI with user-friendly feedback messaging
+- [ ] Generate comprehensive API tests for all moderation endpoints with existing ModerationService integration
+- [ ] Generate mobile UI tests for report button functionality and confirmation flows
 
-- [ ] Configure the admin notification system (e.g., set up email transport or log monitoring)
-- [ ] Define and document the internal process for reviewing and acting on reported content
-- [ ] Deploy the updated API and frontend application
-- [ ] Manually test the end-to-end reporting flow on physical devices.
-- [ ] Establish the process for manually removing content (e.g., a secure script or direct database access procedure)
-- [ ] Monitor the volume and nature of reports post-launch
+### Tasks To Perform Manually (UX Decisions, Admin Workflow, Security Review)
+
+- [ ] Design the optimal user experience for reporting - context menu vs button vs long-press gesture
+- [ ] Determine report reason categories and validation rules for user-friendly reporting flow
+- [ ] Set up admin notification system and alerting for new reports (email, Slack, etc.)
+- [ ] Define and document the internal admin review process and escalation procedures
+- [ ] Configure admin authentication and authorization for moderation endpoints
+- [ ] Test end-to-end reporting flow on physical devices with actual video content
+- [ ] Establish process for monitoring report volume and identifying false positives
+- [ ] Review and validate integration with existing Railway deployment and production monitoring
