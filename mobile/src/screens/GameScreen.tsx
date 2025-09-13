@@ -28,13 +28,13 @@ import {
 import { EnhancedChallenge, GuessResult } from '../types';
 import { ChallengeCreationScreen } from './ChallengeCreationScreen';
 import FullscreenGuessScreen from './FullscreenGuessScreen';
+import { useAuth } from '../hooks/useAuth';
 import AnimatedFeedback from '../shared/AnimatedFeedback';
 import SimpleVideoPlayer from '../components/SimpleVideoPlayer';
 import SegmentedVideoPlayer from '../components/SegmentedVideoPlayer';
 import { realChallengeAPI, Challenge as BackendChallenge } from '../services/realChallengeAPI';
 import { errorHandlingService } from '../services/errorHandlingService';
 import { AuthStatusBanner } from '../components/ProtectedScreen';
-import { useAuth } from '../hooks/useAuth';
 
 // Helper function to convert backend challenge to frontend format
 const convertBackendChallenge = (backendChallenge: BackendChallenge): EnhancedChallenge => {
@@ -184,6 +184,7 @@ export const GameScreen: React.FC<GameScreenProps> = ({
   useFullscreenInterface = true, // Default to new interface
 }) => {
   const dispatch = useAppDispatch();
+  const { isAuthenticated, isGuest } = useAuth();
   const {
     availableChallenges,
     selectedChallenge,
@@ -343,6 +344,34 @@ export const GameScreen: React.FC<GameScreenProps> = ({
     loadChallengesFromAPI(false);
   };
 
+  const handleCreateChallenge = () => {
+    if (!isAuthenticated || isGuest) {
+      Alert.alert(
+        'Sign In Required',
+        'You need to sign in with an account to create challenges. Guest users can play challenges but cannot create them.',
+        [
+          {
+            text: 'Cancel',
+            style: 'cancel',
+          },
+          {
+            text: 'Sign In',
+            style: 'default',
+            onPress: () => {
+              // You can navigate to auth screen here if needed
+              // For now, just inform the user
+              console.log('User wants to sign in to create challenges');
+            },
+          },
+        ]
+      );
+      return;
+    }
+    
+    // User is authenticated, proceed with challenge creation
+    setShowChallengeCreation(true);
+  };
+
   const getErrorDisplayInfo = () => {
     if (!loadError) return null;
 
@@ -370,7 +399,7 @@ export const GameScreen: React.FC<GameScreenProps> = ({
       {!hideCreateButton && (
         <TouchableOpacity
           style={[styles.challengeCard, styles.createChallengeCard]}
-          onPress={() => setShowChallengeCreation(true)}
+          onPress={handleCreateChallenge}
         >
           <Text style={styles.createChallengeTitle}>📹 Create New Challenge</Text>
           <Text style={styles.createChallengeSubtitle}>

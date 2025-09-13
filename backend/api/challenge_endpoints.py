@@ -8,7 +8,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.responses import JSONResponse
 import logging
 
-from services.auth_service import get_current_user
+from services.auth_service import get_current_user, get_authenticated_user
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from services.challenge_service import challenge_service
 from services.upload_service import ChunkedUploadService
@@ -45,7 +45,7 @@ upload_service = ChunkedUploadService()
 @router.post("/", response_model=Challenge, status_code=status.HTTP_201_CREATED)
 async def create_challenge(
     request: CreateChallengeRequest,
-    creator_id: str = Depends(get_current_user)
+    creator_id: str = Depends(get_authenticated_user)
 ) -> Challenge:
     """
     Create a new challenge with 3 statements and their associated media

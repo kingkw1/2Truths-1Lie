@@ -229,6 +229,20 @@ async def get_current_user_with_permissions(
     payload = verify_token(credentials.credentials)
     return payload
 
+async def get_authenticated_user(credentials: HTTPAuthorizationCredentials = Depends(security)) -> str:
+    """Get current user from JWT token - ONLY authenticated users, rejects guests"""
+    payload = verify_token(credentials.credentials)
+    user_type = payload.get("type", "user")
+    
+    if user_type == "guest":
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="This action requires user authentication. Please sign in with an account.",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    
+    return payload.get("sub")
+
 def require_permission(permission: str):
     """Factory function to create permission-based dependency"""
     async def _check_permission(

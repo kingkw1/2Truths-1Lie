@@ -155,7 +155,10 @@ export class RealChallengeAPIService {
       }
       
       console.log('🎯 API: About to connect to endpoint...');
-      console.log('🎯 API: Full URL:', `${this.baseUrl}/api/v1/test/challenge`);
+      console.log('🎯 API: Full URL:', `${this.baseUrl}/api/v1/challenges/`);
+
+      // Get authentication headers
+      const authHeaders = await this.getAuthHeaders();
 
       // Create abort controller for timeout
       const controller = new AbortController();
@@ -178,10 +181,11 @@ export class RealChallengeAPIService {
         
         const startTime = Date.now();
         
-        // Use test endpoint for development (bypasses auth)
-        const response = await fetch(`${this.baseUrl}/api/v1/test/challenge`, {
+        // Use production endpoint with authentication
+        const response = await fetch(`${this.baseUrl}/api/v1/challenges/`, {
           method: 'POST',
           headers: {
+            ...authHeaders,
             'Content-Type': 'application/json',
           },
           body: JSON.stringify(request),
