@@ -10,6 +10,8 @@ import gameSessionReducer from './slices/gameSessionSlice';
 import playerProgressionReducer from './slices/playerProgressionSlice';
 import uiReducer from './slices/uiSlice';
 import networkReducer from './slices/networkSlice';
+import authReducer from './slices/authSlice';
+import { authMiddleware } from './middleware/authMiddleware';
 
 if (__DEV__) {
   console.log('⚡ Configuring simplified mobile Redux store...');
@@ -17,6 +19,7 @@ if (__DEV__) {
 
 const store = configureStore({
   reducer: {
+    auth: authReducer,
     guessingGame: guessingGameReducer,
     challengeCreation: challengeCreationReducer,
     gameSession: gameSessionReducer,
@@ -29,9 +32,13 @@ const store = configureStore({
       serializableCheck: {
         // Ignore non-serializable values in actions/state for now
         ignoredActions: ['persist/PERSIST', 'persist/REHYDRATE'],
-        ignoredPaths: ['guessingGame.availableChallenges.0.createdAt', 'guessingGame.availableChallenges.0.lastPlayed'],
+        ignoredPaths: [
+          'guessingGame.availableChallenges.0.createdAt', 
+          'guessingGame.availableChallenges.0.lastPlayed',
+          'auth.user.createdAt', // Auth user createdAt is a Date object
+        ],
       },
-    }),
+    }).concat(authMiddleware),
   devTools: process.env.NODE_ENV !== 'production',
 });
 

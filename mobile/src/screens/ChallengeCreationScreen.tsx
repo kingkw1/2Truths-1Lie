@@ -30,6 +30,8 @@ import { realChallengeAPI } from '../services/realChallengeAPI';
 import { mobileMediaIntegration } from '../services/mobileMediaIntegration';
 import { errorHandlingService } from '../services/errorHandlingService';
 import { useErrorHandling } from '../hooks/useErrorHandling';
+import { AuthStatusBanner } from '../components/ProtectedScreen';
+import { useAuth } from '../hooks/useAuth';
 
 /**
  * Opens device settings for the app
@@ -730,6 +732,15 @@ export const ChallengeCreationScreen: React.FC<ChallengeCreationScreenProps> = (
       ) : (
         // Render traditional interface with header and container
         <SafeAreaView style={styles.container}>
+          <AuthStatusBanner
+            showForGuests={true}
+            guestMessage="Sign in to save your challenges and track your creations"
+            onAuthAction={() => {
+              // Navigate back to trigger auth flow
+              if (onCancel) onCancel();
+            }}
+          />
+          
           <View style={styles.header}>
             <TouchableOpacity onPress={onCancel}>
               <Text style={styles.cancelButton}>← Back</Text>

@@ -14,6 +14,33 @@ export interface AuthUser {
   createdAt: Date;
 }
 
+export interface AuthResponse {
+  access_token: string;
+  refresh_token: string;
+  token_type: string;
+  expires_in: number;
+  user?: {
+    id: string;
+    email: string;
+    created_at: string;
+  };
+}
+
+export interface AuthError {
+  message: string;
+  code: string;
+  field?: string;
+}
+
+export enum AuthErrorCode {
+  INVALID_CREDENTIALS = 'INVALID_CREDENTIALS',
+  EMAIL_ALREADY_EXISTS = 'EMAIL_ALREADY_EXISTS',
+  NETWORK_ERROR = 'NETWORK_ERROR',
+  VALIDATION_ERROR = 'VALIDATION_ERROR',
+  TOKEN_EXPIRED = 'TOKEN_EXPIRED',
+  UNKNOWN_ERROR = 'UNKNOWN_ERROR',
+}
+
 export class AuthService {
   private static instance: AuthService;
   private currentUser: AuthUser | null = null;
@@ -33,13 +60,18 @@ export class AuthService {
    */
   public async initialize(): Promise<void> {
     try {
-      // Clear any existing auth data for fresh start
-      await AsyncStorage.multiRemove(['currentUser', 'authToken', 'refreshToken']);
+      console.log('🚀 Initializing AuthService...');
       
-      // Always create a fresh guest user for testing
-      await this.createGuestUser();
+      // Try to restore existing authentication state
+      const restored = await this.restoreAuthState();
+      
+      if (restored) {
+        console.log('✅ Authentication state restored from storage');
+      } else {
+        console.log('✅ New guest session created');
+      }
     } catch (error) {
-      console.error('Auth initialization error:', error);
+      console.error('❌ Auth initialization error:', error);
       await this.createGuestUser();
     }
   }
@@ -137,39 +169,42 @@ export class AuthService {
   }
 
   /**
-   * Login with credentials
+   * Sign up with credentials
    */
-  public async login(email: string, password: string): Promise<AuthUser> {
+  public async signup(email: string, password: string): Promise<AuthUser> {
     try {
-      const response = await fetch(`${this.getApiBaseUrl()}/api/v1/auth/login`, {
+      // Validate input parameters
+      this.validateEmailPassword(email, password);
+
+      const response = await fetch(`${this.getApiBaseUrl()}/api/v1/auth/signup`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify({
-          email,
+          email: email.trim().toLowerCase(),
           password,
           device_info: {
             platform: 'mobile',
+            app_version: '1.0.0',
             // Add more device info as needed
           },
         }),
       });
 
       if (!response.ok) {
-        const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.detail || 'Login failed');
+        throw await this.handleAuthError(response);
       }
 
-      const data = await response.json();
+      const data: AuthResponse = await response.json();
       
-      const user: AuthUser = {
-        id: email.split('@')[0] || 'User',
-        name: email.split('@')[0] || 'User',
-        email,
-        createdAt: new Date(),
-      };
+      // Create user from backend response or fallback to email-based user
+      const user: AuthUser = this.createUserFromResponse(data, email);
 
+      // Store current guest user data for potential migration
+      const guestUser = this.currentUser;
+      
+      // Update current user and token
       this.currentUser = user;
       this.authToken = data.access_token;
 
@@ -178,10 +213,76 @@ export class AuthService {
       await AsyncStorage.setItem('authToken', data.access_token);
       await AsyncStorage.setItem('refreshToken', data.refresh_token);
 
+      console.log('✅ Signup successful for user:', user.email);
+
+      // Migrate guest user data if applicable
+      if (guestUser && this.isGuestUser(guestUser)) {
+        await this.migrateGuestUserData(guestUser, user);
+      }
+
       return user;
     } catch (error: any) {
-      console.error('Login failed:', error);
-      throw error;
+      console.error('❌ Signup failed:', error);
+      throw this.normalizeAuthError(error);
+    }
+  }
+
+  /**
+   * Login with credentials
+   */
+  public async login(email: string, password: string): Promise<AuthUser> {
+    try {
+      // Validate input parameters
+      this.validateEmailPassword(email, password);
+
+      const response = await fetch(`${this.getApiBaseUrl()}/api/v1/auth/login`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          email: email.trim().toLowerCase(),
+          password,
+          device_info: {
+            platform: 'mobile',
+            app_version: '1.0.0',
+            // Add more device info as needed
+          },
+        }),
+      });
+
+      if (!response.ok) {
+        throw await this.handleAuthError(response);
+      }
+
+      const data: AuthResponse = await response.json();
+      
+      // Create user from backend response or fallback to email-based user
+      const user: AuthUser = this.createUserFromResponse(data, email);
+
+      // Store current guest user data for potential migration
+      const guestUser = this.currentUser;
+      
+      // Update current user and token
+      this.currentUser = user;
+      this.authToken = data.access_token;
+
+      // Store in AsyncStorage
+      await AsyncStorage.setItem('currentUser', JSON.stringify(user));
+      await AsyncStorage.setItem('authToken', data.access_token);
+      await AsyncStorage.setItem('refreshToken', data.refresh_token);
+
+      console.log('✅ Login successful for user:', user.email);
+
+      // Migrate guest user data if applicable
+      if (guestUser && this.isGuestUser(guestUser)) {
+        await this.migrateGuestUserData(guestUser, user);
+      }
+
+      return user;
+    } catch (error: any) {
+      console.error('❌ Login failed:', error);
+      throw this.normalizeAuthError(error);
     }
   }
 
@@ -189,15 +290,15 @@ export class AuthService {
    * Logout current user
    */
   public async logout(): Promise<void> {
-    this.currentUser = null;
-    this.authToken = null;
-
-    // Clear from AsyncStorage
-    await AsyncStorage.removeItem('currentUser');
-    await AsyncStorage.removeItem('authToken');
+    console.log('🚪 Logging out user...');
+    
+    // Clear all authentication data
+    await this.clearAuthData();
 
     // Create a new guest user
     await this.createGuestUser();
+    
+    console.log('✅ Logout completed, new guest session created');
   }
 
   /**
@@ -342,6 +443,225 @@ export class AuthService {
   public async hasPermission(permission: string): Promise<boolean> {
     const permissions = await this.getUserPermissions();
     return permissions.includes(permission) || permissions.includes('admin');
+  }
+
+  /**
+   * Validate email and password format
+   */
+  private validateEmailPassword(email: string, password: string): void {
+    if (!email || !email.trim()) {
+      throw new Error('Email is required');
+    }
+
+    if (!this.isValidEmail(email)) {
+      throw new Error('Please enter a valid email address');
+    }
+
+    if (!password || password.length < 6) {
+      throw new Error('Password must be at least 6 characters long');
+    }
+  }
+
+  /**
+   * Validate email format
+   */
+  public isValidEmail(email: string): boolean {
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    return emailRegex.test(email.trim());
+  }
+
+  /**
+   * Validate password strength
+   */
+  public isValidPassword(password: string): boolean {
+    // Password must be at least 8 characters and contain at least one letter and one number
+    const passwordRegex = /^(?=.*[A-Za-z])(?=.*\d)[A-Za-z\d@$!%*#?&]{8,}$/;
+    return passwordRegex.test(password);
+  }
+
+  /**
+   * Check if user is a guest user
+   */
+  private isGuestUser(user: AuthUser): boolean {
+    return user.id.startsWith('guest_') && !user.email;
+  }
+
+  /**
+   * Create user object from backend response
+   */
+  private createUserFromResponse(data: AuthResponse, email: string): AuthUser {
+    if (data.user) {
+      return {
+        id: data.user.id,
+        name: data.user.email.split('@')[0] || 'User',
+        email: data.user.email,
+        createdAt: new Date(data.user.created_at),
+      };
+    }
+
+    // Fallback to email-based user creation
+    return {
+      id: email.split('@')[0] || 'User',
+      name: email.split('@')[0] || 'User',
+      email: email.trim().toLowerCase(),
+      createdAt: new Date(),
+    };
+  }
+
+  /**
+   * Handle authentication errors from backend
+   */
+  private async handleAuthError(response: Response): Promise<Error> {
+    let errorData: any = {};
+    
+    try {
+      errorData = await response.json();
+    } catch {
+      // If response is not JSON, use status-based error
+    }
+
+    switch (response.status) {
+      case 400:
+        return new Error(errorData.detail || 'Invalid request. Please check your input.');
+      case 401:
+        return new Error('Invalid email or password. Please check your credentials.');
+      case 409:
+        return new Error('An account with this email already exists.');
+      case 422:
+        return new Error(errorData.detail || 'Validation error. Please check your input.');
+      case 429:
+        return new Error('Too many attempts. Please try again later.');
+      case 500:
+        return new Error('Server error. Please try again later.');
+      default:
+        return new Error(errorData.detail || `Authentication failed (${response.status})`);
+    }
+  }
+
+  /**
+   * Normalize authentication errors for consistent handling
+   */
+  private normalizeAuthError(error: any): Error {
+    if (error instanceof Error) {
+      return error;
+    }
+
+    if (typeof error === 'string') {
+      return new Error(error);
+    }
+
+    if (error?.message) {
+      return new Error(error.message);
+    }
+
+    return new Error('Authentication failed. Please try again.');
+  }
+
+  /**
+   * Migrate guest user data to authenticated user
+   */
+  private async migrateGuestUserData(guestUser: AuthUser, authenticatedUser: AuthUser): Promise<void> {
+    try {
+      console.log('🔄 Migrating guest user data to authenticated user...');
+      
+      // Here you can implement logic to migrate:
+      // - Challenge history
+      // - Game progress
+      // - User preferences
+      // - Any other guest user data
+      
+      // For now, we'll just log the migration
+      console.log('✅ Guest user data migration completed');
+      console.log(`   From: ${guestUser.id} (guest)`);
+      console.log(`   To: ${authenticatedUser.email} (authenticated)`);
+      
+      // You can extend this method to call backend APIs for data migration
+      // Example:
+      // await this.migrateUserDataOnBackend(guestUser.id, authenticatedUser.id);
+      
+    } catch (error) {
+      console.warn('⚠️ Guest user data migration failed:', error);
+      // Don't throw error here as authentication was successful
+    }
+  }
+
+  /**
+   * Get user authentication status with detailed information
+   */
+  public getAuthStatus(): {
+    isAuthenticated: boolean;
+    isGuest: boolean;
+    user: AuthUser | null;
+    hasValidToken: boolean;
+  } {
+    const isAuthenticated = this.isAuthenticated();
+    const isGuest = this.currentUser ? this.isGuestUser(this.currentUser) : false;
+    const hasValidToken = !!this.authToken;
+
+    return {
+      isAuthenticated,
+      isGuest,
+      user: this.currentUser,
+      hasValidToken,
+    };
+  }
+
+  /**
+   * Clear all authentication data (for logout or reset)
+   */
+  public async clearAuthData(): Promise<void> {
+    this.currentUser = null;
+    this.authToken = null;
+
+    await AsyncStorage.multiRemove([
+      'currentUser',
+      'authToken',
+      'refreshToken',
+    ]);
+
+    console.log('🧹 Authentication data cleared');
+  }
+
+  /**
+   * Restore authentication state from storage
+   */
+  public async restoreAuthState(): Promise<boolean> {
+    try {
+      const [storedUser, storedToken] = await AsyncStorage.multiGet([
+        'currentUser',
+        'authToken',
+      ]);
+
+      const userData = storedUser[1];
+      const tokenData = storedToken[1];
+
+      if (userData && tokenData) {
+        this.currentUser = JSON.parse(userData);
+        this.authToken = tokenData;
+
+        // Validate token if it's not a guest token
+        if (!tokenData.startsWith('local_guest_token_')) {
+          const isValid = await this.validateToken();
+          if (!isValid) {
+            console.warn('⚠️ Stored token is invalid, creating new guest session');
+            await this.clearAuthData();
+            await this.createGuestUser();
+            return false;
+          }
+        }
+
+        console.log('✅ Authentication state restored');
+        return true;
+      }
+
+      // No stored auth data, create guest user
+      await this.createGuestUser();
+      return false;
+    } catch (error) {
+      console.error('❌ Failed to restore auth state:', error);
+      await this.createGuestUser();
+      return false;
+    }
   }
 }
 

@@ -1,16 +1,14 @@
-// Re-enabled safe components (no FormData dependencies)
-export { MobileCameraRecorder } from './MobileCameraRecorder';
-export { EnhancedMobileCameraIntegration } from './EnhancedMobileCameraIntegration';
-export { default as SafeEnhancedChallengeCreation } from './SafeEnhancedChallengeCreation';
-export { default as MergeProgressIndicator } from './MergeProgressIndicator';
-export { default as SimpleVideoPlayer } from './SimpleVideoPlayer';
-export { default as SegmentedVideoPlayer } from './SegmentedVideoPlayer';
-export { ErrorDisplay } from './ErrorDisplay';
-export { default as PlaybackErrorHandler } from './PlaybackErrorHandler';
-export { ErrorBoundary } from './ErrorBoundary';
+// Export form components
+export { ErrorMessage } from './ErrorMessage';
+export { FormInput } from './FormInput';
 
-// Upload-related exports - NOW ENABLED!
-export { default as UploadProgressIndicator } from './UploadProgressIndicator';
-export { default as EnhancedUploadUI } from './EnhancedUploadUI';
-export { default as EnhancedChallengeCreation } from './EnhancedChallengeCreation';
-export { default as UploadErrorHandler } from './UploadErrorHandler';
+// Export existing components
+export { AuthGuard } from './AuthGuard';
+export { ProtectedScreen } from './ProtectedScreen';
+
+// Export loading and feedback components
+export { LoadingOverlay } from './LoadingOverlay';
+export { Toast } from './Toast';
+export { AuthButton } from './AuthButton';
+export { RetryButton } from './RetryButton';
+export { ProgressIndicator } from './ProgressIndicator';

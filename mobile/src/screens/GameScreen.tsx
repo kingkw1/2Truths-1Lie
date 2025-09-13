@@ -33,6 +33,8 @@ import SimpleVideoPlayer from '../components/SimpleVideoPlayer';
 import SegmentedVideoPlayer from '../components/SegmentedVideoPlayer';
 import { realChallengeAPI, Challenge as BackendChallenge } from '../services/realChallengeAPI';
 import { errorHandlingService } from '../services/errorHandlingService';
+import { AuthStatusBanner } from '../components/ProtectedScreen';
+import { useAuth } from '../hooks/useAuth';
 
 // Helper function to convert backend challenge to frontend format
 const convertBackendChallenge = (backendChallenge: BackendChallenge): EnhancedChallenge => {
@@ -640,6 +642,15 @@ export const GameScreen: React.FC<GameScreenProps> = ({
       ) : (
         /* Traditional interface with header and layout */
         <SafeAreaView style={styles.container}>
+          <AuthStatusBanner
+            showForGuests={true}
+            guestMessage="Sign in to save your game progress and compete with friends"
+            onAuthAction={() => {
+              // Navigate back to trigger auth flow
+              if (onBack) onBack();
+            }}
+          />
+          
           <View style={styles.header}>
             <TouchableOpacity onPress={currentSession ? handleNewGame : onBack}>
               <Text style={styles.backButton}>← Back</Text>
