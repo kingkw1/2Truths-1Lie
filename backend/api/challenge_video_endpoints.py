@@ -84,8 +84,20 @@ async def initiate_multi_video_upload(
             durations_ms = json.loads(video_durations)  # Mobile app sends durations in milliseconds
             mime_types = json.loads(video_mime_types)
             
-            # Convert durations from milliseconds to seconds
-            durations = [duration_ms / 1000.0 for duration_ms in durations_ms]
+            # Validate and convert durations from milliseconds to seconds
+            durations = []
+            for i, duration_ms in enumerate(durations_ms):
+                # Assertion: Durations > 1000 should be in milliseconds (no video recording is > 1000 seconds)
+                if duration_ms > 1000:
+                    # Convert from milliseconds to seconds
+                    duration_seconds = duration_ms / 1000.0
+                    durations.append(duration_seconds)
+                    logger.info(f"Video {i+1}: Converted duration {duration_ms}ms to {duration_seconds}s")
+                else:
+                    # Value seems to already be in seconds (unlikely but handle it)
+                    durations.append(duration_ms)
+                    logger.warning(f"Video {i+1}: Duration {duration_ms} appears to be in seconds (< 1000)")
+                    
         except json.JSONDecodeError as e:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,

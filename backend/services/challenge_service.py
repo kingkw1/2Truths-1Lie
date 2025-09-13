@@ -197,7 +197,23 @@ class ChallengeService:
                 if not segment_metadata:
                     raise ChallengeServiceError(f"Missing segment metadata for statement {i}")
                 
-                # Create statement with merged video URL and segment metadata
+                # Validate segment metadata timing units (should be in seconds, not milliseconds)
+                # Assertion: Values > 1000 likely indicate milliseconds instead of seconds
+                if segment_metadata.duration and segment_metadata.duration > 1000:
+                    logger.warning(f"Statement {i}: segment_metadata.duration={segment_metadata.duration} > 1000, likely in milliseconds instead of seconds")
+                    raise ChallengeServiceError(f"Statement {i}: Invalid duration {segment_metadata.duration} - expected seconds, got what appears to be milliseconds")
+                    
+                if segment_metadata.start_time and segment_metadata.start_time > 1000:
+                    logger.warning(f"Statement {i}: segment_metadata.start_time={segment_metadata.start_time} > 1000, likely in milliseconds instead of seconds")
+                    raise ChallengeServiceError(f"Statement {i}: Invalid start_time {segment_metadata.start_time} - expected seconds, got what appears to be milliseconds")
+                    
+                if segment_metadata.end_time and segment_metadata.end_time > 1000:
+                    logger.warning(f"Statement {i}: segment_metadata.end_time={segment_metadata.end_time} > 1000, likely in milliseconds instead of seconds")
+                    raise ChallengeServiceError(f"Statement {i}: Invalid end_time {segment_metadata.end_time} - expected seconds, got what appears to be milliseconds")
+                
+                logger.info(f"Statement {i}: Validated segment timing in seconds - duration={segment_metadata.duration}s, start={segment_metadata.start_time}s, end={segment_metadata.end_time}s")
+
+                # Create statement with merged video URL and segment metadata (all timing in seconds)
                 statement = Statement(
                     statement_id=statement_id,
                     statement_type=statement_type,
@@ -206,11 +222,11 @@ class ChallengeService:
                     streaming_url=request.merged_video_url,
                     cloud_storage_key=None,  # Will be set by the merge service
                     storage_type="cloud" if request.merged_video_url.startswith("http") else "local",
-                    duration_seconds=segment_metadata.duration,
-                    # Legacy segment metadata for backward compatibility
-                    segment_start_time=segment_metadata.start_time,
-                    segment_end_time=segment_metadata.end_time,
-                    segment_duration=segment_metadata.duration,
+                    duration_seconds=segment_metadata.duration,  # Duration in seconds
+                    # Legacy segment metadata for backward compatibility (all in seconds)
+                    segment_start_time=segment_metadata.start_time,  # Start time in seconds
+                    segment_end_time=segment_metadata.end_time,      # End time in seconds
+                    segment_duration=segment_metadata.duration,     # Duration in seconds
                     # Enhanced segment metadata
                     segment_metadata=segment_metadata,
                     created_at=datetime.utcnow()
@@ -435,26 +451,26 @@ class ChallengeService:
                 "metadata": challenge.legacy_merged_metadata
             }
         
-        # Fallback to statement-level segment metadata
+        # Fallback to statement-level segment metadata (all timing values in seconds)
         segments = []
         for i, statement in enumerate(challenge.statements):
             if statement.segment_metadata:
                 segments.append({
                     "statement_id": statement.statement_id,
                     "statement_index": i,
-                    "start_time": statement.segment_metadata.start_time,
-                    "end_time": statement.segment_metadata.end_time,
-                    "duration": statement.segment_metadata.duration,
+                    "start_time": statement.segment_metadata.start_time,    # Seconds
+                    "end_time": statement.segment_metadata.end_time,        # Seconds  
+                    "duration": statement.segment_metadata.duration,       # Seconds
                     "statement_type": statement.statement_type.value
                 })
             elif statement.segment_start_time is not None and statement.segment_end_time is not None:
-                # Legacy format
+                # Legacy format (all timing values in seconds)
                 segments.append({
                     "statement_id": statement.statement_id,
                     "statement_index": i,
-                    "start_time": statement.segment_start_time,
-                    "end_time": statement.segment_end_time,
-                    "duration": statement.segment_duration or (statement.segment_end_time - statement.segment_start_time),
+                    "start_time": statement.segment_start_time,             # Seconds
+                    "end_time": statement.segment_end_time,                 # Seconds
+                    "duration": statement.segment_duration or (statement.segment_end_time - statement.segment_start_time),  # Seconds
                     "statement_type": statement.statement_type.value
                 })
         

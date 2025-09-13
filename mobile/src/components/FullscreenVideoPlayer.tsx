@@ -152,15 +152,16 @@ export const FullscreenVideoPlayer: React.FC<FullscreenVideoPlayerProps> = ({
       }
 
       // Seek to segment start and play
-      await videoRef.current.setPositionAsync(segment.startTime);
+      // Set position and play (all timing values in milliseconds)
+      await videoRef.current.setPositionAsync(segment.startTime); // startTime in milliseconds
       if (autoPlay) {
         await videoRef.current.playAsync();
         
         // Set up a safety timer to force-pause the video
         // This acts as a backup in case the playback status callback misses the end
-        const segmentDuration = segment.endTime - segment.startTime;
-        const safetyBuffer = 200; // Stop 200ms before the actual end
-        const timerDuration = Math.max(100, segmentDuration - safetyBuffer);
+        const segmentDuration_ms = segment.endTime - segment.startTime; // Duration in milliseconds
+        const safetyBuffer_ms = 200; // Stop 200ms before the actual end
+        const timerDuration_ms = Math.max(100, segmentDuration_ms - safetyBuffer_ms); // Timer duration in milliseconds
         
         // Clear any existing timer
         if (segmentTimerRef.current) {
@@ -168,14 +169,14 @@ export const FullscreenVideoPlayer: React.FC<FullscreenVideoPlayerProps> = ({
         }
         
         segmentTimerRef.current = setTimeout(async () => {
-          console.log(`🎬 SAFETY_TIMER: Force-pausing segment ${segmentIndex} after ${timerDuration}ms`);
+          console.log(`🎬 SAFETY_TIMER: Force-pausing segment ${segmentIndex} after ${timerDuration_ms}ms`);
           try {
             await videoRef.current?.pauseAsync();
             setHasReachedSegmentEnd(true);
           } catch (error) {
             console.error('Error in safety timer pause:', error);
           }
-        }, timerDuration);
+        }, timerDuration_ms);
       }
 
       console.log(`🎬 FULLSCREEN_PLAYER: Loaded segment ${segmentIndex} (${segment.startTime}ms - ${segment.endTime}ms)`);
