@@ -160,7 +160,7 @@ export const FullscreenVideoPlayer: React.FC<FullscreenVideoPlayerProps> = ({
         // Set up a safety timer to force-pause the video
         // This acts as a backup in case the playback status callback misses the end
         const segmentDuration_ms = segment.endTime - segment.startTime; // Duration in milliseconds
-        const safetyBuffer_ms = 200; // Stop 200ms before the actual end
+        const safetyBuffer_ms = 50; // Stop 50ms before the actual end (reduced from 200ms)
         const timerDuration_ms = Math.max(100, segmentDuration_ms - safetyBuffer_ms); // Timer duration in milliseconds
         
         // Clear any existing timer
@@ -169,7 +169,7 @@ export const FullscreenVideoPlayer: React.FC<FullscreenVideoPlayerProps> = ({
         }
         
         segmentTimerRef.current = setTimeout(async () => {
-          console.log(`🎬 SAFETY_TIMER: Force-pausing segment ${segmentIndex} after ${timerDuration_ms}ms`);
+          console.log(`🎬 SAFETY_TIMER: Force-pausing segment ${segmentIndex} after ${timerDuration_ms}ms (segment duration: ${segmentDuration_ms}ms, buffer: ${safetyBuffer_ms}ms)`);
           try {
             await videoRef.current?.pauseAsync();
             setHasReachedSegmentEnd(true);
@@ -177,9 +177,11 @@ export const FullscreenVideoPlayer: React.FC<FullscreenVideoPlayerProps> = ({
             console.error('Error in safety timer pause:', error);
           }
         }, timerDuration_ms);
+        
+        console.log(`🎬 FULLSCREEN_PLAYER: Loaded segment ${segmentIndex} (${segment.startTime}ms - ${segment.endTime}ms), duration=${segmentDuration_ms}ms, safety_timer=${timerDuration_ms}ms`);
+      } else {
+        console.log(`🎬 FULLSCREEN_PLAYER: Loaded segment ${segmentIndex} (${segment.startTime}ms - ${segment.endTime}ms), autoPlay=false`);
       }
-
-      console.log(`🎬 FULLSCREEN_PLAYER: Loaded segment ${segmentIndex} (${segment.startTime}ms - ${segment.endTime}ms)`);
 
     } catch (error) {
       console.error('Error loading merged video segment:', error);

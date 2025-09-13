@@ -722,12 +722,16 @@ class VideoMergeService:
                 
                 duration = float(stdout.decode().strip())
                 
+                logger.info(f"Video {i}: FFmpeg detected duration = {duration}s ({duration * 1000}ms)")
+                
                 segment = VideoSegmentMetadata(
                     start_time=current_time,
                     end_time=current_time + duration,
                     duration=duration,
                     statement_index=i
                 )
+                
+                logger.info(f"Video {i}: Segment metadata created - start_time={current_time}s, end_time={current_time + duration}s, duration={duration}s")
                 
                 segments.append(segment)
                 current_time += duration
