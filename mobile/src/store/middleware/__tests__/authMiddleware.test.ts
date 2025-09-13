@@ -8,10 +8,17 @@ import { authMiddleware, isAuthActionSuccessful, isAuthActionFailed, getAuthStat
 import authReducer, { loginUser, signupUser, logoutUser, initializeAuth } from '../../slices/authSlice';
 import gameSessionReducer from '../../slices/gameSessionSlice';
 import { authService } from '../../../services/authService';
+import type { RootState, AppDispatch } from '../../index';
 
 // Mock the auth service
 jest.mock('../../../services/authService');
 const mockAuthService = authService as jest.Mocked<typeof authService>;
+
+// Helper to get typed state
+const getTypedState = (store: any) => store.getState() as {
+  auth: ReturnType<typeof authReducer>;
+  gameSession: ReturnType<typeof gameSessionReducer>;
+};
 
 describe('authMiddleware', () => {
   let store: ReturnType<typeof configureStore>;
@@ -54,30 +61,30 @@ describe('authMiddleware', () => {
 
   describe('auth action handling', () => {
     it('should handle successful login', async () => {
-      await store.dispatch(loginUser({ email: 'test@example.com', password: 'password' }));
+      await store.dispatch(loginUser({ email: 'test@example.com', password: 'password' }) as any);
 
       // Check if game session was started
-      const gameSessionState = store.getState().gameSession;
+      const gameSessionState = getTypedState(store).gameSession;
       expect(gameSessionState.currentSession).toBeTruthy();
       expect(gameSessionState.currentSession?.playerId).toBe('test-user');
       expect(gameSessionState.isActive).toBe(true);
     });
 
     it('should handle successful signup', async () => {
-      await store.dispatch(signupUser({ email: 'new@example.com', password: 'password' }));
+      await store.dispatch(signupUser({ email: 'new@example.com', password: 'password' }) as any);
 
       // Check if game session was started
-      const gameSessionState = store.getState().gameSession;
+      const gameSessionState = getTypedState(store).gameSession;
       expect(gameSessionState.currentSession).toBeTruthy();
       expect(gameSessionState.currentSession?.playerId).toBe('new-user');
     });
 
     it('should handle logout', async () => {
       // First login to create a session
-      await store.dispatch(loginUser({ email: 'test@example.com', password: 'password' }));
+      await store.dispatch(loginUser({ email: 'test@example.com', password: 'password' }) as any);
       
       // Verify session is active
-      expect(store.getState().gameSession.currentSession).toBeTruthy();
+      expect(getTypedState(store).gameSession.currentSession).toBeTruthy();
 
       // Mock logout behavior
       const guestUser = {
@@ -95,10 +102,10 @@ describe('authMiddleware', () => {
       });
 
       // Now logout
-      await store.dispatch(logoutUser());
+      await store.dispatch(logoutUser() as any);
 
       // Check if game session was ended
-      const gameSessionState = store.getState().gameSession;
+      const gameSessionState = getTypedState(store).gameSession;
       expect(gameSessionState.currentSession).toBeNull();
       expect(gameSessionState.isActive).toBe(false);
     });
@@ -123,7 +130,7 @@ describe('authMiddleware', () => {
       store.dispatch(initAction);
 
       // Should not start session for guest users
-      const gameSessionState = store.getState().gameSession;
+      const gameSessionState = getTypedState(store).gameSession;
       expect(gameSessionState.currentSession).toBeNull();
     });
 
@@ -198,9 +205,9 @@ describe('authMiddleware', () => {
 
     describe('getAuthStatusFromStore', () => {
       it('should extract auth status from store state', async () => {
-        await store.dispatch(loginUser({ email: 'test@example.com', password: 'password' }));
+        await store.dispatch(loginUser({ email: 'test@example.com', password: 'password' }) as any);
 
-        const state = store.getState();
+        const state = getTypedState(store);
         const authStatus = getAuthStatusFromStore(state);
 
         expect(authStatus).toEqual({
@@ -212,7 +219,7 @@ describe('authMiddleware', () => {
       });
 
       it('should handle guest user state', () => {
-        const state = store.getState();
+        const state = getTypedState(store);
         const authStatus = getAuthStatusFromStore(state);
 
         expect(authStatus).toEqual({
@@ -240,7 +247,7 @@ describe('authMiddleware', () => {
         payload: { user: mockUser, permissions: [] },
       });
 
-      const firstSessionId = store.getState().gameSession.currentSession?.sessionId;
+      const firstSessionId = getTypedState(store).gameSession.currentSession?.sessionId;
 
       // Second auth action - should not start new session
       store.dispatch({
@@ -248,7 +255,7 @@ describe('authMiddleware', () => {
         payload: { isValid: true, permissions: [] },
       });
 
-      const secondSessionId = store.getState().gameSession.currentSession?.sessionId;
+      const secondSessionId = getTypedState(store).gameSession.currentSession?.sessionId;
       expect(firstSessionId).toBe(secondSessionId);
     });
   });

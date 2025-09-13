@@ -12,3 +12,7 @@ export { Toast } from './Toast';
 export { AuthButton } from './AuthButton';
 export { RetryButton } from './RetryButton';
 export { ProgressIndicator } from './ProgressIndicator';
+
+// Export upload components
+export { default as EnhancedUploadUI } from './EnhancedUploadUI';
+export { default as UploadProgressIndicator } from './UploadProgressIndicator';

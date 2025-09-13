@@ -376,6 +376,7 @@ export const {
   resetNetworkState,
 } = networkSlice.actions;
 
+export { networkSlice };
 export default networkSlice.reducer;
 
 // Selectors

@@ -18,10 +18,16 @@ import authReducer, {
   AuthState,
 } from '../authSlice';
 import { authService } from '../../../services/authService';
+import type { RootState, AppDispatch } from '../../index';
 
 // Mock the auth service
 jest.mock('../../../services/authService');
 const mockAuthService = authService as jest.Mocked<typeof authService>;
+
+// Helper to get typed state
+const getTypedState = (store: any) => store.getState() as {
+  auth: ReturnType<typeof authReducer>;
+};
 
 describe('authSlice', () => {
   let store: ReturnType<typeof configureStore>;
@@ -38,7 +44,7 @@ describe('authSlice', () => {
 
   describe('initial state', () => {
     it('should have correct initial state', () => {
-      const state = store.getState().auth;
+      const state = getTypedState(store).auth;
       
       expect(state).toEqual({
         user: null,
@@ -61,7 +67,7 @@ describe('authSlice', () => {
       // Clear error
       store.dispatch(clearAuthError());
       
-      const state = store.getState().auth;
+      const state = getTypedState(store).auth;
       expect(state.error).toBeNull();
     });
 
@@ -82,7 +88,7 @@ describe('authSlice', () => {
 
       store.dispatch(syncAuthState());
       
-      const state = store.getState().auth;
+      const state = getTypedState(store).auth;
       expect(state.user).toEqual(mockUser);
       expect(state.isAuthenticated).toBe(true);
       expect(state.isGuest).toBe(false);
@@ -93,7 +99,7 @@ describe('authSlice', () => {
       
       store.dispatch(setPermissions(permissions));
       
-      const state = store.getState().auth;
+      const state = getTypedState(store).auth;
       expect(state.permissions).toEqual(permissions);
     });
   });
@@ -118,9 +124,9 @@ describe('authSlice', () => {
         });
         mockAuthService.getUserPermissions.mockResolvedValue(['read', 'write']);
 
-        await store.dispatch(initializeAuth());
+        await store.dispatch(initializeAuth() as any);
         
-        const state = store.getState().auth;
+        const state = getTypedState(store).auth;
         expect(state.user).toEqual(mockUser);
         expect(state.isAuthenticated).toBe(true);
         expect(state.isGuest).toBe(false);
@@ -133,9 +139,9 @@ describe('authSlice', () => {
       it('should handle initialization failure', async () => {
         mockAuthService.initialize.mockRejectedValue(new Error('Init failed'));
 
-        await store.dispatch(initializeAuth());
+        await store.dispatch(initializeAuth() as any);
         
-        const state = store.getState().auth;
+        const state = getTypedState(store).auth;
         expect(state.error).toBe('Init failed');
         expect(state.isLoading).toBe(false);
         expect(state.isAuthenticated).toBe(false);
@@ -155,9 +161,9 @@ describe('authSlice', () => {
         mockAuthService.login.mockResolvedValue(mockUser);
         mockAuthService.getUserPermissions.mockResolvedValue(['read', 'write']);
 
-        await store.dispatch(loginUser({ email: 'test@example.com', password: 'password' }));
+        await store.dispatch(loginUser({ email: 'test@example.com', password: 'password' }) as any);
         
-        const state = store.getState().auth;
+        const state = getTypedState(store).auth;
         expect(state.user).toEqual(mockUser);
         expect(state.isAuthenticated).toBe(true);
         expect(state.isGuest).toBe(false);
@@ -171,9 +177,9 @@ describe('authSlice', () => {
       it('should handle login failure', async () => {
         mockAuthService.login.mockRejectedValue(new Error('Invalid credentials'));
 
-        await store.dispatch(loginUser({ email: 'test@example.com', password: 'wrong' }));
+        await store.dispatch(loginUser({ email: 'test@example.com', password: 'wrong' }) as any);
         
-        const state = store.getState().auth;
+        const state = getTypedState(store).auth;
         expect(state.error).toBe('Invalid credentials');
         expect(state.isLoading).toBe(false);
         expect(state.isAuthenticated).toBe(false);
@@ -192,9 +198,9 @@ describe('authSlice', () => {
         mockAuthService.signup.mockResolvedValue(mockUser);
         mockAuthService.getUserPermissions.mockResolvedValue(['read']);
 
-        await store.dispatch(signupUser({ email: 'new@example.com', password: 'password' }));
+        await store.dispatch(signupUser({ email: 'new@example.com', password: 'password' }) as any);
         
-        const state = store.getState().auth;
+        const state = getTypedState(store).auth;
         expect(state.user).toEqual(mockUser);
         expect(state.isAuthenticated).toBe(true);
         expect(state.isGuest).toBe(false);
@@ -206,9 +212,9 @@ describe('authSlice', () => {
       it('should handle signup failure', async () => {
         mockAuthService.signup.mockRejectedValue(new Error('Email already exists'));
 
-        await store.dispatch(signupUser({ email: 'existing@example.com', password: 'password' }));
+        await store.dispatch(signupUser({ email: 'existing@example.com', password: 'password' }) as any);
         
-        const state = store.getState().auth;
+        const state = getTypedState(store).auth;
         expect(state.error).toBe('Email already exists');
         expect(state.isLoading).toBe(false);
       });
@@ -232,9 +238,9 @@ describe('authSlice', () => {
         });
         mockAuthService.getUserPermissions.mockResolvedValue(['read']);
 
-        await store.dispatch(logoutUser());
+        await store.dispatch(logoutUser() as any);
         
-        const state = store.getState().auth;
+        const state = getTypedState(store).auth;
         expect(state.user).toEqual(guestUser);
         expect(state.isAuthenticated).toBe(false);
         expect(state.isGuest).toBe(true);
@@ -248,9 +254,9 @@ describe('authSlice', () => {
         mockAuthService.validateToken.mockResolvedValue(true);
         mockAuthService.getUserPermissions.mockResolvedValue(['read', 'write']);
 
-        await store.dispatch(validateToken());
+        await store.dispatch(validateToken() as any);
         
-        const state = store.getState().auth;
+        const state = getTypedState(store).auth;
         expect(state.tokenValidated).toBe(true);
         expect(state.permissions).toEqual(['read', 'write']);
         expect(state.isLoading).toBe(false);
@@ -260,9 +266,9 @@ describe('authSlice', () => {
         mockAuthService.validateToken.mockResolvedValue(false);
         mockAuthService.getUserPermissions.mockResolvedValue(['read']);
 
-        await store.dispatch(validateToken());
+        await store.dispatch(validateToken() as any);
         
-        const state = store.getState().auth;
+        const state = getTypedState(store).auth;
         expect(state.tokenValidated).toBe(false);
         expect(state.isAuthenticated).toBe(false);
         expect(state.isGuest).toBe(true);
@@ -291,9 +297,9 @@ describe('authSlice', () => {
 
         mockAuthService.updateProfile.mockResolvedValue(updatedUser);
 
-        await store.dispatch(updateUserProfile({ name: 'Updated User' }));
+        await store.dispatch(updateUserProfile({ name: 'Updated User' }) as any);
         
-        const state = store.getState().auth;
+        const state = getTypedState(store).auth;
         expect(state.user).toEqual(updatedUser);
         expect(state.error).toBeNull();
       });
@@ -313,10 +319,10 @@ describe('authSlice', () => {
       mockAuthService.getUserPermissions.mockResolvedValue([]);
 
       // Start the async operation but don't await it
-      const loginPromise = store.dispatch(loginUser({ email: 'test@example.com', password: 'password' }));
+      const loginPromise = store.dispatch(loginUser({ email: 'test@example.com', password: 'password' }) as any);
       
       // Check loading state immediately
-      const state = store.getState().auth;
+      const state = getTypedState(store).auth;
       expect(state.isLoading).toBe(true);
       expect(state.lastAuthAction).toBe('login');
 
@@ -333,9 +339,9 @@ describe('authSlice', () => {
       });
       mockAuthService.getUserPermissions.mockResolvedValue([]);
 
-      await store.dispatch(loginUser({ email: 'test@example.com', password: 'password' }));
+      await store.dispatch(loginUser({ email: 'test@example.com', password: 'password' }) as any);
       
-      const state = store.getState().auth;
+      const state = getTypedState(store).auth;
       expect(state.isLoading).toBe(false);
     });
   });

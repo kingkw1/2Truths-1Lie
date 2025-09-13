@@ -6,7 +6,7 @@
  */
 
 import { networkResilienceService } from '../services/networkResilienceService';
-import { store } from '../store/store';
+import { store } from '../store/index';
 import { updateNetworkState, addToOfflineQueue } from '../store/slices/networkSlice';
 
 console.log('🔍 Network Resilience Testing Started');
