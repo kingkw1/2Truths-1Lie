@@ -666,14 +666,20 @@ The mobile app has successfully completed all foundational phases with:
 
 Our future development roadmap includes a clear set of prioritized gameplay and platform enhancements to extend functionality and user engagement beyond the current production-ready core:
 
-- **User Authentication**  
-  Implement secure user registration, login, logout, and profile management with JWT-based authentication, biometric support, email verification, and password recovery optimized for mobile devices.
+- **MVP User Authentication**
+  Focus on a simple, secure email/password sign-up and login flow. This gives every user a unique identity.
+  
+- **MVP Content Moderation**
+  A simple "Report" button on each video that flags it in a database for your manual review is a critical safety feature and a must-have for launch.
 
 - **Challenge Board Enhancements**  
   Add features such as user and challenge names, popularity-based sorting, and personalized recommendations for improved discovery and social engagement.
 
 - **Monetization Integration**  
   Incorporate a freemium model with in-app purchases, including premium AI features and custom challenges, supported by RevenueCat or equivalent platforms for seamless cross-platform payments.
+
+- **User Authentication**  
+  Implement secure user registration, login, logout, and profile management with JWT-based authentication, biometric support, email verification, and password recovery optimized for mobile devices.
 
 - **Emotion Analysis API Full Integration**  
   Complete the connection to AffectLink’s emotion recognition API to enable real-time and batch emotion scoring, with confidence indicators and fallback modes, enriching gameplay with AI-driven lie detection.
