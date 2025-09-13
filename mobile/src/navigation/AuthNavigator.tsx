@@ -1,7 +1,13 @@
 /**
  * Authentication Navigator
  * Handles navigation between login and signup screens
- * Enhanced with improved transitions and guest user migration
+ * Enhanced with improved        {({ navigation }) => (
+          <SignupScreen
+            onSignupSuccess={handleSignupSuccess}
+            onNavigateToLogin={() => handleNavigateToLogin(navigation)}
+            onBack={() => handleBackToLogin(navigation)}
+          />
+        )}ns and guest user migration
  */
 
 import React, { useEffect, useState } from 'react';
@@ -18,12 +24,20 @@ export const AuthNavigator: React.FC = () => {
   const { refreshAuth, user, isGuest, exitAuthFlow } = useAuth();
   const [hasShownGuestMigrationPrompt, setHasShownGuestMigrationPrompt] = useState(false);
 
-  // Enhanced auth success handler with guest user migration
-  const handleAuthSuccess = async () => {
-    console.log('🔄 Auth success - refreshing auth state');
+  // Enhanced auth success handler for LOGIN (no account created message)
+  const handleLoginSuccess = async () => {
+    console.log('🔄 Login success - refreshing auth state');
     
-    // If user was a guest, show migration success message
-    if (isGuest && user && !hasShownGuestMigrationPrompt) {
+    // Refresh auth state to trigger navigation update
+    await refreshAuth();
+  };
+
+  // Enhanced auth success handler for SIGNUP (with account created message)
+  const handleSignupSuccess = async () => {
+    console.log('🔄 Signup success - refreshing auth state');
+    
+    // For new account signup, show welcome message
+    if (user && !hasShownGuestMigrationPrompt) {
       setHasShownGuestMigrationPrompt(true);
       Alert.alert(
         'Account Created!',
@@ -85,7 +99,7 @@ export const AuthNavigator: React.FC = () => {
       >
         {({ navigation, route }) => (
           <LoginScreen
-            onLoginSuccess={handleAuthSuccess}
+            onLoginSuccess={handleLoginSuccess}
             onNavigateToSignup={() => handleNavigateToSignup(navigation)}
             onBack={handleBackToMainApp}
             initialEmail={route.params?.email}
@@ -104,7 +118,7 @@ export const AuthNavigator: React.FC = () => {
       >
         {({ navigation, route }) => (
           <SignupScreen
-            onSignupSuccess={handleAuthSuccess}
+            onSignupSuccess={handleSignupSuccess}
             onNavigateToLogin={() => handleNavigateToLogin(navigation)}
             onBack={handleBackToMainApp}
             initialEmail={route.params?.email}
