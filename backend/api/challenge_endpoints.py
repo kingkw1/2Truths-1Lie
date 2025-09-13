@@ -12,15 +12,86 @@ from services.auth_service import get_current_user, get_authenticated_user
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from services.challenge_service import challenge_service
 from services.upload_service import ChunkedUploadService
+from services.cloud_storage_service import create_cloud_storage_service, CloudStorageError
 from models import (
     CreateChallengeRequest, 
     Challenge, 
     SubmitGuessRequest,
     FlagChallengeRequest
 )
+from config import settings
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/v1/challenges", tags=["challenges"])
+
+# Initialize cloud storage service for signed URL generation
+_cloud_storage_service = None
+
+async def get_cloud_storage_service():
+    """Get or create cloud storage service instance"""
+    global _cloud_storage_service
+    if _cloud_storage_service is None and settings.CLOUD_STORAGE_PROVIDER:
+        try:
+            _cloud_storage_service = create_cloud_storage_service(
+                provider=settings.CLOUD_STORAGE_PROVIDER,
+                bucket_name=settings.AWS_S3_BUCKET_NAME,
+                region_name=settings.AWS_S3_REGION,
+                aws_access_key_id=settings.AWS_ACCESS_KEY_ID,
+                aws_secret_access_key=settings.AWS_SECRET_ACCESS_KEY,
+                endpoint_url=settings.AWS_S3_ENDPOINT_URL
+            )
+        except Exception as e:
+            logger.error(f"Failed to initialize cloud storage service: {e}")
+    return _cloud_storage_service
+
+def extract_s3_key_from_url(url: str) -> Optional[str]:
+    """Extract S3 key from full S3 URL
+    
+    Expected URL format: https://{bucket}.s3.{region}.amazonaws.com/{key}
+    Returns the key part or None if not a valid S3 URL
+    """
+    if not url or not url.startswith('https://'):
+        return None
+    
+    try:
+        # Parse URL to extract key
+        # Format: https://{bucket}.s3.{region}.amazonaws.com/{key}
+        if '.s3.' in url and '.amazonaws.com/' in url:
+            # Find the position after .amazonaws.com/
+            amazonaws_pos = url.find('.amazonaws.com/')
+            if amazonaws_pos != -1:
+                key_start = amazonaws_pos + len('.amazonaws.com/')
+                return url[key_start:]
+    except Exception as e:
+        logger.warning(f"Failed to extract S3 key from URL {url}: {e}")
+    
+    return None
+
+async def get_signed_url_for_video(video_url: str) -> str:
+    """Convert S3 URL to signed URL for video access"""
+    if not video_url:
+        return video_url
+    
+    # Extract S3 key from the URL
+    s3_key = extract_s3_key_from_url(video_url)
+    if not s3_key:
+        # Not an S3 URL, return as is (might be local URL)
+        return video_url
+    
+    try:
+        # Get cloud storage service instance
+        cloud_storage = await get_cloud_storage_service()
+        if not cloud_storage:
+            # Cloud storage not available, return original URL
+            return video_url
+            
+        # Generate signed URL for the S3 key
+        signed_url = await cloud_storage.get_file_url(s3_key)
+        return signed_url
+    except Exception as e:
+        logger.error(f"Failed to generate signed URL for video {video_url}: {e}")
+        # Return original URL as fallback
+        return video_url
 
 # Optional authentication dependency
 security = HTTPBearer(auto_error=False)
@@ -156,11 +227,22 @@ async def list_challenges_authenticated(
         for challenge in challenges:
             challenge_dict = challenge.model_dump()
             
+            # Generate signed URLs for statement media
+            if challenge_dict.get("statements"):
+                for statement in challenge_dict["statements"]:
+                    if statement.get("streaming_url"):
+                        statement["streaming_url"] = await get_signed_url_for_video(statement["streaming_url"])
+                    if statement.get("media_url"):
+                        statement["media_url"] = await get_signed_url_for_video(statement["media_url"])
+            
             # Add merged video information if available
             if challenge.is_merged_video:
+                # Generate signed URL for merged video
+                signed_video_url = await get_signed_url_for_video(challenge.merged_video_url)
+                
                 challenge_dict["merged_video_info"] = {
                     "has_merged_video": True,
-                    "merged_video_url": challenge.merged_video_url,
+                    "merged_video_url": signed_video_url,
                     "merged_video_file_id": challenge.merged_video_file_id,
                     "merge_session_id": challenge.merge_session_id
                 }
@@ -247,10 +329,30 @@ async def list_challenges_public(
         
         logger.debug(f"Retrieved {len(challenges)} public challenges")
         
+        # Enhance challenges with signed URLs for video access
+        enhanced_challenges = []
+        for challenge in challenges:
+            challenge_dict = challenge.model_dump()
+            
+            # Generate signed URLs for statement media
+            if challenge_dict.get("statements"):
+                for statement in challenge_dict["statements"]:
+                    if statement.get("streaming_url"):
+                        statement["streaming_url"] = await get_signed_url_for_video(statement["streaming_url"])
+                    if statement.get("media_url"):
+                        statement["media_url"] = await get_signed_url_for_video(statement["media_url"])
+            
+            # Generate signed URL for merged video if available
+            if challenge.is_merged_video and challenge.merged_video_url:
+                signed_video_url = await get_signed_url_for_video(challenge.merged_video_url)
+                challenge_dict["merged_video_url"] = signed_video_url
+            
+            enhanced_challenges.append(challenge_dict)
+        
         has_next = (actual_page * actual_page_size) < total_count
         
         return {
-            "challenges": challenges,
+            "challenges": enhanced_challenges,
             "total_count": total_count,
             "page": actual_page,
             "page_size": actual_page_size,

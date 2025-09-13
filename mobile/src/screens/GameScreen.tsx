@@ -143,9 +143,9 @@ const convertBackendChallenge = (backendChallenge: BackendChallenge): EnhancedCh
           isMergedVideo: true,
           segments: (backendChallenge.merged_video_metadata.segments || []).map((segment: any, index: number) => ({
             statementIndex: segment.statement_index || index,
-            startTime: segment.start_time > 1000 ? Math.round(segment.start_time) : Math.round((segment.start_time || 0) * 1000),
-            endTime: segment.end_time > 1000 ? Math.round(segment.end_time) : Math.round((segment.end_time || 0) * 1000),
-            duration: segment.duration > 1000 ? Math.round(segment.duration) : Math.round((segment.duration || 0) * 1000),
+            startTime: Math.round(segment.start_time || 0),
+            endTime: Math.round(segment.end_time || 0),
+            duration: Math.round(segment.duration || (segment.end_time - segment.start_time) || 0),
             url: mergedVideoUrl,
           })),
         };

@@ -300,7 +300,7 @@ class ChallengeService:
             title=request.title,
             statements=statements,
             lie_statement_id=lie_statement_id,
-            status=ChallengeStatus.DRAFT,
+            status=ChallengeStatus.PUBLISHED,  # Auto-publish for mobile game
             tags=request.tags,
             is_merged_video=request.is_merged_video,
             merged_video_metadata=request.merged_video_metadata,
@@ -310,7 +310,8 @@ class ChallengeService:
             merged_video_file_id=request.merged_video_file_id,
             merge_session_id=request.merge_session_id,
             created_at=datetime.utcnow(),
-            updated_at=datetime.utcnow()
+            updated_at=datetime.utcnow(),
+            published_at=datetime.utcnow()  # Set publish time for auto-published challenges
         )
         
         # Validate complete challenge structure
