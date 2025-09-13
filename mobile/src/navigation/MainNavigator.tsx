@@ -11,6 +11,7 @@ import { ChallengeCreationScreen } from '../screens/ChallengeCreationScreen';
 import { MainStackParamList } from './types';
 import { useAuth } from '../hooks/useAuth';
 import { ConditionalAuthContent, AuthGuard } from '../components/AuthGuard';
+import { AuthToggleButton } from '../components/AuthToggleButton';
 
 const Stack = createStackNavigator<MainStackParamList>();
 
@@ -21,28 +22,6 @@ interface MainNavigatorProps {
 const HomeScreen: React.FC<{ navigation: any; onLogout: () => void }> = ({ navigation, onLogout }) => {
   const { user, isAuthenticated, isGuest } = useAuth();
 
-  const handleAuthPrompt = () => {
-    // Enhanced auth prompt with user confirmation
-    Alert.alert(
-      'Sign In Required',
-      'Sign in to save your progress and unlock all features. Your current session will be preserved.',
-      [
-        {
-          text: 'Cancel',
-          style: 'cancel',
-        },
-        {
-          text: 'Sign In',
-          style: 'default',
-          onPress: () => {
-            console.log('🔄 User requested auth flow from main app');
-            onLogout();
-          },
-        },
-      ]
-    );
-  };
-
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
@@ -52,39 +31,9 @@ const HomeScreen: React.FC<{ navigation: any; onLogout: () => void }> = ({ navig
             Welcome, {user?.name || 'Guest'}!
           </Text>
           
-          <ConditionalAuthContent
-            guest={
-              <TouchableOpacity onPress={handleAuthPrompt} style={styles.signInPrompt}>
-                <Text style={styles.signInPromptText}>Sign in to save progress</Text>
-              </TouchableOpacity>
-            }
-            authenticated={
-              <View style={styles.authenticatedUserInfo}>
-                <Text style={styles.userEmail}>{user?.email}</Text>
-                <TouchableOpacity 
-                  onPress={() => {
-                    Alert.alert(
-                      'Sign Out',
-                      'Are you sure you want to sign out? You can always sign back in later.',
-                      [
-                        { text: 'Cancel', style: 'cancel' },
-                        { 
-                          text: 'Sign Out', 
-                          style: 'destructive',
-                          onPress: () => {
-                            console.log('🔄 User signed out from main app');
-                            onLogout();
-                          }
-                        },
-                      ]
-                    );
-                  }} 
-                  style={styles.logoutButton}
-                >
-                  <Text style={styles.logoutButtonText}>Sign Out</Text>
-                </TouchableOpacity>
-              </View>
-            }
+          <AuthToggleButton 
+            onAuthAction={onLogout}
+            style={styles.authToggleButton}
           />
         </View>
       </View>
@@ -93,7 +42,7 @@ const HomeScreen: React.FC<{ navigation: any; onLogout: () => void }> = ({ navig
       
       <AuthGuard
         showGuestPrompt={isGuest}
-        onAuthPrompt={handleAuthPrompt}
+        onAuthPrompt={onLogout}
       >
         <TouchableOpacity 
           style={[styles.menuButton, styles.primaryButton]} 
@@ -200,35 +149,8 @@ const styles = StyleSheet.create({
     color: '#666',
     marginBottom: 8,
   },
-  signInPrompt: {
-    backgroundColor: '#007AFF',
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 6,
-  },
-  signInPromptText: {
-    color: 'white',
-    fontSize: 14,
-    fontWeight: '500',
-  },
-  authenticatedUserInfo: {
-    alignItems: 'center',
-  },
-  userEmail: {
-    fontSize: 14,
-    color: '#666',
-    marginBottom: 8,
-  },
-  logoutButton: {
-    backgroundColor: '#ff4444',
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 6,
-  },
-  logoutButtonText: {
-    color: 'white',
-    fontSize: 14,
-    fontWeight: '500',
+  authToggleButton: {
+    marginTop: 8,
   },
   guestModeText: {
     color: 'rgba(255, 255, 255, 0.7)',

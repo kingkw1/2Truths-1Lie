@@ -321,6 +321,7 @@ const styles = StyleSheet.create({
   scrollContent: {
     flexGrow: 1,
     padding: 20,
+    paddingBottom: Platform.OS === 'android' ? 100 : 40,
   },
   header: {
     marginTop: 40,
@@ -416,6 +417,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'center',
     marginTop: 30,
+    marginBottom: Platform.OS === 'android' ? 20 : 0,
   },
   signInText: {
     fontSize: 16,
