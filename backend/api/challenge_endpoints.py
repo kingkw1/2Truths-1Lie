@@ -61,7 +61,7 @@ async def create_challenge(
             upload_service=upload_service
         )
         
-        logger.info(f"Challenge created successfully: {challenge.id}")
+        logger.info(f"Challenge created successfully: {challenge.challenge_id}")
         return challenge
         
     except ValueError as e:
