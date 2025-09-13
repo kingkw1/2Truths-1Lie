@@ -1,23 +1,26 @@
 # Content Moderation - MVP Requirements
 
-## User Story 1: Simple Reporting of Video Content
+## User Story: Reporting Inappropriate Content
 
-WHEN a user views a video challenge  
-THEY SHALL see a "Report" button associated with each video  
-WHEN the user taps "Report"  
-THEN the system SHALL record a report tied to that video's unique ID  
-AND generate an alert (e.g., database flag or email notification) to administrators  
-AND provide user feedback acknowledging the report was received
+WHEN a user is viewing a video challenge
+THE SYSTEM SHALL display a "Report" option
 
-## User Story 2: Administrative Handling
+WHEN a user selects the "Report" option for a specific video
+THE SYSTEM SHALL record that a report has been submitted for that video's ID
+AND THE SYSTEM SHALL trigger an alert for administrative review
+AND THE SYSTEM SHALL display a confirmation message to the user acknowledging their report has been received
 
-THE system SHALL provide an interface or data view for administrators to retrieve reported videos  
-Administrators MAY manually review and mark videos for removal or retention  
-Video removal MAY trigger deletion or disabling of the flagged video content
+## User Story: Administrative Review
+
+WHEN an administrator checks for reported content
+THE SYSTEM SHALL provide a list of all videos that have been reported
+
+WHEN an administrator reviews a reported video
+THE SYSTEM SHALL allow the administrator to manually take action, such as disabling or deleting the content
 
 ## Non-Goals for MVP
 
-- Automatic or AI-driven content filtering or moderation  
-- Sophisticated abuse detection or analysis  
-- User block or ban flows  
-- Self-service user dispute or appeal mechanisms  
+* Automatic or AI-driven content moderation
+* Detecting or analyzing sophisticated abuse
+* Flows for users to be blocked or banned
+* Mechanisms for users to appeal a moderation decision
