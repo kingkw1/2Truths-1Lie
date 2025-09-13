@@ -13,11 +13,17 @@ from services.auth_service import (
     security,
     create_access_token
 )
+from services.database_service import db_service
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/v1/auth", tags=["authentication"])
 
 class LoginRequest(BaseModel):
+    email: str
+    password: str
+    device_info: Optional[dict] = None
+
+class RegisterRequest(BaseModel):
     email: str
     password: str
     device_info: Optional[dict] = None
@@ -32,35 +38,100 @@ class TokenResponse(BaseModel):
 class RefreshRequest(BaseModel):
     refresh_token: str
 
-@router.post("/login", response_model=TokenResponse)
-async def login(request: LoginRequest):
-    """Login user and return JWT tokens"""
+@router.post("/register", response_model=TokenResponse)
+async def register(request: RegisterRequest):
+    """Register a new user and return JWT tokens"""
     try:
-        # In production, validate credentials against your user database
-        # For now, we'll create a simple mock authentication
-        
         if not request.email or not request.password:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Email and password are required"
             )
         
-        # Mock user validation (replace with real authentication)
-        user_id = f"user_{request.email.split('@')[0]}"
+        # Validate email format (basic validation)
+        if "@" not in request.email or "." not in request.email:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Invalid email format"
+            )
         
-        # Create tokens
+        # Validate password strength (minimum requirements)
+        if len(request.password) < 6:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Password must be at least 6 characters long"
+            )
+        
+        # Create user in database
+        user_data = db_service.create_user(request.email, request.password)
+        
+        if not user_data:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="Email already registered"
+            )
+        
+        # Create tokens for the new user
         access_token = auth_service.create_access_token(
-            data={"sub": user_id, "email": request.email}
+            data={"sub": str(user_data["id"]), "email": user_data["email"], "type": "authenticated"}
         )
-        refresh_token = auth_service.create_refresh_token(user_id)
+        refresh_token = auth_service.create_refresh_token(str(user_data["id"]))
+        
+        logger.info(f"New user registered: {request.email}")
         
         return TokenResponse(
             access_token=access_token,
             refresh_token=refresh_token,
             expires_in=1800,  # 30 minutes
-            permissions=["media:read", "media:upload", "media:delete"]
+            permissions=["media:read", "media:upload", "media:delete", "challenge:create", "challenge:read", "challenge:play"]
         )
         
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Registration error: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Registration failed"
+        )
+
+@router.post("/login", response_model=TokenResponse)
+async def login(request: LoginRequest):
+    """Login user and return JWT tokens"""
+    try:
+        if not request.email or not request.password:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Email and password are required"
+            )
+        
+        # Authenticate user against database
+        user_data = db_service.authenticate_user(request.email, request.password)
+        
+        if not user_data:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Invalid email or password"
+            )
+        
+        # Create tokens for authenticated user
+        access_token = auth_service.create_access_token(
+            data={"sub": str(user_data["id"]), "email": user_data["email"], "type": "authenticated"}
+        )
+        refresh_token = auth_service.create_refresh_token(str(user_data["id"]))
+        
+        logger.info(f"User logged in successfully: {request.email}")
+        
+        return TokenResponse(
+            access_token=access_token,
+            refresh_token=refresh_token,
+            expires_in=1800,  # 30 minutes
+            permissions=["media:read", "media:upload", "media:delete", "challenge:create", "challenge:read", "challenge:play"]
+        )
+        
+    except HTTPException:
+        # Re-raise HTTP exceptions (like 401 Unauthorized)
+        raise
     except Exception as e:
         logger.error(f"Login error: {e}")
         raise HTTPException(

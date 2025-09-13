@@ -175,6 +175,15 @@ const authSlice = createSlice({
     setPermissions: (state, action: PayloadAction<string[]>) => {
       state.permissions = action.payload;
     },
+    
+    // Trigger auth flow for guest users who want to sign in
+    triggerAuthFlow: (state) => {
+      console.log('🎯 triggerAuthFlow action called - setting isAuthenticated to false');
+      // Temporarily set to unauthenticated to trigger navigation to auth screens
+      // This preserves the guest session but shows login/signup screens
+      state.isAuthenticated = false;
+      state.lastAuthAction = null;
+    },
   },
   extraReducers: (builder) => {
     // Initialize auth
@@ -324,6 +333,7 @@ export const {
   setAuthLoading,
   syncAuthState,
   setPermissions,
+  triggerAuthFlow,
 } = authSlice.actions;
 
 // Selectors

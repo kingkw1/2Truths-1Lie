@@ -25,7 +25,7 @@ export const AuthToggleButton: React.FC<AuthToggleButtonProps> = ({
   style,
   compact = false,
 }) => {
-  const { user, isAuthenticated, isGuest, isLoading } = useAuth();
+  const { user, isAuthenticated, isGuest, isLoading, triggerAuthFlow } = useAuth();
 
   const handlePress = () => {
     if (isGuest) {
@@ -42,8 +42,8 @@ export const AuthToggleButton: React.FC<AuthToggleButtonProps> = ({
             text: 'Sign In',
             style: 'default',
             onPress: () => {
-              console.log('🔄 User requested sign in from toggle button');
-              onAuthAction();
+              console.log('🔄 User requested sign in from toggle button - using triggerAuthFlow');
+              triggerAuthFlow();
             },
           },
         ]

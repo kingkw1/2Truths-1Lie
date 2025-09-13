@@ -10,6 +10,9 @@ from pydantic_settings import BaseSettings
 class Settings(BaseSettings):
     """Application settings"""
     
+    # Directory settings
+    BACKEND_DIR: Path = Path(__file__).parent
+    
     # Upload settings
     UPLOAD_DIR: Path = Path("uploads")
     TEMP_DIR: Path = Path("temp")

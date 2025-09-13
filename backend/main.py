@@ -378,3 +378,14 @@ async def clear_validation_history(current_user: str = Depends(get_current_user)
         return {"message": "Validation history cleared successfully"}
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to clear validation history: {str(e)}")
+    
+
+if __name__ == "__main__":
+    import uvicorn
+    uvicorn.run(
+        "main:app",
+        host="0.0.0.0",
+        port=8001,
+        reload=True,
+        log_level="info"
+    )

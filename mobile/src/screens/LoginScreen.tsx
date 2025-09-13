@@ -226,6 +226,14 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
               loadingText="Signing In..."
               style={styles.signInButton}
             />
+
+            {/* Sign Up Link */}
+            <View style={styles.signUpContainer}>
+              <Text style={styles.signUpText}>Don't have an account? </Text>
+              <TouchableOpacity onPress={onNavigateToSignup}>
+                <Text style={styles.signUpLink}>Sign up</Text>
+              </TouchableOpacity>
+            </View>
           </View>
         </ScrollView>
       </KeyboardAvoidingView>

@@ -176,7 +176,7 @@ export class AuthService {
       // Validate input parameters
       this.validateEmailPassword(email, password);
 
-      const response = await fetch(`${this.getApiBaseUrl()}/api/v1/auth/signup`, {
+      const response = await fetch(`${this.getApiBaseUrl()}/api/v1/auth/register`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
