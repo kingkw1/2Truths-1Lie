@@ -461,6 +461,12 @@ export const ChallengeCreationScreen: React.FC<ChallengeCreationScreenProps> = (
         Other players will try to guess which statement is the lie!
       </Text>
 
+      <View style={styles.rateLimitContainer}>
+        <Text style={styles.rateLimitText}>
+          ⏰ Rate Limit: You can create up to 5 challenges per hour
+        </Text>
+      </View>
+
       <View style={styles.instructionsList}>
         <View style={styles.instructionItem}>
           <Text style={styles.instructionNumber}>1</Text>
@@ -840,6 +846,20 @@ const styles = StyleSheet.create({
     marginBottom: 30,
     color: '#666',
     lineHeight: 22,
+  },
+  rateLimitContainer: {
+    backgroundColor: '#fff3e0',
+    padding: 15,
+    borderRadius: 8,
+    marginBottom: 25,
+    borderLeftWidth: 4,
+    borderLeftColor: '#ff9800',
+  },
+  rateLimitText: {
+    fontSize: 14,
+    color: '#e65100',
+    textAlign: 'center',
+    fontWeight: '500',
   },
   instructionsList: {
     marginBottom: 30,
