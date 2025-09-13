@@ -1,22 +1,32 @@
 # User Authentication - MVP Implementation Tasks
 
-### Tasks Kiro Can Automate (Spec-to-Code, Testing, API Generation)
+# User Authentication - MVP Implementation Tasks
 
-- [ ] Generate User data model with email (unique) and hashed password fields
-- [ ] Create REST API endpoints: `POST /api/auth/signup` and `POST /api/auth/login` with request validation and JWT response
-- [ ] Implement password hashing using bcrypt in the backend service layer
-- [ ] Generate JWT signing and verification utility functions
-- [ ] Create API middleware for JWT validation on protected routes
-- [ ] Generate frontend login and signup screens with email/password inputs and client-side validation logic
-- [ ] Generate API client functions for the signup and login flows on the mobile app
-- [ ] Create unit and integration tests for the backend authentication logic and JWT flows
-- [ ] Generate basic UI tests for the login/signup forms, error handling, and successful login navigation
+## Implementation Status
+**Backend**: ✅ Complete - Full authentication system with JWT, bcrypt, and Railway deployment  
+**Mobile Service**: ✅ Complete - AuthService with guest user support and token management  
+**Missing**: UI screens and navigation integration for signup/login flows
 
-### Tasks To Perform Manually (Configuration, Deployment, Sensitive Setup)
+### Tasks Kiro Can Automate (UI Implementation, Integration, Testing)
 
-- [ ] Configure JWT secret keys and other sensitive environment variables securely in the backend deployment environment
-- [ ] Choose and implement a secure client-side storage mechanism for the JWT (e.g., Expo's SecureStore)
-- [ ] Perform a manual security audit and review of all generated authentication code
-- [ ] Manually test the authentication endpoints for common vulnerabilities (e.g., using Postman or a similar tool)
-- [ ] Set up basic monitoring and alerting for backend authentication failures
-- [ ] Validate the cross-platform UI and token persistence behavior on physical iOS and Android devices
+- [ ] Create LoginScreen.tsx with email/password inputs, validation, and error handling
+- [ ] Create SignupScreen.tsx with registration form, password confirmation, and client-side validation
+- [ ] Integrate auth screens into existing React Navigation structure with proper routing
+- [ ] Extend existing AuthService methods to support email/password authentication flows
+- [ ] Create auth navigation guards and conditional rendering for authenticated vs guest users
+- [ ] Generate form validation logic and error message display components
+- [ ] Create loading states and user feedback for authentication operations
+- [ ] Generate comprehensive UI tests for login/signup forms and authentication flows
+- [ ] Update existing navigation patterns to include auth screen transitions
+- [ ] Create auth state management integration with existing Redux store (if needed)
+
+### Tasks To Perform Manually (UX Decisions, Design Polish, Testing)
+
+- [ ] Design and finalize the visual design and styling for auth screens to match existing app aesthetics
+- [ ] Determine optimal auth flow placement - modal vs full-screen vs bottom sheet presentation
+- [ ] Decide on guest-to-authenticated user migration strategy and data preservation approach
+- [ ] Test auth flows on physical iOS and Android devices for platform-specific behavior
+- [ ] Validate auth error handling and recovery flows across different network conditions
+- [ ] Review and test the complete user journey from guest → signup → authenticated game experience
+- [ ] Configure any additional auth-related analytics and monitoring for user onboarding metrics
+- [ ] Perform accessibility audit of auth forms for screen reader and keyboard navigation support

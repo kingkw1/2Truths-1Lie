@@ -1,5 +1,8 @@
 # Mobile User Authentication - MVP Requirements
 
+## Current Implementation Status
+**Note**: The project already has substantial authentication infrastructure in place, including backend auth services, JWT token management, and mobile auth client. This spec focuses on completing the missing UI/UX components and user registration flows.
+
 ## User Story: Account Creation
 
 WHEN a new user provides a unique email and a valid password to the signup screen
@@ -31,8 +34,17 @@ THE SYSTEM SHALL deny access with an unauthorized error
 WHEN a user initiates a logout action
 THE SYSTEM SHALL clear the stored JWT token from the client device
 
+## User Story: Onboarding Integration
+
+WHEN a user successfully signs up or logs in for the first time
+THE SYSTEM SHALL navigate to the main game screen and maintain authentication state
+
+WHEN an existing guest user decides to create an account
+THE SYSTEM SHALL preserve their challenge history and migrate to authenticated account
+
 ## Non-Goals for MVP
 
 - Biometric login
-- Password reset or recovery flows
+- Password reset or recovery flows  
 - Email verification flows
+- OAuth/Social login integration
