@@ -31,6 +31,7 @@ class DatabaseService:
                         id INTEGER PRIMARY KEY AUTOINCREMENT,
                         email TEXT UNIQUE NOT NULL,
                         password_hash TEXT NOT NULL,
+                        name TEXT,
                         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                         is_active BOOLEAN DEFAULT TRUE,
@@ -42,6 +43,14 @@ class DatabaseService:
                 cursor.execute("""
                     CREATE INDEX IF NOT EXISTS idx_users_email ON users(email)
                 """)
+                
+                # Add name column to existing users table if it doesn't exist
+                try:
+                    cursor.execute("ALTER TABLE users ADD COLUMN name TEXT")
+                except sqlite3.OperationalError as e:
+                    # Column already exists or other issue
+                    if "duplicate column name" not in str(e).lower():
+                        logger.warning(f"Failed to add name column: {e}")
                 
                 conn.commit()
                 logger.info(f"Database initialized successfully at {self.db_path}")
@@ -58,13 +67,14 @@ class DatabaseService:
         """Verify a password against its hash"""
         return self.pwd_context.verify(plain_password, hashed_password)
     
-    def create_user(self, email: str, password: str) -> Optional[Dict[str, Any]]:
+    def create_user(self, email: str, password: str, name: Optional[str] = None) -> Optional[Dict[str, Any]]:
         """
         Create a new user with email and password
         
         Args:
             email: User's email address
             password: Plain text password
+            name: Optional user display name
             
         Returns:
             Dict with user data if successful, None if email already exists
@@ -86,9 +96,9 @@ class DatabaseService:
                 password_hash = self.hash_password(password)
                 
                 cursor.execute("""
-                    INSERT INTO users (email, password_hash, created_at, updated_at)
-                    VALUES (?, ?, ?, ?)
-                """, (email, password_hash, datetime.utcnow(), datetime.utcnow()))
+                    INSERT INTO users (email, password_hash, name, created_at, updated_at)
+                    VALUES (?, ?, ?, ?, ?)
+                """, (email, password_hash, name, datetime.utcnow(), datetime.utcnow()))
                 
                 user_id = cursor.lastrowid
                 conn.commit()
@@ -97,6 +107,7 @@ class DatabaseService:
                 return {
                     "id": user_id,
                     "email": email,
+                    "name": name,
                     "created_at": datetime.utcnow().isoformat(),
                     "is_active": True
                 }
@@ -122,7 +133,7 @@ class DatabaseService:
                 
                 # Get user by email
                 cursor.execute("""
-                    SELECT id, email, password_hash, created_at, is_active, last_login
+                    SELECT id, email, password_hash, name, created_at, is_active, last_login
                     FROM users 
                     WHERE email = ? AND is_active = TRUE
                 """, (email,))
@@ -132,7 +143,7 @@ class DatabaseService:
                     logger.warning(f"Authentication failed: user {email} not found")
                     return None
                 
-                user_id, user_email, password_hash, created_at, is_active, last_login = user_data
+                user_id, user_email, password_hash, name, created_at, is_active, last_login = user_data
                 
                 # Verify password
                 if not self.verify_password(password, password_hash):
@@ -151,6 +162,7 @@ class DatabaseService:
                 return {
                     "id": user_id,
                     "email": user_email,
+                    "name": name,
                     "created_at": created_at,
                     "is_active": bool(is_active),
                     "last_login": datetime.utcnow().isoformat()
@@ -167,7 +179,7 @@ class DatabaseService:
                 cursor = conn.cursor()
                 
                 cursor.execute("""
-                    SELECT id, email, created_at, is_active, last_login
+                    SELECT id, email, name, created_at, is_active, last_login
                     FROM users 
                     WHERE id = ? AND is_active = TRUE
                 """, (user_id,))
@@ -176,11 +188,12 @@ class DatabaseService:
                 if not user_data:
                     return None
                 
-                user_id, email, created_at, is_active, last_login = user_data
+                user_id, email, name, created_at, is_active, last_login = user_data
                 
                 return {
                     "id": user_id,
                     "email": email,
+                    "name": name,
                     "created_at": created_at,
                     "is_active": bool(is_active),
                     "last_login": last_login
@@ -197,7 +210,7 @@ class DatabaseService:
                 cursor = conn.cursor()
                 
                 cursor.execute("""
-                    SELECT id, email, created_at, is_active, last_login
+                    SELECT id, email, name, created_at, is_active, last_login
                     FROM users 
                     WHERE email = ? AND is_active = TRUE
                 """, (email,))
@@ -206,11 +219,12 @@ class DatabaseService:
                 if not user_data:
                     return None
                 
-                user_id, email, created_at, is_active, last_login = user_data
+                user_id, email, name, created_at, is_active, last_login = user_data
                 
                 return {
                     "id": user_id,
                     "email": email,
+                    "name": name,
                     "created_at": created_at,
                     "is_active": bool(is_active),
                     "last_login": last_login

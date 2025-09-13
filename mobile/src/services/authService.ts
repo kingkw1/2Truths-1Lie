@@ -22,6 +22,7 @@ export interface AuthResponse {
   user?: {
     id: string;
     email: string;
+    name?: string;
     created_at: string;
   };
 }
@@ -171,7 +172,7 @@ export class AuthService {
   /**
    * Sign up with credentials
    */
-  public async signup(email: string, password: string): Promise<AuthUser> {
+  public async signup(email: string, password: string, name?: string): Promise<AuthUser> {
     try {
       // Validate input parameters
       this.validateEmailPassword(email, password);
@@ -184,6 +185,7 @@ export class AuthService {
         body: JSON.stringify({
           email: email.trim().toLowerCase(),
           password,
+          name: name?.trim() || undefined,
           device_info: {
             platform: 'mobile',
             app_version: '1.0.0',
@@ -493,7 +495,7 @@ export class AuthService {
     if (data.user) {
       return {
         id: data.user.id,
-        name: data.user.email.split('@')[0] || 'User',
+        name: data.user.name || data.user.email.split('@')[0] || 'User',
         email: data.user.email,
         createdAt: data.user.created_at,
       };

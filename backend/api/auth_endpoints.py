@@ -26,6 +26,7 @@ class LoginRequest(BaseModel):
 class RegisterRequest(BaseModel):
     email: str
     password: str
+    name: Optional[str] = None
     device_info: Optional[dict] = None
 
 class TokenResponse(BaseModel):
@@ -34,6 +35,7 @@ class TokenResponse(BaseModel):
     token_type: str = "bearer"
     expires_in: int
     permissions: list
+    user: Optional[dict] = None
 
 class RefreshRequest(BaseModel):
     refresh_token: str
@@ -63,7 +65,7 @@ async def register(request: RegisterRequest):
             )
         
         # Create user in database
-        user_data = db_service.create_user(request.email, request.password)
+        user_data = db_service.create_user(request.email, request.password, request.name)
         
         if not user_data:
             raise HTTPException(
@@ -83,7 +85,13 @@ async def register(request: RegisterRequest):
             access_token=access_token,
             refresh_token=refresh_token,
             expires_in=1800,  # 30 minutes
-            permissions=["media:read", "media:upload", "media:delete", "challenge:create", "challenge:read", "challenge:play"]
+            permissions=["media:read", "media:upload", "media:delete", "challenge:create", "challenge:read", "challenge:play"],
+            user={
+                "id": str(user_data["id"]),
+                "email": user_data["email"],
+                "name": user_data.get("name"),
+                "created_at": user_data["created_at"]
+            }
         )
         
     except HTTPException:
@@ -126,7 +134,13 @@ async def login(request: LoginRequest):
             access_token=access_token,
             refresh_token=refresh_token,
             expires_in=1800,  # 30 minutes
-            permissions=["media:read", "media:upload", "media:delete", "challenge:create", "challenge:read", "challenge:play"]
+            permissions=["media:read", "media:upload", "media:delete", "challenge:create", "challenge:read", "challenge:play"],
+            user={
+                "id": str(user_data["id"]),
+                "email": user_data["email"],
+                "name": user_data.get("name"),
+                "created_at": user_data["created_at"]
+            }
         )
         
     except HTTPException:
@@ -223,14 +237,37 @@ async def validate_token(
 ):
     """Validate current token and return user info"""
     try:
-        return {
+        user_id = current_user_data.get("sub")
+        user_type = current_user_data.get("type", "user")
+        
+        # For authenticated users, fetch full user data from database
+        user_info = None
+        if user_type == "authenticated" and user_id:
+            try:
+                # Fetch user from database to get name and other details
+                user_info = db_service.get_user_by_id(int(user_id))
+            except (ValueError, Exception) as e:
+                logger.warning(f"Could not fetch user data for ID {user_id}: {e}")
+        
+        response = {
             "valid": True,
-            "user_id": current_user_data.get("sub"),
+            "user_id": user_id,
             "email": current_user_data.get("email"),
-            "type": current_user_data.get("type", "user"),
+            "type": user_type,
             "permissions": current_user_data.get("permissions", []),
             "expires_at": current_user_data.get("exp")
         }
+        
+        # Add user details if available
+        if user_info:
+            response["user"] = {
+                "id": str(user_info["id"]),
+                "email": user_info["email"],
+                "name": user_info.get("name"),
+                "created_at": user_info.get("created_at")
+            }
+        
+        return response
         
     except Exception as e:
         logger.error(f"Token validation error: {e}")

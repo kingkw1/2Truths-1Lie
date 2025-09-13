@@ -37,12 +37,14 @@ export const SignupScreen: React.FC<SignupScreenProps> = ({
   returnTo,
 }) => {
   const [email, setEmail] = useState(initialEmail);
+  const [name, setName] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
   const [loadingMessage, setLoadingMessage] = useState('');
   const [errors, setErrors] = useState<{
     email?: string;
+    name?: string;
     password?: string;
     confirmPassword?: string;
     general?: string;
@@ -69,6 +71,13 @@ export const SignupScreen: React.FC<SignupScreenProps> = ({
       newErrors.email = 'Email is required';
     } else if (!validateEmail(email)) {
       newErrors.email = 'Please enter a valid email address';
+    }
+
+    // Name validation (optional but if provided, must be valid)
+    if (name.trim() && name.trim().length < 2) {
+      newErrors.name = 'Name must be at least 2 characters';
+    } else if (name.trim() && name.trim().length > 50) {
+      newErrors.name = 'Name must be less than 50 characters';
     }
 
     // Password validation
@@ -101,7 +110,7 @@ export const SignupScreen: React.FC<SignupScreenProps> = ({
     setLoadingMessage('Creating your account...');
 
     try {
-      await authService.signup(email.trim(), password);
+      await authService.signup(email.trim(), password, name.trim() || undefined);
       console.log('✅ Signup successful');
       
       setLoadingMessage('Account created successfully!');
@@ -206,6 +215,34 @@ export const SignupScreen: React.FC<SignupScreenProps> = ({
               {errors.email && (
                 <Text style={styles.errorText}>{errors.email}</Text>
               )}
+            </View>
+
+            {/* Name Input */}
+            <View style={styles.inputContainer}>
+              <Text style={styles.label}>Name (Optional)</Text>
+              <TextInput
+                style={[
+                  styles.input,
+                  errors.name && styles.inputError,
+                ]}
+                value={name}
+                onChangeText={(text) => {
+                  setName(text);
+                  clearError('name');
+                  clearError('general');
+                }}
+                placeholder="Enter your name"
+                placeholderTextColor="#999"
+                autoCapitalize="words"
+                autoCorrect={false}
+                editable={!isLoading}
+              />
+              {errors.name && (
+                <Text style={styles.errorText}>{errors.name}</Text>
+              )}
+              <Text style={styles.helperText}>
+                This will be displayed in your welcome messages
+              </Text>
             </View>
 
             {/* Password Input */}
