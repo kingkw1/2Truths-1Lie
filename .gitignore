@@ -119,3 +119,5 @@ GoogleService-Info.plist
 
 *.mp4
 *.mov
+
+.dev_archive/
