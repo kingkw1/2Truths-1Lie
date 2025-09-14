@@ -34,7 +34,7 @@
     * **Curated Demo: Building the Secure Backend:**
         * **Shots:** **A tightly edited, time-lapsed screen recording of Kiro's chat interface. Show you pasting a clear, concise prompt for the authentication backend. As Kiro generates the code, it should appear on screen at a highly accelerated speed, conveying rapid automation. Use graphic highlights (boxes/arrows) to point to key generated elements like the registration endpoint, password hashing, or database interaction.**
         * **Script (Voiceover during the clip):** "Building a robust, secure authentication system is a critical, often time-consuming task. Instead, we simply described our requirements for user registration and login to Kiro. What you're seeing now is Kiro generating that complex, production-grade FastAPI backend code, complete with secure password hashing and database integration, in minutes—freeing us to focus on our unique game mechanics."
-    * **Future-Ready Hooks:** Showcase the hook files themselves inside the `/.kiro/hooks` directory. "We leveraged Kiro's spec-driven development for the core build. Looking ahead, we've also set up agent hooks to automate our testing and documentation. They're ready to be activated to ensure the app stays robust and easy to maintain as it evolves."
+    * **AI-Generated Testing:** A screen recording showing a Kiro spec file for tests on the left, and the generated Jest test file (`*.test.tsx`) on the right. "And it wasn't just about building features. Kiro also generated a comprehensive test suite directly from our specs, giving us over 200 tests that verify our authentication and core logic, ensuring the app was secure and stable from day one."
 
 ---
 ## Part 4: The Synthesis & Future Vision (2:30 - 3:00)
