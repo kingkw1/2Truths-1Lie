@@ -185,6 +185,12 @@ class MediaUploadService:
                 
                 logger.info(f"Media {media_id} uploaded to cloud storage: {cloud_key}")
                 
+                # Clean up upload session after successful cloud upload
+                await self.upload_service._cleanup_session_chunks(session_id)
+                if session_id in self.upload_service.sessions:
+                    del self.upload_service.sessions[session_id]
+                    await self.upload_service._save_sessions()
+                
                 return {
                     "media_id": media_id,
                     "streaming_url": streaming_url,
@@ -207,6 +213,12 @@ class MediaUploadService:
                 # Generate streaming URL
                 streaming_url = f"/api/v1/media/stream/{media_id}"
                 
+                # Clean up upload session after local storage
+                await self.upload_service._cleanup_session_chunks(session_id)
+                if session_id in self.upload_service.sessions:
+                    del self.upload_service.sessions[session_id]
+                    await self.upload_service._save_sessions()
+                
                 logger.info(f"Media {media_id} stored locally: {media_path}")
                 
                 return {
@@ -227,6 +239,12 @@ class MediaUploadService:
             final_path.rename(media_path)
             
             streaming_url = f"/api/v1/media/stream/{media_id}"
+            
+            # Clean up upload session even on fallback
+            await self.upload_service._cleanup_session_chunks(session_id)
+            if session_id in self.upload_service.sessions:
+                del self.upload_service.sessions[session_id]
+                await self.upload_service._save_sessions()
             
             return {
                 "media_id": media_id,
