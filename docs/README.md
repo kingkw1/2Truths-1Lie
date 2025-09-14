@@ -148,7 +148,7 @@ docs/
 **Ready for Submission** ✅
 
 #### **Understand the Project**
-- [Project Overview](PRODUCT_OVERVIEW.md) - What is 2Truths-1Lie?
+- [Product Overview](PRODUCT_OVERVIEW.md) - What is 2Truths-1Lie?
 - [Technical Architecture](ARCHITECTURE.md) - How is it built?
 
 #### **Start Development**

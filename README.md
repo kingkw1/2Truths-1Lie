@@ -29,8 +29,9 @@ This project was built from the ground up with Kiro, moving from high-level conc
 | Feature | How Kiro Made It Possible |
 | :--- | :--- |
 | **🎮 Secure, Scalable Backend** | We described the requirements for our JWT authentication and video processing APIs, and Kiro generated the production-grade FastAPI services. This allowed us to focus on the core game logic instead of backend boilerplate. |
-| **📱 Polished Mobile Experience**| Kiro's spec-to-code capabilities for React Native generated the foundational UI components and state management hooks, letting us spend more time on polishing the user experience and gesture controls. |
-| **🤖 Responsible AI & Moderation**| We used Kiro to spec out and implement a full content moderation system, including user reporting APIs and a backend service, ensuring the platform was community-ready from day one. |
+| **📱 Advanced Video Recording**| Kiro helped us implement sophisticated video recording with expo-camera, including permission handling, validation, and corruption detection - solving complex mobile video challenges. |
+| **🎬 Real-time Video Processing**| We leveraged Kiro to build FFmpeg-powered video merging on the backend, enabling seamless combination of multiple video segments into final challenge videos. |
+| **☁️ Production Deployment**| Kiro guided us through Railway deployment and EAS Build configuration, ensuring our app scales properly with proper signing credentials and environment management. |
 
 ## 🏆 Our Kiro Workflow: From Spec to Production
 
@@ -59,12 +60,13 @@ The system is a modern, decoupled architecture designed for scalability.
 
 ```mermaid
 graph TD
-    A[📱 Mobile App <br> React Native, Expo, Redux] -->|REST API Requests| B(🌐 Backend API <br> Python, FastAPI);
-    B -->|User Data| C{DB <br> SQLite/PostgreSQL};
-    B -->|Media Files| D[☁️ Cloud Storage <br> AWS S3];
-    B -->|AI Analysis| E[🤖 AI Service <br> TensorFlow.js Model];
-    D -->|Cached Content| F[🌍 Global CDN];
-    F --> A;
+    A[📱 Mobile App <br> React Native, Expo, expo-camera] -->|REST API| B(🌐 Backend API <br> Python FastAPI, Railway);
+    B -->|Challenge Data| C[(🗄️ Database <br> SQLite)];
+    B -->|Video Files| D[📁 Local Storage <br> Backend uploads/];
+    B -->|Video Processing| E[🎬 FFmpeg Service <br> Video Merging];
+    A -->|Video Upload| B;
+    E -->|Merged Videos| D;
+    B -->|JWT Auth| F[🔐 Authentication <br> Secure Tokens];
 ````
 
 **👉 [Dive into the Full Technical Details](docs/TECHNICAL_ARCHITECTURE.md)**
@@ -78,7 +80,7 @@ Get the project running on your local machine in under 5 minutes.
 1.  **Clone the repository:**
 
     ```bash
-    git clone [https://github.com/kingkw1/2Truths-1Lie.git](https://github.com/kingkw1/2Truths-1Lie.git)
+    git clone https://github.com/kingkw1/2Truths-1Lie.git
     cd 2Truths-1Lie
     ```
 
@@ -87,7 +89,7 @@ Get the project running on your local machine in under 5 minutes.
     ```bash
     cd backend
     pip install -r requirements.txt
-    uvicorn main:app --reload --host 0.0.0.0 --port 8001
+    python run.py
     ```
 
 3.  **Launch the mobile app:**
@@ -95,7 +97,7 @@ Get the project running on your local machine in under 5 minutes.
     ```bash
     cd mobile
     npm install
-    npm start
+    npx expo start
     ```
 
     Scan the QR code with the Expo Go app on your phone.
@@ -138,16 +140,16 @@ Get the project running on your local machine in under 5 minutes.
 - **[`.kiro/steering/`](.kiro/steering/)** - Technical steering documents and policies
 
 **📊 Kiro-Generated Code Examples:**
-- **Backend Authentication**: JWT token system generated from Kiro specs
-- **Mobile State Management**: Redux store and hooks generated with Kiro assistance
-- **API Documentation**: Auto-generated from Kiro design specifications
-- **Testing Framework**: Comprehensive test suites built using Kiro patterns
+- **Backend Video Processing**: FFmpeg integration and video merging service
+- **Mobile Camera Integration**: expo-camera setup with permission handling and validation
+- **API Architecture**: Complete FastAPI backend with JWT authentication
+- **Production Deployment**: EAS Build configuration and Railway deployment setup
 
 **🚀 Production Readiness:**
-- ✅ **Deployed Backend**: Live FastAPI server with monitoring
-- ✅ **Mobile App Store**: Google Play Store submission ready
-- ✅ **Security Compliance**: JWT authentication, input validation, content moderation
-- ✅ **Scalable Architecture**: Cloud storage, CDN, database optimization
+- ✅ **Deployed Backend**: Live FastAPI server on Railway with monitoring
+- ✅ **Mobile App Store**: Google Play Store submission with EAS Build
+- ✅ **Video Processing**: FFmpeg-powered video recording and merging
+- ✅ **Robust Architecture**: JWT authentication, input validation, error handling
 
 **📱 Judge Access:**
 - **Live App**: Available on Google Play Store (scan QR in [`submission_materials/`](submission_materials/))
@@ -157,10 +159,10 @@ Get the project running on your local machine in under 5 minutes.
 ### 🎯 Key Differentiators
 
 1. **Spec-First Development**: Every major feature started as a Kiro specification
-2. **Production Quality**: Real app with paying users potential, not just a prototype
-3. **AI Integration**: Content moderation and video processing with AI assistance
-4. **Mobile + Backend**: Full-stack application with sophisticated architecture
-5. **Developer Experience**: Comprehensive tooling and documentation for future development
+2. **Production Quality**: Real app deployed to Google Play Store with working video features
+3. **Advanced Video Processing**: FFmpeg-powered backend with sophisticated mobile camera integration
+4. **Mobile + Backend**: Full-stack application with Railway deployment and EAS Build
+5. **Developer Experience**: Comprehensive debugging and validation throughout the video pipeline
 
 ## 📜 License
 
