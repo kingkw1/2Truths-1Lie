@@ -473,11 +473,34 @@ export class VideoUploadService {
 
       onProgress?.({ stage: 'preparing', progress: 5, startTime });
 
-      // Validate all video files exist
+      // Validate all video files exist and are readable
       for (const video of videos) {
         const fileInfo = await FileSystem.getInfoAsync(video.uri);
         if (!fileInfo.exists) {
           throw new Error(`Video file not found for statement ${video.statementIndex + 1}`);
+        }
+        
+        const fileSize = 'size' in fileInfo ? fileInfo.size || 0 : 0;
+        if (fileSize === 0) {
+          throw new Error(`Video file is empty for statement ${video.statementIndex + 1}`);
+        }
+        
+        // Optional validation: try to read file metadata to ensure it's complete
+        // Skip this validation if it fails to avoid blocking uploads
+        try {
+          const testRead = await FileSystem.readAsStringAsync(video.uri, {
+            encoding: FileSystem.EncodingType.Base64,
+            length: 50 // Just read a small portion to test file accessibility
+          });
+          
+          if (!testRead || testRead.length === 0) {
+            console.warn(`Video file validation warning for statement ${video.statementIndex + 1}: empty read`);
+          } else {
+            console.log(`✅ Video ${video.statementIndex + 1} validation passed: ${Math.round(fileSize / 1024)}KB`);
+          }
+        } catch (readError) {
+          console.warn(`Video file validation warning for statement ${video.statementIndex + 1}:`, readError);
+          // Continue with upload instead of failing - validation is optional
         }
       }
 

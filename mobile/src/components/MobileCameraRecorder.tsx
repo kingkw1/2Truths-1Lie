@@ -504,6 +504,10 @@ export const MobileCameraRecorder: React.FC<MobileCameraRecorderProps> = ({
 
       const uri = recording.uri;
 
+      // Add a small delay to ensure camera recording is fully finalized
+      await new Promise(resolve => setTimeout(resolve, 100));
+      console.log('📹 Camera recording finalization delay completed');
+
       // Validate file exists and get info
       const fileInfo = await FileSystem.getInfoAsync(uri);
       if (!fileInfo.exists) {
@@ -514,6 +518,24 @@ export const MobileCameraRecorder: React.FC<MobileCameraRecorderProps> = ({
       const fileSize = fileInfo.size || 0;
       if (fileSize === 0) {
         throw new Error('Recording file is empty');
+      }
+
+      // Additional validation: try to read the first few bytes to ensure file is complete
+      // This is optional validation - don't fail recording if it doesn't work
+      try {
+        const fileData = await FileSystem.readAsStringAsync(uri, {
+          encoding: FileSystem.EncodingType.Base64,
+          length: 100 // Read first 100 bytes to check file header
+        });
+        
+        if (!fileData || fileData.length === 0) {
+          console.warn('Recording file appears to have empty header, but continuing...');
+        } else {
+          console.log('📹 Recording file header validation passed');
+        }
+      } catch (readError) {
+        console.warn('Could not validate recording file header (non-critical):', readError);
+        // Don't fail here as this is just additional validation
       }
 
       // Calculate actual recording duration from start time

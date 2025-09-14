@@ -116,3 +116,6 @@ GoogleService-Info.plist
 *.bak
 
 *.db
+
+*.mp4
+*.mov
