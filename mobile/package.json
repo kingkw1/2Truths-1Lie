@@ -14,7 +14,11 @@
     "test:watch": "jest --watch",
     "test:coverage": "jest --coverage",
     "test:working": "jest --config=jest.config.working.js",
-    "test:working:watch": "jest --config=jest.config.working.js --watch"
+    "test:working:watch": "jest --config=jest.config.working.js --watch",
+    "test:core": "jest --testPathPattern=\"(slices|services|hooks)\" --testPathIgnorePatterns=\"component|integration|e2e\"",
+    "test:components": "jest --testPathPattern=\"components\"",
+    "test:integration": "jest --testPathPattern=\"(integration|e2e|workflow)\"",
+    "test:quick": "jest --testPathPattern=\"(slices|services)\" --passWithNoTests"
   },
   "dependencies": {
     "@expo/metro-runtime": "~6.1.2",

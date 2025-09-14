@@ -16,10 +16,11 @@ module.exports = {
   moduleFileExtensions: ['ts', 'tsx', 'js', 'jsx', 'json'],
   moduleNameMapper: {
     '^@/(.*)$': '<rootDir>/src/$1',
+    '^expo-file-system/legacy$': 'expo-file-system',
   },
   transformIgnorePatterns: [
-    'node_modules/(?!(react-native|@react-native|expo|@expo|@testing-library/react-native|@reduxjs/toolkit|react-redux|expo-haptics|expo-av|expo-camera|expo-constants|expo-device|expo-file-system|expo-media-library|expo-web-browser)/)',
+    'node_modules/(?!(react-native|@react-native|expo|@expo|@testing-library/react-native|@reduxjs/toolkit|react-redux|expo-haptics|expo-av|expo-camera|expo-constants|expo-device|expo-file-system|expo-media-library|expo-web-browser|expo-modules-core|@react-native-async-storage|@react-native-community)/)',
   ],
-  testEnvironment: 'node',
+  testEnvironment: 'node', // Reverting until jest-environment-jsdom is installed
   maxWorkers: 2, // Reduce worker count to prevent memory issues
 };

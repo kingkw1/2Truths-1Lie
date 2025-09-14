@@ -11,21 +11,24 @@ import {
 } from '../store/slices/challengeCreationSlice';
 
 // Mock Expo Camera and permissions
-jest.mock('expo-camera', () => ({
-  CameraView: React.forwardRef(({ children, ...props }: any, ref: any) => {
-    React.useImperativeHandle(ref, () => ({
-      recordAsync: jest.fn().mockResolvedValue({
-        uri: 'mock://recorded-video.mp4',
-      }),
-      stopRecording: jest.fn().mockResolvedValue(undefined),
-    }));
-    return <div testID="mock-camera-view">{children}</div>;
-  }),
-  useCameraPermissions: () => [
-    { granted: true },
-    jest.fn().mockResolvedValue({ granted: true }),
-  ],
-}));
+jest.mock('expo-camera', () => {
+  const mockReact = require('react');
+  return {
+    CameraView: mockReact.forwardRef(({ children, ...props }: any, ref: any) => {
+      mockReact.useImperativeHandle(ref, () => ({
+        recordAsync: jest.fn().mockResolvedValue({
+          uri: 'mock://recorded-video.mp4',
+        }),
+        stopRecording: jest.fn().mockResolvedValue(undefined),
+      }));
+      return mockReact.createElement('div', { testID: 'mock-camera-view', ...props }, children);
+    }),
+    useCameraPermissions: () => [
+      { granted: true },
+      jest.fn().mockResolvedValue({ granted: true }),
+    ],
+  };
+});
 
 jest.mock('expo-media-library', () => ({
   usePermissions: () => [

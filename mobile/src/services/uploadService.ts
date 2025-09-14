@@ -579,8 +579,8 @@ export class VideoUploadService {
 
       console.error('❌ MERGE_UPLOAD: Upload error:', error);
 
-      // Use enhanced error handling service
-      const { errorHandlingService } = await import('./errorHandlingService');
+      // Use static import instead of dynamic import for Jest compatibility
+      const { errorHandlingService } = require('./errorHandlingService');
       const errorDetails = errorHandlingService.handleUploadError(error, {
         fileName: 'merged_videos',
         uploadProgress: 0,
