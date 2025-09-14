@@ -93,13 +93,13 @@
   - Handle modal presentation and dismissal
   - _Requirements: User Story 1 - Reason selection for reports_
 
-- [ ] (MANUAL) Success/error feedback to users
+- [x] (MANUAL) Success/error feedback to users
   - Implement toast notifications for report confirmation
   - Add proper error message display
   - Test user experience flow
   - _Requirements: User Story 1 - Confirmation message acknowledgment_
 
-- [ ] (MANUAL) Disable report button after submission
+- [x] (MANUAL) Disable report button after submission
   - Prevent duplicate reports from same user
   - Update button state after successful submission
   - Test duplicate prevention logic

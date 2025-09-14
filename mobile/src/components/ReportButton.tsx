@@ -7,8 +7,11 @@ import {
   TextStyle,
 } from 'react-native';
 import { useReportAuth } from '../hooks/useReportAuth';
+import { useAppSelector } from '../store';
+import { selectIsChallengeReported } from '../store/slices/reportingSlice';
 
 interface ReportButtonProps {
+  challengeId: string;
   onPress: () => void;
   disabled?: boolean;
   style?: ViewStyle;
@@ -18,6 +21,7 @@ interface ReportButtonProps {
 }
 
 export const ReportButton: React.FC<ReportButtonProps> = ({
+  challengeId,
   onPress,
   disabled = false,
   style,
@@ -26,11 +30,12 @@ export const ReportButton: React.FC<ReportButtonProps> = ({
   variant = 'default',
 }) => {
   const { canReport } = useReportAuth();
+  const isAlreadyReported = useAppSelector(selectIsChallengeReported(challengeId));
 
   const handlePress = () => {
     // Always call onPress - authentication handling is done by parent component
     // This allows for consistent behavior and centralized auth logic
-    if (!disabled) {
+    if (!disabled && !isAlreadyReported) {
       onPress();
     }
   };
@@ -58,7 +63,7 @@ export const ReportButton: React.FC<ReportButtonProps> = ({
     }
 
     // Disabled state
-    if (disabled || !canReport) {
+    if (disabled || !canReport || isAlreadyReported) {
       baseStyle.push(styles.buttonDisabled);
     }
 
@@ -86,7 +91,7 @@ export const ReportButton: React.FC<ReportButtonProps> = ({
     }
 
     // Disabled state
-    if (disabled || !canReport) {
+    if (disabled || !canReport || isAlreadyReported) {
       baseStyle.push(styles.iconDisabled);
     }
 
@@ -102,13 +107,13 @@ export const ReportButton: React.FC<ReportButtonProps> = ({
     <TouchableOpacity
       style={getButtonStyle()}
       onPress={handlePress}
-      disabled={disabled || !canReport}
+      disabled={disabled || !canReport || isAlreadyReported}
       activeOpacity={0.7}
-      accessibilityLabel="Report inappropriate content"
-      accessibilityHint="Tap to report this content as inappropriate"
+      accessibilityLabel={isAlreadyReported ? "Already reported" : "Report inappropriate content"}
+      accessibilityHint={isAlreadyReported ? "This content has already been reported" : "Tap to report this content as inappropriate"}
       accessibilityRole="button"
     >
-      <Text style={getIconStyle()}>🚩</Text>
+      <Text style={getIconStyle()}>{isAlreadyReported ? '🏴' : '🚩'}</Text>
     </TouchableOpacity>
   );
 };

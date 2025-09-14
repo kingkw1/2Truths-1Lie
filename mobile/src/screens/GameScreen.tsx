@@ -38,7 +38,7 @@ import { errorHandlingService } from '../services/errorHandlingService';
 import { AuthStatusBanner } from '../components/ProtectedScreen';
 import { ReportButton } from '../components/ReportButton';
 import { ReportModal, ModerationReason } from '../components/ReportModal';
-import { reportService } from '../services/reportService';
+import { submitReport } from '../store/slices/reportingSlice';
 
 // Helper function to convert backend challenge to frontend format
 const convertBackendChallenge = (backendChallenge: BackendChallenge): EnhancedChallenge => {
@@ -427,7 +427,12 @@ export const GameScreen: React.FC<GameScreenProps> = ({
       setIsSubmittingReport(true);
       console.log('🚩 REPORT: Submitting report for challenge:', reportingChallengeId);
       
-      await reportService.reportChallenge(reportingChallengeId, reason, details);
+      // Use Redux action to submit report
+      const result = await dispatch(submitReport({
+        challengeId: reportingChallengeId,
+        reason,
+        details
+      })).unwrap();
       
       console.log('✅ REPORT: Report submitted successfully');
       
@@ -583,6 +588,7 @@ export const GameScreen: React.FC<GameScreenProps> = ({
           <View style={styles.challengeHeader}>
             <Text style={styles.creatorName}>By {challenge.creatorName}</Text>
             <ReportButton
+              challengeId={challenge.id}
               onPress={() => handleReportChallenge(challenge.id)}
               size="small"
               variant="minimal"

@@ -13,19 +13,11 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useReportAuth } from '../hooks/useReportAuth';
 import { ReportService } from '../services/reportService';
 import { ReportError, ReportErrorType } from '../services/reportErrors';
+import { ModerationReason } from '../types/reporting';
 
-// ModerationReason enum values from backend
-export enum ModerationReason {
-  INAPPROPRIATE_LANGUAGE = 'inappropriate_language',
-  SPAM = 'spam',
-  PERSONAL_INFO = 'personal_info',
-  VIOLENCE = 'violence',
-  HATE_SPEECH = 'hate_speech',
-  ADULT_CONTENT = 'adult_content',
-  COPYRIGHT = 'copyright',
-  MISLEADING = 'misleading',
-  LOW_QUALITY = 'low_quality',
-}
+// Re-export ModerationReason from types to maintain backward compatibility
+export { ModerationReason } from '../types/reporting';
+export type { ReportRequest, ReportResponse } from '../types/reporting';
 
 // Human-readable labels for the reasons
 const REASON_LABELS: Record<ModerationReason, string> = {

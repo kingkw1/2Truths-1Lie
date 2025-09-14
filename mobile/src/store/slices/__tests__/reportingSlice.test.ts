@@ -21,7 +21,7 @@ import reportingReducer, {
   ReportingState,
 } from '../reportingSlice';
 import { ReportError, ReportErrorType } from '../../../services/reportErrors';
-import { ModerationReason } from '../../../components/ReportModal';
+import { ModerationReason } from '../../../types/reporting';
 
 // Mock the report service
 jest.mock('../../../services/reportService', () => ({

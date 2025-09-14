@@ -6,7 +6,7 @@
 import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit';
 import { reportService, ReportService } from '../../services/reportService';
 import { ReportError, ReportErrorType } from '../../services/reportErrors';
-import { ModerationReason } from '../../components/ReportModal';
+import { ModerationReason } from '../../types/reporting';
 
 export interface ReportingState {
   isReporting: boolean;

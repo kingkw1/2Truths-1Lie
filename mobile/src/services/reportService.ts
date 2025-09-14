@@ -5,19 +5,11 @@
 
 import { getApiBaseUrl } from '../config/apiConfig';
 import { authService } from './authService';
-import { ModerationReason } from '../components/ReportModal';
+import { ModerationReason, ReportRequest, ReportResponse } from '../types/reporting';
 import { ReportError, ReportErrorType } from './reportErrors';
 
-export interface ReportRequest {
-  reason: ModerationReason;
-  details?: string;
-}
-
-export interface ReportResponse {
-  report_id: number;
-  message: string;
-  challenge_id: string;
-}
+// Re-export types for backward compatibility
+export type { ReportRequest, ReportResponse } from '../types/reporting';
 
 // Re-export for convenience
 export { ReportError, ReportErrorType } from './reportErrors';

@@ -7,7 +7,8 @@ import React, { useState } from 'react';
 import { View, StyleSheet, Alert } from 'react-native';
 import { ReportButton } from './ReportButton';
 import { ReportModal, ModerationReason } from './ReportModal';
-import { reportService } from '../services/reportService';
+import { useAppDispatch } from '../store';
+import { submitReport } from '../store/slices/reportingSlice';
 import { useToast } from '../hooks/useToast';
 import { Toast } from './Toast';
 
@@ -20,6 +21,7 @@ export const ReportingExample: React.FC<ReportingExampleProps> = ({
   challengeId,
   onReportSubmitted,
 }) => {
+  const dispatch = useAppDispatch();
   const [showReportModal, setShowReportModal] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [hasReported, setHasReported] = useState(false);
@@ -42,10 +44,12 @@ export const ReportingExample: React.FC<ReportingExampleProps> = ({
     try {
       setIsSubmitting(true);
       
-      await reportService.reportChallenge(challengeId, {
+      // Use Redux action to submit report
+      await dispatch(submitReport({
+        challengeId,
         reason,
-        details,
-      });
+        details
+      })).unwrap();
 
       // Mark as reported to prevent duplicate reports
       setHasReported(true);
@@ -84,6 +88,7 @@ export const ReportingExample: React.FC<ReportingExampleProps> = ({
   return (
     <View style={styles.container}>
       <ReportButton
+        challengeId={challengeId}
         onPress={handleReportPress}
         disabled={hasReported || isSubmitting}
         size="medium"
