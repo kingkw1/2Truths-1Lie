@@ -14,18 +14,20 @@
 
 **Hackathon Category**: Games & Entertainment
 
-**[View the Demo Video](#-live-demo) · [Explore our Kiro Specs](#-our-kiro-workflow) · [Quick Start](#-quick-start)**
+**[View the Demo Video](#-live-demo) · [Explore our Kiro Specs](#-our-kiro-workflow-from-spec-to-production) · [Quick Start](#-quick-start)**
 
 </div>
 
 > **Kiro Integration:**  
-> This repository features a fully populated `.kiro/specs` directory for requirements, designs, and tasks, plus agent hooks and steering docs in `.kiro/hooks` and `.kiro/steering`. All major architecture and code decisions were executed via Kiro's spec-driven workflow. See below for direct links and usage details.
+> This repository features a fully populated [`.kiro/specs/`](.kiro/specs/) directory for requirements, designs, and tasks, plus agent hooks and steering docs in [`.kiro/hooks/`](.kiro/hooks/) and [`.kiro/steering/`](.kiro/steering/). All major architecture and code decisions were executed via Kiro's spec-driven workflow. See below for direct links and usage details.
 
 ## 🏆 Hackathon Submission Materials
 
-- 🎬 [Demo Video](submission_materials/DEMO_VIDEO_LINK) — 3-minute app tour & Kiro development walkthrough
-- 📱 [Judge QR Code & App Access](submission_materials/QR_CODE.png)  
-- 📂 [Submission Materials Directory](submission_materials/) — Scripts, demo instructions, and assets
+| Resource               | Link/Access                                      |
+|------------------------|-------------------------------------------------|
+| 🎬 Demo Video          | [Watch here](submission_materials/DEMO_VIDEO_LINK)   |
+| 📱 QR Code / App Access | <img src="submission_materials/playstore-qr-code.png" alt="QR Code" width="150"/> |
+| 📂 Submission Assets    | [Browse folder](submission_materials/)          |
 
 ## 🎯 A Partnership with Kiro
 
@@ -43,13 +45,12 @@ This project was built from the ground up with Kiro, moving from high-level conc
 | **☁️ Production Deployment**| Railway deployment and EAS Build configuration scripted from architectural specs. |
 
 ## 🏆 Our Kiro Workflow: From Spec to Production
-
-The hackathon rules emphasize showing *how* we built with Kiro. Our entire process was centered around Kiro's spec-driven development, which is fully documented in the `/.kiro/specs` directory of this repository.
+Our entire process was centered around Kiro's spec-driven development, which is fully documented in the [`/.kiro/specs/`](.kiro/specs/) directory of this repository. Explore the full journey from requirements to production code in our [Kiro Specs Overview](.kiro/specs/README.md).
 
 -   **✅ Requirements Phase**: We started by defining user stories and acceptance criteria for complex features like User Authentication and Content Moderation in `requirements.md` files. This ensured our goals were clear and testable from the start.
 -   **✅ Design Phase**: Kiro helped translate these requirements into technical `design.md` files, complete with data models, API contracts, and sequence diagrams. This is where Kiro helped us make "better architecture decisions."
 -   **✅ Implementation Phase**: With a solid design, Kiro's code generation automated over 70% of the foundational code. The most impressive code generation was the entire secure authentication backend, which saved us days of complex, security-critical work.
--   **✅ Future-Ready Hooks**: We've set up agent hooks (see `/.kiro/hooks`) to automate future tasks like documentation updates and test generation, showing how Kiro can assist throughout the project's entire lifecycle.
+-   **✅ Future-Ready Hooks**: We've set up agent hooks (see [`.kiro/hooks/`](.kiro/hooks/)) to automate future tasks like documentation updates and test generation, showing how Kiro can assist throughout the project's entire lifecycle.
 
 This workflow allowed us to bridge the gap between idea and implementation, creating a polished, production-ready app in a fraction of the typical time.
 

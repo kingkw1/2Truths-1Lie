@@ -34,7 +34,7 @@ npm run start:dev  # Launches both mobile and backend
 ## 📱 Mobile Development
 
 ### Code Contributions
-- Fork the repository and create your branch from `feat/mobile-only`:
+- Fork the repository and create your branch from `main`:
 ```bash
 git checkout -b feature/mobile-enhancement
 ```
