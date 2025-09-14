@@ -1183,12 +1183,53 @@ async def upload_videos_for_merge_direct(
                 video_file = video_data["file"]
                 video_path = temp_dir / f"video_{i}.mp4"
                 
-                # Save file
+                logger.info(f"Processing video {i}: filename={video_file.filename}, "
+                           f"content_type={video_file.content_type}, size={video_file.size}")
+                
+                # Save file with detailed logging
+                bytes_written = 0
                 with open(video_path, "wb") as buffer:
-                    shutil.copyfileobj(video_file.file, buffer)
+                    # Read in chunks to track progress and detect issues
+                    chunk_size = 8192
+                    while chunk := video_file.file.read(chunk_size):
+                        buffer.write(chunk)
+                        bytes_written += len(chunk)
+                
+                logger.info(f"Saved video {i}: wrote {bytes_written} bytes to {video_path}")
+                
+                # Verify saved file exists and has correct size
+                if not video_path.exists():
+                    logger.error(f"Video {i} file was not saved successfully")
+                    raise HTTPException(
+                        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                        detail=f"Failed to save video {i}"
+                    )
+                
+                actual_size = video_path.stat().st_size
+                if actual_size != bytes_written:
+                    logger.error(f"Video {i} size mismatch: expected {bytes_written}, got {actual_size}")
+                    raise HTTPException(
+                        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                        detail=f"Video {i} file corruption detected during save"
+                    )
+                
+                # Quick probe to validate MP4 structure
+                import subprocess
+                probe_result = subprocess.run([
+                    'ffprobe', '-v', 'quiet', '-print_format', 'json',
+                    '-show_format', str(video_path)
+                ], capture_output=True, text=True)
+                
+                if probe_result.returncode != 0:
+                    logger.error(f"Video {i} failed FFprobe validation: {probe_result.stderr}")
+                    raise HTTPException(
+                        status_code=status.HTTP_400_BAD_REQUEST,
+                        detail=f"Video {i} is not a valid MP4 file or is corrupted"
+                    )
+                else:
+                    logger.info(f"Video {i} passed FFprobe validation")
                 
                 video_paths.append(video_path)
-                logger.debug(f"Saved video {i} to {video_path}")
             
             # Initiate merge using the video merge service
             logger.info(f"Initiating merge for session {merge_session_id}")
