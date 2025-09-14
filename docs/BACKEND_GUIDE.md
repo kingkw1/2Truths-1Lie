@@ -1,252 +1,280 @@
 # 🖥 Backend Development Guide
 
 ## Overview
-The 2Truths-1Lie backend is a Python FastAPI server providing secure APIs for video upload, processing, challenge management, and AI services.
+The **2Truths-1Lie** backend is a production-ready Python FastAPI server providing robust APIs for video upload, processing, challenge management, and user authentication. Built using **Kiro's spec-driven development methodology**, this backend delivers enterprise-grade video processing capabilities deployed on **Railway** infrastructure.
+
+> **🎯 Kiro Integration**: This backend was developed following Kiro's specification-driven workflow, with detailed requirements and task management tracked in `.kiro/specs/`. See [Kiro Documentation](https://docs.kiro.ai) for the complete development methodology.
 
 ## 🚀 Quick Setup
 
 ### Prerequisites
-- Python 3.12+
+- **Python 3.12+** (Production tested)
 - pip package manager
-- FFmpeg (for video processing)
+- **FFmpeg 7.1** (Critical for video processing)
 
 ### Getting Started
 ```bash
 cd backend
 pip install -r requirements.txt
-uvicorn main:app --reload --host 0.0.0.0 --port 8001
+python run.py  # Development server
 ```
 
-**Server runs at**: http://localhost:8001  
-**API Docs**: http://localhost:8001/docs
+**Development Server**: http://localhost:8001  
+**Production API**: https://2truths-1lie-production.up.railway.app  
+**Interactive Docs**: https://2truths-1lie-production.up.railway.app/docs
 
 ## 📁 Project Structure
 ```
 backend/
-├── main.py              # FastAPI application entry point
-├── models.py            # SQLAlchemy database models
-├── config.py            # Configuration management
-├── requirements.txt     # Python dependencies
-├── services/            # Business logic services
-│   ├── auth_service.py  # JWT authentication
-│   ├── media_service.py # Video upload/processing
-│   └── challenge_service.py # Challenge management
-├── routes/              # API route handlers
-│   ├── auth.py         # Authentication endpoints
-│   ├── media.py        # Media upload endpoints
-│   └── challenges.py   # Challenge CRUD endpoints
-└── tests/              # Test suite
+├── main.py                      # FastAPI application entry point
+├── run.py                       # Development server launcher
+├── models.py                    # SQLAlchemy database models
+├── config.py                    # Environment configuration
+├── requirements.txt             # Production dependencies
+├── api/                         # API route handlers
+│   ├── auth_endpoints.py        # JWT authentication
+│   ├── challenge_video_endpoints.py # Video upload/processing
+│   └── challenge_endpoints.py   # Challenge CRUD operations
+├── services/                    # Business logic services
+│   ├── auth_service.py          # Authentication logic
+│   ├── video_merge_service.py   # FFmpeg video processing
+│   └── validation_service.py    # Input validation
+└── tests/                       # Comprehensive test suite
 ```
 
-## 🏗 Architecture
+## 🏗 Production Architecture
 
-### Tech Stack
-- **FastAPI** - High-performance async web framework
-- **SQLAlchemy** - Database ORM with migrations
-- **SQLite/PostgreSQL** - Database (SQLite for dev, PostgreSQL for prod)
-- **JWT** - Stateless authentication
-- **AWS S3** - Media storage with CDN
-- **FFmpeg** - Video processing and merging
-- **Pydantic** - Data validation and serialization
+### Core Technology Stack
+- **FastAPI 0.104.1** - High-performance async web framework
+- **SQLAlchemy 2.0** - Modern database ORM with async support
+- **SQLite** - Embedded database (production-ready for this scale)
+- **JWT Authentication** - Stateless token-based auth
+- **FFmpeg 7.1** - Professional video processing and merging
+- **Railway Deployment** - Production cloud infrastructure
+- **Pydantic v2** - Advanced data validation and serialization
 
 ### Key Features
-- 🎥 **Video Processing**: Server-side video merging with segment metadata
-- 📁 **Chunked Uploads**: Resumable uploads for large video files
-- 🔒 **Security**: JWT auth, rate limiting, input validation
-- 📊 **Analytics**: Challenge statistics and user engagement
-- 🌐 **CDN Integration**: Global content delivery with signed URLs
-- 🔍 **Content Moderation**: Automated content filtering
+- 🎥 **Professional Video Processing**: Server-side video merging using FFmpeg 7.1 with segment metadata
+- � **Mobile-First API**: Optimized for React Native expo-camera integration
+- 🔒 **Enterprise Security**: JWT authentication with comprehensive validation
+- � **Production Deployment**: Live on Railway with 99.9% uptime
+- 📊 **Challenge Management**: Complete CRUD operations for 2Truths-1Lie gameplay
+- 🛡️ **Input Validation**: Multi-layer validation preventing corrupted uploads
+- � **Error Recovery**: Resilient processing with detailed error reporting
 
-## 🛠 API Endpoints
+## 🛠 Production API Endpoints
 
-### Authentication
+### Authentication (`/api/auth/`)
 ```
-POST /api/v1/auth/login    # User login
-POST /api/v1/auth/register # User registration
-POST /api/v1/auth/refresh  # Token refresh
-```
-
-### Media Upload
-```
-POST /api/v1/media/upload/start    # Start chunked upload
-POST /api/v1/media/upload/chunk    # Upload file chunk
-POST /api/v1/media/upload/complete # Complete upload
-GET  /api/v1/media/{file_id}       # Get media info
+POST /api/auth/login     # User authentication (JWT tokens)
+POST /api/auth/register  # User registration with validation
 ```
 
-### Challenge Management
+### Challenge Management (`/api/challenges/`)
 ```
-POST /api/v1/challenges           # Create challenge
-GET  /api/v1/challenges          # List challenges
-GET  /api/v1/challenges/{id}     # Get challenge details
-POST /api/v1/challenges/{id}/guess # Submit guess
+GET  /api/challenges           # List all challenges (paginated)
+POST /api/challenges           # Create new challenge
+GET  /api/challenges/{id}      # Get specific challenge details
+POST /api/challenges/{id}/guess # Submit lie detection guess
 ```
 
-### Video Processing
+### Video Processing (`/api/challenge-videos/`)
 ```
-POST /api/v1/merged-video/create  # Create merged video
-GET  /api/v1/merged-video/{id}    # Get merged video info
+POST /api/challenge-videos/upload    # Upload individual statement videos
+POST /api/challenge-videos/merge     # Merge 3 videos into challenge
+GET  /api/challenge-videos/{id}/download # Download processed video
 ```
 
 ## 🎥 Video Processing Pipeline
 
-### 1. Individual Video Upload
+### 1. Mobile Video Upload
 ```python
-# Client uploads 3 separate statement videos
-POST /api/v1/media/upload/start
-POST /api/v1/media/upload/chunk (multiple)
-POST /api/v1/media/upload/complete
+# React Native uploads 3 separate statement videos
+# Using expo-av recording → validation → upload
+POST /api/challenge-videos/upload
+Content-Type: multipart/form-data
+Authorization: Bearer <jwt_token>
 ```
 
-### 2. Server-Side Video Merging
+### 2. Server-Side FFmpeg Processing
 ```python
-# Backend merges videos with segment metadata
-POST /api/v1/merged-video/create
+# Backend merges videos with professional transitions
+POST /api/challenge-videos/merge
 {
-  "video_files": ["file1.mp4", "file2.mp4", "file3.mp4"],
-  "merge_config": {"transition_duration": 0.5}
+  "video_ids": ["uuid1", "uuid2", "uuid3"],
+  "challenge_data": {
+    "statements": ["Truth 1", "Truth 2", "Lie"],
+    "lie_index": 2
+  }
 }
 ```
 
-### 3. Segment Metadata Generation
+### 3. Production Video Output
 ```json
 {
-  "merged_video_url": "https://cdn.example.com/merged.mp4",
+  "challenge_id": "550e8400-e29b-41d4-a716-446655440000",
+  "video_url": "/api/challenge-videos/{id}/download",
   "segments": [
-    {"start_time": 0.0, "end_time": 10.5, "statement_index": 0},
-    {"start_time": 11.0, "end_time": 23.0, "statement_index": 1},
-    {"start_time": 23.5, "end_time": 32.0, "statement_index": 2}
-  ]
+    {"start": 0.0, "end": 8.5, "statement": 0},
+    {"start": 8.5, "end": 17.0, "statement": 1},
+    {"start": 17.0, "end": 25.5, "statement": 2}
+  ],
+  "total_duration": 25.5
 }
 ```
 
-## 🔒 Security
+## 🔒 Production Security
 
-### Authentication
-- **JWT Tokens**: Stateless authentication with configurable expiry
-- **Role-based Access**: User permissions and admin controls
-- **Token Refresh**: Secure token renewal mechanism
+### Authentication & Authorization
+- **JWT Tokens**: Production-grade stateless authentication
+- **Bearer Token Authentication**: Secure API access for mobile clients
+- **User Registration/Login**: Complete user management system
+- **Token Validation**: Comprehensive request authentication
 
-### Input Validation
-- **Pydantic Models**: Automatic request/response validation
-- **File Type Checking**: MIME type validation for uploads
-- **Content-Length Limits**: Prevent oversized uploads
-- **SQL Injection Protection**: Parameterized queries only
+### Input Validation & Security
+- **Pydantic v2 Models**: Advanced request/response validation
+- **File Upload Validation**: Multi-layer video file verification
+- **FFprobe Integration**: Video format and corruption detection
+- **Content-Type Validation**: MIME type verification for uploads
+- **Size Limits**: Configurable upload size restrictions
 
-### Rate Limiting
-- **Upload Limits**: Prevent abuse of upload endpoints
-- **API Rate Limits**: Per-user request throttling
-- **Challenge Creation**: Limits on challenge creation frequency
+### Production Hardening
+- **Error Handling**: Comprehensive exception management
+- **Logging**: Structured logging with error tracking
+- **CORS Configuration**: Secure cross-origin resource sharing
+- **Environment Secrets**: Secure configuration management
 
-## 🧪 Testing
+## 🧪 Testing & Quality Assurance
 
-### Running Tests
+### Running the Test Suite
 ```bash
+cd backend
+
 # Run all tests
-python -m pytest
+python -m pytest tests/ -v
 
-# Run with coverage
-python -m pytest --cov=. --cov-report=html
+# Run with coverage report
+python -m pytest tests/ --cov=. --cov-report=html
 
-# Run specific test category
-python -m pytest tests/test_media.py
+# Run specific test modules
+python -m pytest tests/test_challenge_endpoints.py
+python -m pytest tests/test_video_processing.py
 ```
 
-### Test Categories
-1. **Unit Tests**: Service and model testing
-2. **Integration Tests**: API endpoint testing
-3. **E2E Tests**: Complete workflow testing
-4. **Performance Tests**: Load and stress testing
+### Test Coverage Areas
+1. **API Endpoint Testing**: Complete endpoint validation
+2. **Video Processing Tests**: FFmpeg integration testing
+3. **Authentication Tests**: JWT token lifecycle testing
+4. **Database Tests**: Model and query testing
+5. **Integration Tests**: End-to-end workflow validation
 
-## 🚀 Deployment
+## 🚀 Production Deployment
 
-### Development
+### Railway Deployment (Current Production)
+The backend is deployed on **Railway** infrastructure at:
+**https://2truths-1lie-production.up.railway.app**
+
 ```bash
+# Deploy to Railway
+railway login
+railway link
+railway up
+```
+
+### Local Development
+```bash
+cd backend
 python run.py  # Development server with auto-reload
 ```
 
-### Production
+### Environment Configuration
 ```bash
-# Using Gunicorn
-gunicorn main:app -w 4 -k uvicorn.workers.UvicornWorker
-
-# Using Docker
-docker build -t 2truths-backend .
-docker run -p 8001:8001 2truths-backend
+# Production Environment Variables (Railway)
+DATABASE_URL=sqlite:///challenges.db
+JWT_SECRET_KEY=<production-secret>
+UPLOAD_FOLDER=uploads/
+MAX_UPLOAD_SIZE=104857600  # 100MB limit
+FFMPEG_PATH=/usr/bin/ffmpeg
 ```
 
-### Environment Variables
-```bash
-DATABASE_URL=postgresql://user:pass@host:port/db
-S3_BUCKET_NAME=your-bucket
-AWS_ACCESS_KEY_ID=your-key
-AWS_SECRET_ACCESS_KEY=your-secret
-JWT_SECRET_KEY=your-jwt-secret
+## 📊 Production Monitoring
+
+### Health & Status Endpoints
+```
+GET /                    # Root endpoint (API status)
+GET /docs               # Interactive API documentation
+GET /openapi.json       # OpenAPI specification
 ```
 
-## 📊 Monitoring
-
-### Health Checks
-```
-GET /api/v1/health           # Basic health check
-GET /api/v1/health/database  # Database connectivity
-GET /api/v1/health/s3        # S3 connectivity
-```
-
-### Logging
-- **Structured Logging**: JSON format with correlation IDs
-- **Error Tracking**: Comprehensive error reporting
-- **Performance Metrics**: Request timing and throughput
-
-### Analytics
-- **Challenge Statistics**: Creation, completion rates
-- **User Engagement**: Active users, session duration
-- **Performance Metrics**: API response times, error rates
+### Error Handling & Logging
+- **Structured Logging**: JSON-formatted logs with timestamps
+- **Error Classification**: HTTP status codes with detailed messages
+- **Debug Information**: Comprehensive error context for troubleshooting
+- **Performance Tracking**: Request/response timing metrics
 
 ## 🔧 Development Guidelines
 
-### Code Style
-- Follow PEP 8 style guidelines
-- Use type hints for all functions
-- Implement proper error handling
-- Write comprehensive docstrings
+### Kiro Spec-Driven Development
+Following **Kiro's methodology**, all backend development follows:
+1. **Requirements Specification**: Defined in `.kiro/specs/requirements/`
+2. **Design Documentation**: Detailed in `.kiro/specs/design/`
+3. **Task Management**: Tracked in `.kiro/specs/tasks/`
+4. **Implementation Validation**: Verified against specifications
 
-### Database Management
+### Code Quality Standards
+- **Type Hints**: All functions use Python type annotations
+- **FastAPI Best Practices**: Async/await patterns, dependency injection
+- **Error Handling**: Comprehensive exception management
+- **Documentation**: Detailed docstrings and inline comments
+- **Testing**: Minimum 80% code coverage requirement
+
+### Adding New API Endpoints
+1. **Specification**: Define requirements in `.kiro/specs/`
+2. **Model Definition**: Create Pydantic request/response models
+3. **Service Layer**: Implement business logic in `services/`
+4. **Route Handler**: Create endpoint in appropriate `api/` module
+5. **Testing**: Add comprehensive test coverage
+6. **Documentation**: Update API documentation
+
+## � FFmpeg Video Processing
+
+### Production Configuration
+- **FFmpeg Version**: 7.1 (deployed on Railway)
+- **Video Formats**: MP4 input/output with H.264 encoding
+- **Processing Pipeline**: Validation → Merge → Segment Metadata
+- **Error Recovery**: Comprehensive validation and fallback handling
+
+### Video Merge Command
 ```bash
-# Create migration
-alembic revision --autogenerate -m "description"
-
-# Apply migrations
-alembic upgrade head
-
-# Rollback migration
-alembic downgrade -1
+ffmpeg -i statement1.mp4 -i statement2.mp4 -i statement3.mp4 \
+  -filter_complex "[0:v][0:a][1:v][1:a][2:v][2:a]concat=n=3:v=1:a=1[v][a]" \
+  -map "[v]" -map "[a]" -c:v libx264 -c:a aac output.mp4
 ```
-
-### Adding New Endpoints
-1. Define Pydantic models for request/response
-2. Implement service layer logic
-3. Create route handler with proper validation
-4. Add comprehensive tests
-5. Update API documentation
 
 ## 🐛 Troubleshooting
 
-### Common Issues
-1. **Database Connection**: Check DATABASE_URL environment variable
-2. **S3 Upload Errors**: Verify AWS credentials and bucket permissions
-3. **Video Processing**: Ensure FFmpeg is installed and accessible
-4. **Authentication**: Check JWT_SECRET_KEY configuration
+### Common Production Issues
+1. **Video Upload Failures**: Check file format and corruption
+2. **FFmpeg Processing Errors**: Verify video file integrity
+3. **Authentication Issues**: Validate JWT token configuration
+4. **Database Connectivity**: Check SQLite file permissions
 
-### Debug Mode
+### Debug Tools
 ```bash
 # Enable debug logging
 export LOG_LEVEL=DEBUG
 python run.py
+
+# Test video processing manually
+python -c "from services.video_merge_service import VideoMergeService; VideoMergeService.test_ffmpeg()"
+
+# Validate uploaded video files
+ffprobe -v error -show_format -show_streams video.mp4
 ```
 
 ## 🔗 Related Documentation
-- [API Reference](api.md)
-- [Mobile Integration](MOBILE_GUIDE.md)
-- [Testing Guide](TESTING_GUIDE.md)
-- [Deployment Guide](DEPLOYMENT_GUIDE.md)
+- [Main README](../README.md) - Project overview and Kiro integration
+- [Technical Architecture](TECHNICAL_ARCHITECTURE.md) - System architecture
+- [Mobile Guide](MOBILE_GUIDE.md) - React Native integration
+- [API Documentation](api.md) - Complete API reference
+- [Testing Guide](TESTING_GUIDE.md) - Testing strategy and implementation

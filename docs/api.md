@@ -1,231 +1,538 @@
 # 📋 API Documentation
 
 ## Overview
-RESTful API documentation for the 2Truths-1Lie backend server. All endpoints are optimized for mobile usage with efficient data transfer and offline-first capabilities.
+Production-ready RESTful API documentation for the **2Truths-1Lie** backend server. Built with **FastAPI** and optimized for React Native mobile clients with efficient video processing and challenge management.
 
-## Base URL
-- **Development**: `http://192.168.50.111:8001/api/v1`
-- **Production (Railway)**: `https://2truths-1lie-production.up.railway.app/api/v1`
+> **🎯 Kiro Integration**: This API was developed following Kiro's spec-driven methodology with requirements and designs documented in `.kiro/specs/`. All endpoints have been validated against production mobile usage patterns.
+
+## Base URLs
+- **Production (Railway)**: `https://2truths-1lie-production.up.railway.app`
+- **Development**: `http://localhost:8001`
 
 ## Interactive Documentation
-The deployed backend provides comprehensive interactive documentation:
+The production backend provides comprehensive interactive API documentation:
 
-- **Swagger UI**: https://2truths-1lie-production.up.railway.app/docs
-  - Interactive API testing and exploration
-  - Request/response examples
-  - Authentication testing
+- **🚀 Live Swagger UI**: https://2truths-1lie-production.up.railway.app/docs
+  - Interactive API testing with real production data
+  - Request/response examples with authentication
+  - Schema validation and error handling demos
   
-- **ReDoc**: https://2truths-1lie-production.up.railway.app/redoc  
-  - Clean, readable documentation
-  - Detailed schema information
+- **📖 ReDoc Documentation**: https://2truths-1lie-production.up.railway.app/redoc  
+  - Clean, professional API documentation
+  - Detailed schema and model information
+  - Mobile-optimized responsive design
 
-- **OpenAPI Spec**: https://2truths-1lie-production.up.railway.app/openapi.json
-  - Machine-readable API specification
+- **🔧 OpenAPI Specification**: https://2truths-1lie-production.up.railway.app/openapi.json
+  - Machine-readable API specification for client generation
 
 ## Authentication
-Most endpoints require JWT authentication via the `Authorization` header:
+All protected endpoints require JWT authentication via the `Authorization` header:
 ```
 Authorization: Bearer <jwt_token>
 ```
 
+**Token Lifecycle:**
+- **Access Token Duration**: 24 hours
+- **Format**: JSON Web Token (JWT)
+- **Encoding**: HS256 algorithm
+- **Claims**: User ID, username, expiration
+
 ## 🔐 Authentication Endpoints
 
-### POST `/auth/register`
-Register a new user account.
+### POST `/api/auth/register`
+Register a new user account for challenge creation and gameplay.
 
-**Request:**
+**Request Body:**
 ```json
 {
-  "username": "user123",
-  "email": "user@example.com",
-  "password": "securepassword"
+  "username": "player123",
+  "email": "player@example.com", 
+  "password": "SecurePass123!"
 }
 ```
 
-**Response:**
+**Success Response (201):**
 ```json
 {
   "access_token": "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9...",
   "token_type": "bearer",
-  "expires_in": 3600,
   "user": {
-    "id": "user_123",
-    "username": "user123",
-    "email": "user@example.com"
+    "id": 1,
+    "username": "player123",
+    "email": "player@example.com"
   }
 }
 ```
 
-### POST `/auth/login`
-Authenticate existing user.
+**Error Responses:**
+- `400 Bad Request`: Invalid input data or username already exists
+- `422 Unprocessable Entity`: Validation errors
 
-**Request:**
+### POST `/api/auth/login`
+Authenticate existing user and receive access token.
+
+**Request Body:**
 ```json
 {
-  "username": "user123",
-  "password": "securepassword"
+  "username": "player123",
+  "password": "SecurePass123!"
 }
 ```
 
-**Response:** Same as register
+**Success Response (200):** Same format as registration
+**Error Responses:**
+- `401 Unauthorized`: Invalid credentials
+- `422 Unprocessable Entity`: Missing required fields
 
-### POST `/auth/refresh`
-Refresh expired JWT token.
+## 🎥 Video Processing Endpoints
 
-**Request:**
+### POST `/api/challenge-videos/upload`
+Upload individual statement videos for challenge creation.
+
+**Headers:**
+```
+Authorization: Bearer <jwt_token>
+Content-Type: multipart/form-data
+```
+
+**Request Body (Multipart):**
+```
+file: <video_file.mp4>  # Required: Video file (max 100MB)
+```
+
+**Success Response (200):**
 ```json
 {
-  "refresh_token": "refresh_token_here"
+  "id": "550e8400-e29b-41d4-a716-446655440000",
+  "filename": "statement_video.mp4",
+  "size": 5242880,
+  "duration": 8.5,
+  "format": "mp4",
+  "created_at": "2024-01-15T10:30:00Z"
 }
 ```
 
-## 📁 Media Upload Endpoints
+**Error Responses:**
+- `400 Bad Request`: Invalid file format or corrupted video
+- `413 Payload Too Large`: File exceeds 100MB limit
+- `422 Unprocessable Entity`: Video validation failed
 
-### POST `/media/upload/start`
-Initialize chunked upload session.
-
-**Request:**
-```json
-{
-  "filename": "video_statement_1.mp4",
-  "file_size": 5242880,
-  "chunk_size": 1048576,
-  "file_hash": "sha256_hash",
-  "media_type": "video"
-}
+### POST `/api/challenge-videos/merge`
+Merge three statement videos into a single challenge video with segment metadata.
+**Headers:**
+```
+Authorization: Bearer <jwt_token>
+Content-Type: application/json
 ```
 
-**Response:**
+**Request Body:**
 ```json
 {
-  "upload_session_id": "upload_123456",
-  "chunk_urls": [
-    "https://signed-url-chunk-1",
-    "https://signed-url-chunk-2"
+  "video_ids": [
+    "550e8400-e29b-41d4-a716-446655440001",
+    "550e8400-e29b-41d4-a716-446655440002", 
+    "550e8400-e29b-41d4-a716-446655440003"
   ],
-  "total_chunks": 5
+  "statements": [
+    "I have traveled to 15 different countries",
+    "I once met a famous celebrity at a coffee shop",
+    "I can speak 4 languages fluently"
+  ],
+  "lie_index": 2
 }
 ```
 
-### POST `/media/upload/chunk`
-Upload individual file chunk.
-
-**Request:** Binary chunk data to signed URL
-
-**Response:**
+**Success Response (200):**
 ```json
 {
-  "chunk_number": 1,
-  "status": "uploaded",
-  "etag": "chunk_etag"
+  "challenge_id": "550e8400-e29b-41d4-a716-446655440000",
+  "merged_video_id": "550e8400-e29b-41d4-a716-446655440004",
+  "segments": [
+    {
+      "start_time": 0.0,
+      "end_time": 8.5,
+      "statement_index": 0,
+      "statement": "I have traveled to 15 different countries"
+    },
+    {
+      "start_time": 8.5,
+      "end_time": 17.0,
+      "statement_index": 1,
+      "statement": "I once met a famous celebrity at a coffee shop"
+    },
+    {
+      "start_time": 17.0,
+      "end_time": 25.5,
+      "statement_index": 2,
+      "statement": "I can speak 4 languages fluently"
+    }
+  ],
+  "total_duration": 25.5,
+  "created_at": "2024-01-15T10:35:00Z"
 }
 ```
 
-### POST `/media/upload/complete`
-Complete chunked upload and finalize file.
+**Error Responses:**
+- `400 Bad Request`: Invalid video IDs or missing videos
+- `422 Unprocessable Entity`: Video processing failed or FFmpeg error
 
-**Request:**
+### GET `/api/challenge-videos/{video_id}/download`
+Download processed video file.
+
+**Headers:**
+```
+Authorization: Bearer <jwt_token>
+```
+
+**Success Response (200):**
+```
+Content-Type: video/mp4
+Content-Disposition: attachment; filename="challenge_video.mp4"
+Content-Length: 15728640
+
+<binary video data>
+```
+
+**Error Responses:**
+- `404 Not Found`: Video does not exist
+- `403 Forbidden`: No access to video
+
+## 🎯 Challenge Management Endpoints
+
+### GET `/api/challenges`
+List all available challenges with pagination support.
+
+**Query Parameters:**
+```
+page: integer = 1           # Page number (1-based)
+per_page: integer = 10      # Items per page (max 50)
+user_id: integer = null     # Filter by creator (optional)
+```
+
+**Success Response (200):**
 ```json
 {
-  "upload_session_id": "upload_123456",
-  "chunks": [
-    {"chunk_number": 1, "etag": "etag1"},
-    {"chunk_number": 2, "etag": "etag2"}
+  "challenges": [
+    {
+      "id": 1,
+      "creator": {
+        "id": 1,
+        "username": "player123"
+      },
+      "created_at": "2024-01-15T10:35:00Z",
+      "statements": [
+        "I have traveled to 15 different countries",
+        "I once met a famous celebrity at a coffee shop", 
+        "I can speak 4 languages fluently"
+      ],
+      "video_url": "/api/challenge-videos/550e8400-e29b-41d4-a716-446655440004/download",
+      "segments": [
+        {"start_time": 0.0, "end_time": 8.5, "statement_index": 0},
+        {"start_time": 8.5, "end_time": 17.0, "statement_index": 1},
+        {"start_time": 17.0, "end_time": 25.5, "statement_index": 2}
+      ],
+      "guesses": [],
+      "total_duration": 25.5
+    }
+  ],
+  "pagination": {
+    "page": 1,
+    "per_page": 10,
+    "total": 1,
+    "pages": 1
+  }
+}
+```
+
+### POST `/api/challenges`
+Create a new challenge using merged video.
+
+**Headers:**
+```
+Authorization: Bearer <jwt_token>
+Content-Type: application/json
+```
+
+**Request Body:**
+```json
+{
+  "merged_video_id": "550e8400-e29b-41d4-a716-446655440004"
+}
+```
+
+**Success Response (201):**
+```json
+{
+  "id": 1,
+  "creator": {
+    "id": 1,
+    "username": "player123"
+  },
+  "created_at": "2024-01-15T10:35:00Z",
+  "statements": [
+    "I have traveled to 15 different countries",
+    "I once met a famous celebrity at a coffee shop",
+    "I can speak 4 languages fluently"
+  ],
+  "video_url": "/api/challenge-videos/550e8400-e29b-41d4-a716-446655440004/download",
+  "segments": [
+    {"start_time": 0.0, "end_time": 8.5, "statement_index": 0},
+    {"start_time": 8.5, "end_time": 17.0, "statement_index": 1},
+    {"start_time": 17.0, "end_time": 25.5, "statement_index": 2}
+  ],
+  "guesses": [],
+  "total_duration": 25.5
+}
+```
+
+**Error Responses:**
+- `400 Bad Request`: Invalid merged video ID
+- `409 Conflict`: Challenge already exists for this video
+
+### GET `/api/challenges/{challenge_id}`
+Get specific challenge details.
+
+**Success Response (200):** Same format as challenge list item
+**Error Responses:**
+- `404 Not Found`: Challenge does not exist
+
+### POST `/api/challenges/{challenge_id}/guess`
+Submit a guess for which statement is the lie.
+**Headers:**
+```
+Authorization: Bearer <jwt_token>
+Content-Type: application/json
+```
+
+**Request Body:**
+```json
+{
+  "guess": 2,  # Index of the statement you think is the lie (0-based)
+  "reasoning": "The claim about speaking 4 languages seems exaggerated"  # Optional
+}
+```
+
+**Success Response (200):**
+```json
+{
+  "guess_id": "550e8400-e29b-41d4-a716-446655440005",
+  "challenge_id": 1,
+  "user_id": 2,
+  "guess": 2,
+  "reasoning": "The claim about speaking 4 languages seems exaggerated",
+  "is_correct": true,
+  "submitted_at": "2024-01-15T11:00:00Z",
+  "reveal": {
+    "lie_index": 2,
+    "lie_statement": "I can speak 4 languages fluently",
+    "explanation": "I actually only speak 2 languages fluently"
+  }
+}
+```
+
+**Error Responses:**
+- `400 Bad Request`: Invalid guess index (must be 0, 1, or 2)
+- `404 Not Found`: Challenge does not exist
+- `409 Conflict`: User has already guessed on this challenge
+
+## 📊 Data Models
+
+### User Model
+```json
+{
+  "id": 1,
+  "username": "player123",
+  "email": "player@example.com",
+  "created_at": "2024-01-15T09:00:00Z"
+}
+```
+
+### Challenge Model
+```json
+{
+  "id": 1,
+  "creator": {
+    "id": 1,
+    "username": "player123"
+  },
+  "created_at": "2024-01-15T10:35:00Z",
+  "statements": [
+    "Statement 1 (Truth)",
+    "Statement 2 (Truth)",
+    "Statement 3 (Lie)"
+  ],
+  "lie_index": 2,
+  "video_url": "/api/challenge-videos/{video_id}/download",
+  "segments": [
+    {"start_time": 0.0, "end_time": 8.5, "statement_index": 0},
+    {"start_time": 8.5, "end_time": 17.0, "statement_index": 1},
+    {"start_time": 17.0, "end_time": 25.5, "statement_index": 2}
+  ],
+  "total_duration": 25.5,
+  "guesses": [
+    {
+      "user": {"id": 2, "username": "guesser456"},
+      "guess": 2,
+      "is_correct": true,
+      "submitted_at": "2024-01-15T11:00:00Z"
+    }
   ]
 }
 ```
 
-**Response:**
+### Video Model
 ```json
 {
-  "media_file_id": "media_789",
-  "url": "https://cdn.example.com/video.mp4",
-  "duration_seconds": 10.5,
-  "file_size": 5242880,
-  "status": "ready"
+  "id": "550e8400-e29b-41d4-a716-446655440000",
+  "filename": "statement_video.mp4",
+  "size": 5242880,
+  "duration": 8.5,
+  "format": "mp4",
+  "created_at": "2024-01-15T10:30:00Z",
+  "upload_user_id": 1
 }
 ```
 
-### GET `/media/{media_file_id}`
-Get media file information.
+## ⚠️ Error Handling
 
-**Response:**
+### Standard Error Response Format
 ```json
 {
-  "media_file_id": "media_789",
-  "url": "https://cdn.example.com/video.mp4",
-  "thumbnail_url": "https://cdn.example.com/thumb.jpg",
-  "duration_seconds": 10.5,
-  "file_size": 5242880,
-  "media_type": "video",
-  "created_at": "2025-09-10T12:00:00Z"
+  "detail": "Error description",
+  "error_code": "SPECIFIC_ERROR_CODE",
+  "timestamp": "2024-01-15T12:00:00Z"
 }
 ```
 
-## 🎬 Video Processing Endpoints
+### Common HTTP Status Codes
+- **200 OK**: Successful request
+- **201 Created**: Resource created successfully
+- **400 Bad Request**: Invalid request data or parameters
+- **401 Unauthorized**: Missing or invalid authentication token
+- **403 Forbidden**: Valid token but insufficient permissions
+- **404 Not Found**: Requested resource does not exist
+- **409 Conflict**: Resource conflict (e.g., duplicate guess)
+- **413 Payload Too Large**: File upload exceeds size limit
+- **422 Unprocessable Entity**: Validation errors
+- **500 Internal Server Error**: Server processing error
 
-### POST `/merged-video/create`
-Create merged video from multiple statement videos.
-
-**Request:**
+### Validation Errors (422)
 ```json
 {
-  "video_files": [
-    {"media_file_id": "media_1", "statement_index": 0},
-    {"media_file_id": "media_2", "statement_index": 1},
-    {"media_file_id": "media_3", "statement_index": 2}
-  ],
-  "merge_config": {
-    "transition_duration": 0.5,
-    "output_quality": "high"
-  }
-}
-```
-
-**Response:**
-```json
-{
-  "merged_video_id": "merged_456",
-  "status": "processing",
-  "estimated_completion": "2025-09-10T12:05:00Z"
-}
-```
-
-### GET `/merged-video/{merged_video_id}`
-Get merged video information and segment metadata.
-
-**Response:**
-```json
-{
-  "merged_video_id": "merged_456",
-  "url": "https://cdn.example.com/merged_video.mp4",
-  "status": "ready",
-  "total_duration": 31.5,
-  "segments": [
+  "detail": [
     {
-      "statement_index": 0,
-      "start_time": 0.0,
-      "end_time": 10.5,
-      "media_file_id": "media_1"
+      "loc": ["body", "username"],
+      "msg": "field required",
+      "type": "value_error.missing"
     },
     {
-      "statement_index": 1,
-      "start_time": 11.0,
-      "end_time": 23.0,
-      "media_file_id": "media_2"
-    },
-    {
-      "statement_index": 2,
-      "start_time": 23.5,
-      "end_time": 32.0,
-      "media_file_id": "media_3"
+      "loc": ["body", "password"],
+      "msg": "ensure this value has at least 8 characters",
+      "type": "value_error.any_str.min_length"
     }
-  ],
-  "created_at": "2025-09-10T12:00:00Z"
+  ]
 }
 ```
 
-## 🎮 Challenge Endpoints
+## 🔧 Client Integration
+
+### React Native Usage Example
+```typescript
+// Authentication
+const loginUser = async (username: string, password: string) => {
+  const response = await fetch(`${API_BASE_URL}/api/auth/login`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ username, password }),
+  });
+  
+  if (!response.ok) {
+    throw new Error('Login failed');
+  }
+  
+  const data = await response.json();
+  return data.access_token;
+};
+
+// Video Upload
+const uploadVideo = async (videoUri: string, token: string) => {
+  const formData = new FormData();
+  formData.append('file', {
+    uri: videoUri,
+    type: 'video/mp4',
+    name: 'statement.mp4',
+  } as any);
+
+  const response = await fetch(`${API_BASE_URL}/api/challenge-videos/upload`, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'multipart/form-data',
+    },
+    body: formData,
+  });
+
+  return response.json();
+};
+
+// Challenge Creation
+const createChallenge = async (videoIds: string[], statements: string[], lieIndex: number, token: string) => {
+  const mergeResponse = await fetch(`${API_BASE_URL}/api/challenge-videos/merge`, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      video_ids: videoIds,
+      statements,
+      lie_index: lieIndex,
+    }),
+  });
+
+  const mergeData = await mergeResponse.json();
+  
+  const challengeResponse = await fetch(`${API_BASE_URL}/api/challenges`, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      merged_video_id: mergeData.merged_video_id,
+    }),
+  });
+
+  return challengeResponse.json();
+};
+```
+
+## 🚀 Performance Considerations
+
+### Rate Limiting
+- **Authentication Endpoints**: 10 requests per minute per IP
+- **Video Upload**: 50MB per minute per user
+- **Challenge Creation**: 5 challenges per hour per user
+- **Guess Submission**: 100 guesses per hour per user
+
+### Video Processing
+- **Maximum File Size**: 100MB per video
+- **Supported Formats**: MP4, MOV, AVI (converted to MP4)
+- **Processing Time**: ~30 seconds for 3-video merge
+- **Concurrent Processing**: 5 simultaneous merge operations
+
+### Caching
+- **Challenge List**: Cached for 5 minutes
+- **Video Downloads**: CDN cached with 24-hour TTL
+- **User Authentication**: Token validation cached for 1 minute
+
+## 🔗 Related Documentation
+- [Backend Development Guide](BACKEND_GUIDE.md) - Server setup and development
+- [Mobile Integration Guide](MOBILE_GUIDE.md) - React Native client implementation
+- [Technical Architecture](TECHNICAL_ARCHITECTURE.md) - System architecture overview
+- [Main README](../README.md) - Project overview and Kiro integration
 
 ### POST `/challenges`
 Create a new challenge.
@@ -290,40 +597,7 @@ List public challenges with pagination.
     {
       "challenge_id": "challenge_789",
       "title": "My Challenge",
-      "creator_username": "user123",
-      "thumbnail_url": "https://cdn.example.com/thumb.jpg",
-      "tags": ["personal", "funny"],
-      "stats": {
-        "total_guesses": 25,
-        "correct_guesses": 8,
-        "success_rate": 0.32
-      },
-      "created_at": "2025-09-10T12:00:00Z"
-    }
-  ],
-  "pagination": {
-    "page": 1,
-    "limit": 20,
-    "total": 150,
-    "has_next": true
-  }
-}
-```
 
-### GET `/challenges/{challenge_id}`
-Get detailed challenge information.
-
-**Response:**
-```json
-{
-  "challenge_id": "challenge_789",
-  "title": "My Challenge",
-  "creator": {
-    "user_id": "user_123",
-    "username": "user123"
-  },
-  "statements": [
-    {
       "statement_index": 0,
       "text": "I once met a celebrity"
     },
