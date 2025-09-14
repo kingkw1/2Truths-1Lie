@@ -1,5 +1,9 @@
 # Monetization - Implementation Tasks
 
+## Implementation Status
+**⚠️ NOT IMPLEMENTED**: Monetization features are planned but not yet implemented in production.
+
+## Core Monetization Features - ⚠️ NOT IMPLEMENTED
 - [ ] Integrate RevenueCat SDK in frontend for purchase UI and receipt management  
 - [ ] Implement backend API for purchase receipt validation with RevenueCat  
 - [ ] Develop entitlement management system to track premium access per user  

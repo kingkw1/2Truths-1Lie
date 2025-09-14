@@ -1,4 +1,9 @@
 # Emotion Analysis - Implementation Tasks
+
+## Implementation Status
+**⚠️ NOT IMPLEMENTED**: Emotion analysis features are planned but not yet implemented in production.
+
+## Core Emotion Analysis - ⚠️ NOT IMPLEMENTED
 - [ ] Design API endpoints and job queue for asynchronous emotion processing  
 - [ ] Integrate AffectLink API or open-source emotion recognition components  
 - [ ] Implement backend worker/service to process media and extract emotion features  

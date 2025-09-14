@@ -31,7 +31,7 @@ Create an engaging, social, gamified **mobile application** based on the classic
 
 **Business Goals:**  
 - Build a viral mobile app optimized for app store success and user retention
-- Win hackathon prizes (Kiro & RevenueCat Shipaton) showcasing mobile AI integration
+- Win Kiro hackathon prizes showcasing mobile AI integration
 - Leverage mobile-specific monetization strategies (IAP, subscriptions)
 - Maintain streamlined mobile codebase for faster AI-assisted development
 - **Current Achievement**: Production-ready app with full backend integration and Railway deployment
