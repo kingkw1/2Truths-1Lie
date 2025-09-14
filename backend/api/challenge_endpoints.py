@@ -13,12 +13,17 @@ from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from services.challenge_service import challenge_service
 from services.upload_service import ChunkedUploadService
 from services.cloud_storage_service import create_cloud_storage_service, CloudStorageError
-from services.database_service import db_service
+from services.database_service import DatabaseService
+
+# Initialize database service
+db_service = DatabaseService()
 from models import (
     CreateChallengeRequest, 
     Challenge, 
     SubmitGuessRequest,
-    FlagChallengeRequest
+    FlagChallengeRequest,
+    UserReportRequest,
+    UserReportResponse
 )
 from config import settings
 
@@ -675,6 +680,74 @@ async def get_challenge_moderation_status(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to get moderation status"
+        )
+
+
+@router.post("/{challenge_id}/report", response_model=UserReportResponse, status_code=status.HTTP_201_CREATED)
+async def report_challenge(
+    challenge_id: str,
+    request: UserReportRequest,
+    user_id: str = Depends(get_current_user)
+) -> UserReportResponse:
+    """
+    Report a challenge for inappropriate content
+    
+    Allows authenticated users to report challenges that violate community guidelines.
+    Each user can only report a challenge once to prevent spam.
+    """
+    try:
+        logger.info(f"User {user_id} reporting challenge {challenge_id} for reason: {request.reason}")
+        
+        # First verify the challenge exists
+        challenge = await challenge_service.get_challenge(challenge_id)
+        if not challenge:
+            logger.warning(f"Report attempt for non-existent challenge {challenge_id} by user {user_id}")
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Challenge not found"
+            )
+        
+        # Get user ID as integer (the database expects integer user IDs)
+        try:
+            user_id_int = int(user_id)
+        except ValueError:
+            logger.error(f"Invalid user ID format: {user_id}")
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Invalid user ID format"
+            )
+        
+        # Create the report using the database service
+        report_data = db_service.create_user_report(
+            challenge_id=challenge_id,
+            user_id=user_id_int,
+            reason=request.reason,
+            details=request.details
+        )
+        
+        if not report_data:
+            # User has already reported this challenge
+            logger.warning(f"Duplicate report attempt: user {user_id} already reported challenge {challenge_id}")
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="Challenge already reported by this user"
+            )
+        
+        logger.info(f"Report created successfully: ID {report_data['id']}, user {user_id}, challenge {challenge_id}")
+        
+        return UserReportResponse(
+            report_id=report_data["id"],
+            message="Challenge reported successfully. Thank you for helping keep our community safe.",
+            challenge_id=challenge_id
+        )
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to create report for challenge {challenge_id} by user {user_id}: {str(e)}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to create report"
         )
 
 

@@ -11,6 +11,7 @@ import playerProgressionReducer from './slices/playerProgressionSlice';
 import uiReducer from './slices/uiSlice';
 import networkReducer from './slices/networkSlice';
 import authReducer from './slices/authSlice';
+import reportingReducer from './slices/reportingSlice';
 import { authMiddleware } from './middleware/authMiddleware';
 
 if (__DEV__) {
@@ -26,6 +27,7 @@ const store = configureStore({
     playerProgression: playerProgressionReducer,
     ui: uiReducer,
     network: networkReducer,
+    reporting: reportingReducer,
   },
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware({

@@ -37,10 +37,10 @@ class ChallengeService:
     
     def _convert_segment_times_to_milliseconds(self, challenge: Challenge) -> Challenge:
         """Convert segment times from seconds to milliseconds for frontend compatibility"""
-        if not challenge.merged_video_metadata or not challenge.merged_video_metadata.get("segments"):
+        if not challenge.merged_video_metadata or not challenge.merged_video_metadata.segments:
             return challenge
         
-        segments = challenge.merged_video_metadata.get("segments", [])
+        segments = challenge.merged_video_metadata.segments
         converted_segments = []
         
         for segment in segments:

@@ -29,12 +29,16 @@ import { EnhancedChallenge, GuessResult } from '../types';
 import { ChallengeCreationScreen } from './ChallengeCreationScreen';
 import FullscreenGuessScreen from './FullscreenGuessScreen';
 import { useAuth } from '../hooks/useAuth';
+import { useReportAuth } from '../hooks/useReportAuth';
 import AnimatedFeedback from '../shared/AnimatedFeedback';
 import SimpleVideoPlayer from '../components/SimpleVideoPlayer';
 import SegmentedVideoPlayer from '../components/SegmentedVideoPlayer';
 import { realChallengeAPI, Challenge as BackendChallenge } from '../services/realChallengeAPI';
 import { errorHandlingService } from '../services/errorHandlingService';
 import { AuthStatusBanner } from '../components/ProtectedScreen';
+import { ReportButton } from '../components/ReportButton';
+import { ReportModal, ModerationReason } from '../components/ReportModal';
+import { reportService } from '../services/reportService';
 
 // Helper function to convert backend challenge to frontend format
 const convertBackendChallenge = (backendChallenge: BackendChallenge): EnhancedChallenge => {
@@ -188,6 +192,7 @@ export const GameScreen: React.FC<GameScreenProps> = ({
   
   const dispatch = useAppDispatch();
   const { isAuthenticated, isGuest, triggerAuthFlow } = useAuth();
+  const { handleAuthRequired, validateReportPermissions } = useReportAuth();
   const {
     availableChallenges,
     selectedChallenge,
@@ -205,6 +210,9 @@ export const GameScreen: React.FC<GameScreenProps> = ({
   const [showChallengeCreation, setShowChallengeCreation] = useState(false);
   const [showVideoPlayer, setShowVideoPlayer] = useState(false);
   const [isRetrying, setIsRetrying] = useState(false);
+  const [showReportModal, setShowReportModal] = useState(false);
+  const [reportingChallengeId, setReportingChallengeId] = useState<string | null>(null);
+  const [isSubmittingReport, setIsSubmittingReport] = useState(false);
   const gameplayScrollRef = useRef<ScrollView>(null);
 
   // Debug logging for challenge creation modal state
@@ -386,6 +394,70 @@ export const GameScreen: React.FC<GameScreenProps> = ({
     setShowChallengeCreation(true);
   };
 
+  const handleReportChallenge = (challengeId: string) => {
+    console.log('🚩 REPORT: Report button pressed for challenge:', challengeId);
+    
+    // Use the report auth hook to handle authentication
+    handleAuthRequired(() => {
+      console.log('✅ REPORT: User authenticated and can report, opening report modal');
+      setReportingChallengeId(challengeId);
+      setShowReportModal(true);
+    });
+  };
+
+  const handleSubmitReport = async (reason: ModerationReason, details?: string) => {
+    if (!reportingChallengeId) {
+      console.error('🚩 REPORT: No challenge ID set for reporting');
+      return;
+    }
+
+    // Validate permissions before submitting
+    const canReport = await validateReportPermissions();
+    if (!canReport) {
+      console.error('🚩 REPORT: User does not have permission to report');
+      Alert.alert(
+        'Authentication Error',
+        'Your session has expired. Please sign in again to report content.',
+        [{ text: 'OK' }]
+      );
+      return;
+    }
+
+    try {
+      setIsSubmittingReport(true);
+      console.log('🚩 REPORT: Submitting report for challenge:', reportingChallengeId);
+      
+      await reportService.reportChallenge(reportingChallengeId, reason, details);
+      
+      console.log('✅ REPORT: Report submitted successfully');
+      
+      // Show success message
+      Alert.alert(
+        'Report Submitted',
+        'Thank you for helping keep our community safe. Your report has been submitted for review.',
+        [{ text: 'OK' }]
+      );
+      
+      // Close modal and reset state
+      setShowReportModal(false);
+      setReportingChallengeId(null);
+      
+    } catch (error) {
+      console.error('❌ REPORT: Failed to submit report:', error);
+      
+      // Error handling is done in the ReportModal component
+      throw error;
+    } finally {
+      setIsSubmittingReport(false);
+    }
+  };
+
+  const handleCloseReportModal = () => {
+    console.log('🚩 REPORT: Closing report modal');
+    setShowReportModal(false);
+    setReportingChallengeId(null);
+  };
+
   const getErrorDisplayInfo = () => {
     if (!loadError) return null;
 
@@ -506,20 +578,33 @@ export const GameScreen: React.FC<GameScreenProps> = ({
       
       {/* Challenge List */}
       {!isLoading && !isRetrying && availableChallenges.length > 0 && availableChallenges.map((challenge) => (
-        <TouchableOpacity
-          key={challenge.id}
-          style={styles.challengeCard}
-          onPress={() => handleSelectChallenge(challenge)}
-        >
-          <Text style={styles.creatorName}>By {challenge.creatorName}</Text>
-          <Text style={styles.difficultyText}>
-            Difficulty: {challenge.difficultyRating}/100
-          </Text>
-          <Text style={styles.statsText}>
-            {challenge.totalGuesses} guesses • {challenge.correctGuessRate}% correct
-          </Text>
-          <Text style={styles.challengeId}>ID: {challenge.id}</Text>
-        </TouchableOpacity>
+        <View key={challenge.id} style={styles.challengeCard}>
+          {/* Challenge Header with Report Button */}
+          <View style={styles.challengeHeader}>
+            <Text style={styles.creatorName}>By {challenge.creatorName}</Text>
+            <ReportButton
+              onPress={() => handleReportChallenge(challenge.id)}
+              size="small"
+              variant="minimal"
+              style={styles.reportButton}
+            />
+          </View>
+          
+          {/* Challenge Content - Touchable area for selection */}
+          <TouchableOpacity
+            style={styles.challengeContent}
+            onPress={() => handleSelectChallenge(challenge)}
+            activeOpacity={0.7}
+          >
+            <Text style={styles.difficultyText}>
+              Difficulty: {challenge.difficultyRating}/100
+            </Text>
+            <Text style={styles.statsText}>
+              {challenge.totalGuesses} guesses • {challenge.correctGuessRate}% correct
+            </Text>
+            <Text style={styles.challengeId}>ID: {challenge.id}</Text>
+          </TouchableOpacity>
+        </View>
       ))}
     </ScrollView>
   );
@@ -730,6 +815,16 @@ export const GameScreen: React.FC<GameScreenProps> = ({
             />
           </Modal>
 
+          {/* Report Modal */}
+          {reportingChallengeId && (
+            <ReportModal
+              visible={showReportModal}
+              onClose={handleCloseReportModal}
+              onSubmit={handleSubmitReport}
+              isSubmitting={isSubmittingReport}
+            />
+          )}
+
           {/* Animated Feedback */}
           {guessResult && (
             <AnimatedFeedback
@@ -815,7 +910,6 @@ const styles = StyleSheet.create({
   },
   challengeCard: {
     backgroundColor: 'white',
-    padding: 20,
     marginVertical: 10,
     borderRadius: 10,
     shadowColor: '#000',
@@ -823,6 +917,22 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 4,
     elevation: 3,
+    overflow: 'hidden',
+  },
+  challengeHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 20,
+    paddingTop: 16,
+    paddingBottom: 8,
+  },
+  challengeContent: {
+    paddingHorizontal: 20,
+    paddingBottom: 16,
+  },
+  reportButton: {
+    marginLeft: 8,
   },
   createChallengeCard: {
     backgroundColor: '#e8f5e8',

@@ -16,3 +16,7 @@ export { ProgressIndicator } from './ProgressIndicator';
 // Export upload components
 export { default as EnhancedUploadUI } from './EnhancedUploadUI';
 export { default as UploadProgressIndicator } from './UploadProgressIndicator';
+
+// Export reporting components
+export { ReportButton } from './ReportButton';
+export { ReportModal } from './ReportModal';

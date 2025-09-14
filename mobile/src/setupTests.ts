@@ -134,6 +134,53 @@ jest.mock('@react-native-async-storage/async-storage', () => ({
   multiRemove: jest.fn().mockResolvedValue(undefined),
 }));
 
+// Mock NetInfo
+jest.mock('@react-native-community/netinfo', () => ({
+  default: {
+    fetch: jest.fn().mockResolvedValue({
+      isConnected: true,
+      isInternetReachable: true,
+      type: 'wifi',
+      details: {
+        isConnectionExpensive: false,
+        strength: 100,
+      },
+    }),
+    addEventListener: jest.fn(() => jest.fn()),
+    useNetInfo: jest.fn(() => ({
+      isConnected: true,
+      isInternetReachable: true,
+      type: 'wifi',
+    })),
+  },
+  NetInfoStateType: {
+    unknown: 'unknown',
+    none: 'none',
+    cellular: 'cellular',
+    wifi: 'wifi',
+    bluetooth: 'bluetooth',
+    ethernet: 'ethernet',
+    wimax: 'wimax',
+    vpn: 'vpn',
+    other: 'other',
+  },
+  fetch: jest.fn().mockResolvedValue({
+    isConnected: true,
+    isInternetReachable: true,
+    type: 'wifi',
+    details: {
+      isConnectionExpensive: false,
+      strength: 100,
+    },
+  }),
+  addEventListener: jest.fn(() => jest.fn()),
+  useNetInfo: jest.fn(() => ({
+    isConnected: true,
+    isInternetReachable: true,
+    type: 'wifi',
+  })),
+}));
+
 // Global test utilities
 global.fetch = jest.fn();
 global.console.warn = jest.fn();

@@ -269,3 +269,43 @@ class ModerationReviewRequest(BaseModel):
     """Request for manual moderation review"""
     decision: str = Field(..., description="approved, rejected, or flagged")
     reason: Optional[str] = Field(None, max_length=500, description="Reason for decision")
+
+# User Report Models
+
+class UserReportRequest(BaseModel):
+    """Request to report a challenge"""
+    reason: str = Field(..., description="Reason for reporting (should match ModerationReason enum)")
+    details: Optional[str] = Field(None, max_length=1000, description="Optional additional details")
+
+class UserReportResponse(BaseModel):
+    """Response from creating a user report"""
+    report_id: int = Field(..., description="ID of the created report")
+    message: str = Field(..., description="Confirmation message")
+    challenge_id: str = Field(..., description="ID of the reported challenge")
+
+class UserReport(BaseModel):
+    """User report data model"""
+    id: int = Field(..., description="Report ID")
+    challenge_id: str = Field(..., description="ID of the reported challenge")
+    user_id: int = Field(..., description="ID of the user who made the report")
+    reason: str = Field(..., description="Reason for the report")
+    details: Optional[str] = Field(None, description="Additional details about the report")
+    created_at: datetime = Field(..., description="When the report was created")
+    user_email: Optional[str] = Field(None, description="Email of the reporting user")
+    user_name: Optional[str] = Field(None, description="Name of the reporting user")
+
+class ReportedChallenge(BaseModel):
+    """Summary of a reported challenge"""
+    challenge_id: str = Field(..., description="ID of the reported challenge")
+    report_count: int = Field(..., description="Number of reports for this challenge")
+    first_report_at: datetime = Field(..., description="When the first report was made")
+    last_report_at: datetime = Field(..., description="When the most recent report was made")
+    reasons: List[str] = Field(..., description="List of unique report reasons")
+
+class ReportedChallengesResponse(BaseModel):
+    """Response for getting reported challenges"""
+    reported_challenges: List[ReportedChallenge]
+    total_count: int
+    page: int
+    page_size: int
+    has_next: bool
