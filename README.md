@@ -107,6 +107,7 @@ Get the project running on your local machine in under 5 minutes.
 ### 📍 Essential Starting Points
 | What You Need | Where to Find It |
 |---------------|------------------|
+| **🤖 How We Used Kiro** | [`KIRO_WORKFLOW.md`](KIRO_WORKFLOW.md) — AI-assisted development journey and spec-driven process |
 | **🌟 Kiro Specifications** | [`.kiro/specs/README.md`](.kiro/specs/README.md) — Overview of all specs & mapping to code |
 | **🚀 Get Started** | [`docs/DEVELOPER_QUICK_START.md`](docs/DEVELOPER_QUICK_START.md) - 5-minute setup guide |
 | **📖 Documentation** | [`docs/`](docs/) directory - Complete project documentation |
@@ -135,6 +136,7 @@ Get the project running on your local machine in under 5 minutes.
 |-------------------------|------------------------------------------------------------------------|
 | **/.kiro Directory**    | All specs, agent hooks, and steering documents present at project root |
 | **Kiro Usage**          | Complete spec-driven workflow; hooks set for future maintainability    |
+| **Kiro Development Process** | Detailed AI development journey: [`KIRO_WORKFLOW.md`](KIRO_WORKFLOW.md) |
 | **Demo Video Linked**   | [submission_materials/](submission_materials/) & README above          |
 | **Live App for Review** | Download and judge via QR code and public APK in `submission_materials/` |
 | **Open Source License** | MIT License in root and docs                                           |
