@@ -1,15 +1,15 @@
-# � Hackathon Submission Materials
+# 🏆 Hackathon Submission Materials
 
 This directory contains all materials and documentation specifically prepared for hackathon submission and presentation.
 
-## � Scripts & Guidelines
+## 📝 Scripts & Guidelines
 
 ### Video Production
 - **`SUBMISSION_VIDEO_SCRIPT.md`** - Complete script for the main 3-minute submission video, including talking points, demo flow, and technical highlights
 - **`CONTINGENCY_VIDEO_SCRIPT.md`** - Backup script in case of technical issues during recording
 - **`MOBILE_VIDEO_RECORDING_GUIDELINES.md`** - Technical guidelines and best practices for recording mobile app demonstrations
 
-## �️ Visual Assets
+## 🎨 Visual Assets
 
 ### Store & Promotional Materials
 - **`playstore-qr-code.png`** - QR code linking directly to the Google Play Store listing for easy judge access
