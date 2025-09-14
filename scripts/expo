@@ -7,8 +7,8 @@ const { spawn } = require('child_process');
 const path = require('path');
 const fs = require('fs');
 
-// Find the project root (where this script is located)
-const projectRoot = __dirname;
+// Find the project root (one level up from this script's location)
+const projectRoot = path.dirname(__dirname);
 const mobileDir = path.join(projectRoot, 'mobile');
 
 // Check if mobile directory exists
