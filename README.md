@@ -67,7 +67,7 @@ graph TD
     F --> A;
 ````
 
-**👉 [Dive into the Full Technical Details](https://www.google.com/search?q=docs/TECHNICAL_ARCHITECTURE.md)**
+**👉 [Dive into the Full Technical Details](docs/TECHNICAL_ARCHITECTURE.md)**
 
 ## 🚀 Quick Start
 
@@ -99,6 +99,68 @@ Get the project running on your local machine in under 5 minutes.
     ```
 
     Scan the QR code with the Expo Go app on your phone.
+
+## 🗺️ Quick Repository Roadmap
+
+### 📍 Essential Starting Points
+| What You Need | Where to Find It |
+|---------------|------------------|
+| **🚀 Get Started** | [`docs/DEVELOPER_QUICK_START.md`](docs/DEVELOPER_QUICK_START.md) - 5-minute setup guide |
+| **📖 Documentation** | [`docs/`](docs/) directory - Complete project documentation |
+| **💻 Source Code** | [`mobile/`](mobile/) (React Native) & [`backend/`](backend/) (Python FastAPI) |
+| **🏆 Submission Materials** | [`submission_materials/`](submission_materials/) - Video scripts, QR codes, demo assets |
+
+### 🏗️ Architecture & Design
+- **[Technical Architecture](docs/ARCHITECTURE.md)** - System design and component relationships
+- **[API Documentation](docs/api.md)** - Complete REST API reference
+- **[Mobile Development Guide](docs/MOBILE_GUIDE.md)** - React Native setup and patterns
+- **[Backend Guide](docs/BACKEND_GUIDE.md)** - Python FastAPI development guide
+
+### 🧪 Testing & Quality
+- **[Testing Guide](docs/TESTING_GUIDE.md)** - Comprehensive testing strategies
+- **[Backend Tests](backend/tests/)** - Organized test suites with documentation
+- **[Development Tools](tools/)** - Utilities for testing, validation, and debugging
+
+### 📋 Contributing & Policies
+- **[Contributing Guidelines](docs/CONTRIBUTING.md)** - How to contribute to the project
+- **[Privacy Policy](docs/privacy-policy.html)** - User privacy and data handling
+
+## 🏆 Hackathon Submission Checklist
+
+### ✅ Kiro Integration Highlights for Judges
+
+**🔍 Spec-Driven Development Evidence:**
+- **[`.kiro/specs/`](.kiro/specs/)** - Complete specification files for all major features
+  - User Authentication spec with requirements, design, and tasks
+  - Content Moderation spec with AI integration details  
+  - Media Upload spec with cloud storage architecture
+- **[`.kiro/hooks/`](.kiro/hooks/)** - Automated development hooks for future maintenance
+- **[`.kiro/steering/`](.kiro/steering/)** - Technical steering documents and policies
+
+**📊 Kiro-Generated Code Examples:**
+- **Backend Authentication**: JWT token system generated from Kiro specs
+- **Mobile State Management**: Redux store and hooks generated with Kiro assistance
+- **API Documentation**: Auto-generated from Kiro design specifications
+- **Testing Framework**: Comprehensive test suites built using Kiro patterns
+
+**🚀 Production Readiness:**
+- ✅ **Deployed Backend**: Live FastAPI server with monitoring
+- ✅ **Mobile App Store**: Google Play Store submission ready
+- ✅ **Security Compliance**: JWT authentication, input validation, content moderation
+- ✅ **Scalable Architecture**: Cloud storage, CDN, database optimization
+
+**📱 Judge Access:**
+- **Live App**: Available on Google Play Store (scan QR in [`submission_materials/`](submission_materials/))
+- **Demo Video**: 3-minute walkthrough following submission script
+- **Source Code**: Full repository with organized documentation
+
+### 🎯 Key Differentiators
+
+1. **Spec-First Development**: Every major feature started as a Kiro specification
+2. **Production Quality**: Real app with paying users potential, not just a prototype
+3. **AI Integration**: Content moderation and video processing with AI assistance
+4. **Mobile + Backend**: Full-stack application with sophisticated architecture
+5. **Developer Experience**: Comprehensive tooling and documentation for future development
 
 ## 📜 License
 

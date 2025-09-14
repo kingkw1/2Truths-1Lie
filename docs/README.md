@@ -148,11 +148,11 @@ docs/
 **Ready for Submission** ✅
 
 #### **Understand the Project**
-- [Project Overview](PROJECT_OVERVIEW.md) - What is 2Truths-1Lie?
-- [Technical Architecture](../ARCHITECTURE.md) - How is it built?
+- [Project Overview](PRODUCT_OVERVIEW.md) - What is 2Truths-1Lie?
+- [Technical Architecture](ARCHITECTURE.md) - How is it built?
 
 #### **Start Development**
-- [Developer Quick Start](../DEVELOPER_QUICK_START.md) - Get running fast
+- [Developer Quick Start](DEVELOPER_QUICK_START.md) - Get running fast
 - [Mobile Guide](MOBILE_GUIDE.md) - Mobile development setup
 - [Backend Guide](BACKEND_GUIDE.md) - Backend development setup
 
@@ -171,7 +171,7 @@ docs/
 - [Mobile Guide](MOBILE_GUIDE.md) - Mobile app store deployment
 
 #### **Contribute to the Project**
-- [Contributing Guidelines](../CONTRIBUTING.md) - How to contribute
+- [Contributing Guidelines](CONTRIBUTING.md) - How to contribute
 - [Testing Guide](TESTING_GUIDE.md) - Testing your contributions
 
 ## 📊 Current Project Status
@@ -200,23 +200,22 @@ docs/
 ```
 /
 ├── README.md                    # 🏠 Project homepage
-├── DEVELOPER_QUICK_START.md     # ⚡ 5-minute setup guide
-├── ARCHITECTURE.md              # 🏗 Technical architecture
-├── CONTRIBUTING.md              # 🤝 Contribution guidelines
 ├── mobile/                      # 📱 React Native mobile app
 ├── backend/                     # 🖥 Python FastAPI backend
 ├── android/                     # 🤖 Android build configuration
 ├── docs/                        # 📚 All documentation
 │   ├── README.md               # Documentation index (this file)
-│   ├── PROJECT_OVERVIEW.md     # Project summary
+│   ├── DEVELOPER_QUICK_START.md # ⚡ 5-minute setup guide
+│   ├── ARCHITECTURE.md         # 🏗 Technical architecture
+│   ├── CONTRIBUTING.md         # 🤝 Contribution guidelines
+│   ├── PRODUCT_OVERVIEW.md     # Project summary
 │   ├── MOBILE_GUIDE.md         # Mobile development guide
 │   ├── BACKEND_GUIDE.md        # Backend development guide
 │   ├── api.md                  # API documentation
 │   ├── TESTING_GUIDE.md        # Testing strategies
 │   ├── DEPLOYMENT_GUIDE.md     # Deployment guide
-│   ├── HACKATHON.md           # Hackathon submission info
-│   ├── KIRO_HACKATHON.md      # Development process info
-│   └── archive/               # Archived documentation
+│   ├── TECHNICAL_ARCHITECTURE.md # System design details
+│   └── privacy-policy.html     # Privacy policy
 ├── scripts/                     # 🛠 Development scripts
 │   ├── demo-setup.sh          # Demo environment setup
 │   ├── run_complete_e2e_tests.sh # E2E test runner
