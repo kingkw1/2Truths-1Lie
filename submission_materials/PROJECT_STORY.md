@@ -10,7 +10,7 @@ Our app lets users record three short video statements—two truths and one lie�
 
 Our goal was to build a production-grade application, not just a prototype. To achieve this, we fully embraced **Kiro’s AI-powered, spec-driven development workflow** from day one.
 
-Instead of writing boilerplate, we invested our time in creating detailed specifications for each core feature in our `/.kiro/specs/` directory. We treated these specs as the source of truth, allowing Kiro to translate our architectural decisions directly into code.
+Instead of writing boilerplate, we invested our time in creating detailed specifications for each core feature in our `/.kiro/specs/` directory. We treated our specs as the single source of truth, empowering Kiro to translate architectural decisions directly into production-ready code.
 
 > Kiro automatically generated **over 70% of our foundational code**, including the entire **secure FastAPI backend with JWT authentication** and the complex **React Native video recording UI**. This partnership accelerated our development velocity by an estimated 3x, allowing us to focus on what truly matters: the user experience.
 
@@ -19,13 +19,13 @@ Instead of writing boilerplate, we invested our time in creating detailed specif
 Building a media-rich social app comes with significant technical hurdles. Our main challenges included:
 * Orchestrating multi-segment video capture to ensure flawless, "no-bleed" playback transitions.
 * Engineering a robust, server-side video merging pipeline with **FFmpeg** that could scale.
-* Ensuring production-grade stability and security across the full stack, from the mobile app to the deployed **Railway** backend.
+* Ensuring production-grade stability and security across the full stack, from the mobile app to the deployed **Railway** backend and ensuring resilient uploads and smooth playback despite varying network conditions.
 
 We navigated these challenges by pairing Kiro's automated code generation with rigorous human oversight and a comprehensive test suite.
 
 ### Key Accomplishments & Learnings
 
-We are incredibly proud to have delivered a **fully operational, scalable, and polished mobile social game** ready for its Open Beta launch. Our key accomplishments include:
+We are incredibly proud to have delivered a fully operational, scalable, and polished mobile social game ready for its **Open Beta launch**. Our key accomplishments include:
 
 * A secure FastAPI backend, architected and generated through Kiro specs.
 * A responsive, cross-platform mobile app with **a 90% pass rate across over 240 tests**.
