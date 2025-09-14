@@ -554,14 +554,64 @@ class VideoMergeService:
                 shutil.copy2(input_path, output_path)
                 logger.debug(f"Video {video_data['index']} copied without processing")
             else:
-                # Process video to normalize format (no rotation handling)
+                # First, verify the input file exists and is readable
+                if not input_path.exists():
+                    raise VideoMergeError(
+                        f"Input video file does not exist: {input_path}",
+                        "FILE_NOT_FOUND"
+                    )
+                
+                # Check file size
+                file_size = input_path.stat().st_size
+                if file_size == 0:
+                    raise VideoMergeError(
+                        f"Input video file is empty: {input_path}",
+                        "EMPTY_FILE"
+                    )
+                
+                logger.debug(f"Processing video {video_data['index']}: {input_path} ({file_size} bytes)")
+                
+                # First, verify FFmpeg can read the file by probing it
+                probe_cmd = [
+                    "ffprobe", "-v", "quiet", "-print_format", "json", 
+                    "-show_format", "-show_streams", str(input_path)
+                ]
+                
+                try:
+                    logger.debug(f"Probing video metadata: {' '.join(probe_cmd)}")
+                    probe_process = await asyncio.create_subprocess_exec(
+                        *probe_cmd,
+                        stdout=asyncio.subprocess.PIPE,
+                        stderr=asyncio.subprocess.PIPE
+                    )
+                    probe_stdout, probe_stderr = await probe_process.communicate()
+                    
+                    if probe_process.returncode != 0:
+                        probe_error = probe_stderr.decode() if probe_stderr else "Unknown probe error"
+                        logger.error(f"FFprobe failed for {input_path}: {probe_error}")
+                        raise VideoMergeError(
+                            f"Cannot read video metadata for {video_data['index']}: {probe_error}",
+                            "INVALID_VIDEO_FILE"
+                        )
+                    
+                    logger.debug(f"Probe successful for video {video_data['index']}")
+                    
+                except Exception as e:
+                    if not isinstance(e, VideoMergeError):
+                        logger.error(f"Exception during probe of video {video_data['index']}: {str(e)}")
+                        raise VideoMergeError(
+                            f"Failed to probe video {video_data['index']}: {str(e)}",
+                            "PROBE_ERROR"
+                        )
+                
+                # Use a simpler FFmpeg command that's more compatible
                 cmd = [
                     "ffmpeg",
                     "-i", str(input_path),
                     "-c:v", "libx264",
-                    "-preset", "medium",
+                    "-preset", "fast",  # Changed from "medium" to "fast" for better compatibility
                     "-crf", "23",
-                    "-vf", f"scale={target_width}:{target_height}:force_original_aspect_ratio=decrease,pad={target_width}:{target_height}:(ow-iw)/2:(oh-ih)/2",
+                    "-vf", f"scale={target_width}:{target_height}:force_original_aspect_ratio=decrease",  # Simplified scaling
                     "-r", str(target_fps),
                     "-c:a", "aac" if video_info["audio_present"] else "-an",
                     "-movflags", "+faststart",
@@ -595,9 +645,20 @@ class VideoMergeService:
                     
                     if process.returncode != 0:
                         error_msg = stderr.decode() if stderr else "Unknown FFmpeg error"
-                        logger.error(f"FFmpeg failed for video {video_data['index']}: {error_msg}")
+                        stdout_msg = stdout.decode() if stdout else "No output"
+                        
+                        # Log more detailed error information
+                        logger.error(f"FFmpeg failed for video {video_data['index']}:")
+                        logger.error(f"Command: {' '.join(cmd)}")
+                        logger.error(f"Return code: {process.returncode}")
+                        logger.error(f"STDERR: {error_msg}")
+                        logger.error(f"STDOUT: {stdout_msg}")
+                        logger.error(f"Input file: {input_path} (exists: {input_path.exists()}, size: {input_path.stat().st_size if input_path.exists() else 'N/A'})")
+                        
+                        # Include more context in the error message but limit length
+                        truncated_error = error_msg[:500] + "..." if len(error_msg) > 500 else error_msg
                         raise VideoMergeError(
-                            f"Failed to prepare video {video_data['index']}: {error_msg}",
+                            f"Failed to prepare video {video_data['index']}: {truncated_error}",
                             "PREPARATION_ERROR",
                             retryable=True
                         )
