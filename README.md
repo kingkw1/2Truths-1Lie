@@ -18,6 +18,15 @@
 
 </div>
 
+> **Kiro Integration:**  
+> This repository features a fully populated `.kiro/specs` directory for requirements, designs, and tasks, plus agent hooks and steering docs in `.kiro/hooks` and `.kiro/steering`. All major architecture and code decisions were executed via Kiro's spec-driven workflow. See below for direct links and usage details.
+
+## 🏆 Hackathon Submission Materials
+
+- 🎬 [Demo Video](submission_materials/DEMO_VIDEO_LINK) — 3-minute app tour & Kiro development walkthrough
+- 📱 [Judge QR Code & App Access](submission_materials/QR_CODE.png)  
+- 📂 [Submission Materials Directory](submission_materials/) — Scripts, demo instructions, and assets
+
 ## 🎯 A Partnership with Kiro
 
 The Code with Kiro Hackathon challenged us to "turn ideas into production-ready code" by using Kiro as a development partner. We took that challenge to heart. **2Truths-1Lie** is a fully functional, AI-enhanced mobile game, but more importantly, it's a testament to a modern development workflow where an AI partner doesn't just write code faster—it helps you make better architectural decisions.
@@ -28,10 +37,10 @@ This project was built from the ground up with Kiro, moving from high-level conc
 
 | Feature | How Kiro Made It Possible |
 | :--- | :--- |
-| **🎮 Secure, Scalable Backend** | We described the requirements for our JWT authentication and video processing APIs, and Kiro generated the production-grade FastAPI services. This allowed us to focus on the core game logic instead of backend boilerplate. |
-| **📱 Advanced Video Recording**| Kiro helped us implement sophisticated video recording with expo-camera, including permission handling, validation, and corruption detection - solving complex mobile video challenges. |
-| **🎬 Real-time Video Processing**| We leveraged Kiro to build FFmpeg-powered video merging on the backend, enabling seamless combination of multiple video segments into final challenge videos. |
-| **☁️ Production Deployment**| Kiro guided us through Railway deployment and EAS Build configuration, ensuring our app scales properly with proper signing credentials and environment management. |
+| **🎮 Production Backend (Spec-to-Code)** | **Generated a FastAPI/JWT backend instantly from Kiro specs. Sped up design, improved security, zero boilerplate.** |
+| **📱 Advanced Video Recording**| Kiro scaffolded complicated expo-camera workflows, permission handling, and validation. |
+| **🎬 Real-time Video Processing**| FFmpeg backend built from high-level specs for seamless merging and optimization. |
+| **☁️ Production Deployment**| Railway deployment and EAS Build configuration scripted from architectural specs. |
 
 ## 🏆 Our Kiro Workflow: From Spec to Production
 
@@ -44,17 +53,7 @@ The hackathon rules emphasize showing *how* we built with Kiro. Our entire proce
 
 This workflow allowed us to bridge the gap between idea and implementation, creating a polished, production-ready app in a fraction of the typical time.
 
-## 🎬 Live Demo & App Access
-
-Our 3-minute demo video showcases the final application and walks through our Kiro-driven development process.
-
-**[Watch the Full Submission Video Here]** (<- Link Your YouTube Video)
-
-The app is currently in **Open Beta** on the Google Play Store. It is also pending review with the store, but you can download the app directly for testing.
-
-**[Download the App for Testing]** (<- Link to your APK/AAB)
-
-## 🏗️ Technical Architecture
+## ️ Technical Architecture
 
 The system is a modern, decoupled architecture designed for scalability.
 
@@ -102,17 +101,19 @@ Get the project running on your local machine in under 5 minutes.
 
     Scan the QR code with the Expo Go app on your phone.
 
-## 🗺️ Quick Repository Roadmap
+## 🗺️ Navigating This Repository
 
 ### 📍 Essential Starting Points
 | What You Need | Where to Find It |
 |---------------|------------------|
+| **🌟 Kiro Specifications** | [`.kiro/specs/README.md`](.kiro/specs/README.md) — Overview of all specs & mapping to code |
 | **🚀 Get Started** | [`docs/DEVELOPER_QUICK_START.md`](docs/DEVELOPER_QUICK_START.md) - 5-minute setup guide |
 | **📖 Documentation** | [`docs/`](docs/) directory - Complete project documentation |
 | **💻 Source Code** | [`mobile/`](mobile/) (React Native) & [`backend/`](backend/) (Python FastAPI) |
 | **🏆 Submission Materials** | [`submission_materials/`](submission_materials/) - Video scripts, QR codes, demo assets |
 
 ### 🏗️ Architecture & Design
+- **[Kiro Specs Overview](.kiro/specs/README.md)** — Learn how structured requirements and designs map to code and tests
 - **[Technical Architecture](docs/ARCHITECTURE.md)** - System design and component relationships
 - **[API Documentation](docs/api.md)** - Complete REST API reference
 - **[Mobile Development Guide](docs/MOBILE_GUIDE.md)** - React Native setup and patterns
@@ -127,7 +128,15 @@ Get the project running on your local machine in under 5 minutes.
 - **[Contributing Guidelines](docs/CONTRIBUTING.md)** - How to contribute to the project
 - **[Privacy Policy](docs/privacy-policy.html)** - User privacy and data handling
 
-## 🏆 Hackathon Submission Checklist
+## ✅ Kiro Hackathon Submission Checklist
+
+| Requirement             | Where/How We Fulfill It                                                |
+|-------------------------|------------------------------------------------------------------------|
+| **/.kiro Directory**    | All specs, agent hooks, and steering documents present at project root |
+| **Kiro Usage**          | Complete spec-driven workflow; hooks set for future maintainability    |
+| **Demo Video Linked**   | [submission_materials/](submission_materials/) & README above          |
+| **Live App for Review** | Download and judge via QR code and public APK in `submission_materials/` |
+| **Open Source License** | MIT License in root and docs                                           |
 
 ### ✅ Kiro Integration Highlights for Judges
 
