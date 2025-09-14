@@ -2,7 +2,7 @@
   "expo": {
     "name": "Two Truths & a Lie",
     "slug": "two-truths-one-lie-game",
-    "version": "1.1.0",
+    "version": "1.1.1",
     "orientation": "portrait",
     "icon": "./assets/app_icon_scaled.png",
     "userInterfaceStyle": "light",
@@ -21,7 +21,7 @@
         "backgroundColor": "#4a90e2"
       },
       "package": "com.kingkw1.twotruthsoneliegame",
-      "versionCode": 27,
+      "versionCode": 29,
       "permissions": [
         "CAMERA",
         "RECORD_AUDIO",

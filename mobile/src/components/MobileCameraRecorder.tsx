@@ -118,7 +118,8 @@ export const MobileCameraRecorder: React.FC<MobileCameraRecorderProps> = ({
   useEffect(() => {
     // Only initialize if we haven't already initialized
     if (!initializationRef.current && !isInitializing.current) {
-      initializeCamera();
+      // Check permissions first, then initializeCamera will be called from checkPermissions if granted
+      checkPermissions();
       checkStorageSpace();
     }
     
@@ -222,8 +223,18 @@ export const MobileCameraRecorder: React.FC<MobileCameraRecorderProps> = ({
       console.log('Audio mode set successfully');
       
       console.log('Requesting permissions...');
-      // Don't re-check permissions here - trust that they were granted in checkPermissions
-      console.log('✅ Skipping permission re-check, assuming permissions are granted from checkPermissions');
+      // Check permissions before proceeding with camera initialization
+      const cameraStatus = await requestCameraPermission();
+      const micStatus = await Audio.requestPermissionsAsync();
+      const mediaStatus = await requestMediaLibraryPermission();
+      
+      const allGranted = cameraStatus.granted && micStatus.granted && mediaStatus.granted;
+      
+      if (!allGranted) {
+        throw new Error(`Permissions required - Camera: ${cameraStatus.granted}, Mic: ${micStatus.granted}, Media: ${mediaStatus.granted}`);
+      }
+      
+      console.log('✅ All permissions verified, proceeding with camera initialization');
       console.log('✅ Camera initialization complete, setting camera ready');
       setCameraReady(true);
       setCurrentError(null);
@@ -242,14 +253,9 @@ export const MobileCameraRecorder: React.FC<MobileCameraRecorderProps> = ({
   }, []);
 
   const checkPermissions = async (): Promise<boolean> => {
-    Alert.alert('DEBUG', 'checkPermissions function called!');
-    
     try {
       setIsLoading(true);
       console.log('=== Permission Check Debug ===');
-      
-      // Add Alert for debugging without logs
-      Alert.alert('Debug', 'Starting permission check...');
       
       // Request fresh permissions every time to avoid stale state
       const cameraStatus = await requestCameraPermission();
@@ -261,17 +267,14 @@ export const MobileCameraRecorder: React.FC<MobileCameraRecorderProps> = ({
       // Simple boolean check - let the system handle permission dialogs
       const allGranted = cameraStatus.granted && micStatus.granted && mediaStatus.granted;
       
-      // Debug alert to see exact permission status
-      Alert.alert('Permission Status', 
-        `Camera: ${cameraStatus.granted}\nMic: ${micStatus.granted}\nMedia: ${mediaStatus.granted}\nAll: ${allGranted}`
+      console.log('Permission Status:', 
+        `Camera: ${cameraStatus.granted}, Mic: ${micStatus.granted}, Media: ${mediaStatus.granted}, All: ${allGranted}`
       );
       
       if (allGranted) {
         console.log('✅ All permissions granted successfully');
         console.log('🔄 Triggering component re-render...');
         setPermissionsChecked(true); // Force re-render
-        
-        Alert.alert('Success', 'All permissions granted! Initializing camera...');
         
         // Force re-initialization after permissions are granted
         console.log('🎥 Initializing camera...');

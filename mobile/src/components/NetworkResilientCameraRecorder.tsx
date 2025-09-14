@@ -15,8 +15,10 @@ import {
   Animated,
 } from 'react-native';
 import { CameraView, CameraType, useCameraPermissions } from 'expo-camera';
+import { Audio } from 'expo-av';
 import * as Haptics from 'expo-haptics';
 import { useAppDispatch } from '../store/hooks';
+import { CameraErrorHandler } from './CameraErrorHandler';
 import { useNetwork, useNetworkAwareUpload } from '../hooks/useNetwork';
 import { NetworkResilientUploadProgress } from '../services/networkResilientUploadService';
 import { networkResilientUploadService } from '../services/networkResilientUploadService';
@@ -48,6 +50,8 @@ export const NetworkResilientCameraRecorder: React.FC<NetworkResilientCameraReco
   const dispatch = useAppDispatch();
   const cameraRef = useRef<CameraView>(null);
   const [permission, requestPermission] = useCameraPermissions();
+  const [audioPermission, setAudioPermission] = useState<any>(null);
+  const [permissionError, setPermissionError] = useState<any>(null);
   
   // Network state
   const {
@@ -84,12 +88,60 @@ export const NetworkResilientCameraRecorder: React.FC<NetworkResilientCameraReco
   // Timer for recording duration
   const recordingTimer = useRef<NodeJS.Timeout | null>(null);
 
-  // Request camera permissions
-  useEffect(() => {
-    if (!permission?.granted) {
-      requestPermission();
+  // Request camera and audio permissions
+  const requestAllPermissions = useCallback(async () => {
+    try {
+      setPermissionError(null);
+      
+      // Request camera permission
+      const cameraResult = await requestPermission();
+      
+      // Request audio recording permission
+      const audioResult = await Audio.requestPermissionsAsync();
+      setAudioPermission(audioResult);
+      
+      if (!cameraResult.granted) {
+        setPermissionError({
+          type: 'permission',
+          message: 'Camera permission is required to record videos',
+          details: 'Camera access was denied'
+        });
+      } else if (!audioResult.granted) {
+        setPermissionError({
+          type: 'permission', 
+          message: 'Microphone permission is required to record audio',
+          details: 'Audio recording access was denied'
+        });
+      }
+    } catch (error) {
+      setPermissionError({
+        type: 'permission',
+        message: 'Failed to request permissions',
+        details: error instanceof Error ? error.message : 'Unknown permission error'
+      });
     }
-  }, [permission, requestPermission]);
+  }, [requestPermission]);
+
+  // Check and request permissions on mount
+  useEffect(() => {
+    const checkInitialPermissions = async () => {
+      try {
+        // Check existing audio permission status
+        const audioStatus = await Audio.getPermissionsAsync();
+        setAudioPermission(audioStatus);
+        
+        // Request permissions if any are missing
+        if (!permission?.granted || !audioStatus?.granted) {
+          requestAllPermissions();
+        }
+      } catch (error) {
+        console.warn('Error checking initial permissions:', error);
+        requestAllPermissions();
+      }
+    };
+
+    checkInitialPermissions();
+  }, [permission, requestAllPermissions]);
 
   // Handle network state changes
   useEffect(() => {
@@ -345,18 +397,31 @@ export const NetworkResilientCameraRecorder: React.FC<NetworkResilientCameraReco
 
   const networkStatus = getNetworkStatusDisplay();
 
-  if (permission === null) {
+  if (permission === null || audioPermission === null) {
     return (
       <View style={styles.container}>
-        <Text>Requesting camera permission...</Text>
+        <ActivityIndicator size="large" color="#4a90e2" />
+        <Text style={styles.loadingText}>Requesting permissions...</Text>
       </View>
     );
   }
 
-  if (!permission?.granted) {
+  if (!permission?.granted || !audioPermission?.granted || permissionError) {
     return (
       <View style={styles.container}>
-        <Text>No access to camera</Text>
+        <CameraErrorHandler
+          error={permissionError || {
+            type: 'permission',
+            message: !permission?.granted 
+              ? 'Camera permission is required to record videos'
+              : 'Microphone permission is required to record audio',
+            details: !permission?.granted 
+              ? 'Camera access is needed to create video statements'
+              : 'Audio recording access is needed for video statements'
+          }}
+          onRequestPermissions={requestAllPermissions}
+          onCancel={onCancel}
+        />
       </View>
     );
   }
@@ -770,6 +835,12 @@ const styles = StyleSheet.create({
   timeRemainingText: {
     fontSize: 12,
     color: '#666',
+  },
+  loadingText: {
+    fontSize: 16,
+    color: '#4a90e2',
+    textAlign: 'center',
+    marginTop: 16,
   },
 });
 
