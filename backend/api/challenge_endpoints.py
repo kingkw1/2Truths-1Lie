@@ -132,8 +132,8 @@ def enrich_challenge_with_creator_name(challenge: Challenge) -> dict:
             if user_info and user_info.get("name"):
                 challenge_dict["creator_name"] = user_info["name"]
             else:
-                # Fallback to email if name not available
-                challenge_dict["creator_name"] = user_info.get("email", f"User {creator_id[:8]}") if user_info else f"User {creator_id[:8]}"
+                # Fallback to anonymous user instead of email for privacy
+                challenge_dict["creator_name"] = "Anonymous User"
         else:
             # Non-numeric creator_id (guest users, etc.)
             if creator_id.startswith("guest_"):
