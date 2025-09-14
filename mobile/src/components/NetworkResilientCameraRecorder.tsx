@@ -19,6 +19,7 @@ import * as Haptics from 'expo-haptics';
 import { useAppDispatch } from '../store/hooks';
 import { useNetwork, useNetworkAwareUpload } from '../hooks/useNetwork';
 import { NetworkResilientUploadProgress } from '../services/networkResilientUploadService';
+import { networkResilientUploadService } from '../services/networkResilientUploadService';
 import { 
   startMediaRecording, 
   stopMediaRecording, 
@@ -242,9 +243,6 @@ export const NetworkResilientCameraRecorder: React.FC<NetworkResilientCameraReco
     setShowUploadProgress(true);
     
     try {
-      // Import the network-resilient upload service
-      const { networkResilientUploadService } = await import('../services/networkResilientUploadService');
-      
       const sessionId = `upload_${Date.now()}_${statementIndex}`;
       
       dispatch(startUpload({

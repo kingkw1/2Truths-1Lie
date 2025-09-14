@@ -7,6 +7,8 @@ import { Platform } from 'react-native';
 import * as FileSystem from 'expo-file-system/legacy';
 import NetInfo from '@react-native-community/netinfo';
 import { ErrorDetails, errorHandlingService } from './errorHandlingService';
+import { mobileMediaIntegration } from './mobileMediaIntegration';
+import { authService } from './authService';
 
 export interface RecoveryStrategy {
   id: string;
@@ -99,7 +101,6 @@ export class ErrorRecoveryService {
         automated: true,
         execute: async () => {
           try {
-            const { mobileMediaIntegration } = await import('./mobileMediaIntegration');
             await mobileMediaIntegration.cleanupTempFiles();
             return true;
           } catch {
@@ -172,7 +173,6 @@ export class ErrorRecoveryService {
         automated: true,
         execute: async () => {
           try {
-            const { mobileMediaIntegration } = await import('./mobileMediaIntegration');
             await mobileMediaIntegration.cleanupTempFiles();
             
             // Check if we freed up enough space
@@ -205,7 +205,6 @@ export class ErrorRecoveryService {
         automated: true,
         execute: async () => {
           try {
-            const { authService } = await import('./authService');
             const result = await authService.refreshToken();
             return typeof result === 'boolean' ? result : !!result;
           } catch {

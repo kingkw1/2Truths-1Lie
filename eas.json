@@ -19,6 +19,12 @@
         "buildType": "app-bundle"
       },
       "autoIncrement": true
+    },
+    "production-local": {
+      "android": {
+        "buildType": "app-bundle"
+      },
+      "distribution": "internal"
     }
   },
   "submit": {

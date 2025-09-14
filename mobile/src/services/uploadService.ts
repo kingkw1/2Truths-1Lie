@@ -6,6 +6,7 @@
 import * as FileSystem from 'expo-file-system/legacy';
 import { Platform } from 'react-native';
 import { getBackendBaseUrl } from '../config/apiConfig';
+import { authService } from './authService';
 
 
 export interface UploadProgress {
@@ -77,7 +78,6 @@ export class VideoUploadService {
    */
   public async initialize(): Promise<void> {
     try {
-      const { authService } = await import('./authService');
       await authService.initialize();
       
       const token = authService.getAuthToken();
@@ -94,7 +94,6 @@ export class VideoUploadService {
    */
   public async checkUploadPermission(): Promise<boolean> {
     try {
-      const { authService } = await import('./authService');
       return await authService.hasPermission('media:upload');
     } catch (error) {
       console.warn('Failed to check upload permission:', error);
@@ -452,7 +451,6 @@ export class VideoUploadService {
       // Ensure we have an auth token
       if (!this.authToken) {
         console.log('🔐 MERGE_UPLOAD: No auth token found, initializing auth service...');
-        const { authService } = await import('./authService');
         await authService.initialize();
         const token = authService.getAuthToken();
         if (token) {
@@ -618,7 +616,6 @@ export class VideoUploadService {
       // Ensure we have an auth token before uploading
       if (!this.authToken) {
         console.log('🔐 UPLOAD: No auth token found, initializing auth service...');
-        const { authService } = await import('./authService');
         await authService.initialize();
         const token = authService.getAuthToken();
         if (token) {
@@ -794,7 +791,6 @@ export class VideoUploadService {
       // Ensure we have an auth token before uploading
       if (!this.authToken) {
         console.log('🔐 UPLOAD: No auth token found, initializing auth service...');
-        const { authService } = await import('./authService');
         await authService.initialize();
         const token = authService.getAuthToken();
         if (token) {

@@ -22,6 +22,7 @@ import { mobileMediaIntegration } from '../services/mobileMediaIntegration';
 import { MediaCapture } from '../types';
 import { useErrorHandling } from '../hooks/useErrorHandling';
 import { errorHandlingService } from '../services/errorHandlingService';
+import { realChallengeAPI } from '../services/realChallengeAPI';
 import {
   startNewChallenge,
   updateStatement,
@@ -431,7 +432,6 @@ export const EnhancedChallengeCreation: React.FC<EnhancedChallengeCreationProps>
       };
 
       // Submit to backend using the real challenge API
-      const { realChallengeAPI } = await import('../services/realChallengeAPI');
       const response = await realChallengeAPI.createChallenge(challengeRequest);
 
       if (response.success && response.data) {

@@ -330,7 +330,8 @@ export class RealChallengeAPIService {
       }
       
       const headers = await this.getAuthHeaders();
-      const url = `${this.baseUrl}/api/v1/challenges/?skip=${skip}&limit=${limit}&public_only=${publicOnly}`;
+      // Remove public_only parameter as backend doesn't support it
+      const url = `${this.baseUrl}/api/v1/challenges/?skip=${skip}&limit=${limit}`;
       
       console.log('🌐 Making API call to:', url);
       console.log('📋 Request headers:', headers);

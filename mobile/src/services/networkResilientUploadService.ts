@@ -7,6 +7,7 @@ import * as FileSystem from 'expo-file-system/legacy';
 import { Platform } from 'react-native';
 import { networkResilienceService, NetworkState } from './networkResilienceService';
 import { getBackendBaseUrl } from '../config/apiConfig';
+import { authService } from './authService';
 
 export interface NetworkResilientUploadProgress {
   stage: 'preparing' | 'uploading' | 'finalizing' | 'retrying' | 'queued';
@@ -96,7 +97,6 @@ export class NetworkResilientUploadService {
    */
   public async initialize(): Promise<void> {
     try {
-      const { authService } = await import('./authService');
       await authService.initialize();
       
       const token = authService.getAuthToken();

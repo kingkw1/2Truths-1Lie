@@ -10,6 +10,7 @@ import {
   setMergeError,
   completeMerge 
 } from '../store/slices/challengeCreationSlice';
+import { authService } from './authService';
 
 export interface MergeProgress {
   stage: 'pending' | 'processing' | 'completed' | 'failed';
@@ -66,7 +67,6 @@ export class MergeStatusService {
     this.dispatch = dispatch;
     
     try {
-      const { authService } = await import('./authService');
       await authService.initialize();
       
       const token = authService.getAuthToken();

@@ -19,6 +19,7 @@ import {
 import { MediaCapture, VideoSegment } from '../types';
 import { videoUploadService, UploadProgress, UploadOptions } from './uploadService';
 import { crossDeviceMediaService } from './crossDeviceMediaService';
+import { mergeStatusService } from './mergeStatusService';
 
 export interface MobileMediaIntegrationConfig {
   maxFileSize: number; // in bytes
@@ -627,7 +628,6 @@ export class MobileMediaIntegrationService {
       console.log('🎬 MERGE: Uploading 3 videos for server-side merging...');
 
       // Initialize merge status service
-      const { mergeStatusService } = await import('./mergeStatusService');
       if (this.dispatch) {
         await mergeStatusService.initialize(this.dispatch);
       }
@@ -712,8 +712,6 @@ export class MobileMediaIntegrationService {
     onComplete?: (result: { success: boolean; mergedVideoUrl?: string; segmentMetadata?: any; mergeSessionId?: string; error?: string }) => void
   ): Promise<void> {
     try {
-      const { mergeStatusService } = await import('./mergeStatusService');
-      
       if (this.dispatch) {
         await mergeStatusService.initialize(this.dispatch);
       }
