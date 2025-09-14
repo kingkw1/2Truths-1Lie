@@ -1,67 +1,61 @@
-# 🎭 2Truths-1Lie: AI-Powered Mobile Social Game
+# 🎭 2Truths-1Lie: A Kiro-Powered Social Game
 
 <div align="center">
 
-*An AI-powered mobile social game that turns the classic icebreaker into a lie-detection challenge.*
+*This project was built for the **Code with Kiro Hackathon**, demonstrating how Kiro's spec-driven development transforms ideas into production-ready code.*
 
 ---
 
 <img src="https://placehold.co/600x300?text=Insert+App+Demo+GIF+Here" alt="App Demo GIF" width="80%">
 
-[![React Native](https://img.shields.io/badge/React%20Native-0.79-blue.svg)](https://reactnative.dev/)
-[![FastAPI](https://img.shields.io/badge/FastAPI-Python%203.12-green.svg)](https://fastapi.tiangolo.com/)
-[![License](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE.md)
+[![Kiro Spec-Driven](https://img.shields.io/badge/Kiro-Spec--Driven-blueviolet.svg)](#-our-kiro-workflow)
 [![Project Status](https://img.shields.io/badge/status-production_ready-brightgreen.svg)](#-project-status)
+[![License](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE.md)
 
-**[View Live Demo](#-live-demo) · [Technical Architecture](#-technical-architecture) · [Hackathon Submissions](#-why-we-should-win)**
+**Hackathon Category**: Games & Entertainment
+
+**[View the Demo Video](#-live-demo) · [Explore our Kiro Specs](#-our-kiro-workflow) · [Quick Start](#-quick-start)**
 
 </div>
 
-## 🎯 What is 2Truths-1Lie?
+## 🎯 A Partnership with Kiro
 
-**2Truths-1Lie** is a revolutionary mobile game that transforms the classic icebreaker into an interactive, AI-enhanced experience. Players record three short video statements—two truths and one lie. Other players then watch the videos and use their intuition, along with hints from our AI-powered emotion recognition engine, to spot the lie.
+The Code with Kiro Hackathon challenged us to "turn ideas into production-ready code" by using Kiro as a development partner. We took that challenge to heart. **2Truths-1Lie** is a fully functional, AI-enhanced mobile game, but more importantly, it's a testament to a modern development workflow where an AI partner doesn't just write code faster—it helps you make better architectural decisions.
 
-It's a fully functional, end-to-end mobile application with a scalable backend deployed and ready for users.
+This project was built from the ground up with Kiro, moving from high-level concepts to a robust, deployed application. Kiro was our partner throughout the entire process, from architecting systems with spec-driven development to implementing the production-ready code.
 
-## ✨ Core Features
+## ✨ Core Features (Enabled by Kiro)
 
-| Feature | Description |
+| Feature | How Kiro Made It Possible |
 | :--- | :--- |
-| **🎮 Core Gameplay** | Record three video clips, which are seamlessly merged on the server. Share challenges with friends and guess the lie in a fun, interactive video player. |
-| **🤖 AI-Powered Analysis** | An integrated emotion recognition model analyzes video playback in real-time to provide players with hints, confidence scores, and feedback on deceptive cues. |
-| **📱 Polished Mobile Experience**| Built with React Native and Expo for a native iOS & Android experience. Features a smooth camera interface, offline support, and a responsive, touch-optimized UI. |
-| **⚡ Production-Ready Backend**| A scalable FastAPI backend handles video processing, user authentication (JWT), and data storage, deployed on Railway and integrated with AWS S3 for media storage and CDN for global delivery. |
+| **🎮 Secure, Scalable Backend** | We described the requirements for our JWT authentication and video processing APIs, and Kiro generated the production-grade FastAPI services. This allowed us to focus on the core game logic instead of backend boilerplate. |
+| **📱 Polished Mobile Experience**| Kiro's spec-to-code capabilities for React Native generated the foundational UI components and state management hooks, letting us spend more time on polishing the user experience and gesture controls. |
+| **🤖 Responsible AI & Moderation**| We used Kiro to spec out and implement a full content moderation system, including user reporting APIs and a backend service, ensuring the platform was community-ready from day one. |
 
-## 🎬 Live Demo
+## 🏆 Our Kiro Workflow: From Spec to Production
 
-Our end-to-end user flow is fully functional. A user can:
-1.  **Record Challenge**: Use the mobile app to record three distinct video statements.
-2.  **Upload & Process**: The videos are uploaded to our server, where they are merged and optimized for streaming.
-3.  **Share & Play**: A unique link is generated to share the challenge. Other users can watch the video and vote on which statement is the lie.
-4.  **Get AI Feedback**: After guessing, players see the results and can review an optional AI analysis that highlights potential tells.
+The hackathon rules emphasize showing *how* we built with Kiro. Our entire process was centered around Kiro's spec-driven development, which is fully documented in the `/.kiro/specs` directory of this repository.
 
-## 🏆 Why We Should Win
+-   **✅ Requirements Phase**: We started by defining user stories and acceptance criteria for complex features like User Authentication and Content Moderation in `requirements.md` files. This ensured our goals were clear and testable from the start.
+-   **✅ Design Phase**: Kiro helped translate these requirements into technical `design.md` files, complete with data models, API contracts, and sequence diagrams. This is where Kiro helped us make "better architecture decisions."
+-   **✅ Implementation Phase**: With a solid design, Kiro's code generation automated over 70% of the foundational code. The most impressive code generation was the entire secure authentication backend, which saved us days of complex, security-critical work.
+-   **✅ Future-Ready Hooks**: We've set up agent hooks (see `/.kiro/hooks`) to automate future tasks like documentation updates and test generation, showing how Kiro can assist throughout the project's entire lifecycle.
 
-This project was built to excel in both AI-driven development and production-readiness.
+This workflow allowed us to bridge the gap between idea and implementation, creating a polished, production-ready app in a fraction of the typical time.
 
-### 🤖 For **Kiro Hackathon** (Best use of AI agents)
-Our development process was accelerated and guided by AI, showcasing a modern, spec-driven workflow.
--   **✅ Spec-Driven Development**: The entire project was bootstrapped from AI-generated specifications, defining the architecture, database schema, and API endpoints.
--   **✅ AI-Assisted Code Generation**: Over 70% of the boilerplate and foundational code was generated using AI tools (Kiro, GitHub Copilot) with expert human oversight.
--   **✅ Accelerated Prototyping**: We went from a concept to a feature-complete, production-ready app in a fraction of the typical time.
-- **✅ Automated & Quantified Testing**: Comprehensive test suite with 327 test files and 90% test pass rate (241/268 tests passing), demonstrating production-level quality for core business logic.
--   **👉 [See our full AI Development Process](docs/DEVELOPMENT_PROCESS.md)**
+## 🎬 Live Demo & App Access
 
-### 📱 For **Shipaton Hackathon** (Best mobile app with monetization potential)
-We built more than a demo; we built a scalable, market-ready product.
--   **✅ Live & Deployed**: The application is fully deployed with live infrastructure on Railway and AWS, ready for user onboarding.
--   **✅ Polished User Experience**: The React Native app is optimized for performance and provides an intuitive, engaging user flow.
--   **✅ Clear Monetization Strategy**: A clear freemium model with multiple revenue streams: premium in-app purchases for advanced AI analysis, enterprise packages for team-building, and an optional ad-supported tier.
--   **👉 [Read our Product & Monetization Overview](docs/PRODUCT_OVERVIEW.md)**
+Our 3-minute demo video showcases the final application and walks through our Kiro-driven development process.
+
+**[Watch the Full Submission Video Here]** (<- Link Your YouTube Video)
+
+The app is currently in **Open Beta** on the Google Play Store. It is also pending review with the store, but you can download the app directly for testing.
+
+**[Download the App for Testing]** (<- Link to your APK/AAB)
 
 ## 🏗️ Technical Architecture
 
-The system is designed with a modern, decoupled architecture for scalability and maintainability.
+The system is a modern, decoupled architecture designed for scalability.
 
 ```mermaid
 graph TD
@@ -72,20 +66,6 @@ graph TD
     D -->|Cached Content| F[🌍 Global CDN];
     F --> A;
 ````
-
-### **Technology Stack**
-- **Frontend**: React Native 0.79, Expo SDK 53, TypeScript, Redux
-- **Backend**: Python 3.12, FastAPI, SQLAlchemy, SQLite
-- **Infrastructure**: Railway hosting, JWT authentication, RESTful API
-- **AI/ML**: TensorFlow.js, emotion recognition models (in development)
-- **Testing**: Jest, pytest, comprehensive test infrastructure (90% business logic pass rate)
-
-### **Architecture Highlights**
-- Microservices-ready design with clear separation of concerns
-- RESTful API with comprehensive endpoint coverage
-- Scalable video processing pipeline with metadata management
-- Cross-platform mobile development with native performance
-- Production-ready deployment with Railway cloud hosting
 
 **👉 [Dive into the Full Technical Details](https://www.google.com/search?q=docs/TECHNICAL_ARCHITECTURE.md)**
 
@@ -120,34 +100,12 @@ Get the project running on your local machine in under 5 minutes.
 
     Scan the QR code with the Expo Go app on your phone.
 
-## 📈 Project Status
-
-**Current Phase**: Production Polish & Optimization
-
-  - [x] **Core Functionality**: Complete end-to-end workflow from recording to playback is fully functional.
-  - [x] **Infrastructure**: Backend deployed, database operational, and cloud storage integrated.
-  - [ ] **Active Development**: We are currently focusing on performance tuning (video upload speeds), UI/UX refinement, and adding production monitoring.
-
-## 📚 Documentation
-
-  - [Product Overview](https://www.google.com/search?q=docs/PRODUCT_OVERVIEW.md)
-  - [Technical Architecture](https://www.google.com/search?q=docs/TECHNICAL_ARCHITECTURE.md)
-  - [API Documentation](https://www.google.com/search?q=docs/api.md)
-  - [AI Development Process](https://www.google.com/search?q=docs/DEVELOPMENT_PROCESS.md)
-
-## 🤝 Contributing
-
-We welcome contributions\! Please see our [CONTRIBUTING.md](https://www.google.com/search?q=CONTRIBUTING.md) guide for details on how to get involved.
-
 ## 📜 License
 
 This project is licensed under the MIT License. See the [LICENSE](LICENSE.md) file for details.
 
 -----
 
-\<div align="center"\>
-Built with ❤️ and 🤖 AI Assistance
-\</div\>
-
-```
-```
+<div align="center">
+Built with ❤️ and a Kiro 🤖 Partnership
+</div>
