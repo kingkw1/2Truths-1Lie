@@ -1,0 +1,446 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>2Truths-1Lie Admin Panel</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #f5f5f5;
+            color: #333;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        .header {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        
+        .auth-section {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        
+        .main-content {
+            display: none;
+        }
+        
+        .card {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        
+        .form-group {
+            margin-bottom: 15px;
+        }
+        
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 500;
+        }
+        
+        input, button, select {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+        
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            cursor: pointer;
+            font-weight: 500;
+        }
+        
+        button:hover {
+            background: #0056b3;
+        }
+        
+        .btn-danger {
+            background: #dc3545;
+        }
+        
+        .btn-danger:hover {
+            background: #c82333;
+        }
+        
+        .btn-warning {
+            background: #ffc107;
+            color: #333;
+        }
+        
+        .btn-warning:hover {
+            background: #e0a800;
+        }
+        
+        .challenge-item {
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            padding: 15px;
+            margin-bottom: 10px;
+        }
+        
+        .challenge-id {
+            font-family: monospace;
+            font-size: 12px;
+            color: #666;
+        }
+        
+        .status {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 12px;
+            font-size: 12px;
+            font-weight: 500;
+        }
+        
+        .status-published {
+            background: #d4edda;
+            color: #155724;
+        }
+        
+        .status-draft {
+            background: #fff3cd;
+            color: #856404;
+        }
+        
+        .status-flagged {
+            background: #f8d7da;
+            color: #721c24;
+        }
+        
+        .log {
+            background: #f8f9fa;
+            border: 1px solid #dee2e6;
+            border-radius: 4px;
+            padding: 10px;
+            height: 200px;
+            overflow-y: auto;
+            font-family: monospace;
+            font-size: 12px;
+        }
+        
+        .error {
+            color: #dc3545;
+            font-weight: 500;
+        }
+        
+        .success {
+            color: #28a745;
+            font-weight: 500;
+        }
+        
+        .grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+        }
+        
+        @media (max-width: 768px) {
+            .grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🎮 2Truths-1Lie Admin Panel</h1>
+            <p>Manage challenges, view reports, and moderate content</p>
+        </div>
+        
+        <div class="auth-section" id="authSection">
+            <h2>🔐 Authentication</h2>
+            <div class="form-group">
+                <label for="apiUrl">API URL:</label>
+                <input type="text" id="apiUrl" value="https://2truths-1lie-production.up.railway.app">
+            </div>
+            <div class="form-group">
+                <label for="email">Email (optional for guest access):</label>
+                <input type="email" id="email" placeholder="admin@example.com">
+            </div>
+            <div class="form-group">
+                <label for="password">Password (optional for guest access):</label>
+                <input type="password" id="password">
+            </div>
+            <button onclick="authenticate()">🔑 Login</button>
+        </div>
+        
+        <div class="main-content" id="mainContent">
+            <div class="grid">
+                <div class="card">
+                    <h3>🔍 Search Challenges</h3>
+                    <div class="form-group">
+                        <label for="searchTerm">Search Term:</label>
+                        <input type="text" id="searchTerm" placeholder="Challenge ID, creator, or title">
+                    </div>
+                    <button onclick="searchChallenges()">Search</button>
+                    <div id="searchResults"></div>
+                </div>
+                
+                <div class="card">
+                    <h3>📊 Quick Actions</h3>
+                    <button onclick="getReports()">📋 View Reports</button>
+                    <button onclick="getStats()" style="margin-top: 10px;">📈 View Stats</button>
+                    <button onclick="cleanup()" class="btn-warning" style="margin-top: 10px;">🧹 Cleanup</button>
+                </div>
+            </div>
+            
+            <div class="card">
+                <h3>🗑️ Quick Delete</h3>
+                <div class="form-group">
+                    <label for="deleteId">Challenge ID to Delete:</label>
+                    <input type="text" id="deleteId" placeholder="Enter challenge ID">
+                </div>
+                <div class="form-group">
+                    <label>
+                        <input type="checkbox" id="forceDelete"> Force delete (for published challenges)
+                    </label>
+                </div>
+                <button onclick="deleteChallenge()" class="btn-danger">🗑️ Delete Challenge</button>
+            </div>
+            
+            <div class="card">
+                <h3>📋 Results</h3>
+                <div id="results" class="log"></div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let authToken = null;
+        let apiUrl = '';
+        
+        function log(message, type = 'info') {
+            const results = document.getElementById('results');
+            const timestamp = new Date().toLocaleTimeString();
+            const className = type === 'error' ? 'error' : type === 'success' ? 'success' : '';
+            results.innerHTML += `<div class="${className}">[${timestamp}] ${message}</div>`;
+            results.scrollTop = results.scrollHeight;
+        }
+        
+        async function authenticate() {
+            apiUrl = document.getElementById('apiUrl').value;
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            
+            log('🔐 Authenticating...');
+            
+            try {
+                let response;
+                if (email && password) {
+                    response = await fetch(`${apiUrl}/api/v1/auth/login`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ email, password })
+                    });
+                } else {
+                    response = await fetch(`${apiUrl}/api/v1/auth/guest`, {
+                        method: 'POST'
+                    });
+                }
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    authToken = data.access_token;
+                    document.getElementById('authSection').style.display = 'none';
+                    document.getElementById('mainContent').style.display = 'block';
+                    log('✅ Authentication successful', 'success');
+                } else {
+                    log(`❌ Authentication failed: ${response.status}`, 'error');
+                }
+            } catch (error) {
+                log(`❌ Authentication error: ${error.message}`, 'error');
+            }
+        }
+        
+        async function searchChallenges() {
+            const searchTerm = document.getElementById('searchTerm').value;
+            if (!searchTerm) {
+                log('❌ Please enter a search term', 'error');
+                return;
+            }
+            
+            log(`🔍 Searching for: ${searchTerm}`);
+            
+            try {
+                const response = await fetch(`${apiUrl}/api/v1/admin/challenges/search/${encodeURIComponent(searchTerm)}`, {
+                    headers: { 'Authorization': `Bearer ${authToken}` }
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    const challenges = data.challenges;
+                    
+                    if (challenges.length > 0) {
+                        log(`📋 Found ${challenges.length} challenges:`, 'success');
+                        const resultsDiv = document.getElementById('searchResults');
+                        resultsDiv.innerHTML = challenges.map(challenge => `
+                            <div class="challenge-item">
+                                <div class="challenge-id">${challenge.challenge_id}</div>
+                                <div><strong>Status:</strong> <span class="status status-${challenge.status.toLowerCase()}">${challenge.status}</span></div>
+                                <div><strong>Creator:</strong> ${challenge.creator_id}</div>
+                                <div><strong>Created:</strong> ${new Date(challenge.created_at).toLocaleString()}</div>
+                                ${challenge.title ? `<div><strong>Title:</strong> ${challenge.title}</div>` : ''}
+                                <button onclick="deleteSpecificChallenge('${challenge.challenge_id}')" class="btn-danger" style="margin-top: 10px; width: auto; padding: 5px 10px;">Delete</button>
+                            </div>
+                        `).join('');
+                    } else {
+                        log('❌ No challenges found');
+                        document.getElementById('searchResults').innerHTML = '';
+                    }
+                } else {
+                    log(`❌ Search failed: ${response.status}`, 'error');
+                }
+            } catch (error) {
+                log(`❌ Search error: ${error.message}`, 'error');
+            }
+        }
+        
+        async function deleteChallenge() {
+            const challengeId = document.getElementById('deleteId').value;
+            const force = document.getElementById('forceDelete').checked;
+            
+            if (!challengeId) {
+                log('❌ Please enter a challenge ID', 'error');
+                return;
+            }
+            
+            if (!confirm(`Are you sure you want to delete challenge ${challengeId}?`)) {
+                return;
+            }
+            
+            await deleteSpecificChallenge(challengeId, force);
+        }
+        
+        async function deleteSpecificChallenge(challengeId, force = false) {
+            log(`🗑️ Deleting challenge: ${challengeId}${force ? ' (forced)' : ''}`);
+            
+            try {
+                const url = new URL(`${apiUrl}/api/v1/admin/challenges/${challengeId}`);
+                if (force) url.searchParams.set('force', 'true');
+                
+                const response = await fetch(url, {
+                    method: 'DELETE',
+                    headers: { 'Authorization': `Bearer ${authToken}` }
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    log(`✅ Challenge deleted successfully:`, 'success');
+                    log(`   Media files: ${data.media_files_deleted}`, 'success');
+                    log(`   DB records: ${JSON.stringify(data.database_records_deleted)}`, 'success');
+                    
+                    // Clear the input
+                    document.getElementById('deleteId').value = '';
+                    
+                    // Refresh search results if any
+                    const searchTerm = document.getElementById('searchTerm').value;
+                    if (searchTerm) {
+                        searchChallenges();
+                    }
+                } else {
+                    const errorText = await response.text();
+                    log(`❌ Delete failed: ${response.status} - ${errorText}`, 'error');
+                }
+            } catch (error) {
+                log(`❌ Delete error: ${error.message}`, 'error');
+            }
+        }
+        
+        async function getReports() {
+            log('📊 Getting reported challenges...');
+            
+            try {
+                const response = await fetch(`${apiUrl}/api/v1/admin/moderation/reports`, {
+                    headers: { 'Authorization': `Bearer ${authToken}` }
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    const reports = data.reported_challenges;
+                    
+                    if (reports.length > 0) {
+                        log(`📋 Found ${reports.length} reported challenges:`, 'success');
+                        reports.forEach(report => {
+                            log(`   ${report.challenge_id} (${report.report_count} reports: ${report.reasons.join(', ')})`);
+                        });
+                    } else {
+                        log('✅ No reported challenges', 'success');
+                    }
+                } else {
+                    log(`❌ Failed to get reports: ${response.status}`, 'error');
+                }
+            } catch (error) {
+                log(`❌ Reports error: ${error.message}`, 'error');
+            }
+        }
+        
+        async function getStats() {
+            log('📈 Getting moderation stats...');
+            
+            try {
+                const response = await fetch(`${apiUrl}/api/v1/admin/moderation/stats`, {
+                    headers: { 'Authorization': `Bearer ${authToken}` }
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    log('📊 Statistics:', 'success');
+                    log(JSON.stringify(data, null, 2));
+                } else {
+                    log(`❌ Failed to get stats: ${response.status}`, 'error');
+                }
+            } catch (error) {
+                log(`❌ Stats error: ${error.message}`, 'error');
+            }
+        }
+        
+        async function cleanup() {
+            log('🧹 Running cleanup...');
+            
+            try {
+                const response = await fetch(`${apiUrl}/api/v1/admin/cleanup`, {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${authToken}` }
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    log(`✅ Cleanup completed: ${data.message}`, 'success');
+                } else {
+                    log(`❌ Cleanup failed: ${response.status}`, 'error');
+                }
+            } catch (error) {
+                log(`❌ Cleanup error: ${error.message}`, 'error');
+            }
+        }
+    </script>
+</body>
+</html>
