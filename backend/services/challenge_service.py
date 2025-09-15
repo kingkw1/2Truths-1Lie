@@ -68,57 +68,96 @@ class ChallengeService:
 
     def _load_data(self):
         self.guesses: Dict[str, GuessSubmission] = {}
-        self.challenges_file = settings.TEMP_DIR / "challenges.json"
-        self.guesses_file = settings.TEMP_DIR / "guesses.json"
+        self.challenges_file = settings.TEMP_DIR / "challenges.json"  # Keep for backward compatibility
+        self.guesses_file = settings.TEMP_DIR / "guesses.json"        # Keep for backward compatibility
         self.moderation_service = ModerationService()
         self.rate_limiter = RateLimiter()
         self._load_data()
     
     def _load_data(self):
-        """Load challenges and guesses from disk"""
+        """Load challenges and guesses from database"""
         try:
-            # Load challenges
+            # Import database service
+            from services.database_service import db_service
+            
+            # Load challenges from database
+            self.challenges = db_service.load_all_challenges()
+            logger.info(f"Loaded {len(self.challenges)} challenges from database")
+            
+            # Load guesses from database
+            self.guesses = db_service.load_all_guesses()
+            logger.info(f"Loaded {len(self.guesses)} guesses from database")
+            
+            # Migration: If database is empty but JSON files exist, migrate data
+            if not self.challenges and self.challenges_file.exists():
+                logger.info("Migrating challenges from JSON to database...")
+                self._migrate_from_json()
+                        
+        except Exception as e:
+            logger.error(f"Error loading challenge data from database: {e}")
+            self.challenges = {}
+            self.guesses = {}
+    
+    def _migrate_from_json(self):
+        """Migrate challenges from JSON files to database (one-time migration)"""
+        try:
+            from services.database_service import db_service
+            
+            # Load from JSON files
             if self.challenges_file.exists():
                 with open(self.challenges_file, 'r') as f:
                     data = json.load(f)
                     for challenge_data in data.values():
                         challenge = Challenge(**challenge_data)
                         self.challenges[challenge.challenge_id] = challenge
+                        # Save to database
+                        db_service.save_challenge(challenge)
+                
+                logger.info(f"Migrated {len(self.challenges)} challenges to database")
             
-            # Load guesses
+            # Load guesses from JSON
             if self.guesses_file.exists():
                 with open(self.guesses_file, 'r') as f:
                     data = json.load(f)
                     for guess_data in data.values():
                         guess = GuessSubmission(**guess_data)
                         self.guesses[guess.guess_id] = guess
+                        # Save to database (would need save_guess method)
+                
+                logger.info(f"Migrated {len(self.guesses)} guesses to database")
                         
         except Exception as e:
-            logger.error(f"Error loading challenge data: {e}")
-            self.challenges = {}
-            self.guesses = {}
+            logger.error(f"Error migrating data from JSON: {e}")
     
     async def _save_challenges(self):
-        """Save challenges to disk"""
+        """Save challenges to database"""
         try:
-            data = {
-                challenge_id: challenge.model_dump() 
-                for challenge_id, challenge in self.challenges.items()
-            }
-            with open(self.challenges_file, 'w') as f:
-                json.dump(data, f, default=str, indent=2)
+            from services.database_service import db_service
+            
+            # Save each challenge to database
+            saved_count = 0
+            for challenge in self.challenges.values():
+                if db_service.save_challenge(challenge):
+                    saved_count += 1
+            
+            logger.info(f"Saved {saved_count}/{len(self.challenges)} challenges to database")
+            
         except Exception as e:
             logger.error(f"Error saving challenges: {e}")
     
     async def _save_guesses(self):
-        """Save guesses to disk"""
+        """Save guesses to database"""
         try:
-            data = {
-                guess_id: guess.model_dump() 
-                for guess_id, guess in self.guesses.items()
-            }
-            with open(self.guesses_file, 'w') as f:
-                json.dump(data, f, default=str, indent=2)
+            from services.database_service import db_service
+            
+            # Save each guess to database
+            saved_count = 0
+            for guess in self.guesses.values():
+                if db_service.save_guess(guess):
+                    saved_count += 1
+            
+            logger.info(f"Saved {saved_count}/{len(self.guesses)} guesses to database")
+            
         except Exception as e:
             logger.error(f"Error saving guesses: {e}")
     

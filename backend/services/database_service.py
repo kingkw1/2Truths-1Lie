@@ -54,6 +54,69 @@ class DatabaseService:
                     CREATE INDEX IF NOT EXISTS idx_users_last_login ON users(last_login)
                 """)
                 
+                # Create challenges table for persistent challenge storage
+                cursor.execute("""
+                    CREATE TABLE IF NOT EXISTS challenges (
+                        challenge_id TEXT PRIMARY KEY,
+                        creator_id TEXT NOT NULL,
+                        title TEXT,
+                        status TEXT NOT NULL DEFAULT 'draft',
+                        lie_statement_id TEXT NOT NULL,
+                        view_count INTEGER DEFAULT 0,
+                        guess_count INTEGER DEFAULT 0,
+                        correct_guess_count INTEGER DEFAULT 0,
+                        is_merged_video BOOLEAN DEFAULT FALSE,
+                        statements_json TEXT NOT NULL,
+                        merged_video_metadata_json TEXT,
+                        tags_json TEXT,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        published_at TIMESTAMP
+                    )
+                """)
+                
+                # Create indexes on challenges table for faster lookups
+                cursor.execute("""
+                    CREATE INDEX IF NOT EXISTS idx_challenges_creator_id ON challenges(creator_id)
+                """)
+                cursor.execute("""
+                    CREATE INDEX IF NOT EXISTS idx_challenges_status ON challenges(status)
+                """)
+                cursor.execute("""
+                    CREATE INDEX IF NOT EXISTS idx_challenges_created_at ON challenges(created_at DESC)
+                """)
+                cursor.execute("""
+                    CREATE INDEX IF NOT EXISTS idx_challenges_published_at ON challenges(published_at DESC)
+                """)
+                cursor.execute("""
+                    CREATE INDEX IF NOT EXISTS idx_challenges_view_count ON challenges(view_count DESC)
+                """)
+                
+                # Create guesses table for challenge guesses
+                cursor.execute("""
+                    CREATE TABLE IF NOT EXISTS guesses (
+                        guess_id TEXT PRIMARY KEY,
+                        challenge_id TEXT NOT NULL,
+                        user_id TEXT NOT NULL,
+                        guessed_lie_statement_id TEXT NOT NULL,
+                        is_correct BOOLEAN NOT NULL,
+                        response_time_seconds REAL,
+                        submitted_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        FOREIGN KEY (challenge_id) REFERENCES challenges(challenge_id) ON DELETE CASCADE
+                    )
+                """)
+                
+                # Create indexes on guesses table
+                cursor.execute("""
+                    CREATE INDEX IF NOT EXISTS idx_guesses_challenge_id ON guesses(challenge_id)
+                """)
+                cursor.execute("""
+                    CREATE INDEX IF NOT EXISTS idx_guesses_user_id ON guesses(user_id)
+                """)
+                cursor.execute("""
+                    CREATE INDEX IF NOT EXISTS idx_guesses_submitted_at ON guesses(submitted_at DESC)
+                """)
+                
                 # Add name column to existing users table if it doesn't exist
                 try:
                     cursor.execute("ALTER TABLE users ADD COLUMN name TEXT")
@@ -742,6 +805,354 @@ class DatabaseService:
         except Exception as e:
             logger.error(f"Failed to get user report by ID {report_id}: {e}")
             raise
+    
+    def admin_delete_challenge_records(self, challenge_id: str) -> Dict[str, int]:
+        """
+        Delete all database records associated with a challenge (admin only)
+        
+        Args:
+            challenge_id: ID of the challenge to delete records for
+            
+        Returns:
+            Dict with counts of deleted records by table
+        """
+        try:
+            with sqlite3.connect(self.db_path) as conn:
+                # Enable foreign key constraints for this connection
+                conn.execute("PRAGMA foreign_keys = ON")
+                cursor = conn.cursor()
+                
+                deletion_counts = {}
+                
+                # Delete user reports for this challenge
+                cursor.execute("DELETE FROM user_reports WHERE challenge_id = ?", (challenge_id,))
+                deletion_counts["user_reports"] = cursor.rowcount
+                
+                # Delete user challenge progress for this challenge (if table exists)
+                try:
+                    cursor.execute("DELETE FROM user_challenge_progress WHERE challenge_id = ?", (challenge_id,))
+                    deletion_counts["user_challenge_progress"] = cursor.rowcount
+                except sqlite3.OperationalError:
+                    # Table doesn't exist, skip
+                    deletion_counts["user_challenge_progress"] = 0
+                
+                # Delete challenge records from challenges table (if it exists)
+                try:
+                    cursor.execute("DELETE FROM challenges WHERE id = ? OR challenge_id = ?", (challenge_id, challenge_id))
+                    deletion_counts["challenges"] = cursor.rowcount
+                except sqlite3.OperationalError:
+                    # Table doesn't exist, skip
+                    deletion_counts["challenges"] = 0
+                
+                # Delete guess submissions for this challenge (if table exists)
+                try:
+                    cursor.execute("DELETE FROM guess_submissions WHERE challenge_id = ?", (challenge_id,))
+                    deletion_counts["guess_submissions"] = cursor.rowcount
+                except sqlite3.OperationalError:
+                    # Table doesn't exist, skip
+                    deletion_counts["guess_submissions"] = 0
+                
+                conn.commit()
+                
+                logger.info(f"Admin deleted database records for challenge {challenge_id}: {deletion_counts}")
+                return deletion_counts
+                
+        except Exception as e:
+            logger.error(f"Failed to delete database records for challenge {challenge_id}: {e}")
+            raise
+    
+    def get_all_reported_challenge_ids(self) -> List[str]:
+        """
+        Get all unique challenge IDs that have reports
+        
+        Returns:
+            List of challenge IDs that have been reported
+        """
+        try:
+            with sqlite3.connect(self.db_path) as conn:
+                cursor = conn.cursor()
+                
+                cursor.execute("""
+                    SELECT DISTINCT challenge_id
+                    FROM user_reports
+                    ORDER BY challenge_id
+                """)
+                
+                results = cursor.fetchall()
+                return [row[0] for row in results]
+                
+        except Exception as e:
+            logger.error(f"Failed to get reported challenge IDs: {e}")
+            raise
+    
+    def remove_reports_for_challenge(self, challenge_id: str) -> int:
+        """
+        Remove all reports for a specific challenge
+        
+        Args:
+            challenge_id: The challenge ID to remove reports for
+            
+        Returns:
+            Number of reports removed
+        """
+        try:
+            with sqlite3.connect(self.db_path) as conn:
+                cursor = conn.cursor()
+                
+                cursor.execute("""
+                    DELETE FROM user_reports 
+                    WHERE challenge_id = ?
+                """, (challenge_id,))
+                
+                removed_count = cursor.rowcount
+                conn.commit()
+                
+                logger.info(f"Removed {removed_count} reports for challenge {challenge_id}")
+                return removed_count
+                
+        except Exception as e:
+            logger.error(f"Failed to remove reports for challenge {challenge_id}: {e}")
+            raise
+
+    # Challenge persistence methods
+    def save_challenge(self, challenge) -> bool:
+        """Save a challenge to the database"""
+        try:
+            import json
+            from datetime import datetime
+            
+            # Custom JSON encoder for datetime objects
+            def datetime_serializer(obj):
+                if isinstance(obj, datetime):
+                    return obj.isoformat()
+                raise TypeError(f"Object of type {type(obj).__name__} is not JSON serializable")
+            
+            with sqlite3.connect(self.db_path) as conn:
+                cursor = conn.cursor()
+                
+                # Convert challenge object to database format
+                cursor.execute("""
+                    INSERT OR REPLACE INTO challenges (
+                        challenge_id, creator_id, title, status, lie_statement_id,
+                        view_count, guess_count, correct_guess_count, is_merged_video,
+                        statements_json, merged_video_metadata_json, tags_json,
+                        created_at, updated_at, published_at
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                """, (
+                    challenge.challenge_id,
+                    challenge.creator_id,
+                    challenge.title,
+                    challenge.status.value if hasattr(challenge.status, 'value') else str(challenge.status),
+                    challenge.lie_statement_id,
+                    challenge.view_count,
+                    challenge.guess_count,
+                    challenge.correct_guess_count,
+                    challenge.is_merged_video,
+                    json.dumps([stmt.model_dump() for stmt in challenge.statements], default=datetime_serializer),
+                    json.dumps(challenge.merged_video_metadata.model_dump(), default=datetime_serializer) if challenge.merged_video_metadata else None,
+                    json.dumps(challenge.tags) if challenge.tags else None,
+                    challenge.created_at.isoformat() if challenge.created_at else None,
+                    challenge.updated_at.isoformat() if challenge.updated_at else None,
+                    challenge.published_at.isoformat() if challenge.published_at else None
+                ))
+                
+                conn.commit()
+                return True
+                
+        except Exception as e:
+            logger.error(f"Error saving challenge {challenge.challenge_id}: {e}")
+            return False
+    
+    def load_challenge(self, challenge_id: str):
+        """Load a challenge from the database"""
+        try:
+            import json
+            from models import Challenge, Statement, ChallengeStatus, MergedVideoMetadata
+            from datetime import datetime
+            
+            with sqlite3.connect(self.db_path) as conn:
+                cursor = conn.cursor()
+                cursor.execute("""
+                    SELECT challenge_id, creator_id, title, status, lie_statement_id,
+                           view_count, guess_count, correct_guess_count, is_merged_video,
+                           statements_json, merged_video_metadata_json, tags_json,
+                           created_at, updated_at, published_at
+                    FROM challenges WHERE challenge_id = ?
+                """, (challenge_id,))
+                
+                row = cursor.fetchone()
+                if not row:
+                    return None
+                
+                # Parse the data
+                statements = [Statement(**stmt_data) for stmt_data in json.loads(row[9])]
+                merged_metadata = MergedVideoMetadata(**json.loads(row[10])) if row[10] else None
+                tags = json.loads(row[11]) if row[11] else []
+                
+                # Create challenge object
+                challenge = Challenge(
+                    challenge_id=row[0],
+                    creator_id=row[1],
+                    title=row[2],
+                    status=ChallengeStatus(row[3]) if row[3] else ChallengeStatus.DRAFT,
+                    lie_statement_id=row[4],
+                    statements=statements,
+                    view_count=row[5] or 0,
+                    guess_count=row[6] or 0,
+                    correct_guess_count=row[7] or 0,
+                    is_merged_video=bool(row[8]),
+                    merged_video_metadata=merged_metadata,
+                    tags=tags,
+                    created_at=datetime.fromisoformat(row[12]) if row[12] else None,
+                    updated_at=datetime.fromisoformat(row[13]) if row[13] else None,
+                    published_at=datetime.fromisoformat(row[14]) if row[14] else None
+                )
+                
+                return challenge
+                
+        except Exception as e:
+            logger.error(f"Error loading challenge {challenge_id}: {e}")
+            return None
+    
+    def load_all_challenges(self) -> dict:
+        """Load all challenges from the database"""
+        try:
+            import json
+            from models import Challenge, Statement, ChallengeStatus, MergedVideoMetadata
+            from datetime import datetime
+            
+            challenges = {}
+            
+            with sqlite3.connect(self.db_path) as conn:
+                cursor = conn.cursor()
+                cursor.execute("""
+                    SELECT challenge_id, creator_id, title, status, lie_statement_id,
+                           view_count, guess_count, correct_guess_count, is_merged_video,
+                           statements_json, merged_video_metadata_json, tags_json,
+                           created_at, updated_at, published_at
+                    FROM challenges
+                """)
+                
+                for row in cursor.fetchall():
+                    try:
+                        # Parse the data
+                        statements = [Statement(**stmt_data) for stmt_data in json.loads(row[9])]
+                        merged_metadata = MergedVideoMetadata(**json.loads(row[10])) if row[10] else None
+                        tags = json.loads(row[11]) if row[11] else []
+                        
+                        # Create challenge object
+                        challenge = Challenge(
+                            challenge_id=row[0],
+                            creator_id=row[1],
+                            title=row[2],
+                            status=ChallengeStatus(row[3]) if row[3] else ChallengeStatus.DRAFT,
+                            lie_statement_id=row[4],
+                            statements=statements,
+                            view_count=row[5] or 0,
+                            guess_count=row[6] or 0,
+                            correct_guess_count=row[7] or 0,
+                            is_merged_video=bool(row[8]),
+                            merged_video_metadata=merged_metadata,
+                            tags=tags,
+                            created_at=datetime.fromisoformat(row[12]) if row[12] else None,
+                            updated_at=datetime.fromisoformat(row[13]) if row[13] else None,
+                            published_at=datetime.fromisoformat(row[14]) if row[14] else None
+                        )
+                        
+                        challenges[challenge.challenge_id] = challenge
+                        
+                    except Exception as e:
+                        logger.error(f"Error parsing challenge row: {e}")
+                        continue
+                
+            return challenges
+            
+        except Exception as e:
+            logger.error(f"Error loading all challenges: {e}")
+            return {}
+    
+    def delete_challenge_from_db(self, challenge_id: str) -> bool:
+        """Delete a challenge from the database"""
+        try:
+            with sqlite3.connect(self.db_path) as conn:
+                cursor = conn.cursor()
+                cursor.execute("DELETE FROM challenges WHERE challenge_id = ?", (challenge_id,))
+                cursor.execute("DELETE FROM guesses WHERE challenge_id = ?", (challenge_id,))
+                conn.commit()
+                return cursor.rowcount > 0
+                
+        except Exception as e:
+            logger.error(f"Error deleting challenge {challenge_id}: {e}")
+            return False
+    
+    def save_guess(self, guess) -> bool:
+        """Save a guess to the database"""
+        try:
+            with sqlite3.connect(self.db_path) as conn:
+                cursor = conn.cursor()
+                
+                cursor.execute("""
+                    INSERT OR REPLACE INTO guesses (
+                        guess_id, challenge_id, user_id, guessed_lie_statement_id,
+                        is_correct, response_time_seconds, submitted_at
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?)
+                """, (
+                    guess.guess_id,
+                    guess.challenge_id,
+                    guess.user_id,
+                    guess.guessed_lie_statement_id,
+                    guess.is_correct,
+                    guess.response_time_seconds,
+                    guess.submitted_at.isoformat() if guess.submitted_at else None
+                ))
+                
+                conn.commit()
+                return True
+                
+        except Exception as e:
+            logger.error(f"Error saving guess {guess.guess_id}: {e}")
+            return False
+    
+    def load_all_guesses(self) -> dict:
+        """Load all guesses from the database"""
+        try:
+            from models import GuessSubmission
+            from datetime import datetime
+            
+            guesses = {}
+            
+            with sqlite3.connect(self.db_path) as conn:
+                cursor = conn.cursor()
+                cursor.execute("""
+                    SELECT guess_id, challenge_id, user_id, guessed_lie_statement_id,
+                           is_correct, response_time_seconds, submitted_at
+                    FROM guesses
+                """)
+                
+                for row in cursor.fetchall():
+                    try:
+                        guess = GuessSubmission(
+                            guess_id=row[0],
+                            challenge_id=row[1],
+                            user_id=row[2],
+                            guessed_lie_statement_id=row[3],
+                            is_correct=bool(row[4]),
+                            response_time_seconds=row[5],
+                            submitted_at=datetime.fromisoformat(row[6]) if row[6] else None
+                        )
+                        
+                        guesses[guess.guess_id] = guess
+                        
+                    except Exception as e:
+                        logger.error(f"Error parsing guess row: {e}")
+                        continue
+                
+            return guesses
+            
+        except Exception as e:
+            logger.error(f"Error loading all guesses: {e}")
+            return {}
+
 
 # Global instance
 db_service = DatabaseService()
