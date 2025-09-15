@@ -154,17 +154,17 @@ This segment closes the loop, showing that Kiro helps with quality and stability
 
 * **Shot 16: The Synthesis Montage**
     * **Timecode:** 2:30 - 2:42
-    * **Visuals:** A rapid-fire montage of shots that visually connects the development process to the final product.
-        * Cut 1: The Kiro spec file for the video recorder.
-        * Cut 2: The polished video recorder UI in the app.
-        * Cut 2.5: **Live Action.** A 1-second shot of your hand pointing to a specific line in the printed-out Kiro spec file for the video recorder.
-        * Cut 3: The Kiro spec file for the backend.
-        * Cut 4: The app successfully uploading a video.
-        * Cut 4.5: **Live Action.** A 1-second shot of your hand pointing to a specific line in the printed-out Kiro spec file for the backend.
-        * Cut 5: The Kiro-generated test files.
-        * Cut 6: **Live Action.** Yourself playing the game or recording a challenge (creates narrative of creator making content and user enjoying it).
-    * **Editing:** In DaVinci Resolve, these cuts should be rhythmic and timed to the beat of the music. Use quick "flash" transitions or smooth slide transitions between the "Kiro" shots and the "App" shots to create a strong visual link. The hand-pointing shots create tangible, memorable connections between the specs and the product.
-    * **Audio:** The music swells. The voiceover should sound confident and inspiring. **VO starts:** "This is the power of modern, AI-assisted development. Kiro handled the heavy lifting, which gave us the time to focus on what matters: creativity, polish..."
+    * **Visuals:** A revised, rapid-fire montage with a clearer, escalating rhythm: **Plan -> Result -> Plan -> Result -> The Tangible Plan -> The Quality Proof -> The Human Payoff.**
+        * **Cut 1 (1.5s):** Screen recording of the Kiro spec file for the video recorder.
+        * **Cut 2 (1.5s):** The polished video recorder UI in the app.
+        * **Cut 3 (1.5s):** Screen recording of the Kiro spec file for the backend.
+        * **Cut 4 (1.5s):** The app successfully showing the upload animation.
+        * **Cut 5 (2s):** **The Consolidated Live-Action Shot.** A single, clean, impactful shot of your hand decisively tapping or underlining a key line on **one** of the printed-out spec sheets. This one shot now powerfully represents the entire "spec-driven" concept.
+        * **Cut 6 (1s):** A quick shot of the Kiro-generated test files.
+        * **Cut 7 (3s):** **Live Action.** A longer shot of you or your wife genuinely smiling and enjoying the final product.
+    * **Editing:** Still rhythmic and timed to the music. The new flow is more powerful: you establish the "spec-to-product" pattern twice, then provide the memorable, tangible shot of the physical spec, followed by the proof of quality (tests), and ending on the emotional payoff (a person enjoying the game).
+    * **Audio:** The music swells, and the voiceover remains the same, as it perfectly complements this new visual sequence.
+        * **VO starts:** "This is the power of modern, AI-assisted development. Kiro handled the heavy lifting, which gave us the time to focus on what matters: creativity, polish..."
 
 * **Shot 17: The Future Vision**
     * **Timecode:** 2:42 - 2:50
