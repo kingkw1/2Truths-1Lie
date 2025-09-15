@@ -1,4 +1,4 @@
-# 📚 2Truths-1Lie: Documentation Hub
+# 📚**Quick Navigation**: [🏆 Hackathon Submission](#-hackathon-submission) • [🚀 Get Started](#-quick-start) • [🏗 Architecture](#-technical-architecture) • [⚙️ Admin Guide](ADMIN_GUIDE.md) • [🤖 Kiro Integration](#-kiro-integration)2Truths-1Lie: Documentation Hub
 
 > **Kiro-Powered Mobile Social Game** | **Production Ready** | **Google Play Store Live**
 
@@ -120,6 +120,7 @@ This project showcases Kiro's spec-driven development methodology:
 ### 🏗️ **Architecture & Development**
 - **[Mobile Development Guide](MOBILE_GUIDE.md)** - React Native setup and patterns
 - **[Backend Guide](BACKEND_GUIDE.md)** - Python FastAPI development guide
+- **[Admin Guide](ADMIN_GUIDE.md)** - System administration and moderation tools
 - **[API Documentation](api.md)** - Complete REST API reference
 - **[Deployment Guide](DEPLOYMENT_GUIDE.md)** - Production deployment processes
 
