@@ -168,9 +168,9 @@ This segment closes the loop, showing that Kiro helps with quality and stability
 
 * **Shot 17: The Future Vision**
     * **Timecode:** 2:42 - 2:50
-    * **Visuals:** **Phone Screen Recording with Graphics.** Show a clean recording of the app's main feed.
-    * **Editing:** Use DaVinci Resolve to create and animate the futuristic UI mockups you planned. Simple, clean text and icons should fade in over the video feed, showing concepts like "Emotion Score: 85%" or a "Possible Lie!" indicator. This is more effective than a static image.
-    * **Audio:** Add subtle, futuristic UI sound effects as the mockups appear on screen. **VO continues:** "...and thinking about what's next—like our plan for real-time lie detection."
+    * **Visuals:** Use a "picture-in-picture" or split-screen effect. On the main part of the screen, show the clean recording of your app's feed. In a smaller, clean box overlaid on top, show the most compelling clip from your previous project's real-time emotion recognition display.
+    * **Editing:** Animate the emotion recognition box to fade in smoothly as you begin the voiceover line. You can add a subtle glowing border to it. This clearly communicates "this technology" plus "this app."
+    * **VO :** "...and thinking about what's next—like integrating **our proven emotion recognition engine** for real-time lie detection." The word "proven" is key and is backed up by the visual evidence on screen.
 
 * **Shot 18: The Final Call to Action**
     * **Timecode:** 2:50 - 3:00
@@ -179,6 +179,7 @@ This segment closes the loop, showing that Kiro helps with quality and stability
         * Tagline: "Built with Kiro"
         * GitHub Repo URL: `github.com/kingkw1/2Truths-1Lie`
         * The "Get it on Google Play" badge.
+        * Slightly ghosted-out Apple App Store badge with the text "Coming Soon" next to it
         * The QR code you generated.
     * **Editing:** Start on a quick shot of the app's home screen, then have it smoothly transition or fade into this final, clean title card. Hold on the card for the last few seconds.
     * **Audio:** The music hits its final, triumphant chord and fades out. **VO finishes:** "This is 2Truths-1Lie, built with Kiro. Check out our repo, and download the Open Beta today from the Google Play Store."
