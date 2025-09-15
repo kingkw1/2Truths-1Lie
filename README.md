@@ -14,7 +14,7 @@
 
 **Hackathon Category**: Games & Entertainment
 
-**[View the Demo Video](#-live-demo) · [Explore our Kiro Specs](#-our-kiro-workflow-from-spec-to-production) · [Quick Start](#-quick-start)**
+**[Watch the Demo Video](https://youtu.be/Y97sCqtQKB8) · [Explore our Kiro Specs](#-our-kiro-workflow-from-spec-to-production) · [Quick Start](#-quick-start)**
 
 </div>
 
@@ -25,7 +25,7 @@
 
 | Resource               | Link/Access                                      |
 |------------------------|-------------------------------------------------|
-| 🎬 Demo Video          | [Watch here](submission_materials/DEMO_VIDEO_LINK)   |
+| 🎬 Demo Video          | [Watch on YouTube](https://youtu.be/Y97sCqtQKB8)   |
 | 📱 QR Code / App Access | <img src="submission_materials/playstore-qr-code.png" alt="QR Code" width="150"/> <br>[Download on Google Play Store](https://play.google.com/store/apps/details?id=com.kingkw1.twotruthsoneliegame) |
 | 📂 Submission Assets    | [Browse folder](submission_materials/)          |
 
@@ -137,7 +137,7 @@ Get the project running on your local machine in under 5 minutes.
 | **/.kiro Directory**    | All specs, agent hooks, and steering documents present at project root |
 | **Kiro Usage**          | Complete spec-driven workflow; hooks set for future maintainability    |
 | **Kiro Development Process** | Detailed AI development journey: [`KIRO_WORKFLOW.md`](KIRO_WORKFLOW.md) |
-| **Demo Video Linked**   | [submission_materials/](submission_materials/) & README above          |
+| **Demo Video Linked**   | [Watch on YouTube](https://youtu.be/Y97sCqtQKB8) & [submission_materials/](submission_materials/)          |
 | **Live App for Review** | Download and judge via QR code and public APK in `submission_materials/` |
 | **Open Source License** | MIT License in root and docs                                           |
 
@@ -165,7 +165,7 @@ Get the project running on your local machine in under 5 minutes.
 
 **📱 Judge Access:**
 - **Live App**: Available on [Google Play Store](https://play.google.com/store/apps/details?id=com.kingkw1.twotruthsoneliegame) (or scan QR in [`submission_materials/`](submission_materials/))
-- **Demo Video**: 3-minute walkthrough following submission script
+- **Demo Video**: [3-minute walkthrough on YouTube](https://youtu.be/Y97sCqtQKB8) following submission script
 - **Source Code**: Full repository with organized documentation
 
 ### 🎯 Key Differentiators
