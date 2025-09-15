@@ -16,7 +16,8 @@
     "test:core": "jest --testPathPattern=\"(slices|services|hooks)\" --testPathIgnorePatterns=\"component|integration|e2e\"",
     "test:components": "jest --testPathPattern=\"components\"",
     "test:integration": "jest --testPathPattern=\"(integration|e2e|workflow)\"",
-    "test:quick": "jest --testPathPattern=\"(slices|services)\" --passWithNoTests"
+    "test:quick": "jest --testPathPattern=\"(slices|services)\" --passWithNoTests",
+    "test:moderation": "jest --testPathPattern=\"(ReportButton|ReportModal|reportService|reportingSlice)\" --verbose"
   },
   "dependencies": {
     "@expo/metro-runtime": "~6.1.2",

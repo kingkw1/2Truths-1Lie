@@ -26,7 +26,7 @@
 | Resource               | Link/Access                                      |
 |------------------------|-------------------------------------------------|
 | 🎬 Demo Video          | [Watch here](submission_materials/DEMO_VIDEO_LINK)   |
-| 📱 QR Code / App Access | <img src="submission_materials/playstore-qr-code.png" alt="QR Code" width="150"/> |
+| 📱 QR Code / App Access | <img src="submission_materials/playstore-qr-code.png" alt="QR Code" width="150"/> <br>[Download on Google Play Store](https://play.google.com/store/apps/details?id=com.kingkw1.twotruthsoneliegame) |
 | 📂 Submission Assets    | [Browse folder](submission_materials/)          |
 
 ## 🎯 A Partnership with Kiro
@@ -159,19 +159,19 @@ Get the project running on your local machine in under 5 minutes.
 
 **🚀 Production Readiness:**
 - ✅ **Deployed Backend**: Live FastAPI server on Railway with monitoring
-- ✅ **Mobile App Store**: Google Play Store submission with EAS Build
+- ✅ **Mobile App Store**: [Google Play Store submission](https://play.google.com/store/apps/details?id=com.kingkw1.twotruthsoneliegame) with EAS Build
 - ✅ **Video Processing**: FFmpeg-powered video recording and merging
 - ✅ **Robust Architecture**: JWT authentication, input validation, error handling
 
 **📱 Judge Access:**
-- **Live App**: Available on Google Play Store (scan QR in [`submission_materials/`](submission_materials/))
+- **Live App**: Available on [Google Play Store](https://play.google.com/store/apps/details?id=com.kingkw1.twotruthsoneliegame) (or scan QR in [`submission_materials/`](submission_materials/))
 - **Demo Video**: 3-minute walkthrough following submission script
 - **Source Code**: Full repository with organized documentation
 
 ### 🎯 Key Differentiators
 
 1. **Spec-First Development**: Every major feature started as a Kiro specification
-2. **Production Quality**: Real app deployed to Google Play Store with working video features
+2. **Production Quality**: Real app deployed to [Google Play Store](https://play.google.com/store/apps/details?id=com.kingkw1.twotruthsoneliegame) with working video features
 3. **Advanced Video Processing**: FFmpeg-powered backend with sophisticated mobile camera integration
 4. **Mobile + Backend**: Full-stack application with Railway deployment and EAS Build
 5. **Developer Experience**: Comprehensive debugging and validation throughout the video pipeline
