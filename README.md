@@ -6,7 +6,7 @@
 
 ---
 
-<img src="https://github.com/kingkw1/public_media/raw/main/gifs/kiro_full_gameplay_condensed.gif" alt="App Demo GIF" width="80%">
+<img src="https://github.com/kingkw1/public_media/raw/main/gifs/kiro_full_gameplay_condensed.gif" alt="App Demo GIF" width="25%">
 
 [![Kiro Spec-Driven](https://img.shields.io/badge/Kiro-Spec--Driven-blueviolet.svg)](#-our-kiro-workflow)
 [![Project Status](https://img.shields.io/badge/status-production_ready-brightgreen.svg)](#-project-status)
