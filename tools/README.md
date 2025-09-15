@@ -11,6 +11,8 @@ This directory contains Python utilities and scripts for development, testing, d
 | `testing/validate.py` | **Validate backend services** | Before deployment or after changes |
 | `migration/migrate_challenge_urls.py` | **Migrate legacy URLs** | During database schema updates |
 | `monitoring/export_monitoring_metrics.py` | **Export system metrics** | For monitoring system setup |
+| `debugging/memory_leak_diagnostic.py` | **Memory diagnostics & cleanup** | Production memory issues on Railway |
+| `aws/list_aws_challenges.py` | **S3 challenge browser** | Analyze S3 storage and challenges |
 
 ## 🔐 Authentication & Auth (`auth/`)
 Tools for authentication, JWT tokens, and user management.
@@ -142,6 +144,27 @@ pip install -r requirements.txt
 1. **`security_validation_verification.py`** - Security compliance check
 2. **`migrate_challenge_urls.py`** - Apply data migrations
 3. **`export_monitoring_metrics.py`** - Set up monitoring
+
+## 🐛 Debugging & AWS Tools (`debugging/`, `aws/`)
+Production debugging and AWS management utilities.
+
+### Debugging Tools
+- **`debugging/memory_leak_diagnostic.py`** - Production memory analysis and cleanup
+  ```bash
+  python tools/debugging/memory_leak_diagnostic.py
+  ```
+  - Analyzes memory usage and cleans up temporary files
+  - Identifies memory leaks and provides cleanup recommendations
+  - Useful for Railway production environment monitoring
+
+### AWS Tools  
+- **`aws/list_aws_challenges.py`** - S3 bucket challenge browser
+  ```bash
+  python tools/aws/list_aws_challenges.py
+  ```
+  - Lists all challenges stored in the S3 bucket
+  - Provides storage usage analysis and metadata
+  - Helps with AWS cost management and data auditing
 
 ## 🏗️ Organization Benefits
 
