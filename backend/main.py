@@ -144,6 +144,72 @@ async def setup_database():
             "timestamp": datetime.now().isoformat()
         }
 
+@app.post("/test-persistence")
+async def test_persistence():
+    """Test PostgreSQL data persistence by creating and retrieving data"""
+    try:
+        from services.database_service import get_db_service
+        import uuid
+        
+        db_service = get_db_service()
+        
+        # Create a test user
+        test_user_id = str(uuid.uuid4())
+        test_username = f"test_user_{datetime.now().strftime('%H%M%S')}"
+        
+        db_service._execute_query("""
+            INSERT INTO users (id, username, display_name, email, created_at, updated_at)
+            VALUES (%s, %s, %s, %s, %s, %s)
+        """, (test_user_id, test_username, f"Test User {test_username}", 
+              f"{test_username}@example.com", datetime.now(), datetime.now()))
+        
+        # Create a test challenge
+        test_challenge_id = str(uuid.uuid4())
+        db_service._execute_query("""
+            INSERT INTO challenges (id, creator_id, title, statements, lie_index, 
+                                  explanation, status, created_at, updated_at)
+            VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+        """, (test_challenge_id, test_user_id, "Test Persistence Challenge",
+              '["I love PostgreSQL", "I hate data loss", "I prefer SQLite"]',
+              2, "Actually I love PostgreSQL for persistence!", "published",
+              datetime.now(), datetime.now()))
+        
+        # Retrieve the data to verify persistence
+        user_count = db_service._execute_query(
+            "SELECT COUNT(*) as count FROM users", fetch_one=True
+        )
+        challenge_count = db_service._execute_query(
+            "SELECT COUNT(*) as count FROM challenges", fetch_one=True
+        )
+        
+        latest_challenge = db_service._execute_query("""
+            SELECT id, title, statements, created_at 
+            FROM challenges 
+            ORDER BY created_at DESC 
+            LIMIT 1
+        """, fetch_one=True)
+        
+        return {
+            "status": "success",
+            "message": "Data persistence test successful!",
+            "user_count": user_count.get('count', 0),
+            "challenge_count": challenge_count.get('count', 0),
+            "latest_challenge": {
+                "id": latest_challenge.get('id'),
+                "title": latest_challenge.get('title'),
+                "statements": latest_challenge.get('statements'),
+                "created_at": latest_challenge.get('created_at').isoformat() if latest_challenge.get('created_at') else None
+            },
+            "test_completed_at": datetime.now().isoformat()
+        }
+        
+    except Exception as e:
+        return {
+            "status": "error",
+            "message": f"Persistence test failed: {str(e)}",
+            "timestamp": datetime.now().isoformat()
+        }
+
 # CORS middleware for frontend integration
 app.add_middleware(
     CORSMiddleware,
