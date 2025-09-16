@@ -205,11 +205,57 @@ For technical issues or questions:
 3. Test with development environment first
 4. Review audit logs for operation history
 
+## 💾 Database Persistence & Data Recovery
+
+### Railway Deployment Data Persistence
+The application now uses **PostgreSQL** for production persistence on Railway to prevent data loss during deployments.
+
+#### Database Setup on Railway:
+1. **Add PostgreSQL Service**: In Railway dashboard, click "Add Service" → "Database" → "PostgreSQL"
+2. **Automatic Configuration**: Railway automatically sets `DATABASE_URL` environment variable
+3. **Initialize Database**: Run the setup script after deployment:
+   ```bash
+   python backend/setup_production_db.py
+   ```
+
+#### Database Architecture:
+- **Production (Railway)**: PostgreSQL with persistent storage
+- **Development (Local)**: SQLite for easy local testing
+- **Automatic Detection**: Application automatically uses the correct database based on `DATABASE_URL`
+
+#### Verifying Persistence:
+```bash
+# Check current database type and connection
+python backend/setup_production_db.py
+
+# View database configuration
+python -c "from backend.config import settings; print(f'Database: {settings.database_url[:50]}...')"
+```
+
+#### Recovery from Data Loss:
+If you experience data loss (challenges disappearing), it means the application reverted to SQLite:
+1. Ensure PostgreSQL addon is added to Railway project
+2. Verify `DATABASE_URL` environment variable is set
+3. Redeploy the application
+4. Run database setup script
+
+#### Migration Notes:
+- All existing SQLite data will be preserved during PostgreSQL migration
+- Challenge IDs and user data maintain consistency across database types
+- Media files in S3 remain unchanged
+
 ---
 
 ## 📝 Change Log
 
-### v1.0.0 (Current)
+### v1.1.0 (Latest) - Persistent Storage Fix
+- ✅ **PostgreSQL Integration**: Added production-ready PostgreSQL support
+- ✅ **Railway Persistence**: Challenges now survive deployments on Railway
+- ✅ **Dual Database Support**: Automatic SQLite (dev) / PostgreSQL (prod) switching
+- ✅ **Data Migration Tools**: Setup scripts for database initialization
+- ✅ **Zero Data Loss**: Eliminates challenge disappearance on deployment
+
+### v1.0.0
 - ✅ CLI admin tool with full CRUD operations
 - ✅ Web admin panel with visual interface
 - ✅ Comprehensive API endpoints
@@ -220,4 +266,4 @@ For technical issues or questions:
 
 ---
 
-*This admin system provides a complete solution for managing the 2Truths-1Lie application without requiring manual deployments or database access.*
+*This admin system provides a complete solution for managing the 2Truths-1Lie application with persistent data storage and comprehensive administrative capabilities.*

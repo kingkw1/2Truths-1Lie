@@ -1,26 +1,164 @@
 """
-Database service for managing SQLite database operations
+Database service for managing database operations with PostgreSQL and SQLite support
 """
 import sqlite3
 import logging
 from pathlib import Path
-from typing import Optional, Dict, Any, List
+from typing import Optional, Dict, Any, List, Union
 from datetime import datetime
 from passlib.context import CryptContext
 from config import settings
+import os
+
+# PostgreSQL imports (will only be used if DATABASE_URL is set)
+try:
+    import psycopg2
+    import psycopg2.extras
+    PSYCOPG2_AVAILABLE = True
+except ImportError:
+    PSYCOPG2_AVAILABLE = False
 
 logger = logging.getLogger(__name__)
 
 class DatabaseService:
-    """Service for managing SQLite database operations"""
+    """Service for managing database operations with PostgreSQL and SQLite support"""
     
     def __init__(self):
-        self.db_path = Path(__file__).parent.parent / "app.db"  # backend/app.db
+        self.database_url = settings.database_url
+        self.is_postgres = self.database_url.startswith('postgresql://') or self.database_url.startswith('postgres://')
         self.pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+        
+        if self.is_postgres:
+            if not PSYCOPG2_AVAILABLE:
+                raise ImportError("psycopg2 is required for PostgreSQL support")
+            logger.info("Using PostgreSQL database for production")
+            self.db_path = None
+        else:
+            logger.info("Using SQLite database for development")
+            self.db_path = Path(__file__).parent.parent / "app.db"
+            
         self._init_database()
         self._verify_database_constraints()
     
+    def get_connection(self):
+        """Get database connection based on environment"""
+        if self.is_postgres:
+            return psycopg2.connect(self.database_url)
+        else:
+            return sqlite3.connect(self.db_path)
+    
     def _init_database(self):
+        """Initialize the database with required tables"""
+        try:
+            if self.is_postgres:
+                self._init_postgres_database()
+            else:
+                self._init_sqlite_database()
+        except Exception as e:
+            logger.error(f"Failed to initialize database: {e}")
+            raise
+    
+    def _init_postgres_database(self):
+        """Initialize PostgreSQL database tables"""
+        with self.get_connection() as conn:
+            conn.autocommit = True
+            cursor = conn.cursor()
+            
+            # Create users table
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS users (
+                    id SERIAL PRIMARY KEY,
+                    email VARCHAR(255) UNIQUE NOT NULL,
+                    password_hash VARCHAR(255) NOT NULL,
+                    name VARCHAR(255),
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    is_active BOOLEAN DEFAULT TRUE,
+                    last_login TIMESTAMP
+                )
+            """)
+            
+            # Create indexes on users table for faster lookups
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_users_email ON users(email)")
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_users_is_active ON users(is_active)")
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_users_created_at ON users(created_at)")
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_users_last_login ON users(last_login)")
+            
+            # Create challenges table for persistent challenge storage
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS challenges (
+                    challenge_id VARCHAR(255) PRIMARY KEY,
+                    creator_id VARCHAR(255) NOT NULL,
+                    title VARCHAR(255),
+                    status VARCHAR(50) NOT NULL DEFAULT 'draft',
+                    lie_statement_id VARCHAR(255) NOT NULL,
+                    view_count INTEGER DEFAULT 0,
+                    guess_count INTEGER DEFAULT 0,
+                    correct_guess_count INTEGER DEFAULT 0,
+                    is_merged_video BOOLEAN DEFAULT FALSE,
+                    statements_json TEXT NOT NULL,
+                    merged_video_metadata_json TEXT,
+                    tags_json TEXT,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    published_at TIMESTAMP
+                )
+            """)
+            
+            # Create indexes on challenges table
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_challenges_creator_id ON challenges(creator_id)")
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_challenges_status ON challenges(status)")
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_challenges_created_at ON challenges(created_at DESC)")
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_challenges_published_at ON challenges(published_at DESC)")
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_challenges_view_count ON challenges(view_count DESC)")
+            
+            # Create guesses table for challenge guesses
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS guesses (
+                    guess_id VARCHAR(255) PRIMARY KEY,
+                    challenge_id VARCHAR(255) NOT NULL,
+                    user_id VARCHAR(255) NOT NULL,
+                    guessed_lie_statement_id VARCHAR(255) NOT NULL,
+                    is_correct BOOLEAN NOT NULL,
+                    response_time_seconds REAL,
+                    submitted_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    CONSTRAINT fk_guesses_challenge_id 
+                        FOREIGN KEY (challenge_id) REFERENCES challenges(challenge_id) ON DELETE CASCADE
+                )
+            """)
+            
+            # Create indexes on guesses table
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_guesses_challenge_id ON guesses(challenge_id)")
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_guesses_user_id ON guesses(user_id)")
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_guesses_submitted_at ON guesses(submitted_at DESC)")
+            
+            # Create user_reports table for content moderation
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS user_reports (
+                    id SERIAL PRIMARY KEY,
+                    challenge_id VARCHAR(255) NOT NULL,
+                    user_id INTEGER NOT NULL,
+                    reason VARCHAR(100) NOT NULL,
+                    details TEXT,
+                    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                    CONSTRAINT fk_user_reports_user_id 
+                        FOREIGN KEY (user_id) REFERENCES users (id) 
+                        ON DELETE CASCADE,
+                    CONSTRAINT chk_user_reports_reason 
+                        CHECK (reason IN (
+                            'inappropriate_language', 'spam', 'personal_info', 
+                            'violence', 'hate_speech', 'adult_content', 
+                            'copyright', 'misleading', 'low_quality'
+                        ))
+                )
+            """)
+            
+            # Create indexes on user_reports table
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_user_reports_challenge_id ON user_reports(challenge_id)")
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_user_reports_user_id ON user_reports(user_id)")
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_user_reports_created_at ON user_reports(created_at DESC)")
+    
+    def _init_sqlite_database(self):
         """Initialize the database with required tables"""
         try:
             with sqlite3.connect(self.db_path) as conn:
@@ -209,6 +347,59 @@ class DatabaseService:
         except Exception as e:
             logger.error(f"Failed to initialize database: {e}")
             raise
+    
+    def _execute_query(self, query: str, params: tuple = (), fetch_one: bool = False, fetch_all: bool = False) -> Any:
+        """Execute a query with proper database-specific handling"""
+        try:
+            with self.get_connection() as conn:
+                if self.is_postgres:
+                    cursor = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
+                    cursor.execute(query, params)
+                    
+                    if fetch_one:
+                        result = cursor.fetchone()
+                        return dict(result) if result else None
+                    elif fetch_all:
+                        results = cursor.fetchall()
+                        return [dict(row) for row in results]
+                    else:
+                        conn.commit()
+                        return cursor.rowcount
+                else:
+                    conn.row_factory = sqlite3.Row
+                    cursor = conn.cursor()
+                    cursor.execute(query, params)
+                    
+                    if fetch_one:
+                        result = cursor.fetchone()
+                        return dict(result) if result else None
+                    elif fetch_all:
+                        results = cursor.fetchall()
+                        return [dict(row) for row in results]
+                    else:
+                        conn.commit()
+                        return cursor.rowcount
+                        
+        except Exception as e:
+            logger.error(f"Database query failed: {e}")
+            raise
+    
+    def _prepare_query(self, query: str) -> str:
+        """Convert SQLite-style queries to PostgreSQL if needed"""
+        if self.is_postgres:
+            # Convert SQLite parameter style (?) to PostgreSQL (%s)
+            # This is a simple conversion - more complex queries might need custom handling
+            converted = query.replace('?', '%s')
+            
+            # Convert SQLite AUTOINCREMENT to PostgreSQL SERIAL
+            converted = converted.replace('AUTOINCREMENT', 'SERIAL')
+            
+            # Convert SQLite-specific types
+            converted = converted.replace('TEXT', 'VARCHAR(255)')
+            converted = converted.replace('TIMESTAMP DEFAULT CURRENT_TIMESTAMP', 'TIMESTAMP DEFAULT CURRENT_TIMESTAMP')
+            
+            return converted
+        return query
     
     def _verify_database_constraints(self):
         """Verify that all foreign key constraints and indexes are properly set up"""
@@ -430,36 +621,53 @@ class DatabaseService:
             Exception: If database operation fails
         """
         try:
-            with sqlite3.connect(self.db_path) as conn:
-                # Enable foreign key constraints for this connection
-                conn.execute("PRAGMA foreign_keys = ON")
-                cursor = conn.cursor()
-                
-                # Check if user already exists
-                cursor.execute("SELECT id FROM users WHERE email = ?", (email,))
-                if cursor.fetchone():
-                    logger.warning(f"User creation failed: email {email} already exists")
-                    return None
-                
-                # Hash password and create user
-                password_hash = self.hash_password(password)
-                
-                cursor.execute("""
+            # Check if user already exists
+            existing_user = self._execute_query(
+                "SELECT id FROM users WHERE email = %s" if self.is_postgres else "SELECT id FROM users WHERE email = ?",
+                (email,),
+                fetch_one=True
+            )
+            
+            if existing_user:
+                logger.warning(f"User creation failed: email {email} already exists")
+                return None
+            
+            # Hash password and create user
+            password_hash = self.hash_password(password)
+            current_time = datetime.utcnow()
+            
+            if self.is_postgres:
+                # PostgreSQL version with RETURNING clause
+                result = self._execute_query("""
                     INSERT INTO users (email, password_hash, name, created_at, updated_at)
-                    VALUES (?, ?, ?, ?, ?)
-                """, (email, password_hash, name, datetime.utcnow(), datetime.utcnow()))
-                
-                user_id = cursor.lastrowid
-                conn.commit()
-                
+                    VALUES (%s, %s, %s, %s, %s)
+                    RETURNING id
+                """, (email, password_hash, name, current_time, current_time), fetch_one=True)
+                user_id = result['id'] if result else None
+            else:
+                # SQLite version
+                with self.get_connection() as conn:
+                    conn.execute("PRAGMA foreign_keys = ON")
+                    cursor = conn.cursor()
+                    cursor.execute("""
+                        INSERT INTO users (email, password_hash, name, created_at, updated_at)
+                        VALUES (?, ?, ?, ?, ?)
+                    """, (email, password_hash, name, current_time, current_time))
+                    user_id = cursor.lastrowid
+                    conn.commit()
+            
+            if user_id:
                 # Return user data (without password hash)
                 return {
                     "id": user_id,
                     "email": email,
                     "name": name,
-                    "created_at": datetime.utcnow().isoformat(),
+                    "created_at": current_time.isoformat(),
                     "is_active": True
                 }
+            else:
+                logger.error("Failed to get user ID after creation")
+                return None
                 
         except Exception as e:
             logger.error(f"Failed to create user {email}: {e}")

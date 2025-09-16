@@ -26,6 +26,20 @@ class Settings(BaseSettings):
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
     
+    # Database settings
+    DATABASE_URL: Optional[str] = None  # Railway PostgreSQL URL
+    SQLALCHEMY_DATABASE_URL: Optional[str] = None
+    
+    @property
+    def database_url(self) -> str:
+        """Get the appropriate database URL based on environment"""
+        if self.DATABASE_URL:
+            # Production: Use Railway PostgreSQL
+            return self.DATABASE_URL
+        else:
+            # Development: Use local SQLite
+            return f"sqlite:///{self.BACKEND_DIR / 'app.db'}"
+    
     # File type restrictions
     ALLOWED_VIDEO_TYPES: set = {
         "video/mp4", "video/webm", "video/ogg", "video/avi", "video/mov"
