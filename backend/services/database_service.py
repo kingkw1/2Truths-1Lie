@@ -404,6 +404,11 @@ class DatabaseService:
     def _verify_database_constraints(self):
         """Verify that all foreign key constraints and indexes are properly set up"""
         try:
+            # Skip constraint verification for PostgreSQL - constraints are handled at table creation
+            if self.use_postgres:
+                logger.info("PostgreSQL database - skipping SQLite-specific constraint verification")
+                return
+                
             with sqlite3.connect(self.db_path) as conn:
                 cursor = conn.cursor()
                 

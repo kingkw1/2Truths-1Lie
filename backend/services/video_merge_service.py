@@ -65,7 +65,7 @@ class VideoMergeService:
                 self.use_cloud_storage = False
         
         # Verify FFmpeg is available
-        self._verify_ffmpeg()
+        self.ffmpeg_available = self._verify_ffmpeg()
     
     def _verify_ffmpeg(self):
         """Verify FFmpeg is installed and accessible"""
@@ -78,15 +78,16 @@ class VideoMergeService:
             )
             if result.returncode == 0:
                 logger.info("FFmpeg verified and ready for video processing")
+                return True
             else:
-                raise VideoMergeError("FFmpeg not working properly", "FFMPEG_ERROR")
+                logger.warning("FFmpeg not working properly - video merging will be disabled")
+                return False
         except FileNotFoundError:
-            raise VideoMergeError(
-                "FFmpeg not found. Please install FFmpeg to enable video merging.",
-                "FFMPEG_NOT_FOUND"
-            )
+            logger.warning("FFmpeg not found - video merging will be disabled")
+            return False
         except subprocess.TimeoutExpired:
-            raise VideoMergeError("FFmpeg verification timed out", "FFMPEG_TIMEOUT")
+            logger.warning("FFmpeg verification timed out - video merging will be disabled")
+            return False
     
     async def check_merge_readiness(self, merge_session_id: str, user_id: str) -> Dict[str, Any]:
         """Check if all videos in a merge session are ready for merging"""
