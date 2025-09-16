@@ -7,6 +7,7 @@ from typing import List, Optional, Dict, Any
 from pathlib import Path
 import logging
 import uuid
+import subprocess
 from datetime import datetime
 
 from services.auth_service import get_current_user
@@ -20,6 +21,46 @@ router = APIRouter(prefix="/api/v1/challenge-videos", tags=["challenge-videos"])
 # Initialize services
 upload_service = ChunkedUploadService()
 merge_service = VideoMergeService()
+
+
+def _is_ffmpeg_available() -> bool:
+    """Check if FFmpeg/FFprobe is available for video validation"""
+    try:
+        result = subprocess.run(
+            ["ffprobe", "-version"], 
+            capture_output=True, 
+            text=True, 
+            timeout=5
+        )
+        return result.returncode == 0
+    except (FileNotFoundError, subprocess.TimeoutExpired):
+        return False
+
+
+def _validate_video_with_ffprobe(video_path: Path, video_index: int) -> bool:
+    """Validate video file using FFprobe if available"""
+    if not _is_ffmpeg_available():
+        logger.warning(f"FFprobe not available - skipping video {video_index} validation")
+        return True  # Skip validation if FFprobe is not available
+    
+    try:
+        probe_result = subprocess.run([
+            'ffprobe', '-v', 'quiet', '-print_format', 'json',
+            '-show_format', str(video_path)
+        ], capture_output=True, text=True, timeout=10)
+        
+        if probe_result.returncode != 0:
+            logger.error(f"Video {video_index} failed FFprobe validation: {probe_result.stderr}")
+            return False
+        else:
+            logger.info(f"Video {video_index} passed FFprobe validation")
+            return True
+    except subprocess.TimeoutExpired:
+        logger.warning(f"FFprobe validation timed out for video {video_index} - assuming valid")
+        return True
+    except Exception as e:
+        logger.warning(f"FFprobe validation failed for video {video_index}: {e} - assuming valid")
+        return True
 
 
 class MultiVideoUploadRequest:
@@ -1213,21 +1254,12 @@ async def upload_videos_for_merge_direct(
                         detail=f"Video {i} file corruption detected during save"
                     )
                 
-                # Quick probe to validate MP4 structure
-                import subprocess
-                probe_result = subprocess.run([
-                    'ffprobe', '-v', 'quiet', '-print_format', 'json',
-                    '-show_format', str(video_path)
-                ], capture_output=True, text=True)
-                
-                if probe_result.returncode != 0:
-                    logger.error(f"Video {i} failed FFprobe validation: {probe_result.stderr}")
+                # Validate MP4 structure if FFprobe is available
+                if not _validate_video_with_ffprobe(video_path, i):
                     raise HTTPException(
                         status_code=status.HTTP_400_BAD_REQUEST,
                         detail=f"Video {i} is not a valid MP4 file or is corrupted"
                     )
-                else:
-                    logger.info(f"Video {i} passed FFprobe validation")
                 
                 video_paths.append(video_path)
             

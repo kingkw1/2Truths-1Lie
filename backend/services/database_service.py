@@ -739,31 +739,24 @@ class DatabaseService:
     def get_user_by_id(self, user_id: int) -> Optional[Dict[str, Any]]:
         """Get user by ID"""
         try:
-            with sqlite3.connect(self.db_path) as conn:
-                # Enable foreign key constraints for this connection
-                conn.execute("PRAGMA foreign_keys = ON")
-                cursor = conn.cursor()
-                
-                cursor.execute("""
-                    SELECT id, email, name, created_at, is_active, last_login
-                    FROM users 
-                    WHERE id = ? AND is_active = TRUE
-                """, (user_id,))
-                
-                user_data = cursor.fetchone()
-                if not user_data:
-                    return None
-                
-                user_id, email, name, created_at, is_active, last_login = user_data
-                
-                return {
-                    "id": user_id,
-                    "email": email,
-                    "name": name,
-                    "created_at": created_at,
-                    "is_active": bool(is_active),
-                    "last_login": last_login
-                }
+            user_data = self._execute_query(
+                "SELECT id, email, name, created_at, is_active, last_login FROM users WHERE id = %s AND is_active = TRUE" if self.is_postgres 
+                else "SELECT id, email, name, created_at, is_active, last_login FROM users WHERE id = ? AND is_active = TRUE",
+                (user_id,),
+                fetch_one=True
+            )
+            
+            if not user_data:
+                return None
+            
+            return {
+                "id": user_data["id"],
+                "email": user_data["email"],
+                "name": user_data["name"],
+                "created_at": user_data["created_at"],
+                "is_active": bool(user_data["is_active"]),
+                "last_login": user_data["last_login"]
+            }
                 
         except Exception as e:
             logger.error(f"Failed to get user by ID {user_id}: {e}")
@@ -772,31 +765,24 @@ class DatabaseService:
     def get_user_by_email(self, email: str) -> Optional[Dict[str, Any]]:
         """Get user by email"""
         try:
-            with sqlite3.connect(self.db_path) as conn:
-                # Enable foreign key constraints for this connection
-                conn.execute("PRAGMA foreign_keys = ON")
-                cursor = conn.cursor()
+            user_data = self._execute_query(
+                "SELECT id, email, name, created_at, is_active, last_login FROM users WHERE email = %s AND is_active = TRUE" if self.is_postgres
+                else "SELECT id, email, name, created_at, is_active, last_login FROM users WHERE email = ? AND is_active = TRUE",
+                (email,),
+                fetch_one=True
+            )
+            
+            if not user_data:
+                return None
                 
-                cursor.execute("""
-                    SELECT id, email, name, created_at, is_active, last_login
-                    FROM users 
-                    WHERE email = ? AND is_active = TRUE
-                """, (email,))
-                
-                user_data = cursor.fetchone()
-                if not user_data:
-                    return None
-                
-                user_id, email, name, created_at, is_active, last_login = user_data
-                
-                return {
-                    "id": user_id,
-                    "email": email,
-                    "name": name,
-                    "created_at": created_at,
-                    "is_active": bool(is_active),
-                    "last_login": last_login
-                }
+            return {
+                "id": user_data["id"],
+                "email": user_data["email"],
+                "name": user_data["name"],
+                "created_at": user_data["created_at"],
+                "is_active": bool(user_data["is_active"]),
+                "last_login": user_data["last_login"]
+            }
                 
         except Exception as e:
             logger.error(f"Failed to get user by email {email}: {e}")
