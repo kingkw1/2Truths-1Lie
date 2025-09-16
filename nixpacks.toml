@@ -2,7 +2,7 @@
 # Configures Python environment, PostgreSQL dependencies, and startup command
 
 [phases.setup]
-nixPkgs = ["python310", "postgresql", "ffmpeg-full"]
+nixPkgs = ["...", "python310", "postgresql", "ffmpeg-full"]
 
 [phases.install]
 cmd = "pip install -r requirements.txt"
