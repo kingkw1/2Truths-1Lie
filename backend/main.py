@@ -69,6 +69,40 @@ app.include_router(user_router)
 app.include_router(admin_router)
 app.include_router(monitoring_router)
 
+@app.get("/test-db-connection")
+async def test_database_connection():
+    """Test PostgreSQL database connection from within Railway deployment"""
+    try:
+        from services.database_service import get_db_service
+        import os
+        
+        # Get database info
+        database_url = os.getenv("DATABASE_URL", "Not found")
+        
+        # Test database connection
+        db_service = get_db_service()
+        
+        # Simple test query
+        result = db_service._execute_query(
+            "SELECT version() as version, current_database() as database, current_user as user",
+            fetch_one=True
+        )
+        
+        return {
+            "status": "success",
+            "message": "PostgreSQL connection successful!",
+            "database_url_prefix": database_url[:50] + "..." if database_url != "Not found" else "Not found",
+            "database_info": result,
+            "timestamp": datetime.now().isoformat()
+        }
+        
+    except Exception as e:
+        return {
+            "status": "error",
+            "message": f"Database connection failed: {str(e)}",
+            "timestamp": datetime.now().isoformat()
+        }
+
 # CORS middleware for frontend integration
 app.add_middleware(
     CORSMiddleware,
