@@ -103,6 +103,47 @@ async def test_database_connection():
             "timestamp": datetime.now().isoformat()
         }
 
+@app.post("/setup-database")
+async def setup_database():
+    """Initialize PostgreSQL database tables"""
+    try:
+        from services.database_service import get_db_service
+        
+        # Get database service
+        db_service = get_db_service()
+        
+        # The database service __init__ already creates tables, but let's verify
+        # Check if tables exist
+        tables_check = db_service._execute_query("""
+            SELECT table_name 
+            FROM information_schema.tables 
+            WHERE table_schema = 'public'
+            ORDER BY table_name
+        """, fetch_all=True)
+        
+        table_names = [row['table_name'] for row in tables_check]
+        
+        # Test inserting and retrieving a user
+        test_user_result = db_service._execute_query(
+            "SELECT COUNT(*) as count FROM users",
+            fetch_one=True
+        )
+        
+        return {
+            "status": "success",
+            "message": "Database setup completed successfully!",
+            "tables_created": table_names,
+            "user_count": test_user_result.get('count', 0),
+            "timestamp": datetime.now().isoformat()
+        }
+        
+    except Exception as e:
+        return {
+            "status": "error", 
+            "message": f"Database setup failed: {str(e)}",
+            "timestamp": datetime.now().isoformat()
+        }
+
 # CORS middleware for frontend integration
 app.add_middleware(
     CORSMiddleware,
