@@ -1,3 +1,7 @@
+# Railway Deployment Requirements
+# This file is required at the root level for Railway to detect Python dependencies
+# It's a copy of backend/requirements.txt maintained for deployment compatibility
+
 fastapi==0.115.0
 uvicorn==0.24.0
 python-multipart==0.0.6

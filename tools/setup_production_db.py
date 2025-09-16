@@ -1,7 +1,16 @@
 #!/usr/bin/env python3
+#!/usr/bin/env python3
 """
-Script to set up PostgreSQL database on Railway for persistent storage
-Run this after deploying to Railway with PostgreSQL addon
+PostgreSQL Database Setup Tool for Railway Production Environment
+
+This script sets up and verifies the PostgreSQL database connection in Railway.
+Primarily useful for manual database initialization or troubleshooting.
+
+Usage:
+    railway run python tools/setup_production_db.py
+
+Note: The main application now includes /setup-database and /test-db-connection 
+endpoints that provide the same functionality via HTTP API.
 """
 import os
 import sys
@@ -9,7 +18,7 @@ import logging
 from pathlib import Path
 
 # Add backend directory to path
-backend_dir = Path(__file__).parent
+backend_dir = Path(__file__).parent.parent / 'backend'
 sys.path.append(str(backend_dir))
 
 # Import config first to check database type
