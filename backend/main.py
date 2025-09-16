@@ -144,6 +144,44 @@ async def setup_database():
             "timestamp": datetime.now().isoformat()
         }
 
+@app.get("/check-database-structure")
+async def check_database_structure():
+    """Check the actual database structure"""
+    try:
+        from services.database_service import get_db_service
+        
+        db_service = get_db_service()
+        
+        # Check users table structure
+        users_columns = db_service._execute_query("""
+            SELECT column_name, data_type, is_nullable
+            FROM information_schema.columns 
+            WHERE table_name = 'users' 
+            ORDER BY ordinal_position
+        """, fetch_all=True)
+        
+        # Check challenges table structure  
+        challenges_columns = db_service._execute_query("""
+            SELECT column_name, data_type, is_nullable
+            FROM information_schema.columns 
+            WHERE table_name = 'challenges'
+            ORDER BY ordinal_position
+        """, fetch_all=True)
+        
+        return {
+            "status": "success",
+            "users_table": users_columns,
+            "challenges_table": challenges_columns,
+            "timestamp": datetime.now().isoformat()
+        }
+        
+    except Exception as e:
+        return {
+            "status": "error",
+            "message": f"Structure check failed: {str(e)}",
+            "timestamp": datetime.now().isoformat()
+        }
+
 @app.post("/test-persistence")
 async def test_persistence():
     """Test PostgreSQL data persistence by creating and retrieving data"""
