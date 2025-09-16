@@ -12,8 +12,16 @@ from pathlib import Path
 backend_dir = Path(__file__).parent
 sys.path.append(str(backend_dir))
 
-from services.database_service import DatabaseService
+# Import config first to check database type
 from config import settings
+
+# Only import database service if we have the right environment
+try:
+    from services.database_service import DatabaseService
+    DB_SERVICE_AVAILABLE = True
+except ImportError as e:
+    DB_SERVICE_AVAILABLE = False
+    IMPORT_ERROR = str(e)
 
 # Set up logging
 logging.basicConfig(level=logging.INFO)
@@ -41,6 +49,14 @@ def setup_railway_postgres():
     
     # Check if DATABASE_URL is available (Railway PostgreSQL addon)
     if not check_postgresql_connection():
+        return False
+    
+    # Check if we can import the database service
+    if not DB_SERVICE_AVAILABLE:
+        logger.error("❌ Database service dependencies not available")
+        logger.error(f"Import error: {IMPORT_ERROR}")
+        logger.info("💡 This is expected when running locally without PostgreSQL dependencies")
+        logger.info("🚀 This script should be run on Railway after PostgreSQL is added")
         return False
     
     try:

@@ -1362,5 +1362,12 @@ class DatabaseService:
             return {}
 
 
-# Global instance
-db_service = DatabaseService()
+# Global instance - will be initialized when first accessed
+db_service = None
+
+def get_db_service():
+    """Get or create the global database service instance"""
+    global db_service
+    if db_service is None:
+        db_service = DatabaseService()
+    return db_service
