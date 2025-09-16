@@ -11,14 +11,13 @@ import json
 
 from services.auth_service import get_current_user
 from services.challenge_service import challenge_service
-from services.database_service import DatabaseService
+from services.database_service import get_db_service
 from models import Challenge, ChallengeListResponse, ModerationReviewRequest, ReportedChallengesResponse, ReportedChallenge
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/v1/admin", tags=["admin"])
 
-# Initialize database service for user reports
-db_service = DatabaseService()
+# Database service will be accessed via get_db_service() function
 
 
 def log_admin_action(action: str, user_id: str, details: dict = None, success: bool = True):
@@ -59,7 +58,7 @@ async def get_reported_challenges(
         offset = (page - 1) * page_size
         
         # Get reported challenges from database
-        reported_challenges = db_service.get_all_reported_challenges(
+        reported_challenges = get_db_service().get_all_reported_challenges(
             limit=page_size,
             offset=offset
         )
@@ -76,7 +75,7 @@ async def get_reported_challenges(
             ))
         
         # Get total count for pagination
-        total_count = db_service.get_reported_challenges_count()
+        total_count = get_db_service().get_reported_challenges_count()
         
         has_next = len(reported_challenges) == page_size
         
@@ -393,7 +392,7 @@ async def cleanup_orphaned_reports(current_user: str = Depends(get_current_user)
         logger.info(f"Admin {current_user} cleaning up orphaned reports")
         
         # Get all reported challenge IDs
-        reported_challenge_ids = db_service.get_all_reported_challenge_ids()
+        reported_challenge_ids = get_db_service().get_all_reported_challenge_ids()
         
         # Check which ones actually exist in the challenge service
         orphaned_reports = []
@@ -409,7 +408,7 @@ async def cleanup_orphaned_reports(current_user: str = Depends(get_current_user)
         # Remove orphaned reports
         removed_count = 0
         for challenge_id in orphaned_reports:
-            count = db_service.remove_reports_for_challenge(challenge_id)
+            count = get_db_service().remove_reports_for_challenge(challenge_id)
             removed_count += count
             logger.info(f"Removed {count} orphaned reports for challenge {challenge_id}")
         
@@ -477,7 +476,7 @@ async def delete_challenge_admin(
             )
         
         # Delete associated database records
-        db_deletions = db_service.admin_delete_challenge_records(challenge_id)
+        db_deletions = get_db_service().admin_delete_challenge_records(challenge_id)
         
         # Try to delete associated media files from cloud storage
         media_deletions = {"deleted": 0, "errors": []}

@@ -13,10 +13,9 @@ from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from services.challenge_service import challenge_service
 from services.upload_service import ChunkedUploadService
 from services.cloud_storage_service import create_cloud_storage_service, CloudStorageError
-from services.database_service import DatabaseService
+from services.database_service import get_db_service
 
-# Initialize database service
-db_service = DatabaseService()
+# Database service will be accessed via get_db_service() function
 from models import (
     CreateChallengeRequest, 
     Challenge, 
@@ -128,7 +127,7 @@ def enrich_challenge_with_creator_name(challenge: Challenge) -> dict:
         
         # Handle both integer and string creator IDs
         if creator_id.isdigit():
-            user_info = db_service.get_user_by_id(int(creator_id))
+            user_info = get_db_service().get_user_by_id(int(creator_id))
             if user_info and user_info.get("name"):
                 challenge_dict["creator_name"] = user_info["name"]
             else:
@@ -718,7 +717,7 @@ async def report_challenge(
             )
         
         # Create the report using the database service
-        report_data = db_service.create_user_report(
+        report_data = get_db_service().create_user_report(
             challenge_id=challenge_id,
             user_id=user_id_int,
             reason=request.reason,

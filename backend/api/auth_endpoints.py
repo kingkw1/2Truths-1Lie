@@ -13,7 +13,7 @@ from services.auth_service import (
     security,
     create_access_token
 )
-from services.database_service import db_service
+from services.database_service import get_db_service
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/v1/auth", tags=["authentication"])
@@ -65,7 +65,7 @@ async def register(request: RegisterRequest):
             )
         
         # Create user in database
-        user_data = db_service.create_user(request.email, request.password, request.name)
+        user_data = get_db_service().create_user(request.email, request.password, request.name)
         
         if not user_data:
             raise HTTPException(
@@ -114,7 +114,7 @@ async def login(request: LoginRequest):
             )
         
         # Authenticate user against database
-        user_data = db_service.authenticate_user(request.email, request.password)
+        user_data = get_db_service().authenticate_user(request.email, request.password)
         
         if not user_data:
             raise HTTPException(
@@ -245,7 +245,7 @@ async def validate_token(
         if user_type == "authenticated" and user_id:
             try:
                 # Fetch user from database to get name and other details
-                user_info = db_service.get_user_by_id(int(user_id))
+                user_info = get_db_service().get_user_by_id(int(user_id))
             except (ValueError, Exception) as e:
                 logger.warning(f"Could not fetch user data for ID {user_id}: {e}")
         

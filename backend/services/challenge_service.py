@@ -78,14 +78,14 @@ class ChallengeService:
         """Load challenges and guesses from database"""
         try:
             # Import database service
-            from services.database_service import db_service
+            from services.database_service import get_db_service
             
             # Load challenges from database
-            self.challenges = db_service.load_all_challenges()
+            self.challenges = get_db_service().load_all_challenges()
             logger.info(f"Loaded {len(self.challenges)} challenges from database")
             
             # Load guesses from database
-            self.guesses = db_service.load_all_guesses()
+            self.guesses = get_db_service().load_all_guesses()
             logger.info(f"Loaded {len(self.guesses)} guesses from database")
             
             # Migration: If database is empty but JSON files exist, migrate data
@@ -101,7 +101,7 @@ class ChallengeService:
     def _migrate_from_json(self):
         """Migrate challenges from JSON files to database (one-time migration)"""
         try:
-            from services.database_service import db_service
+            from services.database_service import get_db_service
             
             # Load from JSON files
             if self.challenges_file.exists():
@@ -111,7 +111,7 @@ class ChallengeService:
                         challenge = Challenge(**challenge_data)
                         self.challenges[challenge.challenge_id] = challenge
                         # Save to database
-                        db_service.save_challenge(challenge)
+                        get_db_service().save_challenge(challenge)
                 
                 logger.info(f"Migrated {len(self.challenges)} challenges to database")
             
@@ -132,12 +132,12 @@ class ChallengeService:
     async def _save_challenges(self):
         """Save challenges to database"""
         try:
-            from services.database_service import db_service
+            from services.database_service import get_db_service
             
             # Save each challenge to database
             saved_count = 0
             for challenge in self.challenges.values():
-                if db_service.save_challenge(challenge):
+                if get_db_service().save_challenge(challenge):
                     saved_count += 1
             
             logger.info(f"Saved {saved_count}/{len(self.challenges)} challenges to database")
@@ -148,12 +148,12 @@ class ChallengeService:
     async def _save_guesses(self):
         """Save guesses to database"""
         try:
-            from services.database_service import db_service
+            from services.database_service import get_db_service
             
             # Save each guess to database
             saved_count = 0
             for guess in self.guesses.values():
-                if db_service.save_guess(guess):
+                if get_db_service().save_guess(guess):
                     saved_count += 1
             
             logger.info(f"Saved {saved_count}/{len(self.guesses)} guesses to database")
