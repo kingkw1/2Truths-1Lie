@@ -27,13 +27,23 @@
 * **📣 Public Focus (#BuildInPublic & Storytelling)**:
     * Document the process of porting to iOS. Share a challenge you faced and how you overcame it (e.g., "TIL about iOS provisioning profiles... #xcode #reactnative"). This is authentic and valuable content.
 
-**Day 6 & 7: (Sept 23-24) - Community-Ready Features**
+**Day 6: (Sept 23) - Polished User Authentication**
 * **💻 Development Focus**:
-    * Upgrade your user authentication from the MVP to a more robust system (full signup, password reset, etc.), as outlined in your development plan.
-    * Implement the basic content moderation flow: a "Report" button on challenges and a simple flagging system on your backend.
+    * **Upgrade User Authentication**: Instead of a full overhaul, focus on the most critical user-facing improvements from your list.
+        * **Implement Password Recovery**: This is a core user expectation. Integrate an email service to handle password reset links.
+        * **Build a Basic User Profile Screen**: Create a simple screen where a user can see their username and email, with a "Log Out" button. This adds a necessary layer of polish.
+        * **Defer for now**: Biometric login and advanced session refresh are technically complex. We'll add them to the post-hackathon roadmap.
 * **📣 Public Focus (#BuildInPublic & Storytelling)**:
-    * Post an end-of-week recap video or thread. Show off the working IAP flow, the new login screen, and the moderation feature. Frame it as "Making the app safe and ready for a real community."
+    * Post about the upgrade: "Moving beyond a basic login. Today's focus is on adding crucial features like password recovery to make the app feel more secure and professional for our first users. #indiedev #security"
 
+**Day 7: (Sept 24) - Enhanced Moderation & Stability**
+* **💻 Development Focus**:
+    * **Enhance Content Moderation**: Build upon your existing "Report" button.
+        * **Backend Logic for Reports**: Ensure that when a user reports a video, it gets clearly flagged in your database for manual review.
+        * **User-Facing Feedback**: Add a simple confirmation modal ("Thanks for your report, we'll review it shortly.") to let users know their action was successful.
+        * **Defer for now**: An admin dashboard and automated abuse detection are significant undertakings. We'll highlight the functional reporting system in the demo.
+* **📣 Public Focus (#BuildInPublic & Storytelling)**:
+    * Post an end-of-week recap video or thread. Show off the new password recovery flow and the confirmation after reporting a video. Frame it as "Building trust and safety into the core experience before we scale."
 ---
 
 #### **WEEK 2: Polish, Launch & Submission Sprint**
