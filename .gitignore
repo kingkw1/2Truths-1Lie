@@ -9,6 +9,7 @@ dist/
 build/
 out/
 *.aab
+*.apk
 
 # Archived web app (mobile-only project now)
 archive/web-app/
@@ -93,10 +94,6 @@ __pycache__/
 *.pem
 google-services.json
 GoogleService-Info.plist
-
-# APK builds
-*.apk
-*.aab
 
 # Virtual environments
 .vscode/
