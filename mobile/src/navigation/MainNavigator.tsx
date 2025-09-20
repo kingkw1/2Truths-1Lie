@@ -7,6 +7,7 @@ import React from 'react';
 import { createStackNavigator, CardStyleInterpolators } from '@react-navigation/stack';
 import { View, Text, StyleSheet, TouchableOpacity, SafeAreaView, Alert } from 'react-native';
 import { GameScreen } from '../screens/GameScreen';
+import { StoreScreen } from '../screens/StoreScreen';
 import { ChallengeCreationScreen } from '../screens/ChallengeCreationScreen';
 import { MainStackParamList } from './types';
 import { useAuth } from '../hooks/useAuth';
@@ -100,6 +101,17 @@ const HomeScreen: React.FC<{ navigation: any; onLogout: () => void }> = ({ navig
             <Text style={styles.guestModeText}>Progress won't be saved</Text>
           )}
         </TouchableOpacity>
+
+        <TouchableOpacity
+          style={[styles.menuButton, { backgroundColor: '#AF52DE' }]}
+          onPress={() => navigation.navigate('Store')}
+        >
+          <Text style={styles.menuButtonIcon}>🛍️</Text>
+          <Text style={styles.menuButtonText}>Store</Text>
+          <Text style={styles.menuButtonDescription}>
+            Purchase premium features
+          </Text>
+        </TouchableOpacity>
       </AuthGuard>
     </SafeAreaView>
   );
@@ -144,6 +156,7 @@ export const MainNavigator: React.FC<MainNavigatorProps> = ({ onLogout }) => {
           </View>
         )}
       </Stack.Screen>
+      <Stack.Screen name="Store" component={StoreScreen} />
     </Stack.Navigator>
   );
 };
