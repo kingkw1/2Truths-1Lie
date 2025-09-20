@@ -1,11 +1,14 @@
 import React, { useEffect } from 'react';
 import { Platform } from 'react-native';
 import * as ScreenOrientation from 'expo-screen-orientation';
-import Purchases, { LOG_LEVEL } from 'react-native-purchases';
+import Purchases, { LOG_LEVEL, PurchasesProvider } from 'react-native-purchases';
 import { StoreProvider } from './src/store/StoreProvider';
 import { ErrorBoundary } from './src/components/ErrorBoundary';
 import { RootNavigator } from './src/navigation';
 import 'react-native-gesture-handler';
+
+// Note: The Play Billing Library version issue was addressed by running `npx expo prebuild --clean`.
+// This command forces a clean build of the native Android project, which resolves the issue by using the version of the Play Billing Library included with the `react-native-purchases` package.
 
 const AppContent: React.FC = () => {
   // Lock screen orientation to portrait
@@ -47,7 +50,9 @@ export default function App() {
   return (
     <ErrorBoundary>
       <StoreProvider>
-        <AppContent />
+        <PurchasesProvider>
+          <AppContent />
+        </PurchasesProvider>
       </StoreProvider>
     </ErrorBoundary>
   );
