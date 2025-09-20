@@ -8,43 +8,46 @@ import challengeCreationReducer from '../store/slices/challengeCreationSlice';
 import { MediaCapture } from '../types';
 
 // Mock Video component for playback testing
-jest.mock('expo-av', () => ({
-  Video: React.forwardRef(({ source, onPlaybackStatusUpdate, onLoad }: any, ref: any) => {
-    React.useImperativeHandle(ref, () => ({
-      playAsync: jest.fn().mockResolvedValue({}),
-      pauseAsync: jest.fn().mockResolvedValue({}),
-      stopAsync: jest.fn().mockResolvedValue({}),
-      setPositionAsync: jest.fn().mockResolvedValue({}),
-      getStatusAsync: jest.fn().mockResolvedValue({
-        isLoaded: true,
-        isPlaying: false,
-        positionMillis: 0,
-        durationMillis: 5000,
-      }),
-    }));
-
-    // Simulate video load
-    React.useEffect(() => {
-      setTimeout(() => {
-        onLoad?.({
+jest.mock('expo-av', () => {
+  const React = require('react');
+  return {
+    Video: React.forwardRef(({ source, onPlaybackStatusUpdate, onLoad }: any, ref: any) => {
+      React.useImperativeHandle(ref, () => ({
+        playAsync: jest.fn().mockResolvedValue({}),
+        pauseAsync: jest.fn().mockResolvedValue({}),
+        stopAsync: jest.fn().mockResolvedValue({}),
+        setPositionAsync: jest.fn().mockResolvedValue({}),
+        getStatusAsync: jest.fn().mockResolvedValue({
           isLoaded: true,
+          isPlaying: false,
+          positionMillis: 0,
           durationMillis: 5000,
-          naturalSize: { width: 1920, height: 1080 },
-        });
-      }, 100);
-    }, [onLoad]);
+        }),
+      }));
 
-    return (
-      <div testID="video-player" data-source={source?.uri}>
-        Video Player Mock
-      </div>
-    );
-  }),
-  ResizeMode: {
-    CONTAIN: 'contain',
-    COVER: 'cover',
-  },
-}));
+      // Simulate video load
+      React.useEffect(() => {
+        setTimeout(() => {
+          onLoad?.({
+            isLoaded: true,
+            durationMillis: 5000,
+            naturalSize: { width: 1920, height: 1080 },
+          });
+        }, 100);
+      }, [onLoad]);
+
+      return (
+        <div data-testid="video-player" data-source={source?.uri}>
+          Video Player Mock
+        </div>
+      );
+    }),
+    ResizeMode: {
+      CONTAIN: 'contain',
+      COVER: 'cover',
+    },
+  };
+});
 
 // Mock Expo modules
 jest.mock('expo-haptics', () => ({

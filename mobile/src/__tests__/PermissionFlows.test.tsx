@@ -21,26 +21,27 @@ import challengeCreationReducer from '../store/slices/challengeCreationSlice';
 const mockUseCameraPermissions = jest.fn();
 const mockRequestCameraPermission = jest.fn();
 
-jest.mock('expo-camera', () => ({
-  CameraView: React.forwardRef(({ children, onCameraReady }: any, ref: any) => {
-    React.useImperativeHandle(ref, () => ({
-      recordAsync: jest.fn().mockResolvedValue({ uri: 'mock://video.mp4' }),
-      stopRecording: jest.fn(),
-    }));
-    
+jest.mock('expo-camera', () => {
+  const React = require('react');
+  const { View } = require('react-native');
+
+  const CameraView = (props) => {
     React.useEffect(() => {
-      if (onCameraReady) {
-        setTimeout(onCameraReady, 100);
+      if (props.onCameraReady) {
+        props.onCameraReady();
       }
-    }, [onCameraReady]);
-    
-    return React.createElement('div', { testID: 'camera-view' }, children);
-  }),
-  useCameraPermissions: () => [
-    mockUseCameraPermissions(),
-    mockRequestCameraPermission,
-  ],
-}));
+    }, []);
+    return <View testID="camera-view">{props.children}</View>;
+  };
+
+  return {
+    CameraView,
+    useCameraPermissions: () => [
+      mockUseCameraPermissions(),
+      mockRequestCameraPermission,
+    ],
+  };
+});
 
 // Mock Media Library permissions
 const mockUseMediaLibraryPermissions = jest.fn();

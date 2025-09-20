@@ -25,23 +25,26 @@ const mockCameraRef = {
   stopRecording: jest.fn(),
 };
 
-jest.mock('expo-camera', () => ({
-  CameraView: React.forwardRef(({ children, onCameraReady }: any, ref: any) => {
-    React.useImperativeHandle(ref, () => mockCameraRef);
-    
-    React.useEffect(() => {
-      if (onCameraReady) {
-        setTimeout(onCameraReady, 100);
-      }
-    }, [onCameraReady]);
-    
-    return React.createElement('div', { testID: 'camera-view' }, children);
-  }),
-  useCameraPermissions: () => [
-    { granted: true },
-    jest.fn().mockResolvedValue({ granted: true }),
-  ],
-}));
+jest.mock('expo-camera', () => {
+  const React = require('react');
+  return {
+    CameraView: React.forwardRef(({ children, onCameraReady }: any, ref: any) => {
+      React.useImperativeHandle(ref, () => mockCameraRef);
+
+      React.useEffect(() => {
+        if (onCameraReady) {
+          setTimeout(onCameraReady, 100);
+        }
+      }, [onCameraReady]);
+
+      return React.createElement('div', { 'data-testid': 'camera-view' }, children);
+    }),
+    useCameraPermissions: () => [
+      { granted: true },
+      jest.fn().mockResolvedValue({ granted: true }),
+    ],
+  };
+});
 
 jest.mock('expo-media-library', () => ({
   usePermissions: () => [

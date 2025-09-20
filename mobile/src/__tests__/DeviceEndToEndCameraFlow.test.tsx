@@ -45,41 +45,27 @@ const mockDeviceScenarios = {
 };
 
 // Mock Expo modules with device-specific behaviors
-jest.mock('expo-camera', () => ({
-  CameraView: React.forwardRef(({ children, onCameraReady }: any, ref: any) => {
-    React.useImperativeHandle(ref, () => ({
-      recordAsync: jest.fn().mockImplementation(async (options) => {
-        const device = global.__DEVICE_SCENARIO__ || 'IPHONE_13';
-        const deviceConfig = mockDeviceScenarios[device];
-        
-        // Simulate device-specific recording behavior
-        const recordingDelay = device === 'LOW_END_ANDROID' ? 300 : 100;
-        await new Promise(resolve => setTimeout(resolve, recordingDelay));
-        
-        // Simulate different file sizes based on device quality
-        const baseSize = device === 'LOW_END_ANDROID' ? 2 : device === 'TABLET_IPAD' ? 8 : 5;
-        
-        return {
-          uri: `file://device-recording-${device}-${Date.now()}.mp4`,
-          fileSize: baseSize * 1024 * 1024,
-        };
-      }),
-      stopRecording: jest.fn(),
-    }));
-    
+jest.mock('expo-camera', () => {
+  const React = require('react');
+  const { View } = require('react-native');
+
+  const CameraView = (props) => {
     React.useEffect(() => {
-      const device = global.__DEVICE_SCENARIO__ || 'IPHONE_13';
-      const initDelay = device === 'LOW_END_ANDROID' ? 200 : 50;
-      setTimeout(() => onCameraReady?.(), initDelay);
-    }, [onCameraReady]);
-    
-    return children;
-  }),
-  useCameraPermissions: () => [
-    { granted: global.__CAMERA_PERMISSION_GRANTED__ !== false },
-    jest.fn().mockResolvedValue({ granted: global.__CAMERA_PERMISSION_GRANTED__ !== false }),
-  ],
-}));
+      if (props.onCameraReady) {
+        props.onCameraReady();
+      }
+    }, []);
+    return <View testID="camera-view">{props.children}</View>;
+  };
+
+  return {
+    CameraView,
+    useCameraPermissions: () => [
+      { granted: global.__CAMERA_PERMISSION_GRANTED__ !== false },
+      jest.fn().mockResolvedValue({ granted: global.__CAMERA_PERMISSION_GRANTED__ !== false }),
+    ],
+  };
+});
 
 jest.mock('expo-file-system', () => ({
   getInfoAsync: jest.fn().mockImplementation(async (uri) => {
