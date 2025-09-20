@@ -21,12 +21,13 @@
         "backgroundColor": "#4a90e2"
       },
       "package": "com.kingkw1.twotruthsoneliegame",
-      "versionCode": 34,
+      "versionCode": 37,
       "permissions": [
         "CAMERA",
         "RECORD_AUDIO",
         "WRITE_EXTERNAL_STORAGE",
-        "READ_EXTERNAL_STORAGE"
+        "READ_EXTERNAL_STORAGE",
+        "com.android.vending.BILLING"
       ]
     },
     "web": {
