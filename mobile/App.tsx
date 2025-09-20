@@ -1,5 +1,7 @@
 import React, { useEffect } from 'react';
+import { Platform } from 'react-native';
 import * as ScreenOrientation from 'expo-screen-orientation';
+import Purchases, { LOG_LEVEL } from 'react-native-purchases';
 import { StoreProvider } from './src/store/StoreProvider';
 import { ErrorBoundary } from './src/components/ErrorBoundary';
 import { RootNavigator } from './src/navigation';
@@ -23,6 +25,16 @@ const AppContent: React.FC = () => {
     return () => {
       ScreenOrientation.unlockAsync().catch(console.warn);
     };
+  }, []);
+
+  useEffect(() => {
+    Purchases.setLogLevel(LOG_LEVEL.VERBOSE);
+
+    if (Platform.OS === 'ios') {
+      Purchases.configure({ apiKey: '<revenuecat_project_apple_api_key>' });
+    } else if (Platform.OS === 'android') {
+      Purchases.configure({ apiKey: '<revenuecat_project_google_api_key>' });
+    }
   }, []);
 
   console.log('=== APP LOADING ===');
