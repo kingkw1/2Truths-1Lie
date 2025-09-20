@@ -31,7 +31,7 @@ export const StoreScreen: React.FC = () => {
   };
 
   if (isLoading) {
-    return <ActivityIndicator style={styles.center} />;
+    return <ActivityIndicator testID="loading-indicator" style={styles.center} />;
   }
 
   if (error) {
