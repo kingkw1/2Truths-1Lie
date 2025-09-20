@@ -1,7 +1,7 @@
 import React, { useEffect } from 'react';
 import { Platform } from 'react-native';
 import * as ScreenOrientation from 'expo-screen-orientation';
-import Purchases, { LOG_LEVEL, PurchasesProvider } from 'react-native-purchases';
+import Purchases, { LOG_LEVEL } from 'react-native-purchases';
 import { StoreProvider } from './src/store/StoreProvider';
 import { ErrorBoundary } from './src/components/ErrorBoundary';
 import { RootNavigator } from './src/navigation';
@@ -34,9 +34,21 @@ const AppContent: React.FC = () => {
     Purchases.setLogLevel(LOG_LEVEL.VERBOSE);
 
     if (Platform.OS === 'ios') {
-      Purchases.configure({ apiKey: '<revenuecat_project_apple_api_key>' });
+      const iosApiKey = process.env.EXPO_PUBLIC_REVENUECAT_IOS_API_KEY;
+      if (iosApiKey) {
+        Purchases.configure({ apiKey: iosApiKey });
+        console.log('✅ RevenueCat configured for iOS');
+      } else {
+        console.error('❌ RevenueCat iOS API key not found in environment variables');
+      }
     } else if (Platform.OS === 'android') {
-      Purchases.configure({ apiKey: '<revenuecat_project_google_api_key>' });
+      const androidApiKey = process.env.EXPO_PUBLIC_REVENUECAT_ANDROID_API_KEY;
+      if (androidApiKey) {
+        Purchases.configure({ apiKey: androidApiKey });
+        console.log('✅ RevenueCat configured for Android');
+      } else {
+        console.error('❌ RevenueCat Android API key not found in environment variables');
+      }
     }
   }, []);
 
@@ -50,9 +62,7 @@ export default function App() {
   return (
     <ErrorBoundary>
       <StoreProvider>
-        <PurchasesProvider>
-          <AppContent />
-        </PurchasesProvider>
+        <AppContent />
       </StoreProvider>
     </ErrorBoundary>
   );

@@ -6,10 +6,18 @@
   "build": {
     "development": {
       "developmentClient": true,
-      "distribution": "internal"
+      "distribution": "internal",
+      "env": {
+        "EXPO_PUBLIC_REVENUECAT_IOS_API_KEY": "REVENUECAT_IOS_API_KEY",
+        "EXPO_PUBLIC_REVENUECAT_ANDROID_API_KEY": "REVENUECAT_ANDROID_API_KEY"
+      }
     },
     "preview": {
-      "distribution": "internal"
+      "distribution": "internal",
+      "env": {
+        "EXPO_PUBLIC_REVENUECAT_IOS_API_KEY": "REVENUECAT_IOS_API_KEY",
+        "EXPO_PUBLIC_REVENUECAT_ANDROID_API_KEY": "REVENUECAT_ANDROID_API_KEY"
+      }
     },
     "production": {
       "autoIncrement": true,
@@ -18,7 +26,9 @@
         "gradleCommand": ":app:bundleRelease"
       },
       "env": {
-        "NODE_ENV": "production"
+        "NODE_ENV": "production",
+        "EXPO_PUBLIC_REVENUECAT_IOS_API_KEY": "REVENUECAT_IOS_API_KEY",
+        "EXPO_PUBLIC_REVENUECAT_ANDROID_API_KEY": "REVENUECAT_ANDROID_API_KEY"
       }
     }
   },
