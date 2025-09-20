@@ -87,40 +87,44 @@ jest.mock('expo-file-system', () => ({
 }));
 
 // Mock React Native modules
-jest.mock('react-native', () => ({
-  Platform: {
-    OS: 'ios',
-    select: jest.fn((options) => options.ios || options.default),
-  },
-  Vibration: {
-    vibrate: jest.fn(),
-  },
-  AppState: {
-    addEventListener: jest.fn(() => ({ remove: jest.fn() })),
-    currentState: 'active',
-  },
-  BackHandler: {
-    addEventListener: jest.fn(() => ({ remove: jest.fn() })),
-  },
-  Dimensions: {
-    get: jest.fn(() => ({ width: 375, height: 812 })),
-  },
-  Alert: {
-    alert: jest.fn(),
-  },
-  View: 'View',
-  Text: 'Text',
-  TouchableOpacity: 'TouchableOpacity',
-  ScrollView: 'ScrollView',
-  TextInput: 'TextInput',
-  KeyboardAvoidingView: 'KeyboardAvoidingView',
-  StyleSheet: {
-    create: jest.fn((styles) => styles),
-  },
-  ActivityIndicator: 'ActivityIndicator',
-  Modal: 'Modal',
-  SafeAreaView: 'SafeAreaView',
-}));
+jest.mock('react-native', () => {
+  const React = require('react');
+  
+  return {
+    Platform: {
+      OS: 'ios',
+      select: jest.fn((options) => options.ios || options.default),
+    },
+    Vibration: {
+      vibrate: jest.fn(),
+    },
+    AppState: {
+      addEventListener: jest.fn(() => ({ remove: jest.fn() })),
+      currentState: 'active',
+    },
+    BackHandler: {
+      addEventListener: jest.fn(() => ({ remove: jest.fn() })),
+    },
+    Dimensions: {
+      get: jest.fn(() => ({ width: 375, height: 812 })),
+    },
+    Alert: {
+      alert: jest.fn(),
+    },
+    View: 'View',
+    Text: 'Text',
+    TouchableOpacity: 'TouchableOpacity',
+    ScrollView: 'ScrollView',
+    TextInput: 'TextInput',
+    KeyboardAvoidingView: 'KeyboardAvoidingView',
+    StyleSheet: {
+      create: jest.fn((styles) => styles),
+    },
+    ActivityIndicator: 'ActivityIndicator',
+    Modal: 'Modal',
+    SafeAreaView: 'SafeAreaView',
+  };
+});
 
 // Mock AsyncStorage
 jest.mock('@react-native-async-storage/async-storage', () => ({
@@ -179,6 +183,117 @@ jest.mock('@react-native-community/netinfo', () => ({
     isInternetReachable: true,
     type: 'wifi',
   })),
+}));
+
+// Mock react-native-purchases (RevenueCat)
+jest.mock('react-native-purchases', () => ({
+  configure: jest.fn().mockResolvedValue(undefined),
+  getOfferings: jest.fn().mockResolvedValue({
+    current: {
+      monthly: {
+        identifier: 'premium_monthly',
+        priceString: '$4.99',
+        product: {
+          identifier: 'premium_monthly',
+          priceString: '$4.99',
+          title: 'Premium Monthly',
+          description: 'Monthly premium subscription',
+          currencyCode: 'USD',
+        },
+      },
+    },
+  }),
+  getCustomerInfo: jest.fn().mockResolvedValue({
+    originalAppUserId: 'test-user',
+    entitlements: {
+      active: {},
+      all: {
+        'premium': {
+          identifier: 'premium',
+          isActive: false,
+          willRenew: false,
+          latestPurchaseDate: null,
+          originalPurchaseDate: null,
+          expirationDate: null,
+          store: 'app_store',
+          productIdentifier: 'premium_monthly',
+        },
+      },
+    },
+    activeSubscriptions: [],
+    allPurchasedProductIdentifiers: [],
+    nonSubscriptionTransactions: [],
+    firstSeen: '2024-01-01T00:00:00Z',
+    originalApplicationVersion: '1.0.0',
+    managementURL: null,
+  }),
+  purchasePackage: jest.fn().mockResolvedValue({
+    customerInfo: {
+      originalAppUserId: 'test-user',
+      entitlements: {
+        active: {
+          'premium': {
+            identifier: 'premium',
+            isActive: true,
+            willRenew: true,
+            latestPurchaseDate: '2024-01-01T00:00:00Z',
+            originalPurchaseDate: '2024-01-01T00:00:00Z',
+            expirationDate: '2024-02-01T00:00:00Z',
+            store: 'app_store',
+            productIdentifier: 'premium_monthly',
+          },
+        },
+        all: {
+          'premium': {
+            identifier: 'premium',
+            isActive: true,
+            willRenew: true,
+            latestPurchaseDate: '2024-01-01T00:00:00Z',
+            originalPurchaseDate: '2024-01-01T00:00:00Z',
+            expirationDate: '2024-02-01T00:00:00Z',
+            store: 'app_store',
+            productIdentifier: 'premium_monthly',
+          },
+        },
+      },
+      activeSubscriptions: ['premium_monthly'],
+      allPurchasedProductIdentifiers: ['premium_monthly'],
+      nonSubscriptionTransactions: [],
+      firstSeen: '2024-01-01T00:00:00Z',
+      originalApplicationVersion: '1.0.0',
+      managementURL: null,
+    },
+    transaction: null,
+  }),
+  addCustomerInfoUpdateListener: jest.fn((listener) => {
+    // Return a function to remove the listener
+    return () => {};
+  }),
+  removeCustomerInfoUpdateListener: jest.fn(),
+  PURCHASE_TYPE: {
+    SUBS: 'subs',
+    INAPP: 'inapp',
+  },
+  PRODUCT_CATEGORY: {
+    SUBSCRIPTION: 'subscription',
+    NON_SUBSCRIPTION: 'non_subscription',
+  },
+  INTRO_ELIGIBILITY_STATUS: {
+    INTRO_ELIGIBILITY_STATUS_UNKNOWN: 0,
+    INTRO_ELIGIBILITY_STATUS_INELIGIBLE: 1,
+    INTRO_ELIGIBILITY_STATUS_ELIGIBLE: 2,
+  },
+  PACKAGE_TYPE: {
+    UNKNOWN: 'UNKNOWN',
+    CUSTOM: 'CUSTOM',
+    LIFETIME: 'LIFETIME',
+    ANNUAL: 'ANNUAL',
+    SIX_MONTH: 'SIX_MONTH',
+    THREE_MONTH: 'THREE_MONTH',
+    TWO_MONTH: 'TWO_MONTH',
+    MONTHLY: 'MONTHLY',
+    WEEKLY: 'WEEKLY',
+  },
 }));
 
 // Global test utilities
