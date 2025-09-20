@@ -117,6 +117,11 @@ jest.mock('react-native', () => {
     ScrollView: 'ScrollView',
     TextInput: 'TextInput',
     KeyboardAvoidingView: 'KeyboardAvoidingView',
+    TouchableWithoutFeedback: 'TouchableWithoutFeedback',
+    Pressable: 'Pressable',
+    FlatList: 'FlatList',
+    Image: 'Image',
+    Button: 'Button',
     StyleSheet: {
       create: jest.fn((styles) => styles),
     },
