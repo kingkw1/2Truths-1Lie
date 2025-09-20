@@ -23,14 +23,10 @@ export const StoreScreen: React.FC = () => {
 
   const handleRestorePurchases = async () => {
     try {
-      const {- entitlements } = await Purchases.restorePurchases();
-      if (entitlements.active['premium']) {
-        Alert.alert('Success', 'Your purchases have been restored.');
-      } else {
-        Alert.alert('Info', 'No purchases to restore.');
-      }
+      await Purchases.restorePurchases();
+      Alert.alert('Success', 'Your purchases have been restored.');
     } catch (e: any) {
-      Alert.alert('Error', e.message);
+      Alert.alert('Error', 'Could not restore purchases.');
     }
   };
 
