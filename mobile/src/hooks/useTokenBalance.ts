@@ -1,10 +1,14 @@
 import { useState, useEffect } from 'react';
 import Purchases, { CustomerInfo } from 'react-native-purchases';
 
-interface TokenBalance {
+interface TokenBalanceState {
   balance: number;
   loading: boolean;
   error: Error | null;
+}
+
+interface TokenBalance extends TokenBalanceState {
+  refresh: () => Promise<void>;
 }
 
 /**
@@ -28,7 +32,7 @@ interface TokenBalance {
  * ```
  */
 export const useTokenBalance = (): TokenBalance => {
-  const [tokenBalance, setTokenBalance] = useState<TokenBalance>({
+  const [tokenBalance, setTokenBalance] = useState<TokenBalanceState>({
     balance: 0,
     loading: true,
     error: null,
@@ -120,6 +124,7 @@ export const useTokenBalance = (): TokenBalance => {
     balance: tokenBalance.balance,
     loading: tokenBalance.loading,
     error: tokenBalance.error,
+    refresh: fetchTokenBalance,
   };
 };
 
@@ -220,5 +225,118 @@ export const spendTokens = async (tokensToSpend: number): Promise<number> => {
   } catch (error) {
     console.error('❌ Failed to spend tokens:', error);
     throw error;
+  }
+};
+
+/**
+ * Helper function to refresh token balance after a successful purchase
+ * 
+ * Call this function after completing token pack purchases to immediately
+ * update the balance display. This ensures the UI reflects the new tokens
+ * without waiting for the automatic refresh.
+ * 
+ * @param tokensEarned - Optional: Number of tokens earned from the purchase
+ * @returns Promise<number> - The updated token balance
+ * 
+ * Usage:
+ * ```tsx
+ * import { refreshTokenBalanceAfterPurchase } from './hooks/useTokenBalance';
+ * 
+ * // After successful purchase
+ * const { customerInfo } = await Purchases.purchasePackage(package);
+ * const newBalance = await refreshTokenBalanceAfterPurchase(50); // 50 tokens earned
+ * Alert.alert('Success!', `Purchase complete! New balance: ${newBalance}`);
+ * ```
+ */
+export const refreshTokenBalanceAfterPurchase = async (tokensEarned?: number): Promise<number> => {
+  try {
+    console.log('🔄 Refreshing token balance after purchase...');
+    
+    // Force refresh customer info from RevenueCat servers
+    const customerInfo = await Purchases.getCustomerInfo();
+    
+    const customerAttributes = customerInfo as any;
+    let balance = 0;
+    
+    // Parse current balance from RevenueCat
+    if (customerAttributes.subscriberAttributes && customerAttributes.subscriberAttributes.tokens) {
+      const tokenAttribute = customerAttributes.subscriberAttributes.tokens;
+      if (tokenAttribute.value) {
+        const parsedBalance = parseInt(tokenAttribute.value, 10);
+        balance = isNaN(parsedBalance) ? 0 : parsedBalance;
+      }
+    }
+    
+    // If tokens were earned and not yet reflected, add them
+    if (tokensEarned && tokensEarned > 0) {
+      const newBalance = balance + tokensEarned;
+      await updateTokenBalance(newBalance);
+      console.log(`🪙 Added ${tokensEarned} tokens from purchase. New balance: ${newBalance}`);
+      return newBalance;
+    }
+    
+    console.log(`🪙 Token balance after purchase: ${balance}`);
+    return balance;
+    
+  } catch (error) {
+    console.error('❌ Failed to refresh token balance after purchase:', error);
+    throw error;
+  }
+};
+
+/**
+ * Helper function to handle token pack purchases
+ * 
+ * This function combines the purchase flow with automatic token balance updates.
+ * It handles the entire flow from purchase to token balance refresh.
+ * 
+ * @param packageToPurchase - RevenueCat package for the token pack
+ * @param expectedTokens - Number of tokens expected from this purchase
+ * @returns Promise<{ customerInfo: CustomerInfo, newBalance: number }>
+ * 
+ * Usage:
+ * ```tsx
+ * import { purchaseTokenPack } from './hooks/useTokenBalance';
+ * 
+ * const handlePurchase = async () => {
+ *   try {
+ *     const { customerInfo, newBalance } = await purchaseTokenPack(package, 50);
+ *     Alert.alert('Success!', `50 tokens added! New balance: ${newBalance}`);
+ *   } catch (error) {
+ *     Alert.alert('Error', error.message);
+ *   }
+ * };
+ * ```
+ */
+export const purchaseTokenPack = async (
+  packageToPurchase: any,
+  expectedTokens: number
+): Promise<{ customerInfo: any, newBalance: number }> => {
+  try {
+    console.log(`🛒 Starting token pack purchase: ${expectedTokens} tokens`);
+    
+    // Execute the purchase
+    const { customerInfo } = await Purchases.purchasePackage(packageToPurchase);
+    
+    console.log('✅ Purchase completed successfully');
+    
+    // Add the earned tokens to the balance
+    const newBalance = await addTokens(expectedTokens);
+    
+    console.log(`🪙 Token pack purchase complete! Added ${expectedTokens} tokens. New balance: ${newBalance}`);
+    
+    return { customerInfo, newBalance };
+    
+  } catch (error: any) {
+    console.error('❌ Token pack purchase failed:', error);
+    
+    // Re-throw with more context
+    if (error.userCancelled) {
+      throw new Error('Purchase was cancelled');
+    } else if (error.message?.includes('credentials')) {
+      throw new Error('There was a credentials issue. Please try again.');
+    } else {
+      throw new Error(`Purchase failed: ${error.message || 'Unknown error'}`);
+    }
   }
 };

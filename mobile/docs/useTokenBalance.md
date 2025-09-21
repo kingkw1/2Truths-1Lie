@@ -10,6 +10,8 @@ The `useTokenBalance` hook provides a React Native interface for managing virtua
 - ✅ **Cross-device synchronization** via RevenueCat
 - ✅ **Type-safe operations** with TypeScript support  
 - ✅ **Automatic updates** when balance changes
+- ✅ **Manual refresh functionality** for immediate updates
+- ✅ **Post-purchase refresh** for token pack purchases
 - ✅ **Error handling** for insufficient tokens and API failures
 - ✅ **Helper functions** for common operations (add/spend tokens)
 
@@ -29,6 +31,7 @@ interface TokenBalance {
   balance: number;        // Current token balance
   loading: boolean;       // Loading state during fetch
   error: Error | null;    // Any errors that occurred
+  refresh: () => Promise<void>; // Manual refresh function
 }
 ```
 
@@ -37,12 +40,17 @@ interface TokenBalance {
 import { useTokenBalance } from '../hooks/useTokenBalance';
 
 function TokenDisplay() {
-  const { balance, loading, error } = useTokenBalance();
+  const { balance, loading, error, refresh } = useTokenBalance();
 
   if (loading) return <Text>Loading...</Text>;
   if (error) return <Text>Error: {error.message}</Text>;
   
-  return <Text>Tokens: {balance}</Text>;
+  return (
+    <View>
+      <Text>Tokens: {balance}</Text>
+      <Button title="Refresh" onPress={refresh} />
+    </View>
+  );
 }
 ```
 
@@ -102,6 +110,51 @@ try {
 } catch (error) {
   console.log('Insufficient tokens for purchase');
 }
+```
+
+### `refreshTokenBalanceAfterPurchase(tokensEarned?: number)`
+
+Refreshes the token balance after a successful purchase. This ensures the UI immediately reflects the new tokens without waiting for automatic refresh.
+
+**Parameters:**
+- `tokensEarned` (optional number): Number of tokens earned from the purchase
+
+**Returns:** `Promise<number>` - The updated token balance
+
+**Example:**
+```tsx
+import { refreshTokenBalanceAfterPurchase } from '../hooks/useTokenBalance';
+
+// After a successful RevenueCat purchase
+const { customerInfo } = await Purchases.purchasePackage(tokenPackage);
+const newBalance = await refreshTokenBalanceAfterPurchase(50); // 50 tokens earned
+Alert.alert('Success!', `Purchase complete! New balance: ${newBalance}`);
+```
+
+### `purchaseTokenPack(packageToPurchase, expectedTokens)`
+
+Handles the complete token pack purchase flow including RevenueCat purchase and automatic token balance updates.
+
+**Parameters:**
+- `packageToPurchase` (RevenueCat Package): The RevenueCat package for the token pack
+- `expectedTokens` (number): Number of tokens expected from this purchase
+
+**Returns:** `Promise<{ customerInfo: CustomerInfo, newBalance: number }>` - Purchase result and new balance
+
+**Throws:** `Error` with user-friendly messages for various failure scenarios
+
+**Example:**
+```tsx
+import { purchaseTokenPack } from '../hooks/useTokenBalance';
+
+const handlePurchase = async () => {
+  try {
+    const { customerInfo, newBalance } = await purchaseTokenPack(package, 50);
+    Alert.alert('Success!', `50 tokens added! New balance: ${newBalance}`);
+  } catch (error) {
+    Alert.alert('Error', error.message);
+  }
+};
 ```
 
 ## Integration Examples
@@ -170,6 +223,131 @@ export const TokenPurchase: React.FC<TokenPurchaseProps> = ({
         Buy {itemName} ({cost} tokens)
       </Text>
     </TouchableOpacity>
+  );
+};
+```
+
+### RevenueCat Token Pack Purchases
+
+```tsx
+import React, { useState } from 'react';
+import { View, Text, TouchableOpacity, Alert } from 'react-native';
+import { useTokenBalance, purchaseTokenPack } from '../hooks/useTokenBalance';
+import Purchases from 'react-native-purchases';
+
+export const TokenPackStore: React.FC = () => {
+  const { balance, refresh } = useTokenBalance();
+  const [purchasing, setPurchasing] = useState(false);
+
+  const handleTokenPackPurchase = async (packageIdentifier: string, tokenValue: number) => {
+    try {
+      setPurchasing(true);
+      
+      // Get available packages from RevenueCat
+      const offerings = await Purchases.getOfferings();
+      const currentOffering = offerings.current;
+      
+      if (!currentOffering) {
+        throw new Error('No offerings available');
+      }
+      
+      const tokenPackage = currentOffering.availablePackages.find(
+        pkg => pkg.identifier === packageIdentifier
+      );
+      
+      if (!tokenPackage) {
+        throw new Error('Token pack not found');
+      }
+      
+      // Purchase and automatically update balance
+      const { newBalance } = await purchaseTokenPack(tokenPackage, tokenValue);
+      
+      Alert.alert(
+        'Purchase Successful!', 
+        `You received ${tokenValue} tokens! New balance: ${newBalance}`
+      );
+      
+    } catch (error: any) {
+      console.error('Token pack purchase failed:', error);
+      
+      if (error.message === 'Purchase was cancelled') {
+        // User cancelled - no error message needed
+        return;
+      }
+      
+      Alert.alert('Purchase Failed', error.message);
+    } finally {
+      setPurchasing(false);
+    }
+  };
+
+  return (
+    <View style={{ padding: 20 }}>
+      <Text style={{ fontSize: 18, marginBottom: 10 }}>
+        Current Balance: {balance} tokens
+      </Text>
+      
+      <TouchableOpacity
+        style={{ 
+          backgroundColor: '#4CAF50', 
+          padding: 15, 
+          borderRadius: 8,
+          marginBottom: 10,
+          opacity: purchasing ? 0.5 : 1
+        }}
+        onPress={() => handleTokenPackPurchase('tokens_50', 50)}
+        disabled={purchasing}
+      >
+        <Text style={{ color: 'white', textAlign: 'center', fontSize: 16 }}>
+          {purchasing ? 'Processing...' : 'Buy 50 Tokens - $0.99'}
+        </Text>
+      </TouchableOpacity>
+      
+      <TouchableOpacity
+        style={{ 
+          backgroundColor: '#2196F3', 
+          padding: 15, 
+          borderRadius: 8,
+          marginBottom: 10,
+          opacity: purchasing ? 0.5 : 1
+        }}
+        onPress={() => handleTokenPackPurchase('tokens_100', 100)}
+        disabled={purchasing}
+      >
+        <Text style={{ color: 'white', textAlign: 'center', fontSize: 16 }}>
+          {purchasing ? 'Processing...' : 'Buy 100 Tokens - $1.99'}
+        </Text>
+      </TouchableOpacity>
+      
+      <TouchableOpacity
+        style={{ 
+          backgroundColor: '#FF9800', 
+          padding: 15, 
+          borderRadius: 8,
+          opacity: purchasing ? 0.5 : 1
+        }}
+        onPress={() => handleTokenPackPurchase('tokens_500', 500)}
+        disabled={purchasing}
+      >
+        <Text style={{ color: 'white', textAlign: 'center', fontSize: 16 }}>
+          {purchasing ? 'Processing...' : 'Buy 500 Tokens - $7.99 (Best Value!)'}
+        </Text>
+      </TouchableOpacity>
+      
+      <TouchableOpacity
+        style={{ 
+          backgroundColor: '#9E9E9E', 
+          padding: 10, 
+          borderRadius: 5,
+          marginTop: 20
+        }}
+        onPress={refresh}
+      >
+        <Text style={{ color: 'white', textAlign: 'center' }}>
+          Refresh Balance
+        </Text>
+      </TouchableOpacity>
+    </View>
   );
 };
 ```
