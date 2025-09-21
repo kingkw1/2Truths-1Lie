@@ -42,7 +42,23 @@ export const useTokenBalance = (): TokenBalance => {
     try {
       setTokenBalance(prev => ({ ...prev, loading: true, error: null }));
       
-      const customerInfo: CustomerInfo = await Purchases.getCustomerInfo();
+      // Check if RevenueCat is properly configured
+      let customerInfo: CustomerInfo;
+      try {
+        customerInfo = await Purchases.getCustomerInfo();
+      } catch (error: any) {
+        // Handle Expo Go browser mode or singleton issues
+        if (error.message?.includes('singleton instance') || error.message?.includes('Invalid API key')) {
+          console.log('🌐 RevenueCat not available (Expo Go mode) - using demo token balance');
+          setTokenBalance({
+            balance: 50, // Demo balance for Expo Go testing
+            loading: false,
+            error: null,
+          });
+          return;
+        }
+        throw error;
+      }
       
       // RevenueCat stores custom attributes in the customerInfo
       // In RevenueCat SDK 9.x, subscriber attributes are accessed via customerInfo properties
@@ -155,7 +171,12 @@ export const updateTokenBalance = async (newBalance: number): Promise<void> => {
     });
     
     console.log(`🪙 Token balance updated to: ${newBalance}`);
-  } catch (error) {
+  } catch (error: any) {
+    // Handle Expo Go mode gracefully
+    if (error.message?.includes('singleton instance') || error.message?.includes('Invalid API key')) {
+      console.log(`🌐 Demo mode: Token balance would be updated to: ${newBalance}`);
+      return;
+    }
     console.error('❌ Failed to update token balance:', error);
     throw error;
   }
@@ -169,20 +190,39 @@ export const updateTokenBalance = async (newBalance: number): Promise<void> => {
  */
 export const addTokens = async (tokensToAdd: number): Promise<number> => {
   try {
-    const customerInfo = await Purchases.getCustomerInfo();
-    const customerAttributes = customerInfo as any;
-    
+    let customerInfo: any;
     let currentBalance = 0;
-    if (customerAttributes.subscriberAttributes && customerAttributes.subscriberAttributes.tokens) {
-      const tokenAttribute = customerAttributes.subscriberAttributes.tokens;
-      if (tokenAttribute.value) {
-        const parsedBalance = parseInt(tokenAttribute.value, 10);
-        currentBalance = isNaN(parsedBalance) ? 0 : parsedBalance;
+    
+    try {
+      customerInfo = await Purchases.getCustomerInfo();
+      const customerAttributes = customerInfo as any;
+      
+      if (customerAttributes.subscriberAttributes && customerAttributes.subscriberAttributes.tokens) {
+        const tokenAttribute = customerAttributes.subscriberAttributes.tokens;
+        if (tokenAttribute.value) {
+          const parsedBalance = parseInt(tokenAttribute.value, 10);
+          currentBalance = isNaN(parsedBalance) ? 0 : parsedBalance;
+        }
+      }
+    } catch (error: any) {
+      // Handle Expo Go browser mode
+      if (error.message?.includes('singleton instance') || error.message?.includes('Invalid API key')) {
+        console.log('🌐 RevenueCat not available (Expo Go mode) - using demo token adding');
+        currentBalance = 50; // Demo balance
+        customerInfo = null;
+      } else {
+        throw error;
       }
     }
     
     const newBalance = currentBalance + tokensToAdd;
-    await updateTokenBalance(newBalance);
+    
+    // Only try to update if RevenueCat is available
+    if (customerInfo) {
+      await updateTokenBalance(newBalance);
+    } else {
+      console.log(`🌐 Demo: Added ${tokensToAdd} tokens. New balance would be: ${newBalance}`);
+    }
     
     console.log(`🪙 Added ${tokensToAdd} tokens. New balance: ${newBalance}`);
     return newBalance;
@@ -201,15 +241,27 @@ export const addTokens = async (tokensToAdd: number): Promise<number> => {
  */
 export const spendTokens = async (tokensToSpend: number): Promise<number> => {
   try {
-    const customerInfo = await Purchases.getCustomerInfo();
-    const customerAttributes = customerInfo as any;
-    
+    let customerInfo: any;
     let currentBalance = 0;
-    if (customerAttributes.subscriberAttributes && customerAttributes.subscriberAttributes.tokens) {
-      const tokenAttribute = customerAttributes.subscriberAttributes.tokens;
-      if (tokenAttribute.value) {
-        const parsedBalance = parseInt(tokenAttribute.value, 10);
-        currentBalance = isNaN(parsedBalance) ? 0 : parsedBalance;
+    
+    try {
+      customerInfo = await Purchases.getCustomerInfo();
+      const customerAttributes = customerInfo as any;
+      
+      if (customerAttributes.subscriberAttributes && customerAttributes.subscriberAttributes.tokens) {
+        const tokenAttribute = customerAttributes.subscriberAttributes.tokens;
+        if (tokenAttribute.value) {
+          const parsedBalance = parseInt(tokenAttribute.value, 10);
+          currentBalance = isNaN(parsedBalance) ? 0 : parsedBalance;
+        }
+      }
+    } catch (error: any) {
+      // Handle Expo Go browser mode
+      if (error.message?.includes('singleton instance') || error.message?.includes('Invalid API key')) {
+        console.log('🌐 RevenueCat not available (Expo Go mode) - using demo token spending');
+        currentBalance = 50; // Demo balance
+      } else {
+        throw error;
       }
     }
     
@@ -218,7 +270,13 @@ export const spendTokens = async (tokensToSpend: number): Promise<number> => {
     }
     
     const newBalance = currentBalance - tokensToSpend;
-    await updateTokenBalance(newBalance);
+    
+    // Only try to update if RevenueCat is available
+    if (customerInfo) {
+      await updateTokenBalance(newBalance);
+    } else {
+      console.log(`🌐 Demo: Spent ${tokensToSpend} tokens. New balance would be: ${newBalance}`);
+    }
     
     console.log(`🪙 Spent ${tokensToSpend} tokens. New balance: ${newBalance}`);
     return newBalance;

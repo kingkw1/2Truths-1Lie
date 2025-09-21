@@ -35,7 +35,7 @@ const AppContent: React.FC = () => {
 
     if (Platform.OS === 'ios') {
       const iosApiKey = process.env.EXPO_PUBLIC_REVENUECAT_IOS_API_KEY;
-      if (iosApiKey) {
+      if (iosApiKey && iosApiKey !== 'your_revenuecat_ios_api_key_here') {
         Purchases.configure({ apiKey: iosApiKey });
         console.log('✅ RevenueCat configured for iOS');
       } else {
@@ -43,13 +43,17 @@ const AppContent: React.FC = () => {
       }
     } else if (Platform.OS === 'android') {
       const androidApiKey = process.env.EXPO_PUBLIC_REVENUECAT_ANDROID_API_KEY;
-      if (androidApiKey) {
+      if (androidApiKey && androidApiKey !== 'your_revenuecat_android_api_key_here') {
         Purchases.configure({ apiKey: androidApiKey });
         console.log('✅ RevenueCat configured for Android');
       } else {
         console.error('❌ RevenueCat Android API key not found in environment variables');
       }
     }
+    
+    // For Expo Go testing: RevenueCat will automatically handle browser mode
+    // but token functionality will be limited to mock/placeholder values
+    console.log('📱 RevenueCat initialization attempted for platform:', Platform.OS);
   }, []);
 
   console.log('=== APP LOADING ===');
