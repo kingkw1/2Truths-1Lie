@@ -5,7 +5,8 @@
 
 import React from 'react';
 import { createStackNavigator, CardStyleInterpolators } from '@react-navigation/stack';
-import { View, Text, StyleSheet, TouchableOpacity, SafeAreaView, Alert } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Alert } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { GameScreen } from '../screens/GameScreen';
 import { StoreScreen } from '../screens/StoreScreen';
 import { ChallengeCreationScreen } from '../screens/ChallengeCreationScreen';
@@ -26,105 +27,107 @@ const HomeScreen: React.FC<{ navigation: any; onLogout: () => void }> = ({ navig
 
   return (
     <SafeAreaView style={styles.container}>
-      <View style={styles.header}>
-        <Text style={styles.title}>2 Truths & 1 Lie</Text>
-        <View style={styles.userInfo}>
-          <Text style={styles.welcomeText}>
-            Welcome, {user?.name || 'Guest'}!
-          </Text>
-          
-          <AuthToggleButton 
-            onAuthAction={onLogout}
-            style={styles.authToggleButton}
-          />
+      <ScrollView contentContainerStyle={styles.scrollContentContainer}>
+        <View style={styles.header}>
+          <Text style={styles.title}>2 Truths & 1 Lie</Text>
+          <View style={styles.userInfo}>
+            <Text style={styles.welcomeText}>
+              Welcome, {user?.name || 'Guest'}!
+            </Text>
+
+            <AuthToggleButton
+              onAuthAction={onLogout}
+              style={styles.authToggleButton}
+            />
+          </View>
         </View>
-      </View>
-      
-      <Text style={styles.subtitle}>What would you like to do?</Text>
-      
-      <AuthGuard
-        showGuestPrompt={isGuest}
-        onAuthPrompt={onLogout}
-      >
-        <TouchableOpacity 
-          style={[styles.menuButton, styles.primaryButton]} 
-          onPress={() => navigation.navigate('Game')}
-        >
-          <Text style={styles.menuButtonIcon}>🎮</Text>
-          <Text style={styles.menuButtonText}>Guess Challenges</Text>
-          <Text style={styles.menuButtonDescription}>
-            Play existing challenges and test your detective skills
-          </Text>
-          {isGuest && (
-            <Text style={styles.guestModeText}>Playing as guest</Text>
-          )}
-        </TouchableOpacity>
         
-        <TouchableOpacity 
-          style={[styles.menuButton, styles.secondaryButton]} 
-          onPress={() => {
-            console.log('🎯 CREATE_BUTTON: Create Challenge button pressed in HomeScreen');
-            console.log('🎯 CREATE_BUTTON: Auth state:', { isAuthenticated, isGuest });
-            
-            if (!isAuthenticated || isGuest) {
-              console.log('🚨 CREATE_BUTTON: Blocking guest user - showing auth popup');
-              Alert.alert(
-                'Sign In Required',
-                'Please sign in to create a challenge',
-                [
-                  {
-                    text: 'Cancel',
-                    style: 'cancel',
-                  },
-                  {
-                    text: 'Sign In',
-                    style: 'default',
-                    onPress: () => {
-                      console.log('🎯 CREATE_BUTTON: Navigating to auth...');
-                      triggerAuthFlow();
+        <Text style={styles.subtitle}>What would you like to do?</Text>
+
+        <AuthGuard
+          showGuestPrompt={isGuest}
+          onAuthPrompt={onLogout}
+        >
+          <TouchableOpacity
+            style={[styles.menuButton, styles.primaryButton]}
+            onPress={() => navigation.navigate('Game')}
+          >
+            <Text style={styles.menuButtonIcon}>🎮</Text>
+            <Text style={styles.menuButtonText}>Guess Challenges</Text>
+            <Text style={styles.menuButtonDescription}>
+              Play existing challenges and test your detective skills
+            </Text>
+            {isGuest && (
+              <Text style={styles.guestModeText}>Playing as guest</Text>
+            )}
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.menuButton, styles.secondaryButton]}
+            onPress={() => {
+              console.log('🎯 CREATE_BUTTON: Create Challenge button pressed in HomeScreen');
+              console.log('🎯 CREATE_BUTTON: Auth state:', { isAuthenticated, isGuest });
+
+              if (!isAuthenticated || isGuest) {
+                console.log('🚨 CREATE_BUTTON: Blocking guest user - showing auth popup');
+                Alert.alert(
+                  'Sign In Required',
+                  'Please sign in to create a challenge',
+                  [
+                    {
+                      text: 'Cancel',
+                      style: 'cancel',
                     },
-                  },
-                ]
-              );
-              return;
-            }
-            
-            console.log('✅ CREATE_BUTTON: User authenticated - navigating to Create');
-            navigation.navigate('Create');
-          }}
-        >
-          <Text style={styles.menuButtonIcon}>🎬</Text>
-          <Text style={styles.menuButtonText}>Create Challenge</Text>
-          <Text style={styles.menuButtonDescription}>
-            Record your own two truths and a lie
-          </Text>
-          {isGuest && (
-            <Text style={styles.guestModeText}>Progress won't be saved</Text>
-          )}
-        </TouchableOpacity>
+                    {
+                      text: 'Sign In',
+                      style: 'default',
+                      onPress: () => {
+                        console.log('🎯 CREATE_BUTTON: Navigating to auth...');
+                        triggerAuthFlow();
+                      },
+                    },
+                  ]
+                );
+                return;
+              }
 
-        <TouchableOpacity
-          style={[styles.menuButton, { backgroundColor: '#AF52DE' }]}
-          onPress={() => navigation.navigate('Store')}
-        >
-          <Text style={styles.menuButtonIcon}>🛍️</Text>
-          <Text style={styles.menuButtonText}>Store</Text>
-          <Text style={styles.menuButtonDescription}>
-            Purchase premium features
-          </Text>
-        </TouchableOpacity>
+              console.log('✅ CREATE_BUTTON: User authenticated - navigating to Create');
+              navigation.navigate('Create');
+            }}
+          >
+            <Text style={styles.menuButtonIcon}>🎬</Text>
+            <Text style={styles.menuButtonText}>Create Challenge</Text>
+            <Text style={styles.menuButtonDescription}>
+              Record your own two truths and a lie
+            </Text>
+            {isGuest && (
+              <Text style={styles.guestModeText}>Progress won't be saved</Text>
+            )}
+          </TouchableOpacity>
 
-        <TouchableOpacity
-          style={[styles.menuButton, { backgroundColor: '#FF9500' }]}
-          onPress={() => navigation.navigate('TokenTest')}
-        >
-          <Text style={styles.menuButtonIcon}>🪙</Text>
-          <Text style={styles.menuButtonText}>Token Test</Text>
-          <Text style={styles.menuButtonDescription}>
-            Test token management features
-          </Text>
-        </TouchableOpacity>
-      </AuthGuard>
+          <TouchableOpacity
+            style={[styles.menuButton, { backgroundColor: '#AF52DE' }]}
+            onPress={() => navigation.navigate('Store')}
+          >
+            <Text style={styles.menuButtonIcon}>🛍️</Text>
+            <Text style={styles.menuButtonText}>Store</Text>
+            <Text style={styles.menuButtonDescription}>
+              Purchase premium features
+            </Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={[styles.menuButton, { backgroundColor: '#FF9500' }]}
+            onPress={() => navigation.navigate('TokenTest')}
+          >
+            <Text style={styles.menuButtonIcon}>🪙</Text>
+            <Text style={styles.menuButtonText}>Token Test</Text>
+            <Text style={styles.menuButtonDescription}>
+              Test token management features
+            </Text>
+          </TouchableOpacity>
+        </AuthGuard>
+      </ScrollView>
     </SafeAreaView>
   );
 };
@@ -178,8 +181,11 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#fff',
-    padding: 20,
+  },
+  scrollContentContainer: {
+    flexGrow: 1,
     justifyContent: 'center',
+    padding: 20,
   },
   fullScreen: {
     flex: 1,

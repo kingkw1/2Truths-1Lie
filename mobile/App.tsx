@@ -5,6 +5,7 @@ import Purchases, { LOG_LEVEL } from 'react-native-purchases';
 import { StoreProvider } from './src/store/StoreProvider';
 import { ErrorBoundary } from './src/components/ErrorBoundary';
 import { RootNavigator } from './src/navigation';
+import { SafeAreaProvider } from 'react-native-safe-area-context';
 import 'react-native-gesture-handler';
 
 // Note: The Play Billing Library version issue was addressed by running `npx expo prebuild --clean`.
@@ -64,11 +65,13 @@ const AppContent: React.FC = () => {
 
 export default function App() {
   return (
-    <ErrorBoundary>
-      <StoreProvider>
-        <AppContent />
-      </StoreProvider>
-    </ErrorBoundary>
+    <SafeAreaProvider>
+      <ErrorBoundary>
+        <StoreProvider>
+          <AppContent />
+        </StoreProvider>
+      </ErrorBoundary>
+    </SafeAreaProvider>
   );
 }
 
