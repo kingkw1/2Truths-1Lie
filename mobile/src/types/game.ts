@@ -126,7 +126,7 @@ export interface PlayerStats {
 /**
  * Types of virtual currency in the game
  */
-export type CurrencyType = 'coins' | 'gems' | 'experience';
+export type CurrencyType = 'coins' | 'gems' | 'experience' | 'tokens';
 
 /**
  * Virtual currency balance tracking
