@@ -21,6 +21,6 @@ module.exports = {
   transformIgnorePatterns: [
     'node_modules/(?!(react-native|@react-native|expo|@expo|@testing-library/react-native|@reduxjs/toolkit|react-redux|expo-haptics|expo-av|expo-camera|expo-constants|expo-device|expo-file-system|expo-media-library|expo-web-browser|expo-modules-core|@react-native-async-storage|@react-native-community|@react-navigation)/)',
   ],
-  testEnvironment: 'node', // Reverting until jest-environment-jsdom is installed
+  // Use react-native preset's test environment, which handles React Native component testing
   maxWorkers: 2, // Reduce worker count to prevent memory issues
 };
