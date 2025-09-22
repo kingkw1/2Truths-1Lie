@@ -1,3 +1,55 @@
+// CRITICAL: Ensure FormData is available IMMEDIATELY
+// This must run before any React Native code
+if (typeof global !== 'undefined' && typeof global.FormData === 'undefined') {
+  console.log('🔧 [APP] Installing FormData polyfill...');
+  
+  function FormData() {
+    this._parts = [];
+  }
+  
+  FormData.prototype.append = function(name, value, filename) {
+    this._parts.push({ name: String(name), value: value, filename: filename || 'file' });
+  };
+  
+  FormData.prototype.get = function(name) {
+    const part = this._parts.find(p => p.name === name);
+    return part ? part.value : null;
+  };
+  
+  FormData.prototype.getAll = function(name) {
+    return this._parts.filter(p => p.name === name).map(p => p.value);
+  };
+  
+  FormData.prototype.has = function(name) {
+    return this._parts.some(p => p.name === name);
+  };
+  
+  FormData.prototype.delete = function(name) {
+    this._parts = this._parts.filter(p => p.name !== name);
+  };
+  
+  FormData.prototype.keys = function() {
+    return this._parts.map(p => p.name);
+  };
+  
+  FormData.prototype.values = function() {
+    return this._parts.map(p => p.value);
+  };
+  
+  FormData.prototype.entries = function() {
+    return this._parts.map(p => [p.name, p.value]);
+  };
+  
+  // Install globally
+  global.FormData = FormData;
+  if (typeof globalThis !== 'undefined') globalThis.FormData = FormData;
+  if (typeof window !== 'undefined') window.FormData = FormData;
+  
+  console.log('✅ [APP] FormData polyfill installed');
+} else {
+  console.log('✅ [APP] FormData already available');
+}
+
 import React, { useEffect } from 'react';
 import { Platform } from 'react-native';
 import * as ScreenOrientation from 'expo-screen-orientation';
@@ -6,7 +58,6 @@ import { StoreProvider } from './src/store/StoreProvider';
 import { ErrorBoundary } from './src/components/ErrorBoundary';
 import { RootNavigator } from './src/navigation';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
-import 'react-native-gesture-handler';
 
 // Note: The Play Billing Library version issue was addressed by running `npx expo prebuild --clean`.
 // This command forces a clean build of the native Android project, which resolves the issue by using the version of the Play Billing Library included with the `react-native-purchases` package.

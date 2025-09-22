@@ -11,14 +11,14 @@
  */
 
 import React, { useEffect, useState } from 'react';
-import { createStackNavigator, CardStyleInterpolators } from '@react-navigation/stack';
+import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { LoginScreen } from '../screens/LoginScreen';
 import { SignupScreen } from '../screens/SignupScreen';
 import { AuthStackParamList } from './types';
 import { useAuth } from '../hooks/useAuth';
 import { Alert } from 'react-native';
 
-const Stack = createStackNavigator<AuthStackParamList>();
+const Stack = createNativeStackNavigator<AuthStackParamList>();
 
 export const AuthNavigator: React.FC = () => {
   const { refreshAuth, user, isGuest, exitAuthFlow } = useAuth();
@@ -79,22 +79,16 @@ export const AuthNavigator: React.FC = () => {
 
   return (
     <Stack.Navigator
-      id={undefined}
       screenOptions={{
         headerShown: false,
-        cardStyle: { backgroundColor: '#fff' },
-        // Enhanced transitions for auth screens
-        cardStyleInterpolator: CardStyleInterpolators.forHorizontalIOS,
-        gestureEnabled: true,
-        gestureDirection: 'horizontal',
+        contentStyle: { backgroundColor: '#fff' },
       }}
       initialRouteName="Login"
     >
       <Stack.Screen 
         name="Login"
         options={{
-          // Smooth entry animation for login
-          cardStyleInterpolator: CardStyleInterpolators.forFadeFromBottomAndroid,
+          animation: 'fade_from_bottom',
         }}
       >
         {({ navigation, route }) => (
@@ -111,9 +105,7 @@ export const AuthNavigator: React.FC = () => {
       <Stack.Screen 
         name="Signup"
         options={{
-          // Slide transition for signup
-          cardStyleInterpolator: CardStyleInterpolators.forHorizontalIOS,
-          gestureEnabled: true,
+          animation: 'slide_from_right',
         }}
       >
         {({ navigation, route }) => (

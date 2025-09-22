@@ -1,5 +1,5 @@
 import '@testing-library/jest-native/extend-expect';
-import 'react-native-gesture-handler/jestSetup';
+// import 'react-native-gesture-handler/jestSetup';
 
 // Mock for react-native-safe-area-context
 jest.mock('react-native-safe-area-context', () => {
@@ -26,16 +26,16 @@ jest.mock('react-native-reanimated', () => {
 });
 
 // Mock for @gorhom/bottom-sheet
-jest.mock('@gorhom/bottom-sheet', () => {
-  const React = require('react');
-  const View = require('react-native').View;
-  return {
-    __esModule: true,
-    default: React.forwardRef((props, ref) => <View ref={ref} {...props} />),
-    BottomSheetModal: React.forwardRef((props, ref) => <View ref={ref} {...props} />),
-    BottomSheetModalProvider: ({ children }) => <View>{children}</View>,
-  };
-});
+// jest.mock('@gorhom/bottom-sheet', () => {
+//   const React = require('react');
+//   const View = require('react-native').View;
+//   return {
+//     __esModule: true,
+//     default: React.forwardRef((props, ref) => <View ref={ref} {...props} />),
+//     BottomSheetModal: React.forwardRef((props, ref) => <View ref={ref} {...props} />),
+//     BottomSheetModalProvider: ({ children }) => <View>{children}</View>,
+//   };
+// });
 
 import React from 'react';
 

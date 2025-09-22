@@ -4,7 +4,7 @@
  */
 
 import React from 'react';
-import { createStackNavigator, CardStyleInterpolators } from '@react-navigation/stack';
+import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Alert } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { GameScreen } from '../screens/GameScreen';
@@ -16,7 +16,7 @@ import { useAuth } from '../hooks/useAuth';
 import { ConditionalAuthContent, AuthGuard } from '../components/AuthGuard';
 import { AuthToggleButton } from '../components/AuthToggleButton';
 
-const Stack = createStackNavigator<MainStackParamList>();
+const Stack = createNativeStackNavigator<MainStackParamList>();
 
 interface MainNavigatorProps {
   onLogout: () => void;
@@ -135,14 +135,10 @@ const HomeScreen: React.FC<{ navigation: any; onLogout: () => void }> = ({ navig
 export const MainNavigator: React.FC<MainNavigatorProps> = ({ onLogout }) => {
   return (
     <Stack.Navigator
-      id={undefined}
       screenOptions={{
         headerShown: false,
-        cardStyle: { backgroundColor: '#fff' },
-        // Enhanced transitions for main app screens
-        cardStyleInterpolator: CardStyleInterpolators.forHorizontalIOS,
-        gestureEnabled: true,
-        gestureDirection: 'horizontal',
+        contentStyle: { backgroundColor: '#fff' },
+        animation: 'slide_from_right',
       }}
       initialRouteName="Home"
     >

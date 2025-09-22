@@ -1,0 +1,67 @@
+// FormData polyfill for React Native/Hermes
+console.log('🔄 Installing FormData polyfill...');
+
+// Install FormData polyfill before any other code
+(function installFormData() {
+  if (typeof FormData !== 'undefined') {
+    console.log('✅ FormData already exists');
+    return;
+  }
+  
+  function FormData() {
+    this._parts = [];
+  }
+  
+  FormData.prototype.append = function(name, value, filename) {
+    this._parts.push({ name: String(name), value: value, filename: filename || 'file' });
+  };
+  
+  FormData.prototype.get = function(name) {
+    var part = this._parts.find(function(p) { return p.name === name; });
+    return part ? part.value : null;
+  };
+  
+  FormData.prototype.getAll = function(name) {
+    return this._parts.filter(function(p) { return p.name === name; }).map(function(p) { return p.value; });
+  };
+  
+  FormData.prototype.has = function(name) {
+    return this._parts.some(function(p) { return p.name === name; });
+  };
+  
+  FormData.prototype.delete = function(name) {
+    this._parts = this._parts.filter(function(p) { return p.name !== name; });
+  };
+  
+  FormData.prototype.keys = function() {
+    return this._parts.map(function(p) { return p.name; });
+  };
+  
+  FormData.prototype.values = function() {
+    return this._parts.map(function(p) { return p.value; });
+  };
+  
+  FormData.prototype.entries = function() {
+    return this._parts.map(function(p) { return [p.name, p.value]; });
+  };
+  
+  // Install on global
+  if (typeof global !== 'undefined') {
+    global.FormData = FormData;
+  }
+  if (typeof globalThis !== 'undefined') {
+    globalThis.FormData = FormData;
+  }
+  
+  console.log('✅ FormData polyfill installed');
+})();
+
+// Verify FormData is available
+console.log('🔍 FormData available:', typeof FormData !== 'undefined');
+
+import { registerRootComponent } from 'expo';
+import App from './App';
+
+console.log('🚀 Registering app...');
+registerRootComponent(App);
+console.log('✅ App registered');

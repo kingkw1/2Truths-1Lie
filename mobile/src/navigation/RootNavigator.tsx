@@ -6,7 +6,7 @@
 
 import React, { useEffect, useRef } from 'react';
 import { NavigationContainer, NavigationContainerRef } from '@react-navigation/native';
-import { createStackNavigator, CardStyleInterpolators } from '@react-navigation/stack';
+import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { AuthNavigator } from './AuthNavigator';
 import { MainNavigator } from './MainNavigator';
 import { RootStackParamList } from './types';
@@ -15,7 +15,7 @@ import { navigationManager } from './navigationUtils';
 import { AuthProvider } from '../components/AuthProvider';
 import { View, ActivityIndicator, StyleSheet, Text, Animated } from 'react-native';
 
-const Stack = createStackNavigator<RootStackParamList>();
+const Stack = createNativeStackNavigator<RootStackParamList>();
 
 export const RootNavigator: React.FC = () => {
   return (
@@ -102,19 +102,17 @@ const RootNavigatorContent: React.FC = () => {
           id={undefined}
           screenOptions={{
             headerShown: false,
-            cardStyle: { backgroundColor: '#fff' },
-            // Enhanced transition animations for auth flows
-            cardStyleInterpolator: CardStyleInterpolators.forHorizontalIOS,
-            gestureEnabled: true,
-            gestureDirection: 'horizontal',
+            contentStyle: { backgroundColor: '#fff' },
+            // Native stack doesn't need gesture config - it's built-in
+            animation: 'slide_from_right',
           }}
         >
           {isAuthenticated ? (
             <Stack.Screen 
               name="Main"
               options={{
-                // Smooth transition when entering authenticated state
-                cardStyleInterpolator: CardStyleInterpolators.forFadeFromBottomAndroid,
+                // Native stack animation options
+                animation: 'fade_from_bottom',
               }}
             >
               {() => <MainNavigator onLogout={logout} />}
@@ -123,8 +121,8 @@ const RootNavigatorContent: React.FC = () => {
             <Stack.Screen 
               name="Auth"
               options={{
-                // Smooth transition when entering auth state
-                cardStyleInterpolator: CardStyleInterpolators.forVerticalIOS,
+                // Native stack animation options
+                animation: 'slide_from_bottom',
               }}
             >
               {() => <AuthNavigator />}
