@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import Purchases, { CustomerInfo } from 'react-native-purchases';
 
 interface TokenBalanceState {
@@ -38,69 +38,44 @@ export const useTokenBalance = (): TokenBalance => {
     error: null,
   });
 
-  const fetchTokenBalance = async () => {
+  const fetchTokenBalance = useCallback(async (): Promise<number> => {
     try {
-      setTokenBalance(prev => ({ ...prev, loading: true, error: null }));
+      const customerInfo = await Purchases.getCustomerInfo();
       
-      // Check if RevenueCat is properly configured
-      let customerInfo: CustomerInfo;
-      try {
-        customerInfo = await Purchases.getCustomerInfo();
-      } catch (error: any) {
-        // Handle Expo Go browser mode or singleton issues
-        if (error.message?.includes('singleton instance') || error.message?.includes('Invalid API key')) {
-          console.log('🌐 RevenueCat not available (Expo Go mode) - using demo token balance');
-          setTokenBalance({
-            balance: 50, // Demo balance for Expo Go testing
-            loading: false,
-            error: null,
-          });
-          return;
-        }
-        throw error;
-      }
-      
-      // RevenueCat stores custom attributes in the customerInfo
-      // In RevenueCat SDK 9.x, subscriber attributes are accessed via customerInfo properties
-      // For tokens, we'll use a custom attribute approach
-      const customerAttributes = customerInfo as any; // Type assertion for custom attributes
-      
-      // Parse token balance from custom attribute
-      let balance = 0;
-      
-      // Check if tokens are stored as a custom attribute
-      if (customerAttributes.subscriberAttributes && customerAttributes.subscriberAttributes.tokens) {
-        const tokenAttribute = customerAttributes.subscriberAttributes.tokens;
-        if (tokenAttribute.value) {
-          const parsedBalance = parseInt(tokenAttribute.value, 10);
-          balance = isNaN(parsedBalance) ? 0 : parsedBalance;
-        }
-      }
-      
-      // Fallback: check if tokens are stored in management URL or other properties
-      // This is a common pattern for storing virtual currency balances
-      if (balance === 0 && customerInfo.managementURL) {
-        // You could parse tokens from URL parameters if stored there
-        // For now, we'll default to 0 and rely on setAttributes to manage the balance
-      }
-      
-      setTokenBalance({
-        balance,
-        loading: false,
-        error: null,
+      // In RevenueCat 9.x, subscriber attributes may not be immediately available
+      // or may be under a different property. Let's check all possible locations
+      console.log('🔍 CustomerInfo structure:', {
+        hasSubscriberAttributes: 'subscriberAttributes' in customerInfo,
+        hasCustomAttributes: 'customAttributes' in customerInfo,
+        hasAttributes: 'attributes' in customerInfo,
+        allKeys: Object.keys(customerInfo)
       });
       
-      console.log(`🪙 Token balance fetched: ${balance}`);
+      // Try different possible attribute access patterns
+      let tokensStr = '0';
+      const customerInfoAny = customerInfo as any;
       
+      if (customerInfoAny.subscriberAttributes && customerInfoAny.subscriberAttributes.tokens) {
+        if (typeof customerInfoAny.subscriberAttributes.tokens === 'object') {
+          tokensStr = customerInfoAny.subscriberAttributes.tokens.value || '0';
+        } else {
+          tokensStr = customerInfoAny.subscriberAttributes.tokens || '0';
+        }
+      } else if (customerInfoAny.customAttributes && customerInfoAny.customAttributes.tokens) {
+        tokensStr = customerInfoAny.customAttributes.tokens || '0';
+      } else if (customerInfoAny.attributes && customerInfoAny.attributes.tokens) {
+        tokensStr = customerInfoAny.attributes.tokens || '0';
+      }
+      
+      const balance = parseInt(tokensStr, 10);
+      
+      console.log('🪙 Token balance fetched:', balance, 'from tokens string:', tokensStr);
+      return balance;
     } catch (error) {
       console.error('❌ Failed to fetch token balance:', error);
-      setTokenBalance(prev => ({
-        ...prev,
-        loading: false,
-        error: error as Error,
-      }));
+      return 0;
     }
-  };
+  }, []);
 
   useEffect(() => {
     fetchTokenBalance();
@@ -136,11 +111,25 @@ export const useTokenBalance = (): TokenBalance => {
     };
   }, []);
 
+  const refreshWrapper = useCallback(async (): Promise<void> => {
+    setTokenBalance(prev => ({ ...prev, loading: true, error: null }));
+    try {
+      const newBalance = await fetchTokenBalance();
+      setTokenBalance(prev => ({ ...prev, balance: newBalance, loading: false }));
+    } catch (error) {
+      setTokenBalance(prev => ({
+        ...prev,
+        loading: false,
+        error: error instanceof Error ? error : new Error('Unknown error')
+      }));
+    }
+  }, [fetchTokenBalance]);
+
   return {
     balance: tokenBalance.balance,
     loading: tokenBalance.loading,
     error: tokenBalance.error,
-    refresh: fetchTokenBalance,
+    refresh: refreshWrapper,
   };
 };
 
