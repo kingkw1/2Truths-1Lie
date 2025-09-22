@@ -14,7 +14,7 @@ const API_CONFIG = {
     timeout: 10000,
   },
   production: {
-    baseUrl: 'https://your-app.railway.app', // Replace with your actual Railway URL
+    baseUrl: 'https://2truths-1lie-production.up.railway.app', // Railway URL
     timeout: 10000,
   }
 };

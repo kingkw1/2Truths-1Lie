@@ -49,8 +49,8 @@ export class MergeStatusService {
   private dispatch: Dispatch | null = null;
 
   private constructor() {
-    // Use the same base URL as upload service
-    this.baseUrl = 'http://192.168.50.111:8001';
+    // Use Railway production backend
+    this.baseUrl = 'https://2truths-1lie-production.up.railway.app';
   }
 
   public static getInstance(): MergeStatusService {

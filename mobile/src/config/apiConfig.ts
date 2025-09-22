@@ -31,9 +31,9 @@ const getAPIConfig = (): APIConfig => {
   };
 
   // Environment-based configuration
-  // In development, use local backend for faster iteration
-  // In production, use Railway deployment
-  const isDevelopment = __DEV__; // React Native's built-in development flag
+  // TEMPORARILY: Always use production Railway backend for device testing
+  // const isDevelopment = __DEV__; // React Native's built-in development flag
+  const isDevelopment = false; // Force production mode to use Railway backend
   
   const config = isDevelopment ? developmentConfig : productionConfig;
   
