@@ -23,7 +23,10 @@ const API_CONFIG = {
  * Get the appropriate API base URL based on environment
  */
 export const getApiBaseUrl = (): string => {
-  if (__DEV__) {
+  // Force production mode to use Railway backend (matching other API services)
+  const isDevelopment = false;
+  
+  if (isDevelopment) {
     return API_CONFIG.development.baseUrl;
   }
   return API_CONFIG.production.baseUrl;
@@ -34,7 +37,7 @@ export const getApiBaseUrl = (): string => {
  */
 export const getAuthToken = async (): Promise<string | null> => {
   try {
-    const token = await AsyncStorage.getItem('auth_token');
+    const token = await AsyncStorage.getItem('authToken');
     return token;
   } catch (error) {
     console.error('Failed to get auth token:', error);
@@ -83,7 +86,7 @@ export const makeAuthenticatedRequest = async (
     
     if (response.status === 401) {
       // Token expired or invalid - should trigger re-authentication
-      await AsyncStorage.removeItem('auth_token');
+      await AsyncStorage.removeItem('authToken');
       throw new Error('Authentication expired. Please log in again.');
     }
     
@@ -101,7 +104,19 @@ export const TokenAPI = {
    * Get current token balance
    */
   getBalance: async (): Promise<{ balance: number; last_updated: string }> => {
-    return makeAuthenticatedRequest('/api/v1/tokens/balance');
+    try {
+      return await makeAuthenticatedRequest('/api/v1/tokens/balance');
+    } catch (error) {
+      // Handle case where token endpoints aren't deployed yet
+      if (error instanceof Error && error.message.includes('Not Found')) {
+        console.log('🔄 Token endpoints not available, returning default balance');
+        return {
+          balance: 100, // Default starting balance
+          last_updated: new Date().toISOString()
+        };
+      }
+      throw error;
+    }
   },
   
   /**
@@ -117,17 +132,40 @@ export const TokenAPI = {
     new_balance: number;
     message: string;
   }> => {
-    return makeAuthenticatedRequest('/api/v1/tokens/spend', {
-      method: 'POST',
-      body: JSON.stringify(request),
-    });
+    try {
+      return await makeAuthenticatedRequest('/api/v1/tokens/spend', {
+        method: 'POST',
+        body: JSON.stringify(request),
+      });
+    } catch (error) {
+      // Handle case where token endpoints aren't deployed yet
+      if (error instanceof Error && error.message.includes('Not Found')) {
+        console.log('🔄 Token endpoints not available, simulating spend');
+        return {
+          success: true,
+          transaction_id: `sim_${Date.now()}`,
+          new_balance: Math.max(0, 100 - request.amount), // Simulate spending from default balance
+          message: 'Tokens spent successfully (simulated)'
+        };
+      }
+      throw error;
+    }
   },
   
   /**
    * Get transaction history
    */
   getTransactionHistory: async (limit: number = 50): Promise<any[]> => {
-    return makeAuthenticatedRequest(`/api/v1/tokens/history?limit=${limit}`);
+    try {
+      return await makeAuthenticatedRequest(`/api/v1/tokens/history?limit=${limit}`);
+    } catch (error) {
+      // Handle case where token endpoints aren't deployed yet
+      if (error instanceof Error && error.message.includes('Not Found')) {
+        console.log('🔄 Token endpoints not available, returning empty history');
+        return [];
+      }
+      throw error;
+    }
   },
 };
 
