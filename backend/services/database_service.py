@@ -157,6 +157,42 @@ class DatabaseService:
             cursor.execute("CREATE INDEX IF NOT EXISTS idx_user_reports_challenge_id ON user_reports(challenge_id)")
             cursor.execute("CREATE INDEX IF NOT EXISTS idx_user_reports_user_id ON user_reports(user_id)")
             cursor.execute("CREATE INDEX IF NOT EXISTS idx_user_reports_created_at ON user_reports(created_at DESC)")
+            
+            # Create token_balances table for secure token storage
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS token_balances (
+                    user_id VARCHAR(255) PRIMARY KEY,
+                    balance INTEGER NOT NULL DEFAULT 0 CHECK (balance >= 0),
+                    last_updated TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            """)
+            
+            # Create token_transactions table for audit trail
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS token_transactions (
+                    transaction_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+                    user_id VARCHAR(255) NOT NULL,
+                    transaction_type VARCHAR(20) NOT NULL CHECK (
+                        transaction_type IN ('purchase', 'spend', 'adjustment', 'refund')
+                    ),
+                    amount INTEGER NOT NULL,
+                    balance_before INTEGER NOT NULL CHECK (balance_before >= 0),
+                    balance_after INTEGER NOT NULL CHECK (balance_after >= 0),
+                    description TEXT NOT NULL,
+                    metadata JSONB DEFAULT '{}',
+                    revenuecat_transaction_id VARCHAR(255),
+                    revenuecat_product_id VARCHAR(255),
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                )
+            """)
+            
+            # Create indexes on token tables
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_token_transactions_user_id ON token_transactions(user_id)")
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_token_transactions_created_at ON token_transactions(created_at DESC)")
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_token_transactions_type ON token_transactions(transaction_type)")
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_token_transactions_revenuecat ON token_transactions(revenuecat_transaction_id)")
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_token_balances_last_updated ON token_balances(last_updated)")
     
     def _init_sqlite_database(self):
         """Initialize the database with required tables"""
@@ -321,6 +357,57 @@ class DatabaseService:
                 cursor.execute("""
                     CREATE INDEX IF NOT EXISTS idx_user_reports_admin_summary 
                     ON user_reports(challenge_id, created_at, reason, id)
+                """)
+                
+                # Create token_balances table for secure token storage
+                cursor.execute("""
+                    CREATE TABLE IF NOT EXISTS token_balances (
+                        user_id TEXT PRIMARY KEY,
+                        balance INTEGER NOT NULL DEFAULT 0 CHECK (balance >= 0),
+                        last_updated TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                    )
+                """)
+                
+                # Create token_transactions table for audit trail
+                cursor.execute("""
+                    CREATE TABLE IF NOT EXISTS token_transactions (
+                        transaction_id TEXT PRIMARY KEY DEFAULT (hex(randomblob(16))),
+                        user_id TEXT NOT NULL,
+                        transaction_type TEXT NOT NULL CHECK (
+                            transaction_type IN ('purchase', 'spend', 'adjustment', 'refund')
+                        ),
+                        amount INTEGER NOT NULL,
+                        balance_before INTEGER NOT NULL CHECK (balance_before >= 0),
+                        balance_after INTEGER NOT NULL CHECK (balance_after >= 0),
+                        description TEXT NOT NULL,
+                        metadata TEXT DEFAULT '{}',
+                        revenuecat_transaction_id TEXT,
+                        revenuecat_product_id TEXT,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+                    )
+                """)
+                
+                # Create indexes on token tables
+                cursor.execute("""
+                    CREATE INDEX IF NOT EXISTS idx_token_transactions_user_id 
+                    ON token_transactions(user_id)
+                """)
+                cursor.execute("""
+                    CREATE INDEX IF NOT EXISTS idx_token_transactions_created_at 
+                    ON token_transactions(created_at DESC)
+                """)
+                cursor.execute("""
+                    CREATE INDEX IF NOT EXISTS idx_token_transactions_type 
+                    ON token_transactions(transaction_type)
+                """)
+                cursor.execute("""
+                    CREATE INDEX IF NOT EXISTS idx_token_transactions_revenuecat 
+                    ON token_transactions(revenuecat_transaction_id)
+                """)
+                cursor.execute("""
+                    CREATE INDEX IF NOT EXISTS idx_token_balances_last_updated 
+                    ON token_balances(last_updated)
                 """)
                 
                 # Enable foreign key constraints (SQLite doesn't enable them by default)

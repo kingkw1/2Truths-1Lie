@@ -26,6 +26,10 @@ class Settings(BaseSettings):
     ALGORITHM: str = "HS256"
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
     
+    # Token management settings
+    REVENUECAT_WEBHOOK_SECRET: Optional[str] = None
+    JWT_SECRET: Optional[str] = None
+    
     # Database settings
     DATABASE_URL: Optional[str] = None  # Railway PostgreSQL URL
     SQLALCHEMY_DATABASE_URL: Optional[str] = None
@@ -119,7 +123,7 @@ class Settings(BaseSettings):
     CDN_CACHE_CONTROL: str = "public, max-age=86400"  # 24 hours default cache
     CDN_EDGE_LOCATIONS: list = ["us-east-1", "eu-west-1", "ap-southeast-1"]  # Primary edge locations
     
-    model_config = ConfigDict(env_file=".env")
+    model_config = ConfigDict(env_file=".env", extra="allow")
 
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
