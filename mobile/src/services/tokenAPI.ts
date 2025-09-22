@@ -14,7 +14,7 @@ const API_CONFIG = {
     timeout: 10000,
   },
   production: {
-    baseUrl: 'https://your-production-api.com', // Replace with your production URL
+    baseUrl: 'https://your-app.railway.app', // Replace with your actual Railway URL
     timeout: 10000,
   }
 };

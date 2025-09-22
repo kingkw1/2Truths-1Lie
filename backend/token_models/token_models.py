@@ -2,7 +2,7 @@
 Token Management Models for secure backend token storage
 """
 from pydantic import BaseModel, Field, ConfigDict
-from typing import Optional, List
+from typing import Optional, List, Union
 from datetime import datetime
 from enum import Enum
 
@@ -66,5 +66,5 @@ class TokenPurchaseEvent(BaseModel):
     product_id: str = Field(..., description="Product purchased")
     transaction_id: str = Field(..., description="RevenueCat transaction ID")
     tokens_purchased: int = Field(..., gt=0, description="Number of tokens purchased")
-    purchase_price: Optional[str] = Field(None, description="Price paid (for logging)")
+    purchase_price: Optional[Union[str, float, int]] = Field(None, description="Price paid (for logging)")
     purchase_currency: Optional[str] = Field(None, description="Currency used")

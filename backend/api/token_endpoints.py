@@ -71,9 +71,9 @@ class RevenueCatWebhookPayload(BaseModel):
 PRODUCT_TOKEN_MAP = {
     "pro_monthly": 500,    # $4.99 gets 500 tokens
     "pro_annual": 6000,    # $49.99 gets 6000 tokens (extra bonus)
-    "token_pack_small": 100,   # Small token pack
+    "token_pack_small": 5,     # Small token pack
     "token_pack_medium": 500,  # Medium token pack
-    "token_pack_large": 1200,  # Large token pack (bonus tokens)
+    "token_pack_large": 25,    # Large token pack
 }
 
 @router.get("/balance", response_model=TokenBalanceResponse)
@@ -91,7 +91,7 @@ async def get_token_balance(
                 detail="User ID not found in token"
             )
         
-        balance_response = await token_service.get_user_balance(user_id)
+        balance_response = token_service.get_user_balance(user_id)
         
         return TokenBalanceResponse(
             balance=balance_response.balance,
@@ -129,7 +129,7 @@ async def spend_tokens(
             metadata=spend_request.metadata or {}
         )
         
-        response = await token_service.spend_tokens(user_id, spend_request_model)
+        response = token_service.spend_tokens(user_id, spend_request_model)
         
         if not response.success:
             raise HTTPException(
@@ -169,7 +169,7 @@ async def get_transaction_history(
                 detail="User ID not found in token"
             )
         
-        transactions = await token_service.get_transaction_history(user_id, limit)
+        transactions = token_service.get_transaction_history(user_id, limit)
         
         return [
             TokenTransactionResponse(
@@ -280,7 +280,7 @@ async def revenuecat_webhook(
         
         # Add tokens to user balance
         token_service = get_token_service()
-        success = await token_service.add_tokens_from_purchase(purchase_event)
+        success = token_service.add_tokens_from_purchase(purchase_event)
         
         if success:
             logger.info(f"Successfully processed token purchase: {tokens_to_add} tokens for user {app_user_id}")

@@ -188,38 +188,91 @@ All token endpoints require `Authorization: Bearer <jwt_token>` header.
 2. ⏳ Monitor and optimize performance
 3. ⏳ Add advanced features (transaction history UI)
 
-## Testing
+## Mobile App Testing Guide
 
-### Backend Testing
+### Phase 1: Replace Token Hook
+
+**Complete the migration to secure tokens:**
 
 ```bash
-# Test token balance endpoint
-curl -H "Authorization: Bearer <token>" \
-     http://localhost:8001/api/v1/tokens/balance
+cd mobile/src/hooks
 
-# Test token spending
-curl -X POST \
-     -H "Authorization: Bearer <token>" \
-     -H "Content-Type: application/json" \
-     -d '{"amount":10,"description":"Test spend"}' \
-     http://localhost:8001/api/v1/tokens/spend
+# Backup current implementation (if not done already)
+mv useTokenBalance.ts useTokenBalance_legacy.ts
+
+# Use secure version as main implementation
+mv useTokenBalance_secure.ts useTokenBalance.ts
 ```
 
-### Webhook Testing
+### Phase 2: Update API Configuration
 
-Use RevenueCat dashboard to trigger test purchase events, or use webhook testing tools.
+1. **Update Production URL** in `mobile/src/services/tokenAPI.ts`:
+   ```typescript
+   production: {
+     baseUrl: 'https://your-app.railway.app', // Your actual Railway URL
+     timeout: 10000,
+   }
+   ```
 
-### Mobile Testing
+2. **Verify Authentication Flow** - Ensure JWT tokens are stored after login:
+   ```typescript
+   // After successful login
+   await AsyncStorage.setItem('auth_token', jwtToken);
+   ```
 
-1. **Purchase Flow:**
-   - Make RevenueCat purchase
-   - Verify webhook adds tokens to backend
-   - Verify mobile app shows updated balance
+### Phase 3: End-to-End Testing
 
-2. **Spending Flow:**
-   - Use token spending feature
-   - Verify backend validates and deducts tokens
-   - Verify mobile app shows updated balance
+**Test 1: Token Balance Display**
+1. Open your app and log in
+2. Navigate to any screen showing token balance
+3. **Expected**: Balance should load from secure backend
+4. **Check logs**: Should see "🔐 Fetching token balance from secure backend..."
+
+**Test 2: Token Purchase Flow**
+1. Go to your in-app purchase screen
+2. Purchase any token pack (start with smallest: `token_pack_small` = 5 tokens)
+3. **Expected**: 
+   - RevenueCat processes purchase normally
+   - Webhook adds tokens to backend
+   - App shows updated balance after refresh
+4. **Check**: RevenueCat dashboard shows purchase, Railway logs show webhook processing
+
+**Test 3: Token Spending Flow**  
+1. Use any feature that spends tokens (hints, challenges, etc.)
+2. **Expected**:
+   - Backend validates sufficient balance
+   - Tokens deducted atomically
+   - New balance displayed immediately
+3. **Check logs**: Should see "✅ Successfully spent X tokens. New balance: Y"
+
+**Test 4: Network Resilience**
+1. Turn off internet, try to spend tokens
+2. **Expected**: Graceful error message, no tokens lost
+3. Turn internet back on, try again
+4. **Expected**: Normal operation resumes
+
+### Phase 4: Production Verification
+
+**Monitor Railway Logs:**
+```bash
+# Watch real-time logs during testing
+railway logs --follow
+```
+
+**Check Database Records:**
+- Token balances should match app display
+- Transaction history should show all operations
+- No negative balances should exist
+
+### Mobile Testing Checklist
+
+- [ ] App builds and runs without errors
+- [ ] Token balance loads from backend (not RevenueCat attributes)
+- [ ] Purchase flow: RevenueCat → Webhook → Backend → App refresh
+- [ ] Spending flow: App → Backend validation → Balance update
+- [ ] Error handling works (network issues, insufficient tokens)
+- [ ] Performance is acceptable (balance loads quickly)
+- [ ] Multiple users can purchase/spend independently
 
 ## Troubleshooting
 
