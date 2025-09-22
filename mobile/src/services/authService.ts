@@ -375,9 +375,10 @@ export class AuthService {
    */
   private getApiBaseUrl(): string {
     // Use the centralized API configuration
-    // This now points to the Railway production deployment
-    console.log('🌐 AUTH: Using production Railway URL');
-    return getBackendBaseUrl();
+    const baseUrl = getBackendBaseUrl();
+    const environment = __DEV__ ? 'DEVELOPMENT' : 'PRODUCTION';
+    console.log(`🌐 AUTH: Using ${environment} URL: ${baseUrl}`);
+    return baseUrl;
   }
 
   /**
@@ -641,15 +642,13 @@ export class AuthService {
         this.currentUser = JSON.parse(userData);
         this.authToken = tokenData;
 
-        // Validate token if it's not a guest token
-        if (!tokenData.startsWith('local_guest_token_')) {
-          const isValid = await this.validateToken();
-          if (!isValid) {
-            console.warn('⚠️ Stored token is invalid, creating new guest session');
-            await this.clearAuthData();
-            await this.createGuestUser();
-            return false;
-          }
+        // Always validate token with backend, even guest tokens
+        const isValid = await this.validateToken();
+        if (!isValid) {
+          console.warn('⚠️ Stored token is invalid, creating new guest session');
+          await this.clearAuthData();
+          await this.createGuestUser();
+          return false;
         }
 
         console.log('✅ Authentication state restored');

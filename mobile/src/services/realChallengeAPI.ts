@@ -113,8 +113,10 @@ export class RealChallengeAPIService {
 
   private getApiBaseUrl(): string {
     // Use the centralized API configuration
-    // This now points to the Railway production deployment
-    return getApiBaseUrl().replace('/api/v1', ''); // Remove the API path as it's added in individual methods
+    const baseUrl = getApiBaseUrl().replace('/api/v1', ''); // Remove the API path as it's added in individual methods
+    const environment = __DEV__ ? 'DEVELOPMENT' : 'PRODUCTION';
+    console.log(`🌐 CHALLENGE API: Using ${environment} URL: ${baseUrl}`);
+    return baseUrl;
   }
 
   private async getAuthHeaders(): Promise<Record<string, string>> {

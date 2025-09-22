@@ -54,9 +54,10 @@ export class VideoUploadService {
 
   private constructor() {
     // Use the centralized API configuration
-    // This now points to the Railway production deployment
-    console.log('🌐 UPLOAD: Using production Railway URL');
-    this.baseUrl = getBackendBaseUrl();
+    const baseUrl = getBackendBaseUrl();
+    const environment = __DEV__ ? 'DEVELOPMENT' : 'PRODUCTION';
+    console.log(`🌐 UPLOAD: Using ${environment} URL: ${baseUrl}`);
+    this.baseUrl = baseUrl;
   }
 
   public static getInstance(): VideoUploadService {
