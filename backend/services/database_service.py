@@ -4,11 +4,14 @@ Database service for managing database operations with PostgreSQL and SQLite sup
 import sqlite3
 import logging
 from pathlib import Path
-from typing import Optional, Dict, Any, List, Union
+from typing import Optional, Dict, Any, List, Union, NamedTuple
 from datetime import datetime
 from passlib.context import CryptContext
 from config import settings
 import os
+from enum import Enum
+from urllib.parse import urlparse, parse_qs
+import re
 
 # PostgreSQL imports (will only be used if DATABASE_URL is set)
 try:
@@ -20,46 +23,495 @@ except ImportError:
 
 logger = logging.getLogger(__name__)
 
+class DatabaseEnvironment(Enum):
+    """Database environment types"""
+    PRODUCTION = "production"
+    STAGING = "staging"
+    DEVELOPMENT = "development"
+    TESTING = "testing"
+
+class DatabaseMode(Enum):
+    """Database operation modes"""
+    POSTGRESQL_ONLY = "postgresql_only"
+    SQLITE_ONLY = "sqlite_only"
+    HYBRID = "hybrid"  # Only for development/testing
+
+class DatabaseURLInfo(NamedTuple):
+    """Parsed DATABASE_URL information"""
+    scheme: str
+    hostname: str
+    port: Optional[int]
+    username: Optional[str]
+    password: Optional[str]
+    database: str
+    is_postgres: bool
+    is_sqlite: bool
+    
+class DatabaseURLError(Exception):
+    """Raised when DATABASE_URL is invalid or malformed"""
+    pass
+
+class DatabaseError(Exception):
+    """Custom database service errors"""
+    pass
+
+class EnvironmentMismatchError(DatabaseError):
+    """Raised when database operations don't match the configured environment"""
+    pass
+
+def detect_environment() -> DatabaseEnvironment:
+    """
+    Detect the current environment based on various indicators
+    
+    Returns:
+        DatabaseEnvironment: The detected environment
+    """
+    # Check explicit environment variable first
+    env_var = os.environ.get('ENVIRONMENT', '').lower()
+    if env_var in ['production', 'prod']:
+        return DatabaseEnvironment.PRODUCTION
+    elif env_var in ['staging', 'stage']:
+        return DatabaseEnvironment.STAGING
+    elif env_var in ['development', 'dev']:
+        return DatabaseEnvironment.DEVELOPMENT
+    elif env_var in ['testing', 'test']:
+        return DatabaseEnvironment.TESTING
+    
+    # Check for Railway environment (production indicator)
+    if os.environ.get('RAILWAY_ENVIRONMENT'):
+        railway_env = os.environ.get('RAILWAY_ENVIRONMENT', '').lower()
+        if railway_env == 'production':
+            return DatabaseEnvironment.PRODUCTION
+        elif railway_env in ['staging', 'preview']:
+            return DatabaseEnvironment.STAGING
+        else:
+            return DatabaseEnvironment.DEVELOPMENT
+    
+    # Check for other production indicators
+    production_indicators = [
+        'HEROKU_APP_NAME',
+        'VERCEL_ENV',
+        'AWS_LAMBDA_FUNCTION_NAME',
+        'GOOGLE_CLOUD_PROJECT'
+    ]
+    
+    for indicator in production_indicators:
+        if os.environ.get(indicator):
+            return DatabaseEnvironment.PRODUCTION
+    
+    # Check DATABASE_URL patterns for environment hints
+    db_url = os.environ.get('DATABASE_URL', '')
+    if db_url:
+        if any(prod_host in db_url for prod_host in [
+            'railway.app',
+            'amazonaws.com',
+            'googleapis.com',
+            'azure.com',
+            'planetscale.com',
+            'supabase.com'
+        ]):
+            return DatabaseEnvironment.PRODUCTION
+        elif 'localhost' in db_url or '127.0.0.1' in db_url:
+            return DatabaseEnvironment.DEVELOPMENT
+    
+    # Check for testing indicators
+    if os.environ.get('CI') or os.environ.get('PYTEST_CURRENT_TEST'):
+        return DatabaseEnvironment.TESTING
+    
+    # Default to development if no clear indicators
+    return DatabaseEnvironment.DEVELOPMENT
+
+def parse_database_url(database_url: str) -> DatabaseURLInfo:
+    """
+    Parse and validate DATABASE_URL
+    
+    Args:
+        database_url: The DATABASE_URL to parse
+        
+    Returns:
+        DatabaseURLInfo: Parsed database information
+        
+    Raises:
+        DatabaseURLError: If URL is malformed or invalid
+    """
+    if not database_url or not database_url.strip():
+        raise DatabaseURLError("DATABASE_URL is empty or missing")
+    
+    try:
+        parsed = urlparse(database_url)
+    except Exception as e:
+        raise DatabaseURLError(f"Failed to parse DATABASE_URL: {e}")
+    
+    # Validate scheme
+    if not parsed.scheme:
+        raise DatabaseURLError("DATABASE_URL missing scheme (e.g., postgresql://, sqlite://)")
+    
+    scheme = parsed.scheme.lower()
+    
+    # Determine database type
+    is_postgres = scheme in ['postgresql', 'postgres']
+    is_sqlite = scheme in ['sqlite', 'sqlite3']
+    
+    if not is_postgres and not is_sqlite:
+        raise DatabaseURLError(f"Unsupported database scheme: {scheme}. Only postgresql and sqlite are supported.")
+    
+    # For SQLite, validate file path
+    if is_sqlite:
+        if not parsed.path:
+            raise DatabaseURLError("SQLite DATABASE_URL missing file path")
+        
+        # Handle sqlite:///path/to/file.db format
+        db_path = parsed.path
+        if db_path.startswith('/'):
+            db_path = db_path[1:]  # Remove leading slash for relative paths
+        
+        return DatabaseURLInfo(
+            scheme=scheme,
+            hostname='',
+            port=None,
+            username=None,
+            password=None,
+            database=db_path,
+            is_postgres=False,
+            is_sqlite=True
+        )
+    
+    # For PostgreSQL, validate required components
+    if is_postgres:
+        if not parsed.hostname:
+            raise DatabaseURLError("PostgreSQL DATABASE_URL missing hostname")
+        
+        if not parsed.path or parsed.path == '/':
+            raise DatabaseURLError("PostgreSQL DATABASE_URL missing database name")
+        
+        # Remove leading slash from database name
+        database_name = parsed.path[1:] if parsed.path.startswith('/') else parsed.path
+        
+        # Validate database name
+        if not re.match(r'^[a-zA-Z_][a-zA-Z0-9_]*$', database_name):
+            raise DatabaseURLError(f"Invalid PostgreSQL database name: {database_name}")
+        
+        # Validate port if present
+        port = parsed.port
+        if port and (port < 1 or port > 65535):
+            raise DatabaseURLError(f"Invalid port number: {port}")
+        
+        return DatabaseURLInfo(
+            scheme=scheme,
+            hostname=parsed.hostname,
+            port=port,
+            username=parsed.username,
+            password=parsed.password,
+            database=database_name,
+            is_postgres=True,
+            is_sqlite=False
+        )
+
+def validate_database_url_for_environment(database_url: Optional[str], env: DatabaseEnvironment) -> Optional[DatabaseURLInfo]:
+    """
+    Validate DATABASE_URL for the current environment with fail-fast behavior
+    
+    Args:
+        database_url: The DATABASE_URL to validate
+        env: The current environment
+        
+    Returns:
+        DatabaseURLInfo: Parsed and validated database info, or None if no URL provided
+        
+    Raises:
+        DatabaseURLError: If URL is invalid or inappropriate for environment
+    """
+    logger = logging.getLogger(__name__)
+    
+    # Production and staging require DATABASE_URL
+    if env in [DatabaseEnvironment.PRODUCTION, DatabaseEnvironment.STAGING]:
+        if not database_url:
+            error_msg = f"DATABASE_URL is required in {env.value} environment but not configured"
+            logger.error(error_msg)
+            raise DatabaseURLError(error_msg)
+        
+        try:
+            url_info = parse_database_url(database_url)
+        except DatabaseURLError as e:
+            error_msg = f"Invalid DATABASE_URL in {env.value} environment: {e}"
+            logger.error(error_msg)
+            raise DatabaseURLError(error_msg)
+        
+        # Production must use PostgreSQL
+        if env == DatabaseEnvironment.PRODUCTION and not url_info.is_postgres:
+            error_msg = f"Production environment requires PostgreSQL but found {url_info.scheme}"
+            logger.error(error_msg)
+            raise DatabaseURLError(error_msg)
+        
+        logger.info(f"DATABASE_URL validated for {env.value}: {url_info.scheme}://{url_info.hostname or 'file'}/***/")
+        return url_info
+    
+    # Development and testing can work without DATABASE_URL (will use SQLite)
+    if not database_url:
+        logger.info(f"No DATABASE_URL configured for {env.value} environment, will use SQLite fallback")
+        return None
+    
+    try:
+        url_info = parse_database_url(database_url)
+        logger.info(f"DATABASE_URL validated for {env.value}: {url_info.scheme}://{url_info.hostname or 'file'}/***/")
+        return url_info
+    except DatabaseURLError as e:
+        logger.warning(f"Invalid DATABASE_URL in {env.value} environment (will use SQLite fallback): {e}")
+        return None
+
+def determine_database_mode(env: DatabaseEnvironment, url_info: Optional[DatabaseURLInfo]) -> DatabaseMode:
+    """
+    Determine the appropriate database mode based on environment and configuration
+    
+    Args:
+        env: The detected environment
+        url_info: Parsed DATABASE_URL information, None if no URL configured
+        
+    Returns:
+        DatabaseMode: The appropriate database mode
+    """
+    logger = logging.getLogger(__name__)
+    
+    if env == DatabaseEnvironment.PRODUCTION:
+        if not url_info or not url_info.is_postgres:
+            raise EnvironmentMismatchError(
+                "Production environment detected but no PostgreSQL DATABASE_URL configured. "
+                "SQLite is not supported in production environments."
+            )
+        return DatabaseMode.POSTGRESQL_ONLY
+    
+    elif env == DatabaseEnvironment.STAGING:
+        if url_info and url_info.is_postgres:
+            return DatabaseMode.POSTGRESQL_ONLY
+        elif url_info and url_info.is_sqlite:
+            logger.warning("Staging environment using SQLite - consider using PostgreSQL for consistency")
+            return DatabaseMode.SQLITE_ONLY
+        else:
+            logger.warning("Staging environment without DATABASE_URL - falling back to SQLite")
+            return DatabaseMode.SQLITE_ONLY
+    
+    elif env == DatabaseEnvironment.TESTING:
+        # Testing can use either, prefer SQLite for speed unless PostgreSQL is explicitly set
+        if url_info and url_info.is_postgres:
+            return DatabaseMode.POSTGRESQL_ONLY
+        else:
+            return DatabaseMode.SQLITE_ONLY
+    
+    else:  # DEVELOPMENT
+        # Development can use either database type
+        if url_info and url_info.is_postgres:
+            return DatabaseMode.POSTGRESQL_ONLY
+        else:
+            return DatabaseMode.SQLITE_ONLY
+
 class DatabaseService:
-    """Service for managing database operations with PostgreSQL and SQLite support"""
+    """Service for managing database operations with environment-aware PostgreSQL/SQLite support"""
     
     def __init__(self):
-        self.database_url = settings.database_url
-        self.is_postgres = self.database_url.startswith('postgresql://') or self.database_url.startswith('postgres://')
+        # Environment detection
+        self.environment = detect_environment()
+        
+        # Parse and validate DATABASE_URL with fail-fast behavior
+        database_url = settings.database_url
+        self.url_info = validate_database_url_for_environment(database_url, self.environment)
+        
+        # Set explicit boolean flags for clear code path control
+        self.is_postgres = self.url_info.is_postgres if self.url_info else False
+        self.is_sqlite = not self.is_postgres
+        
+        # Determine database mode based on environment and configuration
+        self.database_mode = determine_database_mode(self.environment, self.url_info)
+        
+        # Store parsed URL components for easy access
+        self.database_url = database_url
+        self.database_name = self.url_info.database if self.url_info else None
+        self.hostname = self.url_info.hostname if self.url_info else None
+        self.port = self.url_info.port if self.url_info else None
+        
+        # Validate environment and database configuration
+        self._validate_environment_config()
+        
         self.pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
         
-        if self.is_postgres:
+        # Set up database-specific properties
+        if self.database_mode == DatabaseMode.POSTGRESQL_ONLY:
             if not PSYCOPG2_AVAILABLE:
-                raise ImportError("psycopg2 is required for PostgreSQL support")
-            logger.info("Using PostgreSQL database for production")
+                raise DatabaseError("psycopg2 is required for PostgreSQL support")
+            logger.info(f"Using PostgreSQL database '{self.database_name}' at {self.hostname}:{self.port or 5432} in {self.environment.value} environment")
             self.db_path = None
         else:
-            logger.info("Using SQLite database for development")
-            self.db_path = Path(__file__).parent.parent / "app.db"
+            if self.environment == DatabaseEnvironment.PRODUCTION:
+                raise EnvironmentMismatchError("SQLite is not allowed in production environment")
+            # Use URL database path if provided, otherwise default location
+            if self.url_info and self.url_info.is_sqlite:
+                self.db_path = Path(self.url_info.database)
+            else:
+                self.db_path = Path(__file__).parent.parent / "app.db"
+            logger.info(f"Using SQLite database at {self.db_path} in {self.environment.value} environment")
             
         self._init_database()
         self._verify_database_constraints()
     
+    def _validate_environment_config(self):
+        """Validate that the database configuration matches the environment requirements"""
+        if self.environment == DatabaseEnvironment.PRODUCTION:
+            if not self.is_postgres:
+                raise EnvironmentMismatchError(
+                    f"Production environment requires PostgreSQL but DATABASE_URL is: {self.database_url[:20]}..."
+                )
+            if self.database_mode != DatabaseMode.POSTGRESQL_ONLY:
+                raise EnvironmentMismatchError(
+                    f"Production environment must use POSTGRESQL_ONLY mode, got: {self.database_mode}"
+                )
+        
+        logger.info(f"Database configuration validated for {self.environment.value} environment")
+        logger.info(f"Database mode: {self.database_mode.value}")
+        logger.info(f"PostgreSQL enabled: {self.is_postgres}")
+    
+    def _ensure_postgresql_mode(self, operation_name: str):
+        """Ensure we're in PostgreSQL mode for operations that require it"""
+        if self.database_mode != DatabaseMode.POSTGRESQL_ONLY and self.environment in [
+            DatabaseEnvironment.PRODUCTION, 
+            DatabaseEnvironment.STAGING
+        ]:
+            raise EnvironmentMismatchError(
+                f"Operation '{operation_name}' requires PostgreSQL mode in {self.environment.value} environment"
+            )
+    
+    def _ensure_not_production_for_sqlite(self, operation_name: str):
+        """Ensure we're not in production when attempting SQLite operations"""
+        if self.environment == DatabaseEnvironment.PRODUCTION and not self.is_postgres:
+            raise EnvironmentMismatchError(
+                f"SQLite operation '{operation_name}' is not allowed in production environment"
+            )
+    
+    def _validate_database_operation(self, operation_name: str, requires_postgres: bool = False):
+        """
+        Validate that a database operation is allowed in the current environment
+        
+        Args:
+            operation_name: Name of the operation being performed
+            requires_postgres: Whether this operation specifically requires PostgreSQL
+        """
+        if requires_postgres and self.database_mode != DatabaseMode.POSTGRESQL_ONLY:
+            raise EnvironmentMismatchError(
+                f"Operation '{operation_name}' requires PostgreSQL but current mode is {self.database_mode.value}"
+            )
+        
+        if self.environment == DatabaseEnvironment.PRODUCTION:
+            if self.database_mode != DatabaseMode.POSTGRESQL_ONLY:
+                raise EnvironmentMismatchError(
+                    f"Production environment only allows PostgreSQL operations, attempted: {operation_name}"
+                )
+            if not self.is_postgres:
+                raise EnvironmentMismatchError(
+                    f"Production environment requires PostgreSQL URL, attempted: {operation_name}"
+                )
+        
+        # Log operation in development/testing for debugging
+        if self.environment in [DatabaseEnvironment.DEVELOPMENT, DatabaseEnvironment.TESTING]:
+            logger.debug(f"Database operation '{operation_name}' in {self.environment.value} environment using {self.database_mode.value}")
+    
+    def _get_validated_connection(self, operation_name: str):
+        """Get a database connection with environment validation"""
+        self._validate_database_operation(operation_name)
+        return self.get_connection()
+    
     def get_connection(self):
-        """Get database connection based on environment"""
-        if self.is_postgres:
+        """Get database connection based on environment and mode"""
+        if self.database_mode == DatabaseMode.POSTGRESQL_ONLY:
+            if not self.is_postgres:
+                raise EnvironmentMismatchError("PostgreSQL-only mode but no PostgreSQL URL configured")
             return psycopg2.connect(self.database_url)
-        else:
+        elif self.database_mode == DatabaseMode.SQLITE_ONLY:
+            self._ensure_not_production_for_sqlite("get_connection")
+            if not self.db_path:
+                raise EnvironmentMismatchError("SQLite mode but no database path configured")
             return sqlite3.connect(self.db_path)
+        else:
+            # HYBRID mode (development only)
+            if self.environment == DatabaseEnvironment.PRODUCTION:
+                raise EnvironmentMismatchError("Hybrid mode not allowed in production")
+            
+            if self.is_postgres:
+                return psycopg2.connect(self.database_url)
+            else:
+                return sqlite3.connect(self.db_path)
+    
+    def get_cursor(self, conn):
+        """Get a properly configured cursor for the database type"""
+        if self.database_mode == DatabaseMode.POSTGRESQL_ONLY:
+            return conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
+        elif self.database_mode == DatabaseMode.SQLITE_ONLY:
+            self._ensure_not_production_for_sqlite("get_cursor")
+            # Enable foreign key constraints and set row factory for SQLite
+            conn.execute("PRAGMA foreign_keys = ON")
+            conn.row_factory = sqlite3.Row
+            return conn.cursor()
+        else:
+            # HYBRID mode (development only)
+            if self.environment == DatabaseEnvironment.PRODUCTION:
+                raise EnvironmentMismatchError("Hybrid mode not allowed in production")
+            
+            if self.is_postgres:
+                return conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
+            else:
+                conn.execute("PRAGMA foreign_keys = ON")
+                conn.row_factory = sqlite3.Row
+                return conn.cursor()
+    
+    def execute_query_with_params(self, query: str, params: tuple = (), fetch_one: bool = False, fetch_all: bool = False):
+        """Execute a query with proper parameter binding for the database type"""
+        try:
+            with self.get_connection() as conn:
+                cursor = self.get_cursor(conn)
+                
+                # Convert parameters for PostgreSQL
+                if self.is_postgres:
+                    query = self._prepare_query(query)
+                
+                cursor.execute(query, params)
+                
+                if fetch_one:
+                    result = cursor.fetchone()
+                    return dict(result) if result else None
+                elif fetch_all:
+                    results = cursor.fetchall()
+                    return [dict(row) for row in results]
+                else:
+                    conn.commit()
+                    return cursor.rowcount
+                    
+        except Exception as e:
+            logger.error(f"Database query failed: {e}")
+            raise
     
     def _init_database(self):
         """Initialize the database with required tables"""
         try:
-            if self.is_postgres:
+            if self.database_mode == DatabaseMode.POSTGRESQL_ONLY:
                 self._init_postgres_database()
-            else:
+            elif self.database_mode == DatabaseMode.SQLITE_ONLY:
+                self._ensure_not_production_for_sqlite("_init_database")
                 self._init_sqlite_database()
+            else:
+                # HYBRID mode (development only)
+                if self.environment == DatabaseEnvironment.PRODUCTION:
+                    raise EnvironmentMismatchError("Hybrid database initialization not allowed in production")
+                
+                if self.is_postgres:
+                    self._init_postgres_database()
+                else:
+                    self._init_sqlite_database()
         except Exception as e:
             logger.error(f"Failed to initialize database: {e}")
             raise
     
     def _init_postgres_database(self):
         """Initialize PostgreSQL database tables"""
+        if self.database_mode not in [DatabaseMode.POSTGRESQL_ONLY, DatabaseMode.HYBRID]:
+            raise EnvironmentMismatchError("PostgreSQL initialization not allowed in current database mode")
+            
         with self.get_connection() as conn:
             conn.autocommit = True
             cursor = conn.cursor()
@@ -195,9 +647,15 @@ class DatabaseService:
             cursor.execute("CREATE INDEX IF NOT EXISTS idx_token_balances_last_updated ON token_balances(last_updated)")
     
     def _init_sqlite_database(self):
-        """Initialize the database with required tables"""
+        """Initialize SQLite database tables (development/testing only)"""
+        if self.environment == DatabaseEnvironment.PRODUCTION:
+            raise EnvironmentMismatchError("SQLite initialization not allowed in production environment")
+        
+        if self.database_mode not in [DatabaseMode.SQLITE_ONLY, DatabaseMode.HYBRID]:
+            raise EnvironmentMismatchError("SQLite initialization not allowed in current database mode")
+        
         try:
-            with sqlite3.connect(self.db_path) as conn:
+            with self._get_validated_connection("_init_sqlite_database") as conn:
                 cursor = conn.cursor()
                 
                 # Create users table
@@ -436,9 +894,11 @@ class DatabaseService:
             raise
     
     def _execute_query(self, query: str, params: tuple = (), fetch_one: bool = False, fetch_all: bool = False) -> Any:
-        """Execute a query with proper database-specific handling"""
+        """Execute a query with proper database-specific handling and environment validation"""
+        self._validate_database_operation("_execute_query")
+        
         try:
-            with self.get_connection() as conn:
+            with self._get_validated_connection("_execute_query") as conn:
                 if self.is_postgres:
                     cursor = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
                     cursor.execute(query, params)
@@ -492,11 +952,19 @@ class DatabaseService:
         """Verify that all foreign key constraints and indexes are properly set up"""
         try:
             # Skip constraint verification for PostgreSQL - constraints are handled at table creation
-            if self.use_postgres:
+            if self.database_mode == DatabaseMode.POSTGRESQL_ONLY:
                 logger.info("PostgreSQL database - skipping SQLite-specific constraint verification")
                 return
+            elif self.database_mode == DatabaseMode.SQLITE_ONLY:
+                self._ensure_not_production_for_sqlite("_verify_database_constraints")
+            elif self.environment == DatabaseEnvironment.PRODUCTION:
+                raise EnvironmentMismatchError("Constraint verification for mixed mode not allowed in production")
+            
+            # Only proceed with SQLite constraint verification
+            if not self.is_postgres:
+                return
                 
-            with sqlite3.connect(self.db_path) as conn:
+            with self._get_validated_connection("_verify_database_constraints") as conn:
                 cursor = conn.cursor()
                 
                 # Enable foreign key constraints for this connection
@@ -712,6 +1180,7 @@ class DatabaseService:
         Raises:
             Exception: If database operation fails
         """
+        self._validate_database_operation("create_user")
         try:
             # Check if user already exists
             existing_user = self._execute_query(
@@ -776,6 +1245,7 @@ class DatabaseService:
         Returns:
             Dict with user data if authentication successful, None if failed
         """
+        self._validate_database_operation("authenticate_user")
         try:
             # Get user by email with password hash
             user_data = self._execute_query(
@@ -884,30 +1354,42 @@ class DatabaseService:
             Exception: If database operation fails
         """
         try:
-            with sqlite3.connect(self.db_path) as conn:
-                # Enable foreign key constraints for this connection
-                conn.execute("PRAGMA foreign_keys = ON")
-                cursor = conn.cursor()
-                
-                # Check if user has already reported this challenge
-                cursor.execute("""
-                    SELECT id FROM user_reports 
-                    WHERE challenge_id = ? AND user_id = ?
-                """, (challenge_id, user_id))
-                
-                if cursor.fetchone():
-                    logger.warning(f"Duplicate report attempt: user {user_id} already reported challenge {challenge_id}")
-                    return None
-                
-                # Create the report
-                cursor.execute("""
+            current_time = datetime.utcnow()
+            
+            # Check if user has already reported this challenge
+            existing_report = self._execute_query(
+                "SELECT id FROM user_reports WHERE challenge_id = %s AND user_id = %s" if self.is_postgres 
+                else "SELECT id FROM user_reports WHERE challenge_id = ? AND user_id = ?",
+                (challenge_id, user_id),
+                fetch_one=True
+            )
+            
+            if existing_report:
+                logger.warning(f"Duplicate report attempt: user {user_id} already reported challenge {challenge_id}")
+                return None
+            
+            # Create the report
+            if self.is_postgres:
+                # PostgreSQL version with RETURNING clause
+                result = self._execute_query("""
                     INSERT INTO user_reports (challenge_id, user_id, reason, details, created_at)
-                    VALUES (?, ?, ?, ?, ?)
-                """, (challenge_id, user_id, reason, details, datetime.utcnow()))
-                
-                report_id = cursor.lastrowid
-                conn.commit()
-                
+                    VALUES (%s, %s, %s, %s, %s)
+                    RETURNING id
+                """, (challenge_id, user_id, reason, details, current_time), fetch_one=True)
+                report_id = result['id'] if result else None
+            else:
+                # SQLite version
+                with self.get_connection() as conn:
+                    conn.execute("PRAGMA foreign_keys = ON")
+                    cursor = conn.cursor()
+                    cursor.execute("""
+                        INSERT INTO user_reports (challenge_id, user_id, reason, details, created_at)
+                        VALUES (?, ?, ?, ?, ?)
+                    """, (challenge_id, user_id, reason, details, current_time))
+                    report_id = cursor.lastrowid
+                    conn.commit()
+            
+            if report_id:
                 logger.info(f"User report created: ID {report_id}, user {user_id}, challenge {challenge_id}, reason: {reason}")
                 
                 return {
@@ -916,8 +1398,11 @@ class DatabaseService:
                     "user_id": user_id,
                     "reason": reason,
                     "details": details,
-                    "created_at": datetime.utcnow().isoformat()
+                    "created_at": current_time.isoformat()
                 }
+            else:
+                logger.error("Failed to get report ID after creation")
+                return None
                 
         except Exception as e:
             logger.error(f"Failed to create user report for challenge {challenge_id} by user {user_id}: {e}")
@@ -934,35 +1419,36 @@ class DatabaseService:
             List of report dictionaries
         """
         try:
-            with sqlite3.connect(self.db_path) as conn:
-                # Enable foreign key constraints for this connection
-                conn.execute("PRAGMA foreign_keys = ON")
-                cursor = conn.cursor()
+            results = self._execute_query("""
+                SELECT ur.id, ur.challenge_id, ur.user_id, ur.reason, ur.details, ur.created_at,
+                       u.email, u.name
+                FROM user_reports ur
+                LEFT JOIN users u ON ur.user_id = u.id
+                WHERE ur.challenge_id = %s
+                ORDER BY ur.created_at DESC
+            """ if self.is_postgres else """
+                SELECT ur.id, ur.challenge_id, ur.user_id, ur.reason, ur.details, ur.created_at,
+                       u.email, u.name
+                FROM user_reports ur
+                LEFT JOIN users u ON ur.user_id = u.id
+                WHERE ur.challenge_id = ?
+                ORDER BY ur.created_at DESC
+            """, (challenge_id,), fetch_all=True)
+            
+            reports = []
+            for row in results:
+                reports.append({
+                    "id": row["id"] if isinstance(row, dict) else row[0],
+                    "challenge_id": row["challenge_id"] if isinstance(row, dict) else row[1],
+                    "user_id": row["user_id"] if isinstance(row, dict) else row[2],
+                    "reason": row["reason"] if isinstance(row, dict) else row[3],
+                    "details": row["details"] if isinstance(row, dict) else row[4],
+                    "created_at": row["created_at"] if isinstance(row, dict) else row[5],
+                    "user_email": row["email"] if isinstance(row, dict) else row[6],
+                    "user_name": row["name"] if isinstance(row, dict) else row[7]
+                })
                 
-                cursor.execute("""
-                    SELECT ur.id, ur.challenge_id, ur.user_id, ur.reason, ur.details, ur.created_at,
-                           u.email, u.name
-                    FROM user_reports ur
-                    LEFT JOIN users u ON ur.user_id = u.id
-                    WHERE ur.challenge_id = ?
-                    ORDER BY ur.created_at DESC
-                """, (challenge_id,))
-                
-                reports = []
-                for row in cursor.fetchall():
-                    report_id, challenge_id, user_id, reason, details, created_at, user_email, user_name = row
-                    reports.append({
-                        "id": report_id,
-                        "challenge_id": challenge_id,
-                        "user_id": user_id,
-                        "reason": reason,
-                        "details": details,
-                        "created_at": created_at,
-                        "user_email": user_email,
-                        "user_name": user_name
-                    })
-                
-                return reports
+            return reports
                 
         except Exception as e:
             logger.error(f"Failed to get user reports for challenge {challenge_id}: {e}")
@@ -980,12 +1466,21 @@ class DatabaseService:
             List of challenge report summaries
         """
         try:
-            with sqlite3.connect(self.db_path) as conn:
-                # Enable foreign key constraints for this connection
-                conn.execute("PRAGMA foreign_keys = ON")
-                cursor = conn.cursor()
-                
-                cursor.execute("""
+            # PostgreSQL uses string_agg instead of GROUP_CONCAT
+            if self.is_postgres:
+                query = """
+                    SELECT ur.challenge_id, 
+                           COUNT(ur.id) as report_count,
+                           MIN(ur.created_at) as first_report_at,
+                           MAX(ur.created_at) as last_report_at,
+                           string_agg(DISTINCT ur.reason, ',') as reasons
+                    FROM user_reports ur
+                    GROUP BY ur.challenge_id
+                    ORDER BY MAX(ur.created_at) DESC
+                    LIMIT %s OFFSET %s
+                """
+            else:
+                query = """
                     SELECT ur.challenge_id, 
                            COUNT(ur.id) as report_count,
                            MIN(ur.created_at) as first_report_at,
@@ -995,20 +1490,21 @@ class DatabaseService:
                     GROUP BY ur.challenge_id
                     ORDER BY MAX(ur.created_at) DESC
                     LIMIT ? OFFSET ?
-                """, (limit, offset))
+                """
+            
+            results = self._execute_query(query, (limit, offset), fetch_all=True)
+            
+            reported_challenges = []
+            for row in results:
+                reported_challenges.append({
+                    "challenge_id": row["challenge_id"] if isinstance(row, dict) else row[0],
+                    "report_count": row["report_count"] if isinstance(row, dict) else row[1],
+                    "first_report_at": row["first_report_at"] if isinstance(row, dict) else row[2],
+                    "last_report_at": row["last_report_at"] if isinstance(row, dict) else row[3],
+                    "reasons": (row["reasons"] if isinstance(row, dict) else row[4]).split(',') if (row["reasons"] if isinstance(row, dict) else row[4]) else []
+                })
                 
-                reported_challenges = []
-                for row in cursor.fetchall():
-                    challenge_id, report_count, first_report_at, last_report_at, reasons = row
-                    reported_challenges.append({
-                        "challenge_id": challenge_id,
-                        "report_count": report_count,
-                        "first_report_at": first_report_at,
-                        "last_report_at": last_report_at,
-                        "reasons": reasons.split(',') if reasons else []
-                    })
-                
-                return reported_challenges
+            return reported_challenges
                 
         except Exception as e:
             logger.error(f"Failed to get reported challenges: {e}")
@@ -1022,18 +1518,12 @@ class DatabaseService:
             Total number of unique challenges with reports
         """
         try:
-            with sqlite3.connect(self.db_path) as conn:
-                # Enable foreign key constraints for this connection
-                conn.execute("PRAGMA foreign_keys = ON")
-                cursor = conn.cursor()
-                
-                cursor.execute("""
-                    SELECT COUNT(DISTINCT ur.challenge_id) as total_count
-                    FROM user_reports ur
-                """)
-                
-                result = cursor.fetchone()
-                return result[0] if result else 0
+            result = self._execute_query("""
+                SELECT COUNT(DISTINCT ur.challenge_id) as total_count
+                FROM user_reports ur
+            """, fetch_one=True)
+            
+            return result["total_count"] if isinstance(result, dict) else result[0] if result else 0
                 
         except Exception as e:
             logger.error(f"Failed to get reported challenges count: {e}")
@@ -1050,35 +1540,33 @@ class DatabaseService:
             Report dictionary if found, None otherwise
         """
         try:
-            with sqlite3.connect(self.db_path) as conn:
-                # Enable foreign key constraints for this connection
-                conn.execute("PRAGMA foreign_keys = ON")
-                cursor = conn.cursor()
+            row = self._execute_query("""
+                SELECT ur.id, ur.challenge_id, ur.user_id, ur.reason, ur.details, ur.created_at,
+                       u.email, u.name
+                FROM user_reports ur
+                LEFT JOIN users u ON ur.user_id = u.id
+                WHERE ur.id = %s
+            """ if self.is_postgres else """
+                SELECT ur.id, ur.challenge_id, ur.user_id, ur.reason, ur.details, ur.created_at,
+                       u.email, u.name
+                FROM user_reports ur
+                LEFT JOIN users u ON ur.user_id = u.id
+                WHERE ur.id = ?
+            """, (report_id,), fetch_one=True)
+            
+            if not row:
+                return None
                 
-                cursor.execute("""
-                    SELECT ur.id, ur.challenge_id, ur.user_id, ur.reason, ur.details, ur.created_at,
-                           u.email, u.name
-                    FROM user_reports ur
-                    LEFT JOIN users u ON ur.user_id = u.id
-                    WHERE ur.id = ?
-                """, (report_id,))
-                
-                row = cursor.fetchone()
-                if not row:
-                    return None
-                
-                report_id, challenge_id, user_id, reason, details, created_at, user_email, user_name = row
-                
-                return {
-                    "id": report_id,
-                    "challenge_id": challenge_id,
-                    "user_id": user_id,
-                    "reason": reason,
-                    "details": details,
-                    "created_at": created_at,
-                    "user_email": user_email,
-                    "user_name": user_name
-                }
+            return {
+                "id": row["id"] if isinstance(row, dict) else row[0],
+                "challenge_id": row["challenge_id"] if isinstance(row, dict) else row[1],
+                "user_id": row["user_id"] if isinstance(row, dict) else row[2],
+                "reason": row["reason"] if isinstance(row, dict) else row[3],
+                "details": row["details"] if isinstance(row, dict) else row[4],
+                "created_at": row["created_at"] if isinstance(row, dict) else row[5],
+                "user_email": row["email"] if isinstance(row, dict) else row[6],
+                "user_name": row["name"] if isinstance(row, dict) else row[7]
+            }
                 
         except Exception as e:
             logger.error(f"Failed to get user report by ID {report_id}: {e}")
@@ -1095,40 +1583,50 @@ class DatabaseService:
             Dict with counts of deleted records by table
         """
         try:
-            with sqlite3.connect(self.db_path) as conn:
-                # Enable foreign key constraints for this connection
-                conn.execute("PRAGMA foreign_keys = ON")
-                cursor = conn.cursor()
-                
-                deletion_counts = {}
+            deletion_counts = {}
+            
+            with self.get_connection() as conn:
+                cursor = self.get_cursor(conn)
                 
                 # Delete user reports for this challenge
-                cursor.execute("DELETE FROM user_reports WHERE challenge_id = ?", (challenge_id,))
+                if self.is_postgres:
+                    cursor.execute("DELETE FROM user_reports WHERE challenge_id = %s", (challenge_id,))
+                else:
+                    cursor.execute("DELETE FROM user_reports WHERE challenge_id = ?", (challenge_id,))
                 deletion_counts["user_reports"] = cursor.rowcount
                 
                 # Delete user challenge progress for this challenge (if table exists)
                 try:
-                    cursor.execute("DELETE FROM user_challenge_progress WHERE challenge_id = ?", (challenge_id,))
+                    if self.is_postgres:
+                        cursor.execute("DELETE FROM user_challenge_progress WHERE challenge_id = %s", (challenge_id,))
+                    else:
+                        cursor.execute("DELETE FROM user_challenge_progress WHERE challenge_id = ?", (challenge_id,))
                     deletion_counts["user_challenge_progress"] = cursor.rowcount
-                except sqlite3.OperationalError:
+                except Exception:
                     # Table doesn't exist, skip
                     deletion_counts["user_challenge_progress"] = 0
                 
                 # Delete challenge records from challenges table (if it exists)
                 try:
-                    cursor.execute("DELETE FROM challenges WHERE id = ? OR challenge_id = ?", (challenge_id, challenge_id))
+                    if self.is_postgres:
+                        cursor.execute("DELETE FROM challenges WHERE challenge_id = %s", (challenge_id,))
+                    else:
+                        cursor.execute("DELETE FROM challenges WHERE id = ? OR challenge_id = ?", (challenge_id, challenge_id))
                     deletion_counts["challenges"] = cursor.rowcount
-                except sqlite3.OperationalError:
+                except Exception:
                     # Table doesn't exist, skip
                     deletion_counts["challenges"] = 0
                 
                 # Delete guess submissions for this challenge (if table exists)
                 try:
-                    cursor.execute("DELETE FROM guess_submissions WHERE challenge_id = ?", (challenge_id,))
-                    deletion_counts["guess_submissions"] = cursor.rowcount
-                except sqlite3.OperationalError:
+                    if self.is_postgres:
+                        cursor.execute("DELETE FROM guesses WHERE challenge_id = %s", (challenge_id,))
+                    else:
+                        cursor.execute("DELETE FROM guesses WHERE challenge_id = ?", (challenge_id,))
+                    deletion_counts["guesses"] = cursor.rowcount
+                except Exception:
                     # Table doesn't exist, skip
-                    deletion_counts["guess_submissions"] = 0
+                    deletion_counts["guesses"] = 0
                 
                 conn.commit()
                 
@@ -1147,17 +1645,13 @@ class DatabaseService:
             List of challenge IDs that have been reported
         """
         try:
-            with sqlite3.connect(self.db_path) as conn:
-                cursor = conn.cursor()
-                
-                cursor.execute("""
-                    SELECT DISTINCT challenge_id
-                    FROM user_reports
-                    ORDER BY challenge_id
-                """)
-                
-                results = cursor.fetchall()
-                return [row[0] for row in results]
+            results = self._execute_query("""
+                SELECT DISTINCT challenge_id
+                FROM user_reports
+                ORDER BY challenge_id
+            """, fetch_all=True)
+            
+            return [row["challenge_id"] if isinstance(row, dict) else row[0] for row in results]
                 
         except Exception as e:
             logger.error(f"Failed to get reported challenge IDs: {e}")
@@ -1174,13 +1668,13 @@ class DatabaseService:
             Number of reports removed
         """
         try:
-            with sqlite3.connect(self.db_path) as conn:
-                cursor = conn.cursor()
+            with self.get_connection() as conn:
+                cursor = self.get_cursor(conn)
                 
-                cursor.execute("""
-                    DELETE FROM user_reports 
-                    WHERE challenge_id = ?
-                """, (challenge_id,))
+                if self.is_postgres:
+                    cursor.execute("DELETE FROM user_reports WHERE challenge_id = %s", (challenge_id,))
+                else:
+                    cursor.execute("DELETE FROM user_reports WHERE challenge_id = ?", (challenge_id,))
                 
                 removed_count = cursor.rowcount
                 conn.commit()
@@ -1205,34 +1699,75 @@ class DatabaseService:
                     return obj.isoformat()
                 raise TypeError(f"Object of type {type(obj).__name__} is not JSON serializable")
             
-            with sqlite3.connect(self.db_path) as conn:
-                cursor = conn.cursor()
+            with self.get_connection() as conn:
+                cursor = self.get_cursor(conn)
                 
                 # Convert challenge object to database format
-                cursor.execute("""
-                    INSERT OR REPLACE INTO challenges (
-                        challenge_id, creator_id, title, status, lie_statement_id,
-                        view_count, guess_count, correct_guess_count, is_merged_video,
-                        statements_json, merged_video_metadata_json, tags_json,
-                        created_at, updated_at, published_at
-                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                """, (
-                    challenge.challenge_id,
-                    challenge.creator_id,
-                    challenge.title,
-                    challenge.status.value if hasattr(challenge.status, 'value') else str(challenge.status),
-                    challenge.lie_statement_id,
-                    challenge.view_count,
-                    challenge.guess_count,
-                    challenge.correct_guess_count,
-                    challenge.is_merged_video,
-                    json.dumps([stmt.model_dump() for stmt in challenge.statements], default=datetime_serializer),
-                    json.dumps(challenge.merged_video_metadata.model_dump(), default=datetime_serializer) if challenge.merged_video_metadata else None,
-                    json.dumps(challenge.tags) if challenge.tags else None,
-                    challenge.created_at.isoformat() if challenge.created_at else None,
-                    challenge.updated_at.isoformat() if challenge.updated_at else None,
-                    challenge.published_at.isoformat() if challenge.published_at else None
-                ))
+                if self.is_postgres:
+                    # PostgreSQL uses ON CONFLICT instead of INSERT OR REPLACE
+                    cursor.execute("""
+                        INSERT INTO challenges (
+                            challenge_id, creator_id, title, status, lie_statement_id,
+                            view_count, guess_count, correct_guess_count, is_merged_video,
+                            statements_json, merged_video_metadata_json, tags_json,
+                            created_at, updated_at, published_at
+                        ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+                        ON CONFLICT (challenge_id) DO UPDATE SET
+                            creator_id = EXCLUDED.creator_id,
+                            title = EXCLUDED.title,
+                            status = EXCLUDED.status,
+                            lie_statement_id = EXCLUDED.lie_statement_id,
+                            view_count = EXCLUDED.view_count,
+                            guess_count = EXCLUDED.guess_count,
+                            correct_guess_count = EXCLUDED.correct_guess_count,
+                            is_merged_video = EXCLUDED.is_merged_video,
+                            statements_json = EXCLUDED.statements_json,
+                            merged_video_metadata_json = EXCLUDED.merged_video_metadata_json,
+                            tags_json = EXCLUDED.tags_json,
+                            updated_at = EXCLUDED.updated_at,
+                            published_at = EXCLUDED.published_at
+                    """, (
+                        challenge.challenge_id,
+                        challenge.creator_id,
+                        challenge.title,
+                        challenge.status.value if hasattr(challenge.status, 'value') else str(challenge.status),
+                        challenge.lie_statement_id,
+                        challenge.view_count,
+                        challenge.guess_count,
+                        challenge.correct_guess_count,
+                        challenge.is_merged_video,
+                        json.dumps([stmt.model_dump() for stmt in challenge.statements], default=datetime_serializer),
+                        json.dumps(challenge.merged_video_metadata.model_dump(), default=datetime_serializer) if challenge.merged_video_metadata else None,
+                        json.dumps(challenge.tags) if challenge.tags else None,
+                        challenge.created_at.isoformat() if challenge.created_at else None,
+                        challenge.updated_at.isoformat() if challenge.updated_at else None,
+                        challenge.published_at.isoformat() if challenge.published_at else None
+                    ))
+                else:
+                    cursor.execute("""
+                        INSERT OR REPLACE INTO challenges (
+                            challenge_id, creator_id, title, status, lie_statement_id,
+                            view_count, guess_count, correct_guess_count, is_merged_video,
+                            statements_json, merged_video_metadata_json, tags_json,
+                            created_at, updated_at, published_at
+                        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    """, (
+                        challenge.challenge_id,
+                        challenge.creator_id,
+                        challenge.title,
+                        challenge.status.value if hasattr(challenge.status, 'value') else str(challenge.status),
+                        challenge.lie_statement_id,
+                        challenge.view_count,
+                        challenge.guess_count,
+                        challenge.correct_guess_count,
+                        challenge.is_merged_video,
+                        json.dumps([stmt.model_dump() for stmt in challenge.statements], default=datetime_serializer),
+                        json.dumps(challenge.merged_video_metadata.model_dump(), default=datetime_serializer) if challenge.merged_video_metadata else None,
+                        json.dumps(challenge.tags) if challenge.tags else None,
+                        challenge.created_at.isoformat() if challenge.created_at else None,
+                        challenge.updated_at.isoformat() if challenge.updated_at else None,
+                        challenge.published_at.isoformat() if challenge.published_at else None
+                    ))
                 
                 conn.commit()
                 return True
@@ -1248,42 +1783,49 @@ class DatabaseService:
             from models import Challenge, Statement, ChallengeStatus, MergedVideoMetadata
             from datetime import datetime
             
-            with sqlite3.connect(self.db_path) as conn:
-                cursor = conn.cursor()
-                cursor.execute("""
-                    SELECT challenge_id, creator_id, title, status, lie_statement_id,
-                           view_count, guess_count, correct_guess_count, is_merged_video,
-                           statements_json, merged_video_metadata_json, tags_json,
-                           created_at, updated_at, published_at
-                    FROM challenges WHERE challenge_id = ?
-                """, (challenge_id,))
+            row = self._execute_query("""
+                SELECT challenge_id, creator_id, title, status, lie_statement_id,
+                       view_count, guess_count, correct_guess_count, is_merged_video,
+                       statements_json, merged_video_metadata_json, tags_json,
+                       created_at, updated_at, published_at
+                FROM challenges WHERE challenge_id = %s
+            """ if self.is_postgres else """
+                SELECT challenge_id, creator_id, title, status, lie_statement_id,
+                       view_count, guess_count, correct_guess_count, is_merged_video,
+                       statements_json, merged_video_metadata_json, tags_json,
+                       created_at, updated_at, published_at
+                FROM challenges WHERE challenge_id = ?
+            """, (challenge_id,), fetch_one=True)
+            
+            if not row:
+                return None
                 
-                row = cursor.fetchone()
-                if not row:
-                    return None
+                # Parse the data - handle both dict and tuple row formats
+                statements_json = row["statements_json"] if isinstance(row, dict) else row[9]
+                metadata_json = row["merged_video_metadata_json"] if isinstance(row, dict) else row[10]
+                tags_json = row["tags_json"] if isinstance(row, dict) else row[11]
                 
-                # Parse the data
-                statements = [Statement(**stmt_data) for stmt_data in json.loads(row[9])]
-                merged_metadata = MergedVideoMetadata(**json.loads(row[10])) if row[10] else None
-                tags = json.loads(row[11]) if row[11] else []
+                statements = [Statement(**stmt_data) for stmt_data in json.loads(statements_json)]
+                merged_metadata = MergedVideoMetadata(**json.loads(metadata_json)) if metadata_json else None
+                tags = json.loads(tags_json) if tags_json else []
                 
                 # Create challenge object
                 challenge = Challenge(
-                    challenge_id=row[0],
-                    creator_id=row[1],
-                    title=row[2],
-                    status=ChallengeStatus(row[3]) if row[3] else ChallengeStatus.DRAFT,
-                    lie_statement_id=row[4],
+                    challenge_id=row["challenge_id"] if isinstance(row, dict) else row[0],
+                    creator_id=row["creator_id"] if isinstance(row, dict) else row[1],
+                    title=row["title"] if isinstance(row, dict) else row[2],
+                    status=ChallengeStatus(row["status"] if isinstance(row, dict) else row[3]) if (row["status"] if isinstance(row, dict) else row[3]) else ChallengeStatus.DRAFT,
+                    lie_statement_id=row["lie_statement_id"] if isinstance(row, dict) else row[4],
                     statements=statements,
-                    view_count=row[5] or 0,
-                    guess_count=row[6] or 0,
-                    correct_guess_count=row[7] or 0,
-                    is_merged_video=bool(row[8]),
+                    view_count=(row["view_count"] if isinstance(row, dict) else row[5]) or 0,
+                    guess_count=(row["guess_count"] if isinstance(row, dict) else row[6]) or 0,
+                    correct_guess_count=(row["correct_guess_count"] if isinstance(row, dict) else row[7]) or 0,
+                    is_merged_video=bool(row["is_merged_video"] if isinstance(row, dict) else row[8]),
                     merged_video_metadata=merged_metadata,
                     tags=tags,
-                    created_at=datetime.fromisoformat(row[12]) if row[12] else None,
-                    updated_at=datetime.fromisoformat(row[13]) if row[13] else None,
-                    published_at=datetime.fromisoformat(row[14]) if row[14] else None
+                    created_at=datetime.fromisoformat(row["created_at"] if isinstance(row, dict) else row[12]) if (row["created_at"] if isinstance(row, dict) else row[12]) else None,
+                    updated_at=datetime.fromisoformat(row["updated_at"] if isinstance(row, dict) else row[13]) if (row["updated_at"] if isinstance(row, dict) else row[13]) else None,
+                    published_at=datetime.fromisoformat(row["published_at"] if isinstance(row, dict) else row[14]) if (row["published_at"] if isinstance(row, dict) else row[14]) else None
                 )
                 
                 return challenge
@@ -1301,47 +1843,49 @@ class DatabaseService:
             
             challenges = {}
             
-            with sqlite3.connect(self.db_path) as conn:
-                cursor = conn.cursor()
-                cursor.execute("""
-                    SELECT challenge_id, creator_id, title, status, lie_statement_id,
-                           view_count, guess_count, correct_guess_count, is_merged_video,
-                           statements_json, merged_video_metadata_json, tags_json,
-                           created_at, updated_at, published_at
-                    FROM challenges
-                """)
+            results = self._execute_query("""
+                SELECT challenge_id, creator_id, title, status, lie_statement_id,
+                       view_count, guess_count, correct_guess_count, is_merged_video,
+                       statements_json, merged_video_metadata_json, tags_json,
+                       created_at, updated_at, published_at
+                FROM challenges
+            """, fetch_all=True)
                 
-                for row in cursor.fetchall():
-                    try:
-                        # Parse the data
-                        statements = [Statement(**stmt_data) for stmt_data in json.loads(row[9])]
-                        merged_metadata = MergedVideoMetadata(**json.loads(row[10])) if row[10] else None
-                        tags = json.loads(row[11]) if row[11] else []
-                        
-                        # Create challenge object
-                        challenge = Challenge(
-                            challenge_id=row[0],
-                            creator_id=row[1],
-                            title=row[2],
-                            status=ChallengeStatus(row[3]) if row[3] else ChallengeStatus.DRAFT,
-                            lie_statement_id=row[4],
-                            statements=statements,
-                            view_count=row[5] or 0,
-                            guess_count=row[6] or 0,
-                            correct_guess_count=row[7] or 0,
-                            is_merged_video=bool(row[8]),
-                            merged_video_metadata=merged_metadata,
-                            tags=tags,
-                            created_at=datetime.fromisoformat(row[12]) if row[12] else None,
-                            updated_at=datetime.fromisoformat(row[13]) if row[13] else None,
-                            published_at=datetime.fromisoformat(row[14]) if row[14] else None
-                        )
-                        
-                        challenges[challenge.challenge_id] = challenge
-                        
-                    except Exception as e:
-                        logger.error(f"Error parsing challenge row: {e}")
-                        continue
+            for row in results:
+                try:
+                    # Parse the data - handle both dict and tuple row formats
+                    statements_json = row["statements_json"] if isinstance(row, dict) else row[9]
+                    metadata_json = row["merged_video_metadata_json"] if isinstance(row, dict) else row[10]
+                    tags_json = row["tags_json"] if isinstance(row, dict) else row[11]
+                    
+                    statements = [Statement(**stmt_data) for stmt_data in json.loads(statements_json)]
+                    merged_metadata = MergedVideoMetadata(**json.loads(metadata_json)) if metadata_json else None
+                    tags = json.loads(tags_json) if tags_json else []
+                    
+                    # Create challenge object
+                    challenge = Challenge(
+                        challenge_id=row["challenge_id"] if isinstance(row, dict) else row[0],
+                        creator_id=row["creator_id"] if isinstance(row, dict) else row[1],
+                        title=row["title"] if isinstance(row, dict) else row[2],
+                        status=ChallengeStatus(row["status"] if isinstance(row, dict) else row[3]) if (row["status"] if isinstance(row, dict) else row[3]) else ChallengeStatus.DRAFT,
+                        lie_statement_id=row["lie_statement_id"] if isinstance(row, dict) else row[4],
+                        statements=statements,
+                        view_count=(row["view_count"] if isinstance(row, dict) else row[5]) or 0,
+                        guess_count=(row["guess_count"] if isinstance(row, dict) else row[6]) or 0,
+                        correct_guess_count=(row["correct_guess_count"] if isinstance(row, dict) else row[7]) or 0,
+                        is_merged_video=bool(row["is_merged_video"] if isinstance(row, dict) else row[8]),
+                        merged_video_metadata=merged_metadata,
+                        tags=tags,
+                        created_at=datetime.fromisoformat(row["created_at"] if isinstance(row, dict) else row[12]) if (row["created_at"] if isinstance(row, dict) else row[12]) else None,
+                        updated_at=datetime.fromisoformat(row["updated_at"] if isinstance(row, dict) else row[13]) if (row["updated_at"] if isinstance(row, dict) else row[13]) else None,
+                        published_at=datetime.fromisoformat(row["published_at"] if isinstance(row, dict) else row[14]) if (row["published_at"] if isinstance(row, dict) else row[14]) else None
+                    )
+                    
+                    challenges[challenge.challenge_id] = challenge
+                    
+                except Exception as e:
+                    logger.error(f"Error parsing challenge row: {e}")
+                    continue
                 
             return challenges
             
@@ -1352,10 +1896,16 @@ class DatabaseService:
     def delete_challenge_from_db(self, challenge_id: str) -> bool:
         """Delete a challenge from the database"""
         try:
-            with sqlite3.connect(self.db_path) as conn:
-                cursor = conn.cursor()
-                cursor.execute("DELETE FROM challenges WHERE challenge_id = ?", (challenge_id,))
-                cursor.execute("DELETE FROM guesses WHERE challenge_id = ?", (challenge_id,))
+            with self.get_connection() as conn:
+                cursor = self.get_cursor(conn)
+                
+                if self.is_postgres:
+                    cursor.execute("DELETE FROM challenges WHERE challenge_id = %s", (challenge_id,))
+                    cursor.execute("DELETE FROM guesses WHERE challenge_id = %s", (challenge_id,))
+                else:
+                    cursor.execute("DELETE FROM challenges WHERE challenge_id = ?", (challenge_id,))
+                    cursor.execute("DELETE FROM guesses WHERE challenge_id = ?", (challenge_id,))
+                
                 conn.commit()
                 return cursor.rowcount > 0
                 
@@ -1366,23 +1916,47 @@ class DatabaseService:
     def save_guess(self, guess) -> bool:
         """Save a guess to the database"""
         try:
-            with sqlite3.connect(self.db_path) as conn:
-                cursor = conn.cursor()
+            with self.get_connection() as conn:
+                cursor = self.get_cursor(conn)
                 
-                cursor.execute("""
-                    INSERT OR REPLACE INTO guesses (
-                        guess_id, challenge_id, user_id, guessed_lie_statement_id,
-                        is_correct, response_time_seconds, submitted_at
-                    ) VALUES (?, ?, ?, ?, ?, ?, ?)
-                """, (
-                    guess.guess_id,
-                    guess.challenge_id,
-                    guess.user_id,
-                    guess.guessed_lie_statement_id,
-                    guess.is_correct,
-                    guess.response_time_seconds,
-                    guess.submitted_at.isoformat() if guess.submitted_at else None
-                ))
+                if self.is_postgres:
+                    # PostgreSQL uses ON CONFLICT instead of INSERT OR REPLACE
+                    cursor.execute("""
+                        INSERT INTO guesses (
+                            guess_id, challenge_id, user_id, guessed_lie_statement_id,
+                            is_correct, response_time_seconds, submitted_at
+                        ) VALUES (%s, %s, %s, %s, %s, %s, %s)
+                        ON CONFLICT (guess_id) DO UPDATE SET
+                            challenge_id = EXCLUDED.challenge_id,
+                            user_id = EXCLUDED.user_id,
+                            guessed_lie_statement_id = EXCLUDED.guessed_lie_statement_id,
+                            is_correct = EXCLUDED.is_correct,
+                            response_time_seconds = EXCLUDED.response_time_seconds,
+                            submitted_at = EXCLUDED.submitted_at
+                    """, (
+                        guess.guess_id,
+                        guess.challenge_id,
+                        guess.user_id,
+                        guess.guessed_lie_statement_id,
+                        guess.is_correct,
+                        guess.response_time_seconds,
+                        guess.submitted_at.isoformat() if guess.submitted_at else None
+                    ))
+                else:
+                    cursor.execute("""
+                        INSERT OR REPLACE INTO guesses (
+                            guess_id, challenge_id, user_id, guessed_lie_statement_id,
+                            is_correct, response_time_seconds, submitted_at
+                        ) VALUES (?, ?, ?, ?, ?, ?, ?)
+                    """, (
+                        guess.guess_id,
+                        guess.challenge_id,
+                        guess.user_id,
+                        guess.guessed_lie_statement_id,
+                        guess.is_correct,
+                        guess.response_time_seconds,
+                        guess.submitted_at.isoformat() if guess.submitted_at else None
+                    ))
                 
                 conn.commit()
                 return True
@@ -1399,31 +1973,29 @@ class DatabaseService:
             
             guesses = {}
             
-            with sqlite3.connect(self.db_path) as conn:
-                cursor = conn.cursor()
-                cursor.execute("""
-                    SELECT guess_id, challenge_id, user_id, guessed_lie_statement_id,
-                           is_correct, response_time_seconds, submitted_at
-                    FROM guesses
-                """)
+            results = self._execute_query("""
+                SELECT guess_id, challenge_id, user_id, guessed_lie_statement_id,
+                       is_correct, response_time_seconds, submitted_at
+                FROM guesses
+            """, fetch_all=True)
                 
-                for row in cursor.fetchall():
-                    try:
-                        guess = GuessSubmission(
-                            guess_id=row[0],
-                            challenge_id=row[1],
-                            user_id=row[2],
-                            guessed_lie_statement_id=row[3],
-                            is_correct=bool(row[4]),
-                            response_time_seconds=row[5],
-                            submitted_at=datetime.fromisoformat(row[6]) if row[6] else None
-                        )
-                        
-                        guesses[guess.guess_id] = guess
-                        
-                    except Exception as e:
-                        logger.error(f"Error parsing guess row: {e}")
-                        continue
+            for row in results:
+                try:
+                    guess = GuessSubmission(
+                        guess_id=row["guess_id"] if isinstance(row, dict) else row[0],
+                        challenge_id=row["challenge_id"] if isinstance(row, dict) else row[1],
+                        user_id=row["user_id"] if isinstance(row, dict) else row[2],
+                        guessed_lie_statement_id=row["guessed_lie_statement_id"] if isinstance(row, dict) else row[3],
+                        is_correct=bool(row["is_correct"] if isinstance(row, dict) else row[4]),
+                        response_time_seconds=row["response_time_seconds"] if isinstance(row, dict) else row[5],
+                        submitted_at=datetime.fromisoformat(row["submitted_at"] if isinstance(row, dict) else row[6]) if (row["submitted_at"] if isinstance(row, dict) else row[6]) else None
+                    )
+                    
+                    guesses[guess.guess_id] = guess
+                    
+                except Exception as e:
+                    logger.error(f"Error parsing guess row: {e}")
+                    continue
                 
             return guesses
             
@@ -1431,13 +2003,79 @@ class DatabaseService:
             logger.error(f"Error loading all guesses: {e}")
             return {}
 
+    def get_environment_info(self) -> Dict[str, Any]:
+        """
+        Get comprehensive information about the current database environment
+        
+        Returns:
+            Dict containing environment and configuration details
+        """
+        return {
+            "environment": self.environment.value,
+            "database_mode": self.database_mode.value,
+            "is_postgres": self.is_postgres,
+            "database_url_type": "PostgreSQL" if self.is_postgres else "SQLite",
+            "database_path": str(self.db_path) if self.db_path else None,
+            "psycopg2_available": PSYCOPG2_AVAILABLE,
+            "production_ready": self.environment != DatabaseEnvironment.PRODUCTION or self.database_mode == DatabaseMode.POSTGRESQL_ONLY,
+            "validation_status": "VALIDATED" if self._validate_production_requirements() else "INVALID"
+        }
+    
+    def _validate_production_requirements(self) -> bool:
+        """
+        Validate that all production requirements are met
+        
+        Returns:
+            bool: True if production requirements are satisfied
+        """
+        if self.environment == DatabaseEnvironment.PRODUCTION:
+            return (
+                self.database_mode == DatabaseMode.POSTGRESQL_ONLY and 
+                self.is_postgres and 
+                PSYCOPG2_AVAILABLE and
+                'postgresql://' in self.database_url.lower()
+            )
+        return True
+    
+    def validate_environment_compatibility(self) -> None:
+        """
+        Perform a comprehensive validation of environment compatibility
+        
+        Raises:
+            EnvironmentMismatchError: If environment is not properly configured
+        """
+        env_info = self.get_environment_info()
+        
+        if not env_info["production_ready"]:
+            raise EnvironmentMismatchError(
+                f"Environment validation failed. Current config: {env_info}"
+            )
+        
+        if self.environment == DatabaseEnvironment.PRODUCTION:
+            if not self.is_postgres:
+                raise EnvironmentMismatchError(
+                    "Production environment requires PostgreSQL database"
+                )
+            if self.database_mode != DatabaseMode.POSTGRESQL_ONLY:
+                raise EnvironmentMismatchError(
+                    f"Production environment requires PostgreSQL-only mode, got: {self.database_mode.value}"
+                )
+            if not PSYCOPG2_AVAILABLE:
+                raise EnvironmentMismatchError(
+                    "Production environment requires psycopg2 to be installed"
+                )
+        
+        logger.info(f"Environment validation passed: {env_info}")
+
 
 # Global instance - will be initialized when first accessed
 db_service = None
 
 def get_db_service():
-    """Get or create the global database service instance"""
+    """Get or create the global database service instance with environment validation"""
     global db_service
     if db_service is None:
         db_service = DatabaseService()
+        # Validate environment on first initialization
+        db_service.validate_environment_compatibility()
     return db_service
