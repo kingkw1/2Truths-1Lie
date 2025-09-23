@@ -24,6 +24,15 @@ export const StoreScreen: React.FC = () => {
   } = usePremiumStatus();
   const [purchasing, setPurchasing] = useState(false);
 
+  // Filter and separate product packages
+  const subscriptionPackages = offerings?.current?.availablePackages.filter(pkg => 
+    pkg.identifier === 'pro_monthly' || pkg.identifier === 'pro_annual'
+  ) || [];
+  
+  const tokenPackages = offerings?.current?.availablePackages.filter(pkg => 
+    pkg.identifier.includes('token_pack')
+  ) || [];
+
   const handlePurchase = async (pkg: PurchasesPackage) => {
     try {
       setPurchasing(true);
@@ -93,39 +102,114 @@ export const StoreScreen: React.FC = () => {
         {isPremium ? 'Manage Subscription' : 'Upgrade to Pro'}
       </Text>
 
-      {/* Benefits Section */}
+      {/* Subscription Hero Section */}
       {!isPremium && (
-        <View style={styles.benefitsContainer}>
-          <Text style={styles.benefitsTitle}>Premium Benefits:</Text>
-          <Text style={styles.benefitItem}>• Unlimited Challenge Creation</Text>
-          <Text style={styles.benefitItem}>• Monthly 'AI Detector' Tokens</Text>
-          <Text style={styles.benefitItem}>• Exclusive Pro Badge</Text>
-          <Text style={styles.benefitItem}>• Priority Support</Text>
-          <Text style={styles.benefitItem}>• Ad-Free Experience</Text>
+        <View style={styles.heroSection}>
+          {/* Free Trial Callout for Judge Access */}
+          <View style={styles.judgeAccessContainer}>
+            <Text style={styles.judgeAccessTitle}>🏆 Hackathon Judges</Text>
+            <Text style={styles.judgeAccessText}>
+              Start your free trial to evaluate all premium features during the judging period.
+            </Text>
+          </View>
+
+          {/* Benefits Section */}
+          <View style={styles.benefitsContainer}>
+            <Text style={styles.benefitsTitle}>Premium Benefits:</Text>
+            <Text style={styles.benefitItem}>• Unlimited Challenge Creation</Text>
+            <Text style={styles.benefitItem}>• Monthly 'AI Detector' Tokens</Text>
+            <Text style={styles.benefitItem}>• Exclusive Pro Badge</Text>
+            <Text style={styles.benefitItem}>• Priority Support</Text>
+            <Text style={styles.benefitItem}>• Ad-Free Experience</Text>
+          </View>
+
+          {/* Subscription Packages */}
+          <View style={styles.subscriptionPackagesContainer}>
+            {subscriptionPackages.map((pkg) => (
+              <View key={pkg.identifier} style={styles.packageWithBadge}>
+                {pkg.identifier === 'pro_annual' && (
+                  <View style={styles.bestValueBadge}>
+                    <Text style={styles.badgeText}>Best Value - Save 17%!</Text>
+                  </View>
+                )}
+                <ProductCard 
+                  pkg={pkg} 
+                  onPress={handlePurchase}
+                  disabled={purchasing}
+                />
+              </View>
+            ))}
+          </View>
+
+          {/* Primary CTA Button */}
+          <TouchableOpacity 
+            style={styles.primaryCtaButton}
+            onPress={() => {
+              const preferredPackage = subscriptionPackages.find(pkg => pkg.identifier === 'pro_annual') 
+                || subscriptionPackages[0];
+              if (preferredPackage) {
+                handlePurchase(preferredPackage);
+              }
+            }}
+            disabled={purchasing || subscriptionPackages.length === 0}
+          >
+            <Text style={styles.primaryCtaText}>
+              {purchasing ? 'Processing...' : 'Start 7-Day Free Trial'}
+            </Text>
+          </TouchableOpacity>
         </View>
       )}
 
-      {/* Free Trial Callout for Judge Access */}
-      {!isPremium && (
-        <View style={styles.judgeAccessContainer}>
-          <Text style={styles.judgeAccessTitle}>🏆 Hackathon Judges</Text>
-          <Text style={styles.judgeAccessText}>
-            Start your free trial to evaluate all premium features during the judging period.
-          </Text>
-        </View>
+      {/* À La Carte Token Section */}
+      {tokenPackages.length > 0 && (
+        <>
+          {/* Visual Separator */}
+          <View style={styles.separatorContainer}>
+            <Text style={styles.separatorText}>— Or, Get a Few Tokens —</Text>
+          </View>
+
+          {/* Token Packages */}
+          <View style={styles.tokenSection}>
+            <Text style={styles.tokenSectionTitle}>Token Packs</Text>
+            <View style={styles.tokenPackagesContainer}>
+              {tokenPackages.map((pkg) => (
+                <View key={pkg.identifier} style={styles.tokenPackageWrapper}>
+                  {pkg.identifier === 'token_pack_large' && (
+                    <View style={styles.mostPopularBadge}>
+                      <Text style={styles.badgeText}>Most Popular</Text>
+                    </View>
+                  )}
+                  <ProductCard 
+                    pkg={pkg} 
+                    onPress={handlePurchase}
+                    disabled={purchasing}
+                  />
+                  {/* Per-unit cost display */}
+                  <Text style={styles.perUnitCost}>
+                    {pkg.identifier === 'token_pack_small' && '($1.00 each)'}
+                    {pkg.identifier === 'token_pack_medium' && '($0.01 each)'}
+                    {pkg.identifier === 'token_pack_large' && '($0.20 each)'}
+                  </Text>
+                </View>
+              ))}
+            </View>
+          </View>
+        </>
       )}
 
-      {/* Subscription Packages */}
-      <View style={styles.packagesContainer}>
-        {offerings?.current?.availablePackages.map((pkg) => (
-          <ProductCard 
-            key={pkg.identifier} 
-            pkg={pkg} 
-            onPress={handlePurchase}
-            disabled={purchasing}
-          />
-        ))}
-      </View>
+      {/* Existing subscription packages for premium users */}
+      {isPremium && (
+        <View style={styles.packagesContainer}>
+          {subscriptionPackages.map((pkg) => (
+            <ProductCard 
+              key={pkg.identifier} 
+              pkg={pkg} 
+              onPress={handlePurchase}
+              disabled={purchasing}
+            />
+          ))}
+        </View>
+      )}
 
       {/* Restore Purchases Button */}
       <TouchableOpacity 
@@ -173,11 +257,30 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#2E7D32',
   },
-  benefitsContainer: {
+  
+  // Hero Section Styles
+  heroSection: {
     backgroundColor: '#F5F5F5',
-    borderRadius: 8,
+    borderRadius: 16,
+    padding: 20,
+    marginBottom: 24,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  
+  benefitsContainer: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
     padding: 16,
     marginBottom: 16,
+    borderWidth: 1,
+    borderColor: '#E0E0E0',
   },
   benefitsTitle: {
     fontSize: 16,
@@ -191,6 +294,7 @@ const styles = StyleSheet.create({
     marginBottom: 4,
     lineHeight: 20,
   },
+  
   judgeAccessContainer: {
     backgroundColor: '#FFF3E0',
     borderRadius: 12,
@@ -209,6 +313,115 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#E65100',
   },
+  
+  subscriptionPackagesContainer: {
+    marginBottom: 16,
+  },
+  
+  packageWithBadge: {
+    position: 'relative',
+    marginBottom: 12,
+  },
+  
+  bestValueBadge: {
+    position: 'absolute',
+    top: -8,
+    right: 8,
+    backgroundColor: '#FF5722',
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+    borderRadius: 12,
+    zIndex: 1,
+  },
+  
+  mostPopularBadge: {
+    position: 'absolute',
+    top: -8,
+    right: 8,
+    backgroundColor: '#4CAF50',
+    paddingHorizontal: 12,
+    paddingVertical: 4,
+    borderRadius: 12,
+    zIndex: 1,
+  },
+  
+  badgeText: {
+    color: '#FFFFFF',
+    fontSize: 12,
+    fontWeight: 'bold',
+  },
+  
+  primaryCtaButton: {
+    backgroundColor: '#2196F3',
+    paddingVertical: 16,
+    paddingHorizontal: 32,
+    borderRadius: 12,
+    alignItems: 'center',
+    marginTop: 8,
+    shadowColor: '#2196F3',
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 6,
+  },
+  
+  primaryCtaText: {
+    color: '#FFFFFF',
+    fontSize: 18,
+    fontWeight: 'bold',
+  },
+  
+  // À La Carte Section Styles
+  separatorContainer: {
+    alignItems: 'center',
+    marginVertical: 24,
+  },
+  
+  separatorText: {
+    fontSize: 16,
+    color: '#666666',
+    fontStyle: 'italic',
+  },
+  
+  tokenSection: {
+    backgroundColor: '#FAFAFA',
+    borderRadius: 12,
+    padding: 16,
+    marginBottom: 16,
+  },
+  
+  tokenSectionTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#333',
+    textAlign: 'center',
+    marginBottom: 16,
+  },
+  
+  tokenPackagesContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-around',
+    flexWrap: 'wrap',
+  },
+  
+  tokenPackageWrapper: {
+    position: 'relative',
+    flex: 1,
+    marginHorizontal: 4,
+    maxWidth: '48%',
+  },
+  
+  perUnitCost: {
+    textAlign: 'center',
+    fontSize: 12,
+    color: '#666666',
+    marginTop: 4,
+    fontStyle: 'italic',
+  },
+  
   packagesContainer: {
     marginBottom: 16,
   },
