@@ -29,20 +29,11 @@ class TokenService:
     def get_user_balance(self, user_id: str) -> TokenBalanceResponse:
         """Get current token balance for a user"""
         try:
-            if self.db.is_postgres:
-                query = """
-                    SELECT balance, last_updated 
-                    FROM token_balances 
-                    WHERE user_id = %s
-                """
-            else:  # SQLite
-                query = """
-                    SELECT balance, last_updated 
-                    FROM token_balances 
-                    WHERE user_id = ?
-                """
-            
-            result = self.db._execute_query(query, (user_id,), fetch_one=True)
+            result = self.db._execute_select(
+                "SELECT balance, last_updated FROM token_balances WHERE user_id = ?",
+                (user_id,),
+                fetch_one=True
+            )
             
             if result:
                 return TokenBalanceResponse(
@@ -145,26 +136,14 @@ class TokenService:
     def get_transaction_history(self, user_id: str, limit: int = 50) -> List[Dict[str, Any]]:
         """Get transaction history for a user"""
         try:
-            if self.db.is_postgres:
-                query = """
-                    SELECT transaction_id, transaction_type, amount, balance_before, 
-                           balance_after, description, metadata, created_at
-                    FROM token_transactions 
-                    WHERE user_id = %s 
-                    ORDER BY created_at DESC 
-                    LIMIT %s
-                """
-            else:  # SQLite
-                query = """
-                    SELECT transaction_id, transaction_type, amount, balance_before, 
-                           balance_after, description, metadata, created_at
-                    FROM token_transactions 
-                    WHERE user_id = ? 
-                    ORDER BY created_at DESC 
-                    LIMIT ?
-                """
-                
-            results = self.db._execute_query(query, (user_id, limit), fetch_all=True)
+            results = self.db._execute_select("""
+                SELECT transaction_id, transaction_type, amount, balance_before, 
+                       balance_after, description, metadata, created_at
+                FROM token_transactions 
+                WHERE user_id = ? 
+                ORDER BY created_at DESC 
+                LIMIT ?
+            """, (user_id, limit), fetch_one=False)
             
             return results or []
             
@@ -175,19 +154,13 @@ class TokenService:
     def _initialize_user_balance(self, user_id: str) -> None:
         """Initialize a new user with 0 token balance"""
         try:
-            if self.db.is_postgres:
-                query = """
-                    INSERT INTO token_balances (user_id, balance) 
-                    VALUES (%s, 0)
-                    ON CONFLICT (user_id) DO NOTHING
-                """
-            else:  # SQLite
-                query = """
-                    INSERT OR IGNORE INTO token_balances (user_id, balance) 
-                    VALUES (?, 0)
-                """
-                
-            self.db._execute_query(query, (user_id,))
+            # Use unified UPSERT to handle both PostgreSQL and SQLite
+            self.db._execute_upsert(
+                "token_balances",
+                {"user_id": user_id, "balance": 0},
+                ["user_id"],  # conflict columns
+                []  # don't update anything if exists
+            )
             logger.info(f"Initialized token balance for user {user_id}")
             
         except Exception as e:
@@ -207,55 +180,48 @@ class TokenService:
         revenuecat_transaction_id: Optional[str] = None,
         revenuecat_product_id: Optional[str] = None
     ) -> None:
-        """Execute a token transaction atomically"""
+        """Execute a token transaction atomically using unified query system"""
         try:
             metadata_json = json.dumps(metadata or {})
             
-            # Use database connection for atomic transaction
+            # Start atomic transaction
             with self.db.get_connection() as conn:
-                cursor = conn.cursor()
+                cursor = self.db.get_cursor(conn)
                 
-                if self.db.is_postgres:
-                    # Update balance
-                    cursor.execute("""
-                        INSERT INTO token_balances (user_id, balance, last_updated) 
-                        VALUES (%s, %s, CURRENT_TIMESTAMP)
-                        ON CONFLICT (user_id) 
-                        DO UPDATE SET balance = %s, last_updated = CURRENT_TIMESTAMP
-                    """, (user_id, balance_after, balance_after))
-                    
-                    # Insert transaction record
-                    cursor.execute("""
-                        INSERT INTO token_transactions 
-                        (transaction_id, user_id, transaction_type, amount, balance_before, 
-                         balance_after, description, metadata, revenuecat_transaction_id, 
-                         revenuecat_product_id, created_at)
-                        VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, CURRENT_TIMESTAMP)
-                    """, (transaction_id, user_id, transaction_type.value, amount, 
-                          balance_before, balance_after, description, metadata_json,
-                          revenuecat_transaction_id, revenuecat_product_id))
-                    
-                else:  # SQLite
-                    # Update balance
-                    cursor.execute("""
-                        INSERT OR REPLACE INTO token_balances 
-                        (user_id, balance, last_updated) 
-                        VALUES (?, ?, CURRENT_TIMESTAMP)
-                    """, (user_id, balance_after))
-                    
-                    # Insert transaction record
-                    cursor.execute("""
-                        INSERT INTO token_transactions 
-                        (transaction_id, user_id, transaction_type, amount, balance_before, 
-                         balance_after, description, metadata, revenuecat_transaction_id, 
-                         revenuecat_product_id, created_at)
-                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, CURRENT_TIMESTAMP)
-                    """, (transaction_id, user_id, transaction_type.value, amount, 
-                          balance_before, balance_after, description, metadata_json,
-                          revenuecat_transaction_id, revenuecat_product_id))
+                # Update balance using unified UPSERT
+                balance_data = {
+                    "user_id": user_id,
+                    "balance": balance_after,
+                    "last_updated": datetime.utcnow()
+                }
+                
+                # Use unified UPSERT for balance update (PostgreSQL and SQLite compatible)
+                self.db._execute_upsert(
+                    "token_balances", 
+                    balance_data,
+                    ["user_id"],  # conflict columns
+                    ["balance", "last_updated"]  # update columns
+                )
+                
+                # Insert transaction record using unified INSERT
+                transaction_data = {
+                    "transaction_id": transaction_id,
+                    "user_id": user_id,
+                    "transaction_type": transaction_type.value,
+                    "amount": amount,
+                    "balance_before": balance_before,
+                    "balance_after": balance_after,
+                    "description": description,
+                    "metadata": metadata_json,
+                    "revenuecat_transaction_id": revenuecat_transaction_id,
+                    "revenuecat_product_id": revenuecat_product_id,
+                    "created_at": datetime.utcnow()
+                }
+                
+                self.db._execute_insert("token_transactions", transaction_data)
                 
                 conn.commit()
-                logger.debug(f"Token transaction executed: {transaction_id}")
+                logger.debug(f"Token transaction executed atomically: {transaction_id}")
                 
         except Exception as e:
             logger.error(f"Failed to execute token transaction: {e}")

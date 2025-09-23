@@ -1315,33 +1315,27 @@ class DatabaseService:
             password_hash = self.hash_password(password)
             current_time = datetime.utcnow()
             
+            # Create user using unified query system
+            user_data = {
+                "email": email,
+                "password_hash": password_hash,
+                "name": name,
+                "created_at": current_time,
+                "updated_at": current_time,
+                "is_active": True
+            }
+            
             if self.is_postgres:
-                # PostgreSQL version with RETURNING clause
+                # PostgreSQL - use RETURNING to get the ID
                 result = self._execute_query("""
-                    INSERT INTO users (email, password_hash, name, created_at, updated_at)
-                    VALUES (?, ?, ?, ?, ?)
+                    INSERT INTO users (email, password_hash, name, created_at, updated_at, is_active)
+                    VALUES (?, ?, ?, ?, ?, ?)
                     RETURNING id
-                """, (email, password_hash, name, current_time, current_time), fetch_one=True)
+                """, (email, password_hash, name, current_time, current_time, True), fetch_one=True)
                 user_id = result['id'] if result else None
             else:
-                # SQLite version - insert and get last row id
-                data = {
-                    "email": email,
-                    "password_hash": password_hash,
-                    "name": name,
-                    "created_at": current_time,
-                    "updated_at": current_time
-                }
-                
-                # Use raw connection for lastrowid in SQLite
-                with self._get_validated_connection("create_user") as conn:
-                    cursor = self.get_cursor(conn)
-                    cursor.execute("""
-                        INSERT INTO users (email, password_hash, name, created_at, updated_at)
-                        VALUES (?, ?, ?, ?, ?)
-                    """, (email, password_hash, name, current_time, current_time))
-                    user_id = cursor.lastrowid
-                    conn.commit()
+                # SQLite - use _execute_insert which handles lastrowid
+                user_id = self._execute_insert("users", user_data)
             
             if user_id:
                 # Return user data (without password hash)
@@ -1412,10 +1406,35 @@ class DatabaseService:
             raise
     
     def get_user_by_id(self, user_id: int) -> Optional[Dict[str, Any]]:
-        """Get user by ID"""
+        """Get user by ID (only active users)"""
         try:
             user_data = self._execute_select(
                 "SELECT id, email, name, created_at, is_active, last_login FROM users WHERE id = ? AND is_active = TRUE",
+                (user_id,),
+                fetch_one=True
+            )
+            
+            if not user_data:
+                return None
+            
+            return {
+                "id": user_data["id"],
+                "email": user_data["email"],
+                "name": user_data["name"],
+                "created_at": user_data["created_at"],
+                "is_active": bool(user_data["is_active"]),
+                "last_login": user_data["last_login"]
+            }
+                
+        except Exception as e:
+            logger.error(f"Failed to get user by ID {user_id}: {e}")
+            raise
+    
+    def get_user_by_id_all_status(self, user_id: int) -> Optional[Dict[str, Any]]:
+        """Get user by ID regardless of active status (for admin/debugging)"""
+        try:
+            user_data = self._execute_select(
+                "SELECT id, email, name, created_at, is_active, last_login FROM users WHERE id = ?",
                 (user_id,),
                 fetch_one=True
             )
@@ -1459,6 +1478,118 @@ class DatabaseService:
                 
         except Exception as e:
             logger.error(f"Failed to get user by email {email}: {e}")
+            raise
+    
+    def update_user_last_login(self, user_id: int) -> bool:
+        """Update user's last login timestamp"""
+        try:
+            current_time = datetime.utcnow()
+            rows_affected = self._execute_update(
+                "users",
+                {"last_login": current_time, "updated_at": current_time},
+                "id = ?",
+                (user_id,)
+            )
+            
+            return rows_affected > 0
+                
+        except Exception as e:
+            logger.error(f"Failed to update last login for user {user_id}: {e}")
+            raise
+    
+    def deactivate_user(self, user_id: int) -> bool:
+        """Deactivate a user account (soft delete for session invalidation)"""
+        try:
+            current_time = datetime.utcnow()
+            rows_affected = self._execute_update(
+                "users",
+                {"is_active": False, "updated_at": current_time},
+                "id = ?",
+                (user_id,)
+            )
+            
+            if rows_affected > 0:
+                logger.info(f"User {user_id} deactivated successfully")
+                return True
+            else:
+                logger.warning(f"User {user_id} not found or already deactivated")
+                return False
+                
+        except Exception as e:
+            logger.error(f"Failed to deactivate user {user_id}: {e}")
+            raise
+    
+    def reactivate_user(self, user_id: int) -> bool:
+        """Reactivate a user account"""
+        try:
+            current_time = datetime.utcnow()
+            rows_affected = self._execute_update(
+                "users",
+                {"is_active": True, "updated_at": current_time},
+                "id = ?",
+                (user_id,)
+            )
+            
+            if rows_affected > 0:
+                logger.info(f"User {user_id} reactivated successfully")
+                return True
+            else:
+                logger.warning(f"User {user_id} not found")
+                return False
+                
+        except Exception as e:
+            logger.error(f"Failed to reactivate user {user_id}: {e}")
+            raise
+    
+    def get_user_token_balance(self, user_id: str) -> Optional[Dict[str, Any]]:
+        """Get token balance for a user directly from database"""
+        try:
+            result = self._execute_select(
+                "SELECT balance, last_updated, created_at FROM token_balances WHERE user_id = ?",
+                (user_id,),
+                fetch_one=True
+            )
+            
+            return result
+                
+        except Exception as e:
+            logger.error(f"Failed to get token balance for user {user_id}: {e}")
+            raise
+    
+    def get_user_token_transactions(self, user_id: str, limit: int = 50, offset: int = 0) -> List[Dict[str, Any]]:
+        """Get token transaction history for a user"""
+        try:
+            results = self._execute_select("""
+                SELECT transaction_id, transaction_type, amount, balance_before, 
+                       balance_after, description, metadata, revenuecat_transaction_id,
+                       revenuecat_product_id, created_at
+                FROM token_transactions 
+                WHERE user_id = ? 
+                ORDER BY created_at DESC 
+                LIMIT ? OFFSET ?
+            """, (user_id, limit, offset), fetch_one=False)
+            
+            return results or []
+                
+        except Exception as e:
+            logger.error(f"Failed to get token transactions for user {user_id}: {e}")
+            raise
+    
+    def create_token_balance_if_not_exists(self, user_id: str) -> bool:
+        """Initialize token balance for a user if it doesn't exist"""
+        try:
+            # Use UPSERT to create balance entry without overwriting existing
+            rows_affected = self._execute_upsert(
+                "token_balances",
+                {"user_id": user_id, "balance": 0},
+                ["user_id"],  # conflict columns
+                []  # don't update anything if exists (INSERT only)
+            )
+            
+            return rows_affected > 0
+                
+        except Exception as e:
+            logger.error(f"Failed to create token balance for user {user_id}: {e}")
             raise
     
     def create_user_report(self, challenge_id: str, user_id: int, reason: str, details: Optional[str] = None) -> Optional[Dict[str, Any]]:
