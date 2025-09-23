@@ -104,17 +104,14 @@ export const TokenAPI = {
    * Get current token balance
    */
   getBalance: async (): Promise<{ balance: number; last_updated: string }> => {
+    console.log('🔐 Fetching token balance from secure backend...');
+    
     try {
-      return await makeAuthenticatedRequest('/api/v1/tokens/balance');
+      const response = await makeAuthenticatedRequest('/api/v1/tokens/balance');
+      console.log(`🪙 Token balance fetched from backend: ${response.balance}`);
+      return response;
     } catch (error) {
-      // Handle case where token endpoints aren't deployed yet
-      if (error instanceof Error && error.message.includes('Not Found')) {
-        console.log('🔄 Token endpoints not available, returning default balance');
-        return {
-          balance: 100, // Default starting balance
-          last_updated: new Date().toISOString()
-        };
-      }
+      console.error(`❌ Failed to fetch token balance: ${error}`);
       throw error;
     }
   },
@@ -138,16 +135,7 @@ export const TokenAPI = {
         body: JSON.stringify(request),
       });
     } catch (error) {
-      // Handle case where token endpoints aren't deployed yet
-      if (error instanceof Error && error.message.includes('Not Found')) {
-        console.log('🔄 Token endpoints not available, simulating spend');
-        return {
-          success: true,
-          transaction_id: `sim_${Date.now()}`,
-          new_balance: Math.max(0, 100 - request.amount), // Simulate spending from default balance
-          message: 'Tokens spent successfully (simulated)'
-        };
-      }
+      console.error(`❌ Failed to spend tokens: ${error}`);
       throw error;
     }
   },

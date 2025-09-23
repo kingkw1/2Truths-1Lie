@@ -202,14 +202,9 @@ export const addTokens = async (tokensToAdd: number): Promise<number> => {
   console.warn('⚠️ addTokens() is deprecated. Tokens are now added automatically via RevenueCat webhook to backend.');
   console.warn('⚠️ Use the refresh() function to get updated balance after purchases.');
   
-  // Return current balance (this should trigger a refresh in the UI)
-  try {
-    const response = await TokenAPI.getBalance();
-    return response.balance;
-  } catch (error) {
-    console.error('Failed to get current balance:', error);
-    return 0;
-  }
+  // Trigger a refresh to get the latest balance
+  const refreshedBalance = await refreshTokenBalanceAfterPurchase();
+  return refreshedBalance;
 };
 
 export const updateTokenBalance = async (newBalance: number): Promise<void> => {
