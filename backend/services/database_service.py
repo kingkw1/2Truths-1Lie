@@ -777,47 +777,39 @@ class DatabaseService:
             Dict with user data if authentication successful, None if failed
         """
         try:
-            with sqlite3.connect(self.db_path) as conn:
-                # Enable foreign key constraints for this connection
-                conn.execute("PRAGMA foreign_keys = ON")
-                cursor = conn.cursor()
-                
-                # Get user by email
-                cursor.execute("""
-                    SELECT id, email, password_hash, name, created_at, is_active, last_login
-                    FROM users 
-                    WHERE email = ? AND is_active = TRUE
-                """, (email,))
-                
-                user_data = cursor.fetchone()
-                if not user_data:
-                    logger.warning(f"Authentication failed: user {email} not found")
-                    return None
-                
-                user_id, user_email, password_hash, name, created_at, is_active, last_login = user_data
-                
-                # Verify password
-                if not self.verify_password(password, password_hash):
-                    logger.warning(f"Authentication failed: invalid password for {email}")
-                    return None
-                
-                # Update last login
-                cursor.execute("""
-                    UPDATE users 
-                    SET last_login = ?, updated_at = ?
-                    WHERE id = ?
-                """, (datetime.utcnow(), datetime.utcnow(), user_id))
-                
-                conn.commit()
-                
-                return {
-                    "id": user_id,
-                    "email": user_email,
-                    "name": name,
-                    "created_at": created_at,
-                    "is_active": bool(is_active),
-                    "last_login": datetime.utcnow().isoformat()
-                }
+            # Get user by email with password hash
+            user_data = self._execute_query(
+                "SELECT id, email, password_hash, name, created_at, is_active, last_login FROM users WHERE email = %s AND is_active = TRUE" if self.is_postgres
+                else "SELECT id, email, password_hash, name, created_at, is_active, last_login FROM users WHERE email = ? AND is_active = TRUE",
+                (email,),
+                fetch_one=True
+            )
+            
+            if not user_data:
+                logger.warning(f"Authentication failed: user {email} not found")
+                return None
+            
+            # Verify password
+            if not self.verify_password(password, user_data["password_hash"]):
+                logger.warning(f"Authentication failed: invalid password for {email}")
+                return None
+            
+            # Update last login
+            current_time = datetime.utcnow()
+            self._execute_query(
+                "UPDATE users SET last_login = %s, updated_at = %s WHERE id = %s" if self.is_postgres
+                else "UPDATE users SET last_login = ?, updated_at = ? WHERE id = ?",
+                (current_time, current_time, user_data["id"])
+            )
+            
+            return {
+                "id": user_data["id"],
+                "email": user_data["email"],
+                "name": user_data["name"],
+                "created_at": user_data["created_at"],
+                "is_active": bool(user_data["is_active"]),
+                "last_login": current_time.isoformat()
+            }
                 
         except Exception as e:
             logger.error(f"Authentication error for {email}: {e}")
