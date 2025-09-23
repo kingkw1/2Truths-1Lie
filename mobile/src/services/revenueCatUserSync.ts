@@ -4,7 +4,6 @@
  */
 
 import Purchases from 'react-native-purchases';
-import { authService } from './authService';
 
 export class RevenueCatUserSyncService {
   private static instance: RevenueCatUserSyncService;
@@ -23,31 +22,36 @@ export class RevenueCatUserSyncService {
    * Sync authenticated user with RevenueCat
    * Call this after successful login
    */
-  public async syncAuthenticatedUser(): Promise<void> {
+  public async syncAuthenticatedUser(userEmail: string): Promise<void> {
     try {
-      const currentUser = authService.getCurrentUser();
-      
-      if (!currentUser || !currentUser.email) {
-        console.log('🔄 No authenticated user to sync with RevenueCat');
+      if (!userEmail) {
+        console.log('🔄 [SYNC] No user email provided for RevenueCat sync');
         return;
       }
 
-      // Use email as RevenueCat user ID for consistency with backend
-      const userIdForRevenueCat = currentUser.email;
-
-      console.log(`🔄 Syncing RevenueCat with authenticated user: ${userIdForRevenueCat}`);
+      console.log(`🔄 [SYNC] Starting RevenueCat sync with user: ${userEmail}`);
+      
+      // Check current RevenueCat user before sync
+      const currentCustomerInfo = await Purchases.getCustomerInfo();
+      console.log(`🔍 [SYNC] Current RevenueCat User ID BEFORE sync: ${currentCustomerInfo.originalAppUserId}`);
 
       // Login to RevenueCat with the user's email
-      const customerInfo = await Purchases.logIn(userIdForRevenueCat);
+      console.log(`🔑 [SYNC] Calling Purchases.logIn('${userEmail}')...`);
+      const loginResult = await Purchases.logIn(userEmail);
       
-      console.log('✅ RevenueCat user synced successfully');
-      console.log(`🆔 RevenueCat User ID: ${customerInfo.customerInfo.originalAppUserId}`);
+      console.log('✅ [SYNC] RevenueCat user synced successfully');
+      console.log(`🆔 [SYNC] RevenueCat User ID AFTER sync: ${loginResult.customerInfo.originalAppUserId}`);
+      console.log(`🔍 [SYNC] Login result created: ${loginResult.created}`);
       
-      this.currentRevenueCatUserId = customerInfo.customerInfo.originalAppUserId;
+      this.currentRevenueCatUserId = loginResult.customerInfo.originalAppUserId;
+
+      // Verify the sync worked
+      const verifyCustomerInfo = await Purchases.getCustomerInfo();
+      console.log(`✅ [SYNC] Verification - Current RevenueCat User ID: ${verifyCustomerInfo.originalAppUserId}`);
 
       return;
     } catch (error) {
-      console.error('❌ Failed to sync user with RevenueCat:', error);
+      console.error('❌ [SYNC] Failed to sync user with RevenueCat:', error);
       throw error;
     }
   }
@@ -82,20 +86,25 @@ export class RevenueCatUserSyncService {
   /**
    * Check if RevenueCat user matches authenticated user
    */
-  public async isRevenueCatUserSynced(): Promise<boolean> {
+  public async isRevenueCatUserSynced(userEmail: string | null): Promise<boolean> {
     try {
-      const currentUser = authService.getCurrentUser();
       const customerInfo = await Purchases.getCustomerInfo();
       
-      if (!currentUser || !currentUser.email) {
+      console.log(`🔍 [SYNC CHECK] Current auth user: ${userEmail || 'none'}`);
+      console.log(`🔍 [SYNC CHECK] Current RevenueCat user: ${customerInfo.originalAppUserId}`);
+      
+      if (!userEmail) {
         // No authenticated user, so any RevenueCat user is "synced"
+        console.log(`✅ [SYNC CHECK] No auth user, considering synced`);
         return true;
       }
 
       // Check if RevenueCat user ID matches the authenticated user's email
-      return customerInfo.originalAppUserId === currentUser.email;
+      const isSynced = customerInfo.originalAppUserId === userEmail;
+      console.log(`${isSynced ? '✅' : '❌'} [SYNC CHECK] Sync status: ${isSynced}`);
+      return isSynced;
     } catch (error) {
-      console.error('❌ Failed to check RevenueCat sync status:', error);
+      console.error('❌ [SYNC CHECK] Failed to check RevenueCat sync status:', error);
       return false;
     }
   }
@@ -104,18 +113,19 @@ export class RevenueCatUserSyncService {
    * Auto-sync RevenueCat user if needed
    * Call this periodically or when making purchases
    */
-  public async ensureUserSynced(): Promise<void> {
+  public async ensureUserSynced(userEmail: string | null): Promise<void> {
     try {
-      const isSynced = await this.isRevenueCatUserSynced();
+      console.log('🔄 [ENSURE SYNC] Checking if user sync needed...');
+      const isSynced = await this.isRevenueCatUserSynced(userEmail);
       
-      if (!isSynced) {
-        console.log('🔄 RevenueCat user out of sync, re-syncing...');
-        await this.syncAuthenticatedUser();
+      if (!isSynced && userEmail) {
+        console.log('🔄 [ENSURE SYNC] RevenueCat user out of sync, re-syncing...');
+        await this.syncAuthenticatedUser(userEmail);
       } else {
-        console.log('✅ RevenueCat user already synced');
+        console.log('✅ [ENSURE SYNC] RevenueCat user already synced');
       }
     } catch (error) {
-      console.error('❌ Failed to ensure RevenueCat user sync:', error);
+      console.error('❌ [ENSURE SYNC] Failed to ensure RevenueCat user sync:', error);
     }
   }
 }

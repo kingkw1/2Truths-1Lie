@@ -225,8 +225,10 @@ export class AuthService {
 
       // Sync with RevenueCat after successful signup
       try {
-        await revenueCatUserSync.syncAuthenticatedUser();
-        console.log('✅ RevenueCat user sync completed');
+        if (user.email) {
+          await revenueCatUserSync.syncAuthenticatedUser(user.email);
+          console.log('✅ RevenueCat user sync completed');
+        }
       } catch (error) {
         console.warn('⚠️ RevenueCat sync failed, but signup was successful:', error);
       }
@@ -292,8 +294,10 @@ export class AuthService {
 
       // Sync with RevenueCat after successful login
       try {
-        await revenueCatUserSync.syncAuthenticatedUser();
-        console.log('✅ RevenueCat user sync completed');
+        if (user.email) {
+          await revenueCatUserSync.syncAuthenticatedUser(user.email);
+          console.log('✅ RevenueCat user sync completed');
+        }
       } catch (error) {
         console.warn('⚠️ RevenueCat sync failed, but login was successful:', error);
       }
@@ -677,6 +681,18 @@ export class AuthService {
         }
 
         console.log('✅ Authentication state restored');
+        
+        // Sync with RevenueCat if we have a real user (not guest)
+        if (this.currentUser && this.currentUser.email && !this.isGuestUser(this.currentUser)) {
+          try {
+            console.log('🔄 Syncing restored user with RevenueCat...');
+            await revenueCatUserSync.syncAuthenticatedUser(this.currentUser.email);
+            console.log('✅ RevenueCat sync completed during auth restoration');
+          } catch (error) {
+            console.warn('⚠️ RevenueCat sync failed during auth restoration:', error);
+          }
+        }
+        
         return true;
       }
 

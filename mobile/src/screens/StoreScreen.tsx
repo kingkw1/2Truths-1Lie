@@ -14,6 +14,7 @@ import { StatusBar } from 'expo-status-bar';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { useOfferings } from '../hooks/useOfferings';
 import { usePremiumStatus } from '../hooks/usePremiumStatus';
+import { useAuth } from '../hooks/useAuth';
 import { ProductCard } from '../components/ProductCard';
 import { TrialBanner } from '../components/TrialBanner';
 import { revenueCatUserSync } from '../services/revenueCatUserSync';
@@ -22,6 +23,7 @@ export const StoreScreen: React.FC = () => {
   const [purchasing, setPurchasing] = useState(false);
   const { offerings, isLoading: offeringsLoading, error: offeringsError } = useOfferings();
   const { isPremium } = usePremiumStatus();
+  const { user } = useAuth();
   
   // Debug RevenueCat connectivity
   React.useEffect(() => {
@@ -85,7 +87,7 @@ export const StoreScreen: React.FC = () => {
       
       // Ensure RevenueCat user is synced before purchase
       console.log('🔄 Ensuring RevenueCat user is synced before purchase...');
-      await revenueCatUserSync.ensureUserSynced();
+      await revenueCatUserSync.ensureUserSynced(user?.email || null);
       
       // Log the current RevenueCat user for verification
       const customerInfo = await Purchases.getCustomerInfo();
