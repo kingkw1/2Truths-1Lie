@@ -630,6 +630,15 @@ export class AuthService {
     const isGuest = this.currentUser ? this.isGuestUser(this.currentUser) : false;
     const hasValidToken = !!this.authToken;
 
+    console.log('🔍 [AUTH STATUS DEBUG]:', {
+      isAuthenticated,
+      isGuest,
+      hasValidToken,
+      userId: this.currentUser?.id,
+      userEmail: this.currentUser?.email,
+      isGuestUserCheck: this.currentUser ? this.isGuestUser(this.currentUser) : 'no user'
+    });
+
     return {
       isAuthenticated,
       isGuest,
@@ -671,6 +680,12 @@ export class AuthService {
         this.currentUser = JSON.parse(userData);
         this.authToken = tokenData;
 
+        console.log('🔍 [AUTH DEBUG] Restored user data:', {
+          id: this.currentUser?.id,
+          email: this.currentUser?.email,
+          isGuestCheck: this.currentUser ? this.isGuestUser(this.currentUser) : 'no user'
+        });
+
         // Always validate token with backend, even guest tokens
         const isValid = await this.validateToken();
         if (!isValid) {
@@ -691,6 +706,8 @@ export class AuthService {
           } catch (error) {
             console.warn('⚠️ RevenueCat sync failed during auth restoration:', error);
           }
+        } else {
+          console.log('⚠️ [AUTH DEBUG] Skipping RevenueCat sync - user is guest or missing email');
         }
         
         return true;
