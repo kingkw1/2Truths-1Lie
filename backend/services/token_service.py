@@ -27,7 +27,18 @@ class TokenService:
         self.db = db_service
     
     def get_user_balance(self, user_id: str) -> TokenBalanceResponse:
-        """Get current token balance for a user"""
+        """
+        Get current token balance for a user
+        
+        Args:
+            user_id: User ID to get balance for
+            
+        Returns:
+            TokenBalanceResponse with current balance and last updated time
+            
+        Raises:
+            Exception: For database or service errors
+        """
         try:
             result = self.db._execute_select(
                 "SELECT balance, last_updated FROM token_balances WHERE user_id = ?",
@@ -36,12 +47,14 @@ class TokenService:
             )
             
             if result:
+                logger.debug(f"Retrieved balance for user {user_id}: {result['balance']}")
                 return TokenBalanceResponse(
                     balance=result['balance'],
                     last_updated=result['last_updated']
                 )
             else:
                 # Initialize user with 0 balance if not exists
+                logger.info(f"Initializing new user balance for user {user_id}")
                 self._initialize_user_balance(user_id)
                 return TokenBalanceResponse(
                     balance=0,
@@ -53,7 +66,19 @@ class TokenService:
             raise
     
     def spend_tokens(self, user_id: str, spend_request: TokenSpendRequest) -> TokenSpendResponse:
-        """Spend tokens with validation and transaction logging"""
+        """
+        Spend tokens with validation and transaction logging
+        
+        Args:
+            user_id: User ID to spend tokens for
+            spend_request: Token spend request details
+            
+        Returns:
+            TokenSpendResponse with transaction result
+            
+        Raises:
+            Exception: For database or service errors
+        """
         try:
             # Get current balance
             balance_response = self.get_user_balance(user_id)
@@ -61,6 +86,7 @@ class TokenService:
             
             # Validate sufficient balance
             if current_balance < spend_request.amount:
+                logger.warning(f"Insufficient tokens for user {user_id}: has {current_balance}, needs {spend_request.amount}")
                 return TokenSpendResponse(
                     success=False,
                     transaction_id=None,

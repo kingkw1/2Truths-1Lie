@@ -3,6 +3,8 @@ Database service for managing database operations with PostgreSQL and SQLite sup
 """
 import sqlite3
 import logging
+import json
+import traceback
 from pathlib import Path
 from typing import Optional, Dict, Any, List, Union, NamedTuple
 from datetime import datetime
@@ -52,7 +54,27 @@ class DatabaseURLError(Exception):
     pass
 
 class DatabaseError(Exception):
-    """Custom database service errors"""
+    """Base class for database operation errors"""
+    def __init__(self, message: str, query: str = None, params: tuple = None, original_error: Exception = None):
+        super().__init__(message)
+        self.query = query
+        self.params = params
+        self.original_error = original_error
+
+class DatabaseConnectionError(DatabaseError):
+    """Raised when database connection fails"""
+    pass
+
+class DatabaseQueryError(DatabaseError):
+    """Raised when database query execution fails"""
+    pass
+
+class DatabaseTransactionError(DatabaseError):
+    """Raised when database transaction fails"""
+    pass
+
+class DatabaseConstraintError(DatabaseError):
+    """Raised when database constraint violations occur"""
     pass
 
 class EnvironmentMismatchError(DatabaseError):
@@ -329,7 +351,7 @@ class DatabaseService:
         self.port = self.url_info.port if self.url_info else None
         
         # Validate environment and database configuration
-        self._validate_environment_config()
+        self._validate_environment_requirements()
         
         self.pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
         
@@ -352,7 +374,104 @@ class DatabaseService:
         self._init_database()
         self._verify_database_constraints()
     
-    def _validate_environment_config(self):
+    def _log_database_error(self, operation: str, error: Exception, query: str = None, params: tuple = None) -> None:
+        """
+        Log detailed database error information including stack trace and query details
+        
+        Args:
+            operation: Name of the operation that failed
+            error: The exception that occurred
+            query: SQL query that failed (if applicable)
+            params: Query parameters (if applicable)
+        """
+        import traceback
+        
+        # Sanitize parameters for logging (remove sensitive data)
+        safe_params = None
+        if params:
+            safe_params = tuple(
+                "***REDACTED***" if isinstance(p, str) and any(keyword in str(p).lower() for keyword in ['password', 'secret', 'token', 'key']) 
+                else str(p)[:100] + "..." if isinstance(p, str) and len(str(p)) > 100
+                else p
+                for p in params
+            )
+        
+        error_details = {
+            "operation": operation,
+            "error_type": type(error).__name__,
+            "error_message": str(error),
+            "environment": self.environment.value,
+            "database_mode": self.database_mode.value,
+            "is_postgres": self.is_postgres,
+            "query": query[:500] + "..." if query and len(query) > 500 else query,
+            "params": safe_params,
+            "stack_trace": traceback.format_exc()
+        }
+        
+        logger.error(f"Database operation '{operation}' failed: {json.dumps(error_details, indent=2, default=str)}")
+
+    def _handle_database_exception(self, operation: str, error: Exception, query: str = None, params: tuple = None) -> DatabaseError:
+        """
+        Handle and categorize database exceptions with detailed logging
+        
+        Args:
+            operation: Name of the operation that failed
+            error: The original exception
+            query: SQL query that failed (if applicable)
+            params: Query parameters (if applicable)
+            
+        Returns:
+            DatabaseError: Categorized database error
+        """
+        self._log_database_error(operation, error, query, params)
+        
+        # Categorize the error based on type and message
+        error_msg = str(error).lower()
+        
+        # Handle both SQLite and PostgreSQL connection errors
+        connection_errors = []
+        if PSYCOPG2_AVAILABLE:
+            connection_errors.extend([psycopg2.OperationalError, psycopg2.InterfaceError, psycopg2.DatabaseError])
+        connection_errors.extend([sqlite3.OperationalError, sqlite3.DatabaseError])
+        
+        if isinstance(error, tuple(connection_errors)) or "connection" in error_msg:
+            return DatabaseConnectionError(
+                f"Database connection failed during {operation}: {error}",
+                query=query,
+                params=params,
+                original_error=error
+            )
+        
+        # Handle constraint errors for both databases
+        constraint_errors = []
+        if PSYCOPG2_AVAILABLE:
+            constraint_errors.extend([psycopg2.IntegrityError])
+        constraint_errors.extend([sqlite3.IntegrityError])
+        
+        if (isinstance(error, tuple(constraint_errors)) or 
+            "constraint" in error_msg or "unique" in error_msg or "foreign key" in error_msg):
+            return DatabaseConstraintError(
+                f"Database constraint violation during {operation}: {error}",
+                query=query,
+                params=params,
+                original_error=error
+            )
+        elif "transaction" in error_msg or "rollback" in error_msg:
+            return DatabaseTransactionError(
+                f"Database transaction failed during {operation}: {error}",
+                query=query,
+                params=params,
+                original_error=error
+            )
+        else:
+            return DatabaseQueryError(
+                f"Database query failed during {operation}: {error}",
+                query=query,
+                params=params,
+                original_error=error
+            )
+
+    def _validate_environment_requirements(self):
         """Validate that the database configuration matches the environment requirements"""
         if self.environment == DatabaseEnvironment.PRODUCTION:
             if not self.is_postgres:
@@ -900,11 +1019,15 @@ class DatabaseService:
             - If fetch_all: List of dicts
             - If return_cursor: Database cursor
             - Otherwise: Number of affected rows
+            
+        Raises:
+            DatabaseError: Categorized database errors with detailed logging
         """
-        self._validate_database_operation("_execute_query")
+        operation = "_execute_query"
+        self._validate_database_operation(operation)
         
         try:
-            with self._get_validated_connection("_execute_query") as conn:
+            with self._get_validated_connection(operation) as conn:
                 if self.is_postgres:
                     # Convert SQLite-style ? parameters to PostgreSQL %s
                     converted_query = self._prepare_query(query)
@@ -941,8 +1064,9 @@ class DatabaseService:
                         return cursor.rowcount
                         
         except Exception as e:
-            logger.error(f"Database query failed: {e}")
-            raise
+            # Handle and categorize the exception with detailed logging
+            categorized_error = self._handle_database_exception(operation, e, query, params)
+            raise categorized_error
     
     def _execute_upsert(self, table: str, data: Dict[str, Any], conflict_columns: List[str], update_columns: List[str] = None) -> int:
         """
@@ -1035,7 +1159,7 @@ class DatabaseService:
     
     def _execute_select(self, query: str, params: tuple = (), fetch_one: bool = False) -> Union[Dict[str, Any], List[Dict[str, Any]], None]:
         """
-        Execute a SELECT operation.
+        Execute a SELECT operation with comprehensive error handling.
         
         Args:
             query: SELECT query string
@@ -1044,8 +1168,19 @@ class DatabaseService:
             
         Returns:
             Single dict (if fetch_one=True) or list of dicts
+            
+        Raises:
+            DatabaseError: Categorized database errors with detailed logging
         """
-        return self._execute_query(query, params, fetch_one=fetch_one, fetch_all=not fetch_one)
+        try:
+            return self._execute_query(query, params, fetch_one=fetch_one, fetch_all=not fetch_one)
+        except DatabaseError:
+            # Re-raise database errors (already logged and categorized)
+            raise
+        except Exception as e:
+            # Handle any unexpected errors
+            categorized_error = self._handle_database_exception("_execute_select", e, query, params)
+            raise categorized_error
     
     def _prepare_query(self, query: str) -> str:
         """Convert SQLite-style queries to PostgreSQL if needed"""
@@ -1296,9 +1431,11 @@ class DatabaseService:
             Dict with user data if successful, None if email already exists
             
         Raises:
-            Exception: If database operation fails
+            DatabaseError: For database operation errors
         """
-        self._validate_database_operation("create_user")
+        operation = "create_user"
+        self._validate_database_operation(operation)
+        
         try:
             # Check if user already exists
             existing_user = self._execute_select(
@@ -1338,6 +1475,7 @@ class DatabaseService:
                 user_id = self._execute_insert("users", user_data)
             
             if user_id:
+                logger.info(f"Successfully created user {email} with ID {user_id}")
                 # Return user data (without password hash)
                 return {
                     "id": user_id,
@@ -1347,12 +1485,16 @@ class DatabaseService:
                     "is_active": True
                 }
             else:
-                logger.error("Failed to get user ID after creation")
+                logger.error(f"Failed to get user ID after creation for {email}")
                 return None
                 
-        except Exception as e:
-            logger.error(f"Failed to create user {email}: {e}")
+        except DatabaseError:
+            # Re-raise database errors (already logged and categorized)
             raise
+        except Exception as e:
+            # Handle any unexpected errors
+            categorized_error = self._handle_database_exception(operation, e)
+            raise categorized_error
     
     def authenticate_user(self, email: str, password: str) -> Optional[Dict[str, Any]]:
         """
@@ -1364,8 +1506,13 @@ class DatabaseService:
             
         Returns:
             Dict with user data if authentication successful, None if failed
+            
+        Raises:
+            DatabaseError: For database operation errors
         """
-        self._validate_database_operation("authenticate_user")
+        operation = "authenticate_user"
+        self._validate_database_operation(operation)
+        
         try:
             # Get user by email with password hash
             user_data = self._execute_select(
@@ -1392,6 +1539,7 @@ class DatabaseService:
                 (user_data["id"],)
             )
             
+            logger.info(f"User {email} authenticated successfully")
             return {
                 "id": user_data["id"],
                 "email": user_data["email"],
@@ -1401,12 +1549,28 @@ class DatabaseService:
                 "last_login": current_time.isoformat()
             }
                 
-        except Exception as e:
-            logger.error(f"Authentication error for {email}: {e}")
+        except DatabaseError:
+            # Re-raise database errors (already logged and categorized)
             raise
+        except Exception as e:
+            # Handle any unexpected errors
+            categorized_error = self._handle_database_exception(operation, e)
+            raise categorized_error
     
     def get_user_by_id(self, user_id: int) -> Optional[Dict[str, Any]]:
-        """Get user by ID (only active users)"""
+        """
+        Get user by ID (only active users)
+        
+        Args:
+            user_id: User ID to look up
+            
+        Returns:
+            User data dict or None if not found
+            
+        Raises:
+            DatabaseError: For database operation errors
+        """
+        operation = "get_user_by_id"
         try:
             user_data = self._execute_select(
                 "SELECT id, email, name, created_at, is_active, last_login FROM users WHERE id = ? AND is_active = TRUE",
@@ -1415,6 +1579,7 @@ class DatabaseService:
             )
             
             if not user_data:
+                logger.debug(f"No active user found with ID {user_id}")
                 return None
             
             return {
@@ -1426,12 +1591,28 @@ class DatabaseService:
                 "last_login": user_data["last_login"]
             }
                 
-        except Exception as e:
-            logger.error(f"Failed to get user by ID {user_id}: {e}")
+        except DatabaseError:
+            # Re-raise database errors (already logged and categorized)
             raise
+        except Exception as e:
+            # Handle any unexpected errors
+            categorized_error = self._handle_database_exception(operation, e)
+            raise categorized_error
     
     def get_user_by_id_all_status(self, user_id: int) -> Optional[Dict[str, Any]]:
-        """Get user by ID regardless of active status (for admin/debugging)"""
+        """
+        Get user by ID regardless of active status (for admin/debugging)
+        
+        Args:
+            user_id: User ID to look up
+            
+        Returns:
+            User data dict or None if not found
+            
+        Raises:
+            DatabaseError: For database operation errors
+        """
+        operation = "get_user_by_id_all_status"
         try:
             user_data = self._execute_select(
                 "SELECT id, email, name, created_at, is_active, last_login FROM users WHERE id = ?",
@@ -1440,6 +1621,7 @@ class DatabaseService:
             )
             
             if not user_data:
+                logger.debug(f"No user found with ID {user_id}")
                 return None
             
             return {
@@ -1451,12 +1633,28 @@ class DatabaseService:
                 "last_login": user_data["last_login"]
             }
                 
-        except Exception as e:
-            logger.error(f"Failed to get user by ID {user_id}: {e}")
+        except DatabaseError:
+            # Re-raise database errors (already logged and categorized)
             raise
+        except Exception as e:
+            # Handle any unexpected errors
+            categorized_error = self._handle_database_exception(operation, e)
+            raise categorized_error
     
     def get_user_by_email(self, email: str) -> Optional[Dict[str, Any]]:
-        """Get user by email"""
+        """
+        Get user by email
+        
+        Args:
+            email: Email address to look up
+            
+        Returns:
+            User data dict or None if not found
+            
+        Raises:
+            DatabaseError: For database operation errors
+        """
+        operation = "get_user_by_email"
         try:
             user_data = self._execute_select(
                 "SELECT id, email, name, created_at, is_active, last_login FROM users WHERE email = ? AND is_active = TRUE",
@@ -1465,6 +1663,7 @@ class DatabaseService:
             )
             
             if not user_data:
+                logger.debug(f"No active user found with email {email}")
                 return None
                 
             return {
@@ -1476,9 +1675,13 @@ class DatabaseService:
                 "last_login": user_data["last_login"]
             }
                 
-        except Exception as e:
-            logger.error(f"Failed to get user by email {email}: {e}")
+        except DatabaseError:
+            # Re-raise database errors (already logged and categorized)
             raise
+        except Exception as e:
+            # Handle any unexpected errors
+            categorized_error = self._handle_database_exception(operation, e)
+            raise categorized_error
     
     def update_user_last_login(self, user_id: int) -> bool:
         """Update user's last login timestamp"""
