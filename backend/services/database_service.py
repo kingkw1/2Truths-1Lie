@@ -465,30 +465,12 @@ class DatabaseService:
                 return conn.cursor()
     
     def execute_query_with_params(self, query: str, params: tuple = (), fetch_one: bool = False, fetch_all: bool = False):
-        """Execute a query with proper parameter binding for the database type"""
-        try:
-            with self.get_connection() as conn:
-                cursor = self.get_cursor(conn)
-                
-                # Convert parameters for PostgreSQL
-                if self.is_postgres:
-                    query = self._prepare_query(query)
-                
-                cursor.execute(query, params)
-                
-                if fetch_one:
-                    result = cursor.fetchone()
-                    return dict(result) if result else None
-                elif fetch_all:
-                    results = cursor.fetchall()
-                    return [dict(row) for row in results]
-                else:
-                    conn.commit()
-                    return cursor.rowcount
-                    
-        except Exception as e:
-            logger.error(f"Database query failed: {e}")
-            raise
+        """
+        DEPRECATED: Use _execute_query, _execute_select, _execute_insert, _execute_update, or _execute_upsert instead.
+        This method is kept for backward compatibility.
+        """
+        logger.warning("execute_query_with_params is deprecated. Use the new unified query methods instead.")
+        return self._execute_query(query, params, fetch_one=fetch_one, fetch_all=fetch_all)
     
     def _init_database(self):
         """Initialize the database with required tables"""
@@ -901,17 +883,37 @@ class DatabaseService:
             logger.error(f"Failed to initialize database: {e}")
             raise
     
-    def _execute_query(self, query: str, params: tuple = (), fetch_one: bool = False, fetch_all: bool = False) -> Any:
-        """Execute a query with proper database-specific handling and environment validation"""
+    def _execute_query(self, query: str, params: tuple = (), fetch_one: bool = False, fetch_all: bool = False, return_cursor: bool = False) -> Any:
+        """
+        Execute a query with proper database-specific handling and environment validation.
+        Automatically converts parameter binding style and handles database differences.
+        
+        Args:
+            query: SQL query string (can use ? parameters for both DBs)
+            params: Query parameters as tuple
+            fetch_one: Return single row as dict
+            fetch_all: Return all rows as list of dicts
+            return_cursor: Return cursor for complex operations
+            
+        Returns:
+            - If fetch_one: Dict or None
+            - If fetch_all: List of dicts
+            - If return_cursor: Database cursor
+            - Otherwise: Number of affected rows
+        """
         self._validate_database_operation("_execute_query")
         
         try:
             with self._get_validated_connection("_execute_query") as conn:
                 if self.is_postgres:
+                    # Convert SQLite-style ? parameters to PostgreSQL %s
+                    converted_query = self._prepare_query(query)
                     cursor = conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
-                    cursor.execute(query, params)
+                    cursor.execute(converted_query, params)
                     
-                    if fetch_one:
+                    if return_cursor:
+                        return cursor
+                    elif fetch_one:
                         result = cursor.fetchone()
                         return dict(result) if result else None
                     elif fetch_all:
@@ -926,7 +928,9 @@ class DatabaseService:
                     cursor = conn.cursor()
                     cursor.execute(query, params)
                     
-                    if fetch_one:
+                    if return_cursor:
+                        return cursor
+                    elif fetch_one:
                         result = cursor.fetchone()
                         return dict(result) if result else None
                     elif fetch_all:
@@ -939,6 +943,109 @@ class DatabaseService:
         except Exception as e:
             logger.error(f"Database query failed: {e}")
             raise
+    
+    def _execute_upsert(self, table: str, data: Dict[str, Any], conflict_columns: List[str], update_columns: List[str] = None) -> int:
+        """
+        Execute an UPSERT operation (INSERT with conflict resolution).
+        Automatically uses ON CONFLICT for PostgreSQL and INSERT OR REPLACE for SQLite.
+        
+        Args:
+            table: Table name
+            data: Dictionary of column -> value pairs
+            conflict_columns: Columns to check for conflicts (primary/unique keys)
+            update_columns: Columns to update on conflict (default: all except conflict_columns)
+            
+        Returns:
+            Number of affected rows
+        """
+        if not data:
+            raise ValueError("Data dictionary cannot be empty")
+        
+        columns = list(data.keys())
+        values = list(data.values())
+        placeholders = ['?' for _ in columns]
+        
+        if update_columns is None:
+            update_columns = [col for col in columns if col not in conflict_columns]
+        
+        if self.is_postgres:
+            # PostgreSQL: INSERT ... ON CONFLICT ... DO UPDATE
+            conflict_clause = ', '.join(conflict_columns)
+            update_clause = ', '.join([f"{col} = EXCLUDED.{col}" for col in update_columns])
+            
+            query = f"""
+                INSERT INTO {table} ({', '.join(columns)})
+                VALUES ({', '.join(placeholders)})
+                ON CONFLICT ({conflict_clause}) DO UPDATE SET {update_clause}
+            """
+        else:
+            # SQLite: INSERT OR REPLACE
+            query = f"""
+                INSERT OR REPLACE INTO {table} ({', '.join(columns)})
+                VALUES ({', '.join(placeholders)})
+            """
+        
+        return self._execute_query(query, tuple(values))
+    
+    def _execute_insert(self, table: str, data: Dict[str, Any]) -> int:
+        """
+        Execute a simple INSERT operation.
+        
+        Args:
+            table: Table name
+            data: Dictionary of column -> value pairs
+            
+        Returns:
+            Number of affected rows
+        """
+        if not data:
+            raise ValueError("Data dictionary cannot be empty")
+        
+        columns = list(data.keys())
+        values = list(data.values())
+        placeholders = ['?' for _ in columns]
+        
+        query = f"""
+            INSERT INTO {table} ({', '.join(columns)})
+            VALUES ({', '.join(placeholders)})
+        """
+        
+        return self._execute_query(query, tuple(values))
+    
+    def _execute_update(self, table: str, data: Dict[str, Any], where_clause: str, where_params: tuple = ()) -> int:
+        """
+        Execute an UPDATE operation.
+        
+        Args:
+            table: Table name
+            data: Dictionary of column -> value pairs to update
+            where_clause: WHERE clause (without WHERE keyword)
+            where_params: Parameters for WHERE clause
+            
+        Returns:
+            Number of affected rows
+        """
+        if not data:
+            raise ValueError("Data dictionary cannot be empty")
+        
+        set_clause = ', '.join([f"{col} = ?" for col in data.keys()])
+        query = f"UPDATE {table} SET {set_clause} WHERE {where_clause}"
+        
+        return self._execute_query(query, tuple(data.values()) + where_params)
+    
+    def _execute_select(self, query: str, params: tuple = (), fetch_one: bool = False) -> Union[Dict[str, Any], List[Dict[str, Any]], None]:
+        """
+        Execute a SELECT operation.
+        
+        Args:
+            query: SELECT query string
+            params: Query parameters
+            fetch_one: Return single row instead of list
+            
+        Returns:
+            Single dict (if fetch_one=True) or list of dicts
+        """
+        return self._execute_query(query, params, fetch_one=fetch_one, fetch_all=not fetch_one)
     
     def _prepare_query(self, query: str) -> str:
         """Convert SQLite-style queries to PostgreSQL if needed"""
@@ -1194,8 +1301,8 @@ class DatabaseService:
         self._validate_database_operation("create_user")
         try:
             # Check if user already exists
-            existing_user = self._execute_query(
-                "SELECT id FROM users WHERE email = %s" if self.is_postgres else "SELECT id FROM users WHERE email = ?",
+            existing_user = self._execute_select(
+                "SELECT id FROM users WHERE email = ?",
                 (email,),
                 fetch_one=True
             )
@@ -1212,15 +1319,23 @@ class DatabaseService:
                 # PostgreSQL version with RETURNING clause
                 result = self._execute_query("""
                     INSERT INTO users (email, password_hash, name, created_at, updated_at)
-                    VALUES (%s, %s, %s, %s, %s)
+                    VALUES (?, ?, ?, ?, ?)
                     RETURNING id
                 """, (email, password_hash, name, current_time, current_time), fetch_one=True)
                 user_id = result['id'] if result else None
             else:
-                # SQLite version
-                with self.get_connection() as conn:
-                    conn.execute("PRAGMA foreign_keys = ON")
-                    cursor = conn.cursor()
+                # SQLite version - insert and get last row id
+                data = {
+                    "email": email,
+                    "password_hash": password_hash,
+                    "name": name,
+                    "created_at": current_time,
+                    "updated_at": current_time
+                }
+                
+                # Use raw connection for lastrowid in SQLite
+                with self._get_validated_connection("create_user") as conn:
+                    cursor = self.get_cursor(conn)
                     cursor.execute("""
                         INSERT INTO users (email, password_hash, name, created_at, updated_at)
                         VALUES (?, ?, ?, ?, ?)
@@ -1259,9 +1374,8 @@ class DatabaseService:
         self._validate_database_operation("authenticate_user")
         try:
             # Get user by email with password hash
-            user_data = self._execute_query(
-                "SELECT id, email, password_hash, name, created_at, is_active, last_login FROM users WHERE email = %s AND is_active = TRUE" if self.is_postgres
-                else "SELECT id, email, password_hash, name, created_at, is_active, last_login FROM users WHERE email = ? AND is_active = TRUE",
+            user_data = self._execute_select(
+                "SELECT id, email, password_hash, name, created_at, is_active, last_login FROM users WHERE email = ? AND is_active = TRUE",
                 (email,),
                 fetch_one=True
             )
@@ -1277,10 +1391,11 @@ class DatabaseService:
             
             # Update last login
             current_time = datetime.utcnow()
-            self._execute_query(
-                "UPDATE users SET last_login = %s, updated_at = %s WHERE id = %s" if self.is_postgres
-                else "UPDATE users SET last_login = ?, updated_at = ? WHERE id = ?",
-                (current_time, current_time, user_data["id"])
+            self._execute_update(
+                "users",
+                {"last_login": current_time, "updated_at": current_time},
+                "id = ?",
+                (user_data["id"],)
             )
             
             return {
@@ -1299,9 +1414,8 @@ class DatabaseService:
     def get_user_by_id(self, user_id: int) -> Optional[Dict[str, Any]]:
         """Get user by ID"""
         try:
-            user_data = self._execute_query(
-                "SELECT id, email, name, created_at, is_active, last_login FROM users WHERE id = %s AND is_active = TRUE" if self.is_postgres 
-                else "SELECT id, email, name, created_at, is_active, last_login FROM users WHERE id = ? AND is_active = TRUE",
+            user_data = self._execute_select(
+                "SELECT id, email, name, created_at, is_active, last_login FROM users WHERE id = ? AND is_active = TRUE",
                 (user_id,),
                 fetch_one=True
             )
@@ -1325,9 +1439,8 @@ class DatabaseService:
     def get_user_by_email(self, email: str) -> Optional[Dict[str, Any]]:
         """Get user by email"""
         try:
-            user_data = self._execute_query(
-                "SELECT id, email, name, created_at, is_active, last_login FROM users WHERE email = %s AND is_active = TRUE" if self.is_postgres
-                else "SELECT id, email, name, created_at, is_active, last_login FROM users WHERE email = ? AND is_active = TRUE",
+            user_data = self._execute_select(
+                "SELECT id, email, name, created_at, is_active, last_login FROM users WHERE email = ? AND is_active = TRUE",
                 (email,),
                 fetch_one=True
             )
@@ -1710,79 +1823,36 @@ class DatabaseService:
                     return obj.isoformat()
                 raise TypeError(f"Object of type {type(obj).__name__} is not JSON serializable")
             
-            with self.get_connection() as conn:
-                cursor = self.get_cursor(conn)
-                
-                # Convert challenge object to database format
-                if self.is_postgres:
-                    # PostgreSQL uses ON CONFLICT instead of INSERT OR REPLACE
-                    cursor.execute("""
-                        INSERT INTO challenges (
-                            challenge_id, creator_id, title, status, lie_statement_id,
-                            view_count, guess_count, correct_guess_count, is_merged_video,
-                            statements_json, merged_video_metadata_json, tags_json,
-                            created_at, updated_at, published_at
-                        ) VALUES (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
-                        ON CONFLICT (challenge_id) DO UPDATE SET
-                            creator_id = EXCLUDED.creator_id,
-                            title = EXCLUDED.title,
-                            status = EXCLUDED.status,
-                            lie_statement_id = EXCLUDED.lie_statement_id,
-                            view_count = EXCLUDED.view_count,
-                            guess_count = EXCLUDED.guess_count,
-                            correct_guess_count = EXCLUDED.correct_guess_count,
-                            is_merged_video = EXCLUDED.is_merged_video,
-                            statements_json = EXCLUDED.statements_json,
-                            merged_video_metadata_json = EXCLUDED.merged_video_metadata_json,
-                            tags_json = EXCLUDED.tags_json,
-                            updated_at = EXCLUDED.updated_at,
-                            published_at = EXCLUDED.published_at
-                    """, (
-                        challenge.challenge_id,
-                        challenge.creator_id,
-                        challenge.title,
-                        challenge.status.value if hasattr(challenge.status, 'value') else str(challenge.status),
-                        challenge.lie_statement_id,
-                        challenge.view_count,
-                        challenge.guess_count,
-                        challenge.correct_guess_count,
-                        challenge.is_merged_video,
-                        json.dumps([stmt.model_dump() for stmt in challenge.statements], default=datetime_serializer),
-                        json.dumps(challenge.merged_video_metadata.model_dump(), default=datetime_serializer) if challenge.merged_video_metadata else None,
-                        json.dumps(challenge.tags) if challenge.tags else None,
-                        challenge.created_at.isoformat() if challenge.created_at else None,
-                        challenge.updated_at.isoformat() if challenge.updated_at else None,
-                        challenge.published_at.isoformat() if challenge.published_at else None
-                    ))
-                else:
-                    logger.warning(f"Using SQLite fallback for challenge save in {self.environment.value} environment")
-                    cursor.execute("""
-                        INSERT OR REPLACE INTO challenges (
-                            challenge_id, creator_id, title, status, lie_statement_id,
-                            view_count, guess_count, correct_guess_count, is_merged_video,
-                            statements_json, merged_video_metadata_json, tags_json,
-                            created_at, updated_at, published_at
-                        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                    """, (
-                        challenge.challenge_id,
-                        challenge.creator_id,
-                        challenge.title,
-                        challenge.status.value if hasattr(challenge.status, 'value') else str(challenge.status),
-                        challenge.lie_statement_id,
-                        challenge.view_count,
-                        challenge.guess_count,
-                        challenge.correct_guess_count,
-                        challenge.is_merged_video,
-                        json.dumps([stmt.model_dump() for stmt in challenge.statements], default=datetime_serializer),
-                        json.dumps(challenge.merged_video_metadata.model_dump(), default=datetime_serializer) if challenge.merged_video_metadata else None,
-                        json.dumps(challenge.tags) if challenge.tags else None,
-                        challenge.created_at.isoformat() if challenge.created_at else None,
-                        challenge.updated_at.isoformat() if challenge.updated_at else None,
-                        challenge.published_at.isoformat() if challenge.published_at else None
-                    ))
-                
-                conn.commit()
-                return True
+            # Prepare data for upsert
+            data = {
+                "challenge_id": challenge.challenge_id,
+                "creator_id": challenge.creator_id,
+                "title": challenge.title,
+                "status": challenge.status.value if hasattr(challenge.status, 'value') else str(challenge.status),
+                "lie_statement_id": challenge.lie_statement_id,
+                "view_count": challenge.view_count,
+                "guess_count": challenge.guess_count,
+                "correct_guess_count": challenge.correct_guess_count,
+                "is_merged_video": challenge.is_merged_video,
+                "statements_json": json.dumps([stmt.model_dump() for stmt in challenge.statements], default=datetime_serializer),
+                "merged_video_metadata_json": json.dumps(challenge.merged_video_metadata.model_dump(), default=datetime_serializer) if challenge.merged_video_metadata else None,
+                "tags_json": json.dumps(challenge.tags) if challenge.tags else None,
+                "created_at": challenge.created_at.isoformat() if challenge.created_at else None,
+                "updated_at": challenge.updated_at.isoformat() if challenge.updated_at else None,
+                "published_at": challenge.published_at.isoformat() if challenge.published_at else None
+            }
+            
+            # Define conflict resolution
+            conflict_columns = ["challenge_id"]
+            update_columns = [
+                "creator_id", "title", "status", "lie_statement_id", "view_count",
+                "guess_count", "correct_guess_count", "is_merged_video",
+                "statements_json", "merged_video_metadata_json", "tags_json",
+                "updated_at", "published_at"
+            ]
+            
+            self._execute_upsert("challenges", data, conflict_columns, update_columns)
+            return True
                 
         except Exception as e:
             logger.error(f"Error saving challenge {challenge.challenge_id}: {e}")
@@ -1928,51 +1998,26 @@ class DatabaseService:
     def save_guess(self, guess) -> bool:
         """Save a guess to the database"""
         try:
-            with self.get_connection() as conn:
-                cursor = self.get_cursor(conn)
-                
-                if self.is_postgres:
-                    # PostgreSQL uses ON CONFLICT instead of INSERT OR REPLACE
-                    cursor.execute("""
-                        INSERT INTO guesses (
-                            guess_id, challenge_id, user_id, guessed_lie_statement_id,
-                            is_correct, response_time_seconds, submitted_at
-                        ) VALUES (%s, %s, %s, %s, %s, %s, %s)
-                        ON CONFLICT (guess_id) DO UPDATE SET
-                            challenge_id = EXCLUDED.challenge_id,
-                            user_id = EXCLUDED.user_id,
-                            guessed_lie_statement_id = EXCLUDED.guessed_lie_statement_id,
-                            is_correct = EXCLUDED.is_correct,
-                            response_time_seconds = EXCLUDED.response_time_seconds,
-                            submitted_at = EXCLUDED.submitted_at
-                    """, (
-                        guess.guess_id,
-                        guess.challenge_id,
-                        guess.user_id,
-                        guess.guessed_lie_statement_id,
-                        guess.is_correct,
-                        guess.response_time_seconds,
-                        guess.submitted_at.isoformat() if guess.submitted_at else None
-                    ))
-                else:
-                    logger.warning(f"Using SQLite fallback for guess save in {self.environment.value} environment")
-                    cursor.execute("""
-                        INSERT OR REPLACE INTO guesses (
-                            guess_id, challenge_id, user_id, guessed_lie_statement_id,
-                            is_correct, response_time_seconds, submitted_at
-                        ) VALUES (?, ?, ?, ?, ?, ?, ?)
-                    """, (
-                        guess.guess_id,
-                        guess.challenge_id,
-                        guess.user_id,
-                        guess.guessed_lie_statement_id,
-                        guess.is_correct,
-                        guess.response_time_seconds,
-                        guess.submitted_at.isoformat() if guess.submitted_at else None
-                    ))
-                
-                conn.commit()
-                return True
+            # Prepare data for upsert
+            data = {
+                "guess_id": guess.guess_id,
+                "challenge_id": guess.challenge_id,
+                "user_id": guess.user_id,
+                "guessed_lie_statement_id": guess.guessed_lie_statement_id,
+                "is_correct": guess.is_correct,
+                "response_time_seconds": guess.response_time_seconds,
+                "submitted_at": guess.submitted_at.isoformat() if guess.submitted_at else None
+            }
+            
+            # Define conflict resolution
+            conflict_columns = ["guess_id"]
+            update_columns = [
+                "challenge_id", "user_id", "guessed_lie_statement_id",
+                "is_correct", "response_time_seconds", "submitted_at"
+            ]
+            
+            self._execute_upsert("guesses", data, conflict_columns, update_columns)
+            return True
                 
         except Exception as e:
             logger.error(f"Error saving guess {guess.guess_id}: {e}")
