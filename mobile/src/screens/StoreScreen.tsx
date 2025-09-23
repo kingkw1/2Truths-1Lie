@@ -1,44 +1,99 @@
 import React, { useState } from 'react';
-import {
-  View,
-  Text,
-  StyleSheet,
+import { 
+  View, 
+  Text, 
+  ScrollView, 
+  TouchableOpacity, 
+  StyleSheet, 
   Alert,
-  ScrollView,
-  TouchableOpacity,
-  ActivityIndicator,
+  Platform,
+  ActivityIndicator
 } from 'react-native';
 import Purchases, { PurchasesPackage } from 'react-native-purchases';
+import { StatusBar } from 'expo-status-bar';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import { useOfferings } from '../hooks/useOfferings';
 import { usePremiumStatus } from '../hooks/usePremiumStatus';
 import { ProductCard } from '../components/ProductCard';
 import { TrialBanner } from '../components/TrialBanner';
+import { revenueCatUserSync } from '../services/revenueCatUserSync';
 
 export const StoreScreen: React.FC = () => {
-  const { offerings, isLoading: offeringsLoading, error: offeringsError } = useOfferings();
-  const { 
-    isPremium, 
-    isInTrial, 
-    trialDaysRemaining, 
-    loading: premiumLoading
-  } = usePremiumStatus();
   const [purchasing, setPurchasing] = useState(false);
+  const { offerings, isLoading: offeringsLoading, error: offeringsError } = useOfferings();
+  const { isPremium } = usePremiumStatus();
+  
+  // Debug RevenueCat connectivity
+  React.useEffect(() => {
+    const debugRevenueCat = async () => {
+      try {
+        console.log('🔍 DEBUG: Starting RevenueCat debug...');
+        
+        // Get offerings - simplified logging
+        const offerings = await Purchases.getOfferings();
+        
+        if (offerings.current) {
+          console.log('🔍 DEBUG: Available packages count:', offerings.current.availablePackages?.length || 0);
+          
+          // Log only essential package info
+          offerings.current.availablePackages?.forEach((pkg, index) => {
+            console.log(`🔍 DEBUG: Package ${index + 1}:`, {
+              identifier: pkg.identifier,
+              productId: pkg.product.identifier,
+              productType: pkg.product.productType,
+              priceString: pkg.product.priceString,
+            });
+          });
+        } else {
+          console.log('🔍 DEBUG: No current offering found');
+        }
+        
+      } catch (error) {
+        console.error('🔍 DEBUG: RevenueCat error:', error);
+      }
+    };
+    
+    debugRevenueCat();
+  }, []);
 
   // Filter and separate product packages
-  const subscriptionPackages = offerings?.current?.availablePackages.filter(pkg => 
-    pkg.identifier === 'pro_monthly' || pkg.identifier === 'pro_annual'
-  ) || [];
+  const allPackages = offerings?.current?.availablePackages || [];
   
-  const tokenPackages = offerings?.current?.availablePackages.filter(pkg => 
-    pkg.identifier.includes('token_pack')
-  ) || [];
+  const subscriptionPackages = allPackages.filter(pkg => 
+    pkg.identifier === 'pro_monthly' || pkg.identifier === 'pro_annual'
+  );
+  
+  const tokenPackages = allPackages.filter(pkg => 
+    pkg.identifier.includes('token_pack') || 
+    pkg.identifier.includes('token') ||
+    pkg.product.productType === 'NON_CONSUMABLE' ||
+    pkg.product.productType === 'CONSUMABLE'
+  );
+
+  // Debug logging
+  console.log('🛍️ All available packages:', allPackages.map(pkg => ({
+    identifier: pkg.identifier,
+    title: pkg.product.title,
+    type: pkg.product.productType
+  })));
+  console.log('📱 Subscription packages:', subscriptionPackages.length);
+  console.log('🪙 Token packages:', tokenPackages.length);
 
   const handlePurchase = async (pkg: PurchasesPackage) => {
     try {
       setPurchasing(true);
-      const { customerInfo } = await Purchases.purchasePackage(pkg);
       
-      const premiumEntitlement = customerInfo.entitlements.active['premium'];
+      // Ensure RevenueCat user is synced before purchase
+      console.log('🔄 Ensuring RevenueCat user is synced before purchase...');
+      await revenueCatUserSync.ensureUserSynced();
+      
+      // Log the current RevenueCat user for verification
+      const customerInfo = await Purchases.getCustomerInfo();
+      console.log(`🆔 Making purchase with RevenueCat User ID: ${customerInfo.originalAppUserId}`);
+      
+      const { customerInfo: purchaseCustomerInfo } = await Purchases.purchasePackage(pkg);
+      
+      const premiumEntitlement = purchaseCustomerInfo.entitlements.active['premium'];
       if (premiumEntitlement) {
         if (premiumEntitlement.periodType === 'trial') {
           Alert.alert(
@@ -48,6 +103,9 @@ export const StoreScreen: React.FC = () => {
         } else {
           Alert.alert('Success', 'You are now a premium user!');
         }
+      } else {
+        // Token purchase
+        Alert.alert('Purchase Successful!', `You've purchased ${pkg.identifier}. Tokens will be added to your account shortly.`);
       }
     } catch (e: any) {
       if (!e.userCancelled) {
@@ -67,7 +125,7 @@ export const StoreScreen: React.FC = () => {
     }
   };
 
-  const isLoading = offeringsLoading || premiumLoading;
+  const isLoading = offeringsLoading;
   const error = offeringsError;
 
   if (isLoading) {
@@ -88,7 +146,7 @@ export const StoreScreen: React.FC = () => {
       <TrialBanner onUpgradePress={() => {}} />
 
       {/* Premium Status */}
-      {isPremium && !isInTrial && (
+      {isPremium && (
         <View style={styles.premiumBanner}>
           <Text style={styles.premiumTitle}>✨ Premium Active</Text>
           <Text style={styles.premiumText}>

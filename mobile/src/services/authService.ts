@@ -5,6 +5,7 @@
 
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { getBackendBaseUrl } from '../config/apiConfig';
+import { revenueCatUserSync } from './revenueCatUserSync';
 
 export interface AuthUser {
   id: string;
@@ -222,6 +223,14 @@ export class AuthService {
         await this.migrateGuestUserData(guestUser, user);
       }
 
+      // Sync with RevenueCat after successful signup
+      try {
+        await revenueCatUserSync.syncAuthenticatedUser();
+        console.log('✅ RevenueCat user sync completed');
+      } catch (error) {
+        console.warn('⚠️ RevenueCat sync failed, but signup was successful:', error);
+      }
+
       return user;
     } catch (error: any) {
       console.error('❌ Signup failed:', error);
@@ -281,6 +290,14 @@ export class AuthService {
         await this.migrateGuestUserData(guestUser, user);
       }
 
+      // Sync with RevenueCat after successful login
+      try {
+        await revenueCatUserSync.syncAuthenticatedUser();
+        console.log('✅ RevenueCat user sync completed');
+      } catch (error) {
+        console.warn('⚠️ RevenueCat sync failed, but login was successful:', error);
+      }
+
       return user;
     } catch (error: any) {
       console.error('❌ Login failed:', error);
@@ -293,6 +310,14 @@ export class AuthService {
    */
   public async logout(): Promise<void> {
     console.log('🚪 Logging out user...');
+    
+    // Logout from RevenueCat first
+    try {
+      await revenueCatUserSync.logoutFromRevenueCat();
+      console.log('✅ RevenueCat logout completed');
+    } catch (error) {
+      console.warn('⚠️ RevenueCat logout failed:', error);
+    }
     
     // Clear all authentication data
     await this.clearAuthData();
