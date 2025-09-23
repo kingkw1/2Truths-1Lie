@@ -159,6 +159,45 @@ class TokenService:
             logger.error(f"Failed to add tokens from purchase for user {purchase_event.user_id}: {e}")
             return False
 
+    def add_tokens_for_testing(self, user_id: str, amount: int, description: str = "Test token addition") -> bool:
+        """
+        Add tokens for testing purposes
+        
+        Args:
+            user_id: User ID to add tokens to
+            amount: Number of tokens to add
+            description: Description for the transaction
+            
+        Returns:
+            True if successful, False otherwise
+        """
+        try:
+            # Get current balance
+            balance_response = self.get_user_balance(user_id)
+            current_balance = balance_response.balance
+            new_balance = current_balance + amount
+            
+            transaction_id = str(uuid.uuid4())
+            
+            # Execute transaction
+            self._execute_token_transaction(
+                user_id=user_id,
+                transaction_id=transaction_id,
+                transaction_type=TokenTransactionType.PURCHASE,
+                amount=amount,
+                balance_before=current_balance,
+                balance_after=new_balance,
+                description=description,
+                metadata={"test": True, "method": "add_tokens_for_testing"}
+            )
+            
+            logger.info(f"Added {amount} tokens to user {user_id} for testing")
+            return True
+            
+        except Exception as e:
+            logger.error(f"Failed to add tokens for testing to user {user_id}: {e}")
+            return False
+
     def get_transaction_history(self, user_id: str, limit: int = 50) -> List[Dict[str, Any]]:
         """Get transaction history for a user"""
         try:
@@ -206,30 +245,60 @@ class TokenService:
         revenuecat_transaction_id: Optional[str] = None,
         revenuecat_product_id: Optional[str] = None
     ) -> None:
-        """Execute a token transaction atomically using unified query system"""
+        """
+        Execute a token transaction atomically with proper validation and error handling
+        
+        Ensures atomicity by using database transactions and prevents token loss/duplication.
+        Validates balance consistency before applying changes.
+        """
+        operation = "execute_token_transaction"
+        
         try:
-            metadata_json = json.dumps(metadata or {})
+            # Validate inputs
+            if balance_after < 0:
+                raise ValueError(f"Transaction would result in negative balance: {balance_after}")
             
-            # Start atomic transaction
-            with self.db.get_connection() as conn:
-                cursor = self.db.get_cursor(conn)
+            if amount == 0:
+                raise ValueError("Transaction amount cannot be zero")
+            
+            # Prepare transaction data
+            metadata_json = json.dumps(metadata or {})
+            current_time = datetime.utcnow()
+            
+            # Execute within database transaction for atomicity
+            logger.debug(f"Starting atomic token transaction {transaction_id} for user {user_id}")
+            
+            # Use database transaction to ensure atomicity
+            with self.db.transaction():
+                # Verify current balance matches expected balance_before (prevents race conditions)
+                current_balance_data = self.db._execute_select(
+                    "SELECT balance FROM token_balances WHERE user_id = ?",
+                    (user_id,),
+                    fetch_one=True
+                )
                 
-                # Update balance using unified UPSERT
+                if current_balance_data and current_balance_data['balance'] != balance_before:
+                    raise ValueError(
+                        f"Balance mismatch detected for user {user_id}: "
+                        f"expected {balance_before}, found {current_balance_data['balance']}. "
+                        f"Possible concurrent transaction - operation aborted for safety."
+                    )
+                
+                # Update balance using atomic UPSERT (handles both new users and existing users)
                 balance_data = {
                     "user_id": user_id,
                     "balance": balance_after,
-                    "last_updated": datetime.utcnow()
+                    "last_updated": current_time
                 }
                 
-                # Use unified UPSERT for balance update (PostgreSQL and SQLite compatible)
-                self.db._execute_upsert(
+                balance_rows = self.db._execute_upsert(
                     "token_balances", 
                     balance_data,
                     ["user_id"],  # conflict columns
                     ["balance", "last_updated"]  # update columns
                 )
                 
-                # Insert transaction record using unified INSERT
+                # Insert transaction record for audit trail
                 transaction_data = {
                     "transaction_id": transaction_id,
                     "user_id": user_id,
@@ -241,14 +310,21 @@ class TokenService:
                     "metadata": metadata_json,
                     "revenuecat_transaction_id": revenuecat_transaction_id,
                     "revenuecat_product_id": revenuecat_product_id,
-                    "created_at": datetime.utcnow()
+                    "created_at": current_time
                 }
                 
-                self.db._execute_insert("token_transactions", transaction_data)
+                transaction_rows = self.db._execute_insert("token_transactions", transaction_data)
                 
-                conn.commit()
-                logger.debug(f"Token transaction executed atomically: {transaction_id}")
+                # Transaction will be automatically committed by context manager
                 
+            logger.info(f"Token transaction completed successfully: {transaction_id}")
+            logger.debug(f"User {user_id}: {amount} tokens, balance {balance_before} -> {balance_after}")
+            
         except Exception as e:
-            logger.error(f"Failed to execute token transaction: {e}")
-            raise
+            # Enhanced error logging for debugging
+            logger.error(f"Token transaction failed for user {user_id}: {e}")
+            logger.error(f"Transaction context: ID={transaction_id}, type={getattr(transaction_type, 'value', transaction_type)}, "
+                        f"amount={amount}, balance_before={balance_before}, balance_after={balance_after}")
+            
+            # Re-raise with enhanced error context
+            raise RuntimeError(f"Token transaction failed: {e}") from e

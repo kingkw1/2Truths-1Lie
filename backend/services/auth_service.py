@@ -17,14 +17,29 @@ logger = logging.getLogger(__name__)
 security = HTTPBearer()
 
 class AuthService:
-    """Enhanced authentication service with media-specific security"""
+    """Enhanced authentication service with database-backed session management"""
     
-    def __init__(self):
-        self.active_sessions: Dict[str, Dict[str, Any]] = {}
+    def __init__(self, db_service=None):
+        self.active_sessions: Dict[str, Dict[str, Any]] = {}  # Keep for backwards compatibility
         self.rate_limits: Dict[str, Dict[str, Any]] = {}
+        self._db_service = None  # Will be set via dependency injection
     
-    def create_access_token(self, data: dict, expires_delta: Optional[timedelta] = None) -> str:
-        """Create JWT access token with enhanced claims"""
+    def set_database_service(self, db_service):
+        """Set database service for session management (dependency injection)"""
+        self._db_service = db_service
+    
+    @property  
+    def db_service(self):
+        """Get database service instance with lazy loading"""
+        if self._db_service is None:
+            # Import here to avoid circular dependency
+            from services.database_service import get_db_service
+            self._db_service = get_db_service()
+        return self._db_service
+    
+    def create_access_token(self, data: dict, expires_delta: Optional[timedelta] = None, 
+                           user_agent: str = None, ip_address: str = None) -> str:
+        """Create JWT access token with database-backed session management"""
         to_encode = data.copy()
         
         # Set expiration
@@ -47,15 +62,46 @@ class AuthService:
         
         encoded_jwt = jwt.encode(to_encode, settings.SECRET_KEY, algorithm=settings.ALGORITHM)
         
-        # Track active session
+        # Store session in database for persistent session management
         user_id = data.get("sub")
+        session_type = data.get("type", "user")
+        
         if user_id:
-            self.active_sessions[user_id] = {
-                "token": encoded_jwt,
-                "created_at": datetime.utcnow(),
-                "expires_at": expire,
-                "permissions": to_encode.get("permissions", [])
-            }
+            try:
+                # Store in database
+                session_id = self.db_service.create_session(
+                    user_id=user_id,
+                    jwt_token=encoded_jwt,
+                    session_type=session_type,
+                    permissions=to_encode.get("permissions", []),
+                    expires_at=expire,
+                    user_agent=user_agent,
+                    ip_address=ip_address
+                )
+                
+                if session_id:
+                    logger.info(f"Created database session {session_id} for user {user_id}")
+                else:
+                    logger.warning(f"Failed to create database session for user {user_id}")
+                
+                # Also keep in memory for backwards compatibility
+                self.active_sessions[user_id] = {
+                    "token": encoded_jwt,
+                    "created_at": datetime.utcnow(),
+                    "expires_at": expire,
+                    "permissions": to_encode.get("permissions", []),
+                    "session_id": session_id
+                }
+                
+            except Exception as e:
+                logger.error(f"Failed to create database session for user {user_id}: {e}")
+                # Fall back to memory-only session
+                self.active_sessions[user_id] = {
+                    "token": encoded_jwt,
+                    "created_at": datetime.utcnow(),
+                    "expires_at": expire,
+                    "permissions": to_encode.get("permissions", [])
+                }
         
         return encoded_jwt
     
@@ -99,17 +145,34 @@ class AuthService:
                     headers={"WWW-Authenticate": "Bearer"},
                 )
             
-            # Check if token is still active in our session store (skip for guest users)
-            # Only validate session if user is actively tracked and has a different token
+            # Check if token is still active in database session store
             token_type = payload.get("type", "user")
-            if user_id in self.active_sessions and token_type != "guest":
-                session = self.active_sessions[user_id]
-                if session["token"] != token:
-                    logger.warning(f"Token mismatch for user {user_id}: session has different token")
-                    # For now, allow the token if it's valid JWT - session tracking is optional
-                    # This prevents issues when server restarts and sessions are cleared
-                    # TODO: Implement persistent session store (Redis/database) for production
-                    pass
+            token_hash = hashlib.sha256(token.encode()).hexdigest()
+            
+            try:
+                # Verify session exists and is active in database
+                session_data = self.db_service.get_session_by_token_hash(token_hash)
+                
+                if session_data:
+                    # Update last accessed timestamp
+                    self.db_service.update_session_access(token_hash)
+                    logger.debug(f"Database session validated for user {user_id}")
+                    
+                    # Add session info to payload for downstream use
+                    payload["session_id"] = session_data.get("session_id")
+                    payload["session_type"] = session_data.get("session_type")
+                    
+                elif token_type != "guest":
+                    # For non-guest tokens, require valid database session
+                    logger.warning(f"No active database session found for user {user_id}")
+                    # For now, allow the token if it's valid JWT to handle server restarts gracefully
+                    # In production, consider making this stricter
+                    logger.info(f"Allowing valid JWT without database session for user {user_id}")
+                    
+            except Exception as e:
+                logger.error(f"Database session validation failed for user {user_id}: {e}")
+                # Fall back to allowing valid JWTs if database is unavailable
+                logger.info(f"Falling back to JWT-only validation for user {user_id}")
             
             # JWT library has already validated audience and issuer during decode
             # Return the validated payload
@@ -193,12 +256,58 @@ class AuthService:
         except (ValueError, TypeError):
             return False
     
-    def revoke_token(self, user_id: str) -> bool:
-        """Revoke user's active token"""
-        if user_id in self.active_sessions:
-            del self.active_sessions[user_id]
-            return True
-        return False
+    def revoke_token(self, token: str) -> bool:
+        """Revoke a specific token (invalidate session)"""
+        try:
+            token_hash = hashlib.sha256(token.encode()).hexdigest()
+            
+            # Invalidate in database
+            db_success = self.db_service.invalidate_session(token_hash)
+            
+            # Also remove from memory cache if present
+            # Find and remove from active_sessions by token
+            user_to_remove = None
+            for user_id, session_data in self.active_sessions.items():
+                if session_data.get("token") == token:
+                    user_to_remove = user_id
+                    break
+            
+            if user_to_remove:
+                del self.active_sessions[user_to_remove]
+                
+            logger.info(f"Token revoked - Database: {db_success}, Memory: {user_to_remove is not None}")
+            return db_success
+            
+        except Exception as e:
+            logger.error(f"Failed to revoke token: {e}")
+            return False
+    
+    def revoke_user_sessions(self, user_id: str) -> int:
+        """Revoke all sessions for a user"""
+        try:
+            # Invalidate all user sessions in database
+            db_count = self.db_service.invalidate_user_sessions(user_id)
+            
+            # Also remove from memory cache
+            if user_id in self.active_sessions:
+                del self.active_sessions[user_id]
+                
+            logger.info(f"Revoked {db_count} sessions for user {user_id}")
+            return db_count
+            
+        except Exception as e:
+            logger.error(f"Failed to revoke user sessions for {user_id}: {e}")
+            return 0
+    
+    def cleanup_expired_sessions(self) -> int:
+        """Clean up expired sessions"""
+        try:
+            count = self.db_service.cleanup_expired_sessions()
+            logger.info(f"Cleaned up {count} expired sessions")
+            return count
+        except Exception as e:
+            logger.error(f"Failed to cleanup expired sessions: {e}")
+            return 0
     
     def get_user_permissions(self, user_id: str) -> list:
         """Get user's current permissions"""

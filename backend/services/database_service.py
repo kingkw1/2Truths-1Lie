@@ -583,6 +583,50 @@ class DatabaseService:
                 conn.row_factory = sqlite3.Row
                 return conn.cursor()
     
+    def transaction(self):
+        """
+        Context manager for database transactions with proper rollback on error
+        
+        Usage:
+            with db_service.transaction():
+                db_service._execute_insert("table1", data1)
+                db_service._execute_update("table2", data2, "id = ?", (id,))
+                # Transaction will be committed automatically on success
+                # or rolled back on any exception
+        """
+        class TransactionContext:
+            def __init__(self, db_service):
+                self.db_service = db_service
+                self.conn = None
+                
+            def __enter__(self):
+                self.conn = self.db_service._get_validated_connection("transaction")
+                # Begin transaction (implicit in most cases, explicit for safety)
+                if self.db_service.is_postgres:
+                    self.conn.execute("BEGIN")
+                else:
+                    self.conn.execute("BEGIN")
+                return self.conn
+                
+            def __exit__(self, exc_type, exc_val, exc_tb):
+                if exc_type is None:
+                    # Success - commit transaction
+                    self.conn.commit()
+                    logger.debug("Transaction committed successfully")
+                else:
+                    # Error - rollback transaction
+                    self.conn.rollback()
+                    logger.warning(f"Transaction rolled back due to error: {exc_val}")
+                
+                # Close connection
+                if self.conn:
+                    self.conn.close()
+                    
+                # Don't suppress exceptions
+                return False
+        
+        return TransactionContext(self)
+    
     def execute_query_with_params(self, query: str, params: tuple = (), fetch_one: bool = False, fetch_all: bool = False):
         """
         DEPRECATED: Use _execute_query, _execute_select, _execute_insert, _execute_update, or _execute_upsert instead.
@@ -746,8 +790,36 @@ class DatabaseService:
                 )
             """)
             
+            # Create user_sessions table for JWT session management
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS user_sessions (
+                    session_id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+                    user_id VARCHAR(255) NOT NULL,
+                    jwt_token TEXT NOT NULL,
+                    token_hash VARCHAR(64) NOT NULL UNIQUE,
+                    session_type VARCHAR(20) NOT NULL DEFAULT 'user' CHECK (
+                        session_type IN ('user', 'guest', 'admin')
+                    ),
+                    permissions JSONB DEFAULT '[]',
+                    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    expires_at TIMESTAMP NOT NULL,
+                    last_accessed TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                    is_active BOOLEAN DEFAULT TRUE,
+                    user_agent TEXT,
+                    ip_address INET
+                )
+            """)
+            
             # Create indexes on token tables
             cursor.execute("CREATE INDEX IF NOT EXISTS idx_token_transactions_user_id ON token_transactions(user_id)")
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_token_transactions_created_at ON token_transactions(created_at)")
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_token_transactions_revenuecat ON token_transactions(revenuecat_transaction_id)")
+            
+            # Create indexes on session tables
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_user_sessions_user_id ON user_sessions(user_id)")
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_user_sessions_token_hash ON user_sessions(token_hash)")
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_user_sessions_expires_at ON user_sessions(expires_at)")
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_user_sessions_active ON user_sessions(is_active, expires_at)")
             cursor.execute("CREATE INDEX IF NOT EXISTS idx_token_transactions_created_at ON token_transactions(created_at DESC)")
             cursor.execute("CREATE INDEX IF NOT EXISTS idx_token_transactions_type ON token_transactions(transaction_type)")
             cursor.execute("CREATE INDEX IF NOT EXISTS idx_token_transactions_revenuecat ON token_transactions(revenuecat_transaction_id)")
@@ -955,6 +1027,26 @@ class DatabaseService:
                     )
                 """)
                 
+                # Create user_sessions table for JWT session management  
+                cursor.execute("""
+                    CREATE TABLE IF NOT EXISTS user_sessions (
+                        session_id TEXT PRIMARY KEY DEFAULT (hex(randomblob(16))),
+                        user_id TEXT NOT NULL,
+                        jwt_token TEXT NOT NULL,
+                        token_hash TEXT NOT NULL UNIQUE,
+                        session_type TEXT NOT NULL DEFAULT 'user' CHECK (
+                            session_type IN ('user', 'guest', 'admin')
+                        ),
+                        permissions TEXT DEFAULT '[]',
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        expires_at TIMESTAMP NOT NULL,
+                        last_accessed TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        is_active BOOLEAN DEFAULT TRUE,
+                        user_agent TEXT,
+                        ip_address TEXT
+                    )
+                """)
+                
                 # Create indexes on token tables
                 cursor.execute("""
                     CREATE INDEX IF NOT EXISTS idx_token_transactions_user_id 
@@ -975,6 +1067,24 @@ class DatabaseService:
                 cursor.execute("""
                     CREATE INDEX IF NOT EXISTS idx_token_balances_last_updated 
                     ON token_balances(last_updated)
+                """)
+                
+                # Create indexes on session tables
+                cursor.execute("""
+                    CREATE INDEX IF NOT EXISTS idx_user_sessions_user_id 
+                    ON user_sessions(user_id)
+                """)
+                cursor.execute("""
+                    CREATE INDEX IF NOT EXISTS idx_user_sessions_token_hash 
+                    ON user_sessions(token_hash)
+                """)
+                cursor.execute("""
+                    CREATE INDEX IF NOT EXISTS idx_user_sessions_expires_at 
+                    ON user_sessions(expires_at)
+                """)
+                cursor.execute("""
+                    CREATE INDEX IF NOT EXISTS idx_user_sessions_active 
+                    ON user_sessions(is_active, expires_at)
                 """)
                 
                 # Enable foreign key constraints (SQLite doesn't enable them by default)
@@ -2394,6 +2504,264 @@ class DatabaseService:
         except Exception as e:
             logger.error(f"Error loading all guesses: {e}")
             return {}
+
+    # =============================================================================
+    # Session Management Methods
+    # =============================================================================
+    
+    def create_session(self, user_id: str, jwt_token: str, session_type: str = 'user', 
+                      permissions: List[str] = None, expires_at: datetime = None,
+                      user_agent: str = None, ip_address: str = None) -> Optional[str]:
+        """
+        Create a new session record for JWT token tracking
+        
+        Args:
+            user_id: User ID for the session
+            jwt_token: The JWT token to store
+            session_type: Type of session ('user', 'guest', 'admin')
+            permissions: List of user permissions
+            expires_at: When the session expires
+            user_agent: Client user agent string
+            ip_address: Client IP address
+            
+        Returns:
+            Session ID if successful, None if failed
+            
+        Raises:
+            DatabaseError: For database operation errors
+        """
+        operation = "create_session"
+        try:
+            import hashlib
+            
+            # Create hash of token for efficient lookups without storing full token
+            token_hash = hashlib.sha256(jwt_token.encode()).hexdigest()
+            
+            # Default expiration if not provided
+            if expires_at is None:
+                expires_at = datetime.utcnow() + timedelta(hours=24)
+            
+            session_data = {
+                "user_id": user_id,
+                "jwt_token": jwt_token,  # Store full token for validation
+                "token_hash": token_hash,
+                "session_type": session_type,
+                "permissions": json.dumps(permissions or []),
+                "created_at": datetime.utcnow(),
+                "expires_at": expires_at,
+                "last_accessed": datetime.utcnow(),
+                "is_active": True,
+                "user_agent": user_agent,
+                "ip_address": ip_address
+            }
+            
+            if self.is_postgres:
+                # PostgreSQL - use RETURNING to get the session_id
+                result = self._execute_query("""
+                    INSERT INTO user_sessions (user_id, jwt_token, token_hash, session_type, permissions, 
+                                             created_at, expires_at, last_accessed, is_active, user_agent, ip_address)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    RETURNING session_id
+                """, (user_id, jwt_token, token_hash, session_type, json.dumps(permissions or []),
+                     datetime.utcnow(), expires_at, datetime.utcnow(), True, user_agent, ip_address), 
+                     fetch_one=True)
+                return result['session_id'] if result else None
+            else:
+                # SQLite - insert and get lastrowid
+                self._execute_insert("user_sessions", session_data)
+                # For SQLite, return the token_hash as session identifier since we can't get UUID easily
+                return token_hash
+                
+        except DatabaseError:
+            # Re-raise database errors (already logged and categorized)
+            raise
+        except Exception as e:
+            # Handle any unexpected errors
+            categorized_error = self._handle_database_exception(operation, e)
+            raise categorized_error
+    
+    def get_session_by_token_hash(self, token_hash: str) -> Optional[Dict[str, Any]]:
+        """
+        Get session information by token hash
+        
+        Args:
+            token_hash: SHA256 hash of the JWT token
+            
+        Returns:
+            Session data dict or None if not found
+            
+        Raises:
+            DatabaseError: For database operation errors
+        """
+        operation = "get_session_by_token_hash"
+        try:
+            session_data = self._execute_select("""
+                SELECT session_id, user_id, jwt_token, token_hash, session_type, permissions,
+                       created_at, expires_at, last_accessed, is_active, user_agent, ip_address
+                FROM user_sessions 
+                WHERE token_hash = ? AND is_active = TRUE AND expires_at > ?
+            """, (token_hash, datetime.utcnow()), fetch_one=True)
+            
+            if session_data:
+                # Parse permissions JSON
+                try:
+                    session_data['permissions'] = json.loads(session_data['permissions'])
+                except (json.JSONDecodeError, TypeError):
+                    session_data['permissions'] = []
+                
+                logger.debug(f"Retrieved active session for token hash {token_hash[:16]}...")
+                return session_data
+            else:
+                logger.debug(f"No active session found for token hash {token_hash[:16]}...")
+                return None
+                
+        except DatabaseError:
+            # Re-raise database errors (already logged and categorized)
+            raise
+        except Exception as e:
+            # Handle any unexpected errors
+            categorized_error = self._handle_database_exception(operation, e)
+            raise categorized_error
+    
+    def update_session_access(self, token_hash: str) -> bool:
+        """
+        Update last accessed timestamp for a session
+        
+        Args:
+            token_hash: SHA256 hash of the JWT token
+            
+        Returns:
+            True if updated successfully, False if session not found
+            
+        Raises:
+            DatabaseError: For database operation errors  
+        """
+        operation = "update_session_access"
+        try:
+            rows_affected = self._execute_update(
+                "user_sessions",
+                {"last_accessed": datetime.utcnow()},
+                "token_hash = ? AND is_active = TRUE",
+                (token_hash,)
+            )
+            
+            success = rows_affected > 0
+            if success:
+                logger.debug(f"Updated session access for token hash {token_hash[:16]}...")
+            else:
+                logger.warning(f"No active session found to update for token hash {token_hash[:16]}...")
+                
+            return success
+            
+        except DatabaseError:
+            # Re-raise database errors (already logged and categorized)
+            raise
+        except Exception as e:
+            # Handle any unexpected errors
+            categorized_error = self._handle_database_exception(operation, e)
+            raise categorized_error
+    
+    def invalidate_session(self, token_hash: str) -> bool:
+        """
+        Invalidate a session (mark as inactive)
+        
+        Args:
+            token_hash: SHA256 hash of the JWT token
+            
+        Returns:
+            True if invalidated successfully, False if session not found
+            
+        Raises:
+            DatabaseError: For database operation errors
+        """
+        operation = "invalidate_session"
+        try:
+            rows_affected = self._execute_update(
+                "user_sessions",
+                {"is_active": False, "last_accessed": datetime.utcnow()},
+                "token_hash = ?",
+                (token_hash,)
+            )
+            
+            success = rows_affected > 0
+            if success:
+                logger.info(f"Invalidated session for token hash {token_hash[:16]}...")
+            else:
+                logger.warning(f"No session found to invalidate for token hash {token_hash[:16]}...")
+                
+            return success
+            
+        except DatabaseError:
+            # Re-raise database errors (already logged and categorized)
+            raise
+        except Exception as e:
+            # Handle any unexpected errors
+            categorized_error = self._handle_database_exception(operation, e)
+            raise categorized_error
+    
+    def invalidate_user_sessions(self, user_id: str) -> int:
+        """
+        Invalidate all sessions for a user
+        
+        Args:
+            user_id: User ID whose sessions to invalidate
+            
+        Returns:
+            Number of sessions invalidated
+            
+        Raises:
+            DatabaseError: For database operation errors
+        """
+        operation = "invalidate_user_sessions"
+        try:
+            rows_affected = self._execute_update(
+                "user_sessions",
+                {"is_active": False, "last_accessed": datetime.utcnow()},
+                "user_id = ? AND is_active = TRUE",
+                (user_id,)
+            )
+            
+            logger.info(f"Invalidated {rows_affected} sessions for user {user_id}")
+            return rows_affected
+            
+        except DatabaseError:
+            # Re-raise database errors (already logged and categorized)
+            raise
+        except Exception as e:
+            # Handle any unexpected errors
+            categorized_error = self._handle_database_exception(operation, e)
+            raise categorized_error
+    
+    def cleanup_expired_sessions(self) -> int:
+        """
+        Clean up expired sessions from the database
+        
+        Returns:
+            Number of sessions cleaned up
+            
+        Raises:
+            DatabaseError: For database operation errors
+        """
+        operation = "cleanup_expired_sessions"
+        try:
+            # Mark expired sessions as inactive
+            rows_affected = self._execute_update(
+                "user_sessions",
+                {"is_active": False},
+                "expires_at <= ? AND is_active = TRUE",
+                (datetime.utcnow(),)
+            )
+            
+            logger.info(f"Cleaned up {rows_affected} expired sessions")
+            return rows_affected
+            
+        except DatabaseError:
+            # Re-raise database errors (already logged and categorized)
+            raise
+        except Exception as e:
+            # Handle any unexpected errors
+            categorized_error = self._handle_database_exception(operation, e)
+            raise categorized_error
 
     def get_environment_info(self) -> Dict[str, Any]:
         """
