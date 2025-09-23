@@ -425,6 +425,7 @@ class DatabaseService:
             return psycopg2.connect(self.database_url)
         elif self.database_mode == DatabaseMode.SQLITE_ONLY:
             self._ensure_not_production_for_sqlite("get_connection")
+            logger.warning(f"Using SQLite fallback connection in {self.environment.value} environment (path: {self.db_path})")
             if not self.db_path:
                 raise EnvironmentMismatchError("SQLite mode but no database path configured")
             return sqlite3.connect(self.db_path)
@@ -436,6 +437,7 @@ class DatabaseService:
             if self.is_postgres:
                 return psycopg2.connect(self.database_url)
             else:
+                logger.warning(f"Using SQLite fallback connection in hybrid mode ({self.environment.value} environment, path: {self.db_path})")
                 return sqlite3.connect(self.db_path)
     
     def get_cursor(self, conn):
@@ -444,6 +446,7 @@ class DatabaseService:
             return conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
         elif self.database_mode == DatabaseMode.SQLITE_ONLY:
             self._ensure_not_production_for_sqlite("get_cursor")
+            logger.warning(f"Using SQLite fallback cursor in {self.environment.value} environment")
             # Enable foreign key constraints and set row factory for SQLite
             conn.execute("PRAGMA foreign_keys = ON")
             conn.row_factory = sqlite3.Row
@@ -456,6 +459,7 @@ class DatabaseService:
             if self.is_postgres:
                 return conn.cursor(cursor_factory=psycopg2.extras.DictCursor)
             else:
+                logger.warning(f"Using SQLite fallback cursor in hybrid mode ({self.environment.value} environment)")
                 conn.execute("PRAGMA foreign_keys = ON")
                 conn.row_factory = sqlite3.Row
                 return conn.cursor()
@@ -493,6 +497,7 @@ class DatabaseService:
                 self._init_postgres_database()
             elif self.database_mode == DatabaseMode.SQLITE_ONLY:
                 self._ensure_not_production_for_sqlite("_init_database")
+                logger.warning(f"Initializing SQLite fallback database in {self.environment.value} environment")
                 self._init_sqlite_database()
             else:
                 # HYBRID mode (development only)
@@ -502,6 +507,7 @@ class DatabaseService:
                 if self.is_postgres:
                     self._init_postgres_database()
                 else:
+                    logger.warning(f"Initializing SQLite fallback database in hybrid mode ({self.environment.value} environment)")
                     self._init_sqlite_database()
         except Exception as e:
             logger.error(f"Failed to initialize database: {e}")
@@ -653,6 +659,8 @@ class DatabaseService:
         
         if self.database_mode not in [DatabaseMode.SQLITE_ONLY, DatabaseMode.HYBRID]:
             raise EnvironmentMismatchError("SQLite initialization not allowed in current database mode")
+        
+        logger.warning(f"Creating SQLite fallback database schema in {self.environment.value} environment (path: {self.db_path})")
         
         try:
             with self._get_validated_connection("_init_sqlite_database") as conn:
@@ -913,6 +921,7 @@ class DatabaseService:
                         conn.commit()
                         return cursor.rowcount
                 else:
+                    logger.warning(f"Using SQLite fallback query execution in {self.environment.value} environment")
                     conn.row_factory = sqlite3.Row
                     cursor = conn.cursor()
                     cursor.execute(query, params)
@@ -957,13 +966,15 @@ class DatabaseService:
                 return
             elif self.database_mode == DatabaseMode.SQLITE_ONLY:
                 self._ensure_not_production_for_sqlite("_verify_database_constraints")
+                logger.warning(f"Verifying SQLite fallback database constraints in {self.environment.value} environment")
             elif self.environment == DatabaseEnvironment.PRODUCTION:
                 raise EnvironmentMismatchError("Constraint verification for mixed mode not allowed in production")
             
             # Only proceed with SQLite constraint verification
-            if not self.is_postgres:
+            if self.is_postgres:
                 return
                 
+            logger.warning(f"Verifying SQLite fallback database constraints in {self.environment.value} environment")
             with self._get_validated_connection("_verify_database_constraints") as conn:
                 cursor = conn.cursor()
                 
@@ -1744,6 +1755,7 @@ class DatabaseService:
                         challenge.published_at.isoformat() if challenge.published_at else None
                     ))
                 else:
+                    logger.warning(f"Using SQLite fallback for challenge save in {self.environment.value} environment")
                     cursor.execute("""
                         INSERT OR REPLACE INTO challenges (
                             challenge_id, creator_id, title, status, lie_statement_id,
@@ -1943,6 +1955,7 @@ class DatabaseService:
                         guess.submitted_at.isoformat() if guess.submitted_at else None
                     ))
                 else:
+                    logger.warning(f"Using SQLite fallback for guess save in {self.environment.value} environment")
                     cursor.execute("""
                         INSERT OR REPLACE INTO guesses (
                             guess_id, challenge_id, user_id, guessed_lie_statement_id,
