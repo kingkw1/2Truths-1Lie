@@ -162,12 +162,13 @@ async def stream_video(
     range: Optional[str] = Header(None),
     user: Optional[str] = None,
     expires: Optional[str] = None,
-    signature: Optional[str] = None,
-    current_user: str = Depends(check_download_rate_limit)
+    signature: Optional[str] = None
 ):
     """Stream video with range support for progressive download from cloud or local storage"""
     try:
-        # Check for signed URL access (bypasses normal auth for direct links)
+        authorized_user = None
+        
+        # Check for signed URL access first (bypasses normal auth for direct links)
         if user and expires and signature:
             logger.info(f"=== SIGNED URL VERIFICATION ===")
             logger.info(f"Media ID: {media_id}")
@@ -183,9 +184,26 @@ async def stream_video(
                 )
             # Use the signed URL user for media access
             authorized_user = user
+            logger.info(f"✅ Signed URL verified successfully for user {user}")
         else:
-            # Use authenticated user
-            authorized_user = current_user
+            # Fall back to regular authentication
+            try:
+                from services.auth_service import get_current_user
+                authorized_user = await get_current_user(request)
+                
+                # Check download rate limit for authenticated users
+                if not auth_service.check_rate_limit(authorized_user, "download", limit=100, window=3600):
+                    raise HTTPException(
+                        status_code=status.HTTP_429_TOO_MANY_REQUESTS,
+                        detail="Download rate limit exceeded. Try again later."
+                    )
+                logger.info(f"✅ Regular authentication successful for user {authorized_user}")
+            except HTTPException as e:
+                logger.error(f"❌ Authentication failed: {e.detail}")
+                raise HTTPException(
+                    status_code=status.HTTP_401_UNAUTHORIZED,
+                    detail="Authentication required"
+                )
         
         # Get media streaming info
         stream_info = await media_service.stream_media(media_id, authorized_user, range)
