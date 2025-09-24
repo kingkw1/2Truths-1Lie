@@ -350,10 +350,9 @@ async def add_tokens_manually(
         
         logger.info(f"Manually added {request.amount} tokens to user {user_id}, balance: {current_balance} -> {new_balance}")
         
-        return TokenBalanceResponse(
-            balance=new_balance,
-            user_id=str(user_id)
-        )
+        # Get the updated balance with proper timestamp
+        final_balance = token_service.get_user_balance(str(user_id))
+        return final_balance
             
     except HTTPException:
         raise
