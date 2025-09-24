@@ -209,6 +209,32 @@ async def test_db_connection():
         return {"success": True, "balance": balance_response.balance, "user_id": "10"}
     except Exception as e:
         return {"success": False, "error": str(e)}
+
+@router.post("/test-add")
+async def test_token_add():
+    """Test token addition step by step"""
+    try:
+        token_service = get_token_service()
+        user_id = "10"
+        amount = 25
+        
+        # Get initial balance
+        initial_balance = token_service.get_user_balance(user_id)
+        
+        # Try to add tokens
+        result = token_service.add_tokens_for_testing(user_id, amount, "Test addition")
+        
+        # Get final balance
+        final_balance = token_service.get_user_balance(user_id)
+        
+        return {
+            "success": result,
+            "initial_balance": initial_balance.balance,
+            "final_balance": final_balance.balance,
+            "amount_added": amount
+        }
+    except Exception as e:
+        return {"success": False, "error": str(e)}
     
 @router.post("/add-manual", response_model=TokenBalanceResponse)
 async def add_tokens_manually(
