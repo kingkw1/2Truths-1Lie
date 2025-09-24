@@ -322,23 +322,38 @@ async def add_tokens_manually(
             purchase_currency="USD"
         )
         
-        token_service = get_token_service()
-        success = token_service.add_tokens_from_purchase(purchase_event)
+        # Simplified approach - directly update balance
+        from datetime import datetime
+        from services.database_service import get_db_service
         
-        if success:
-            # Get updated balance
-            balance = token_service.get_user_balance(str(user_id))
-            logger.info(f"Manually added {request.amount} tokens to user {user_id}, new balance: {balance}")
-            
-            return TokenBalanceResponse(
-                balance=balance,
-                user_id=str(user_id)
-            )
-        else:
-            raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail="Failed to add tokens"
-            )
+        db = get_db_service()
+        token_service = get_token_service()
+        
+        # Get current balance
+        current_balance_response = token_service.get_user_balance(str(user_id))
+        current_balance = current_balance_response.balance
+        new_balance = current_balance + request.amount
+        
+        # Update balance directly
+        balance_data = {
+            "user_id": str(user_id),
+            "balance": new_balance,
+            "last_updated": datetime.utcnow()
+        }
+        
+        rows_updated = db._execute_upsert(
+            "token_balances", 
+            balance_data,
+            ["user_id"],
+            ["balance", "last_updated"]
+        )
+        
+        logger.info(f"Manually added {request.amount} tokens to user {user_id}, balance: {current_balance} -> {new_balance}")
+        
+        return TokenBalanceResponse(
+            balance=new_balance,
+            user_id=str(user_id)
+        )
             
     except HTTPException:
         raise
