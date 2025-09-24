@@ -328,6 +328,44 @@ export const ChallengeCreationScreen: React.FC<ChallengeCreationScreenProps> = (
       console.log('✅ SUBMIT: Merged video URL:', mergeResult.mergedVideoUrl);
       console.log('✅ SUBMIT: Segment metadata:', mergeResult.segmentMetadata);
 
+      // Validate timing metadata before creating challenge request
+      console.log('🎯 TIMING_DEBUG: Validating segment metadata before challenge creation');
+      if (mergeResult.segmentMetadata) {
+        const totalDuration = mergeResult.segmentMetadata.reduce((total, segment) => 
+          total + (segment.endTime - segment.startTime), 0);
+        
+        console.log(`🎯 TIMING_DEBUG: Total duration calculated: ${totalDuration}s`);
+        
+        if (totalDuration < 1.5) {
+          console.warn(`⚠️ TIMING_WARNING: Total duration suspiciously short (expecting seconds):`, totalDuration);
+        }
+        if (totalDuration > 90) {
+          console.warn(`⚠️ TIMING_WARNING: Total duration suspiciously long (expecting seconds):`, totalDuration);
+        }
+        
+        mergeResult.segmentMetadata.forEach((segment, index) => {
+          const duration = segment.endTime - segment.startTime;
+          console.log(`🎯 TIMING_DEBUG: Segment ${index} validation: start=${segment.startTime}s, end=${segment.endTime}s, duration=${duration}s`);
+          
+          if (duration < 0.5) {
+            console.warn(`⚠️ TIMING_WARNING: Segment ${index} duration suspiciously short (expecting seconds):`, duration);
+          }
+          if (duration > 30) {
+            console.warn(`⚠️ TIMING_WARNING: Segment ${index} duration suspiciously long (expecting seconds):`, duration);
+          }
+          if (segment.startTime < 0) {
+            console.warn(`⚠️ TIMING_WARNING: Segment ${index} negative start time:`, segment.startTime);
+          }
+          if (segment.endTime <= segment.startTime) {
+            console.warn(`⚠️ TIMING_WARNING: Segment ${index} end time not after start time:`, 'start=', segment.startTime, 'end=', segment.endTime);
+          }
+          if (segment.startTime < 30 && segment.startTime > 0.1) {
+            // Could be suspicious - might be expecting milliseconds but got seconds
+            console.warn(`⚠️ TIMING_WARNING: Segment ${index} start time might be in wrong units (expecting seconds):`, segment.startTime);
+          }
+        });
+      }
+
       // Prepare the challenge request with merged video data
       const challengeRequest = {
         statements: currentChallenge.statements.map((statement, index) => {
@@ -529,6 +567,17 @@ export const ChallengeCreationScreen: React.FC<ChallengeCreationScreenProps> = (
               // Get media info from individual recordings
               let media = individualRecordings?.[index];
               let duration = media?.duration;
+              
+              // Validate duration for display
+              if (duration !== undefined) {
+                console.log(`🎯 TIMING_DEBUG: Statement ${index + 1} individual recording duration: ${duration}ms`);
+                if (duration < 500) {
+                  console.warn(`⚠️ TIMING_WARNING: Statement ${index + 1} duration suspiciously short (expecting ms):`, duration);
+                }
+                if (duration > 60000) {
+                  console.warn(`⚠️ TIMING_WARNING: Statement ${index + 1} duration suspiciously long (expecting ms):`, duration);
+                }
+              }
 
               const isSelected = selectedLieIndex === index;
 

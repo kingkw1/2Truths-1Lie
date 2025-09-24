@@ -564,17 +564,41 @@ export const MobileCameraRecorder: React.FC<MobileCameraRecorderProps> = ({
 
       // Calculate actual recording duration from start time
       const actualDuration = Date.now() - startTime.current;
-      console.log(`Recording duration check: timer=${recordingDuration}ms, actual=${actualDuration}ms`);
+      console.log(`🎯 TIMING_DEBUG: Recording duration calculations for statement ${statementIndex}:`);
+      console.log(`  Timer duration: ${recordingDuration}ms`);
+      console.log(`  Actual duration: ${actualDuration}ms`);
+      console.log(`  Start timestamp: ${startTime.current}`);
+      console.log(`  End timestamp: ${Date.now()}`);
       
       // Use the larger of the two duration calculations and validate duration constraints
       const finalDuration = Math.max(recordingDuration, actualDuration);
+      console.log(`  Final duration: ${finalDuration}ms`);
+      
+      // Enhanced timing validation with warnings
+      if (Math.abs(recordingDuration - actualDuration) > 1000) {
+        console.warn(`⚠️ TIMING_WARNING: Significant difference between timer and actual duration:`, 
+          'timer=', recordingDuration, 'actual=', actualDuration, 'diff=', Math.abs(recordingDuration - actualDuration));
+      }
+      
       if (finalDuration < 500) { // Reduced to 0.5 seconds for more lenient validation
+        console.warn(`⚠️ TIMING_WARNING: Recording suspiciously short (expecting ms):`, finalDuration);
         throw new Error('Recording is too short. Please record for at least 0.5 seconds.');
       }
       
       // Validate maximum duration (30 seconds = 30,000 milliseconds)
       if (finalDuration > 30000) {
+        console.warn(`⚠️ TIMING_WARNING: Recording suspiciously long (expecting ms):`, finalDuration);
         throw new Error('DURATION_TOO_LONG');
+      }
+      
+      if (finalDuration > 60000) {
+        console.warn(`⚠️ TIMING_WARNING: Recording duration extremely long - might be in wrong units:`, finalDuration);
+      }
+      
+      console.log(`✅ TIMING_VALIDATION: Recording duration ${finalDuration}ms is valid for statement ${statementIndex}`);
+      
+      if (finalDuration > 10 && finalDuration < 100) {
+        console.warn(`⚠️ TIMING_WARNING: Duration might be in wrong units (too short for ms, too long for seconds):`, finalDuration);
       }
 
       // Process recording with upload through mobile media integration

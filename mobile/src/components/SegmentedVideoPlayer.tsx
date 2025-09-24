@@ -204,10 +204,33 @@ export const SegmentedVideoPlayer: React.FC<SegmentedVideoPlayerProps> = ({
       }
 
       if (videoRef.current && isVideoLoaded) {
+        // Add detailed logging and validation for segment timing
+        console.log(`🎯 TIMING_DEBUG: Playing segment ${segmentIndex}:`);
+        console.log(`  startTime: ${segment.startTime}ms`);
+        console.log(`  endTime: ${segment.endTime}ms`);
+        console.log(`  duration: ${segment.duration}ms`);
+        console.log(`  Math.floor(startTime): ${Math.floor(segment.startTime)}ms`);
+        
+        // Validate segment timing before seeking
+        if (segment.startTime < 30) {
+          console.warn(`⚠️ TIMING_WARNING: Segment ${segmentIndex} startTime suspiciously small (expecting ms):`, segment.startTime);
+        }
+        if (segment.duration < 30) {
+          console.warn(`⚠️ TIMING_WARNING: Segment ${segmentIndex} duration suspiciously small (expecting ms):`, segment.duration);
+        }
+        if (segment.duration > 30000) {
+          console.warn(`⚠️ TIMING_WARNING: Segment ${segmentIndex} duration suspiciously large (expecting ms):`, segment.duration);
+        }
+        if (segment.endTime <= segment.startTime) {
+          console.warn(`⚠️ TIMING_WARNING: Segment ${segmentIndex} endTime not greater than startTime:`, 'start=', segment.startTime, 'end=', segment.endTime);
+        }
+        
         // Seek to the start of the selected segment
         try {
-          await videoRef.current.setPositionAsync(Math.floor(segment.startTime));
-          console.log(`🎬 SEGMENTED_PLAYER: setPositionAsync OK for segment ${segmentIndex} -> ${Math.floor(segment.startTime)}ms`);
+          const seekPositionMs = Math.floor(segment.startTime);
+          console.log(`🎯 TIMING_DEBUG: Seeking to position: ${seekPositionMs}ms`);
+          await videoRef.current.setPositionAsync(seekPositionMs);
+          console.log(`🎬 SEGMENTED_PLAYER: setPositionAsync OK for segment ${segmentIndex} -> ${seekPositionMs}ms`);
         } catch (seekErr) {
           console.error('🎬 SEGMENTED_PLAYER: setPositionAsync failed:', seekErr);
         }

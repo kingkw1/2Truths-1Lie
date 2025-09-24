@@ -623,9 +623,38 @@ export class VideoUploadService {
       // Calculate actual cumulative timing based on real video durations
       let cumulativeTime = 0;
       const segmentMetadata = uploadedVideos.map((video, index) => {
+        console.log(`🎯 TIMING_DEBUG: Processing video ${index} for segment metadata:`);
+        console.log(`  Original duration (ms): ${video.duration}`);
+        console.log(`  Statement index: ${video.statementIndex}`);
+        
+        // Validate input duration
+        if (video.duration < 500) {
+          console.warn(`⚠️ TIMING_WARNING: Video ${index} duration suspiciously short (expecting ms):`, video.duration);
+        }
+        if (video.duration > 30000) {
+          console.warn(`⚠️ TIMING_WARNING: Video ${index} duration suspiciously long (expecting ms):`, video.duration);
+        }
+        
         const startTime = cumulativeTime;
         const durationInSeconds = video.duration / 1000; // Convert milliseconds to seconds
         const endTime = startTime + durationInSeconds;
+        
+        console.log(`  Converted to seconds: duration=${durationInSeconds}s`);
+        console.log(`  Segment timing: start=${startTime}s, end=${endTime}s`);
+        
+        // Validate output timing
+        if (durationInSeconds < 0.5) {
+          console.warn(`⚠️ TIMING_WARNING: Video ${index} converted duration suspiciously short (expecting seconds):`, durationInSeconds);
+        }
+        if (durationInSeconds > 30) {
+          console.warn(`⚠️ TIMING_WARNING: Video ${index} converted duration suspiciously long (expecting seconds):`, durationInSeconds);
+        }
+        if (startTime < 0) {
+          console.warn(`⚠️ TIMING_WARNING: Video ${index} negative start time:`, startTime);
+        }
+        if (endTime <= startTime) {
+          console.warn(`⚠️ TIMING_WARNING: Video ${index} end time not after start time:`, 'start=', startTime, 'end=', endTime);
+        }
         
         cumulativeTime = endTime; // Update for next segment
         
@@ -636,6 +665,30 @@ export class VideoUploadService {
           duration: durationInSeconds, // In seconds
         };
       });
+      
+      // Final validation of segment metadata array
+      console.log(`🎯 TIMING_DEBUG: Final segment metadata array:`, segmentMetadata);
+      console.log(`  Total merged video duration: ${cumulativeTime}s`);
+      
+      if (segmentMetadata.length !== 3) {
+        console.warn(`⚠️ TIMING_WARNING: Expected 3 segments, got ${segmentMetadata.length}`);
+      }
+      if (cumulativeTime < 1.5) {
+        console.warn(`⚠️ TIMING_WARNING: Total merged duration suspiciously short (expecting seconds):`, cumulativeTime);
+      }
+      if (cumulativeTime > 90) {
+        console.warn(`⚠️ TIMING_WARNING: Total merged duration suspiciously long (expecting seconds):`, cumulativeTime);
+      }
+      
+      // Validate segment ordering
+      const sortedSegments = [...segmentMetadata].sort((a, b) => a.startTime - b.startTime);
+      for (let i = 0; i < sortedSegments.length - 1; i++) {
+        if (sortedSegments[i].endTime > sortedSegments[i + 1].startTime) {
+          console.warn(`⚠️ TIMING_WARNING: Overlapping segments detected:`, 
+            sortedSegments[i].statementIndex, 'ends at', sortedSegments[i].endTime,
+            'but', sortedSegments[i + 1].statementIndex, 'starts at', sortedSegments[i + 1].startTime);
+        }
+      }
       
       const mockResult = {
         merge_session_id: `merge_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`,

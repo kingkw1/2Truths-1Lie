@@ -136,23 +136,76 @@ const convertBackendChallenge = (backendChallenge: BackendChallenge): EnhancedCh
       if (uniqueUrls.length === 1 && backendChallenge.merged_video_metadata) {
         const mergedVideoUrl = uniqueUrls[0];
         console.log('🎬 MERGED_DETECTION: All individual URLs identical; converting to merged video with segments');
+        
+        // Add detailed logging and validation for merged video timing
+        const totalDurationSeconds = backendChallenge.merged_video_metadata.total_duration || 0;
+        const totalDurationMs = totalDurationSeconds * 1000;
+        
+        console.log('🎯 TIMING_DEBUG: Processing merged video metadata');
+        console.log('🎯 TIMING_DEBUG: Total duration from backend (seconds):', totalDurationSeconds);
+        console.log('🎯 TIMING_DEBUG: Total duration converted (ms):', totalDurationMs);
+        
+        // Validate total duration
+        if (totalDurationSeconds > 90) {
+          console.warn('⚠️ TIMING_WARNING: Total duration suspiciously long for video statements:', totalDurationSeconds, 'seconds');
+        }
+        if (totalDurationSeconds < 0.1) {
+          console.warn('⚠️ TIMING_WARNING: Total duration suspiciously short for video statements:', totalDurationSeconds, 'seconds');
+        }
+
+        const segments = (backendChallenge.merged_video_metadata.segments || []).map((segment: any, index: number) => {
+          const startTimeSeconds = segment.start_time || 0;
+          const endTimeSeconds = segment.end_time || 0;
+          const durationSeconds = segment.duration || (endTimeSeconds - startTimeSeconds) || 0;
+          
+          const startTimeMs = Math.round(startTimeSeconds * 1000);
+          const endTimeMs = Math.round(endTimeSeconds * 1000);
+          const durationMs = Math.round(durationSeconds * 1000);
+          
+          console.log(`🎯 TIMING_DEBUG: Segment ${index} (statement ${segment.statement_index || index}):`);
+          console.log(`  Backend seconds: start=${startTimeSeconds}s, end=${endTimeSeconds}s, duration=${durationSeconds}s`);
+          console.log(`  Converted ms: start=${startTimeMs}ms, end=${endTimeMs}ms, duration=${durationMs}ms`);
+          
+          // Validate segment timing
+          if (durationSeconds > 30) {
+            console.warn(`⚠️ TIMING_WARNING: Segment ${index} duration suspiciously long:`, durationSeconds, 'seconds');
+          }
+          if (durationSeconds < 0.5) {
+            console.warn(`⚠️ TIMING_WARNING: Segment ${index} duration suspiciously short:`, durationSeconds, 'seconds');
+          }
+          if (startTimeSeconds < 0) {
+            console.warn(`⚠️ TIMING_WARNING: Segment ${index} negative start time:`, startTimeSeconds, 'seconds');
+          }
+          if (endTimeSeconds <= startTimeSeconds) {
+            console.warn(`⚠️ TIMING_WARNING: Segment ${index} end time not after start time:`, 'start=', startTimeSeconds, 'end=', endTimeSeconds);
+          }
+          
+          return {
+            statementIndex: segment.statement_index || index,
+            startTime: startTimeMs, // Convert from seconds to milliseconds
+            endTime: endTimeMs, // Convert from seconds to milliseconds  
+            duration: durationMs, // Convert from seconds to milliseconds
+            url: mergedVideoUrl, // Already resolved URL from uniqueUrls
+          };
+        });
+
         const mergedVideo = {
           type: 'video' as const,
           streamingUrl: mergedVideoUrl, // Already resolved URL from uniqueUrls
-          duration: (backendChallenge.merged_video_metadata.total_duration || 0) * 1000,
+          duration: totalDurationMs,
           mediaId: backendChallenge.merged_video_metadata.video_file_id,
           isUploaded: true,
           storageType: 'cloud' as any,
           cloudStorageKey: `challenges/${backendChallenge.challenge_id}/merged.mp4`,
           isMergedVideo: true,
-          segments: (backendChallenge.merged_video_metadata.segments || []).map((segment: any, index: number) => ({
-            statementIndex: segment.statement_index || index,
-            startTime: Math.round((segment.start_time || 0) * 1000), // Convert from seconds to milliseconds
-            endTime: Math.round((segment.end_time || 0) * 1000), // Convert from seconds to milliseconds  
-            duration: Math.round((segment.duration || (segment.end_time - segment.start_time) || 0) * 1000), // Convert from seconds to milliseconds
-            url: mergedVideoUrl, // Already resolved URL from uniqueUrls
-          })),
+          segments: segments,
         };
+        
+        console.log('🎯 TIMING_DEBUG: Final merged video object:', {
+          duration: mergedVideo.duration,
+          segmentCount: segments.length,
+          segments: segments.map((s: any) => ({ statementIndex: s.statementIndex, startTime: s.startTime, endTime: s.endTime, duration: s.duration }))
+        });
 
         return [mergedVideo];
       }
