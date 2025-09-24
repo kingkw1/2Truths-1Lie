@@ -226,11 +226,16 @@ async def add_tokens_manually(
         )
         
         token_service = get_token_service()
-        success = token_service.add_tokens_from_purchase(purchase_event)
+        logger.info(f"Attempting to add {request.amount} tokens to user {user_id}")
+        
+        # Use the testing method instead
+        success = token_service.add_tokens_for_testing(str(user_id), request.amount, request.description)
+        logger.info(f"Token addition result: {success}")
         
         if success:
             # Get updated balance
-            balance = token_service.get_user_balance(str(user_id))
+            balance_response = token_service.get_user_balance(str(user_id))
+            balance = balance_response.balance
             logger.info(f"Manually added {request.amount} tokens to user {user_id}, new balance: {balance}")
             
             return TokenBalanceResponse(
