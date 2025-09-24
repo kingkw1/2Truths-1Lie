@@ -72,7 +72,7 @@ def extract_s3_key_from_url(url: str) -> Optional[str]:
     
     return None
 
-async def get_signed_url_for_video(video_url: str) -> str:
+async def get_signed_url_for_video(video_url: str, user_id: str = None) -> str:
     """Convert media reference to accessible URL for video streaming"""
     if not video_url:
         return video_url
@@ -81,8 +81,8 @@ async def get_signed_url_for_video(video_url: str) -> str:
     if video_url.startswith(('http://', 'https://')):
         return video_url
     
-    # Check if it's already a relative API path
-    if video_url.startswith('/api/'):
+    # Check if it's already a relative API path with query params (already signed)
+    if video_url.startswith('/api/') and ('?' in video_url):
         return video_url
     
     # Extract S3 key from S3 URL patterns
@@ -97,11 +97,25 @@ async def get_signed_url_for_video(video_url: str) -> str:
         except Exception as e:
             logger.error(f"Failed to generate S3 signed URL for {video_url}: {e}")
     
-    # Handle media ID - assume it's a local media file reference
-    # For local storage, construct a media streaming URL
-    if len(video_url) > 8 and '-' in video_url:  # Looks like a UUID/media ID
-        # Return the media serving endpoint path that the mobile app can use
-        return f"/api/v1/media/{video_url}"
+    # Handle media ID - generate signed URL for local media access
+    media_id = None
+    if video_url.startswith('/api/v1/media/'):
+        # Extract media ID from URL path like "/api/v1/media/uuid"
+        media_id = video_url.split('/')[-1]
+    elif len(video_url) > 8 and '-' in video_url:  # Looks like a UUID/media ID
+        media_id = video_url
+    
+    if media_id:
+        try:
+            # Generate signed URL using auth service
+            from services.auth_service import AuthService
+            auth_service = AuthService()
+            # Use guest user if no user_id provided
+            effective_user_id = user_id or "guest_public"
+            signed_url = auth_service.create_signed_url(media_id, effective_user_id, expires_in=7200)  # 2 hours
+            return signed_url
+        except Exception as e:
+            logger.error(f"Failed to generate signed URL for media {media_id}: {e}")
     
     # Fallback: return original URL
     return video_url
@@ -221,14 +235,14 @@ async def get_challenge(
         if challenge_dict.get("statements"):
             for statement in challenge_dict["statements"]:
                 if statement.get("streaming_url"):
-                    statement["streaming_url"] = await get_signed_url_for_video(statement["streaming_url"])
+                    statement["streaming_url"] = await get_signed_url_for_video(statement["streaming_url"], user_id)
                 if statement.get("media_url"):
-                    statement["media_url"] = await get_signed_url_for_video(statement["media_url"])
+                    statement["media_url"] = await get_signed_url_for_video(statement["media_url"], user_id)
         
         # Add merged video information if available with signed URL
         if challenge.is_merged_video and challenge.merged_video_url:
             # Generate signed URL for merged video
-            signed_video_url = await get_signed_url_for_video(challenge.merged_video_url)
+            signed_video_url = await get_signed_url_for_video(challenge.merged_video_url, user_id)
             # Update the merged_video_url field directly in the response
             challenge_dict["merged_video_url"] = signed_video_url
         
@@ -294,14 +308,14 @@ async def list_challenges_authenticated(
             if challenge_dict.get("statements"):
                 for statement in challenge_dict["statements"]:
                     if statement.get("streaming_url"):
-                        statement["streaming_url"] = await get_signed_url_for_video(statement["streaming_url"])
+                        statement["streaming_url"] = await get_signed_url_for_video(statement["streaming_url"], user_id)
                     if statement.get("media_url"):
-                        statement["media_url"] = await get_signed_url_for_video(statement["media_url"])
+                        statement["media_url"] = await get_signed_url_for_video(statement["media_url"], user_id)
             
             # Add merged video information if available
             if challenge.is_merged_video:
                 # Generate signed URL for merged video
-                signed_video_url = await get_signed_url_for_video(challenge.merged_video_url)
+                signed_video_url = await get_signed_url_for_video(challenge.merged_video_url, user_id)
                 
                 challenge_dict["merged_video_info"] = {
                     "has_merged_video": True,

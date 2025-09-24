@@ -31,7 +31,7 @@ const getAPIConfig = (): APIConfig => {
   };
 
   // Environment-based configuration
-  // TEMPORARILY: Always use production Railway backend for device testing
+  // Use development backend for testing signed URL functionality
   // const isDevelopment = __DEV__; // React Native's built-in development flag
   const isDevelopment = false; // Force production mode to use Railway backend
   

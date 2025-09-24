@@ -7,8 +7,8 @@ import { Platform } from 'react-native';
 import { authService } from './authService';
 import { getApiBaseUrl, getBackendBaseUrl } from '../config/apiConfig';
 
-// Helper function to convert relative API paths to full URLs
-function resolveMediaUrl(url: string): string {
+// Helper function to resolve media URLs from relative to absolute paths
+export function resolveMediaUrl(url: string): string {
   if (!url) return url;
   
   // Already a full URL

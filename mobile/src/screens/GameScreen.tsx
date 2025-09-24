@@ -33,7 +33,7 @@ import { useReportAuth } from '../hooks/useReportAuth';
 import AnimatedFeedback from '../shared/AnimatedFeedback';
 import SimpleVideoPlayer from '../components/SimpleVideoPlayer';
 import SegmentedVideoPlayer from '../components/SegmentedVideoPlayer';
-import { realChallengeAPI, Challenge as BackendChallenge } from '../services/realChallengeAPI';
+import { realChallengeAPI, Challenge as BackendChallenge, resolveMediaUrl } from '../services/realChallengeAPI';
 import { errorHandlingService } from '../services/errorHandlingService';
 import { AuthStatusBanner } from '../components/ProtectedScreen';
 import { ReportButton } from '../components/ReportButton';
@@ -80,7 +80,7 @@ const convertBackendChallenge = (backendChallenge: BackendChallenge): EnhancedCh
               console.log('🎬 INDIVIDUAL_STRATEGY: Using original individual videos (different URLs)');
               const individualMedia = backendChallenge.statements.map((stmt) => ({
                 type: 'video' as const,
-                streamingUrl: stmt.streaming_url || stmt.media_url,
+                streamingUrl: resolveMediaUrl(stmt.streaming_url || stmt.media_url),
                 duration: (stmt.duration_seconds || 0) * 1000, // Convert to milliseconds
                 mediaId: stmt.media_file_id,
                 isUploaded: true,
@@ -94,7 +94,7 @@ const convertBackendChallenge = (backendChallenge: BackendChallenge): EnhancedCh
               // console.log('🎬 MERGED_STRATEGY: Using merged video (no individual URLs available)');
               const mergedVideo = {
                 type: 'video' as const,
-                streamingUrl: mergedVideoUrl,
+                streamingUrl: resolveMediaUrl(mergedVideoUrl || ''),
                 duration: (mergedMetadata.total_duration || 0) * 1000, // Convert seconds to milliseconds
                 mediaId: mergedVideoFileId,
                 isUploaded: true,
@@ -106,7 +106,7 @@ const convertBackendChallenge = (backendChallenge: BackendChallenge): EnhancedCh
                   startTime: segment.start_time > 1000 ? Math.round(segment.start_time) : Math.round((segment.start_time || 0) * 1000), // Convert seconds to milliseconds if needed
                   endTime: segment.end_time > 1000 ? Math.round(segment.end_time) : Math.round((segment.end_time || 0) * 1000), // Convert seconds to milliseconds if needed
                   duration: segment.duration > 1000 ? Math.round(segment.duration) : Math.round((segment.duration || 0) * 1000), // Convert seconds to milliseconds if needed
-                  url: mergedVideoUrl,
+                  url: resolveMediaUrl(mergedVideoUrl || ''),
                 })),
               };
               
@@ -121,7 +121,7 @@ const convertBackendChallenge = (backendChallenge: BackendChallenge): EnhancedCh
       // For individual videos (non-merged), create individual media entries
       const individualMedia = backendChallenge.statements.map((stmt) => ({
         type: 'video' as const,
-        streamingUrl: stmt.streaming_url || stmt.media_url,
+        streamingUrl: resolveMediaUrl(stmt.streaming_url || stmt.media_url || ''),
         duration: (stmt.duration_seconds || 0) * 1000, // Convert to milliseconds
         mediaId: stmt.media_file_id,
         isUploaded: true,
@@ -138,7 +138,7 @@ const convertBackendChallenge = (backendChallenge: BackendChallenge): EnhancedCh
         console.log('🎬 MERGED_DETECTION: All individual URLs identical; converting to merged video with segments');
         const mergedVideo = {
           type: 'video' as const,
-          streamingUrl: mergedVideoUrl,
+          streamingUrl: mergedVideoUrl, // Already resolved URL from uniqueUrls
           duration: (backendChallenge.merged_video_metadata.total_duration || 0) * 1000,
           mediaId: backendChallenge.merged_video_metadata.video_file_id,
           isUploaded: true,
@@ -150,7 +150,7 @@ const convertBackendChallenge = (backendChallenge: BackendChallenge): EnhancedCh
             startTime: Math.round((segment.start_time || 0) * 1000), // Convert from seconds to milliseconds
             endTime: Math.round((segment.end_time || 0) * 1000), // Convert from seconds to milliseconds  
             duration: Math.round((segment.duration || (segment.end_time - segment.start_time) || 0) * 1000), // Convert from seconds to milliseconds
-            url: mergedVideoUrl,
+            url: mergedVideoUrl, // Already resolved URL from uniqueUrls
           })),
         };
 
