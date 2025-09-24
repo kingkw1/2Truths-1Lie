@@ -192,6 +192,71 @@ async def get_transaction_history(
             detail="Failed to retrieve transaction history"
         )
 
+# Manual token addition for testing (should be protected or removed in production)
+class ManualTokenAddRequest(BaseModel):
+    """Request to manually add tokens (testing only)"""
+    amount: int
+    description: str = "Manual token addition for testing"
+    
+@router.post("/add-manual", response_model=TokenBalanceResponse)
+async def add_tokens_manually(
+    request: ManualTokenAddRequest,
+    current_user: dict = Depends(get_current_user_with_permissions)
+):
+    """Manually add tokens to user balance (for testing purposes)"""
+    try:
+        user_id = current_user.get("user_id") or current_user.get("id")
+        
+        if not user_id:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Unable to identify user"
+            )
+        
+        if request.amount <= 0:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Amount must be positive"
+            )
+        
+        # Create a mock purchase event for manual addition
+        from token_models.token_models import TokenPurchaseEvent
+        purchase_event = TokenPurchaseEvent(
+            user_id=str(user_id),
+            product_id="manual_test_tokens",
+            transaction_id=f"manual_{user_id}_{int(__import__('time').time())}",
+            tokens_purchased=request.amount,
+            purchase_price="0.00",
+            purchase_currency="USD"
+        )
+        
+        token_service = get_token_service()
+        success = token_service.add_tokens_from_purchase(purchase_event)
+        
+        if success:
+            # Get updated balance
+            balance = token_service.get_user_balance(str(user_id))
+            logger.info(f"Manually added {request.amount} tokens to user {user_id}, new balance: {balance}")
+            
+            return TokenBalanceResponse(
+                balance=balance,
+                user_id=str(user_id)
+            )
+        else:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Failed to add tokens"
+            )
+            
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to manually add tokens for user {user_id}: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to add tokens manually"
+        )
+
 def verify_revenuecat_webhook(payload: bytes, signature: str) -> bool:
     """Verify RevenueCat webhook signature"""
     webhook_secret = os.getenv('REVENUECAT_WEBHOOK_SECRET')
