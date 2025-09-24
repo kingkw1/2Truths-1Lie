@@ -308,14 +308,29 @@ class MediaUploadService:
     async def stream_media(self, media_id: str, user_id: Optional[str] = None, range_header: Optional[str] = None) -> Dict[str, Any]:
         """Stream media with range support for video playback from cloud or local storage"""
         
-        if self.use_cloud_storage and self.cloud_storage and user_id:
+        if self.use_cloud_storage and self.cloud_storage:
             # Try cloud storage first - generate signed URL for direct streaming
-            # In production, you'd store the exact cloud key in a database
-            potential_keys = [
-                f"media/{user_id}/{media_id}/video.mp4",
-                f"media/{user_id}/{media_id}/video.webm", 
-                f"media/{user_id}/{media_id}/video.mov"
-            ]
+            # Use the S3 media service key pattern: media/videos/{timestamp}/{media_id}
+            from datetime import datetime, timedelta
+            import boto3
+            
+            # Try different date patterns (current and recent dates)
+            current_date = datetime.utcnow()
+            potential_keys = []
+            
+            # Try multiple date formats in case upload was on different day
+            for days_back in range(7):  # Check last 7 days
+                test_date = current_date - timedelta(days=days_back)
+                timestamp = test_date.strftime('%Y%m%d')
+                potential_keys.append(f"media/videos/{timestamp}/{media_id}")
+            
+            # Also try legacy patterns for backward compatibility
+            if user_id:
+                potential_keys.extend([
+                    f"media/{user_id}/{media_id}/video.mp4",
+                    f"media/{user_id}/{media_id}/video.webm", 
+                    f"media/{user_id}/{media_id}/video.mov"
+                ])
             
             for key in potential_keys:
                 if await self.cloud_storage.file_exists(key):
