@@ -1,9 +1,10 @@
-import React from 'react';
+import React, { useState } from 'react';
 import {
   SafeAreaView,
   ScrollView,
   View,
   Text,
+  TextInput,
   TouchableOpacity,
   Pressable,
   Linking,
@@ -13,6 +14,55 @@ import {
 import Purchases from 'react-native-purchases';
 
 const AccountScreen = () => {
+  // State for Edit Profile
+  const [name, setName] = useState('Current User Name'); // Placeholder
+
+  // State for Change Password
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmNewPassword, setConfirmNewPassword] = useState('');
+
+  const handleUpdateName = async () => {
+    // Placeholder for PATCH API call
+    try {
+      // Simulate API call
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      // const response = await fetch('/api/user/profile', {
+      //   method: 'PATCH',
+      //   headers: { 'Content-Type': 'application/json' },
+      //   body: JSON.stringify({ name }),
+      // });
+      // if (!response.ok) throw new Error('Failed to update name.');
+      Alert.alert('Success', 'Your name has been updated.');
+    } catch (error) {
+      Alert.alert('Error', 'Could not update your name.');
+    }
+  };
+
+  const handleChangePassword = async () => {
+    if (newPassword !== confirmNewPassword) {
+      Alert.alert('Error', 'New passwords do not match.');
+      return;
+    }
+    // Placeholder for POST API call
+    try {
+      // Simulate API call
+      await new Promise(resolve => setTimeout(resolve, 1000));
+      // const response = await fetch('/api/user/change-password', {
+      //   method: 'POST',
+      //   headers: { 'Content-Type': 'application/json' },
+      //   body: JSON.stringify({ currentPassword, newPassword }),
+      // });
+      // if (!response.ok) throw new Error('Failed to change password.');
+      Alert.alert('Success', 'Your password has been changed.');
+      setCurrentPassword('');
+      setNewPassword('');
+      setConfirmNewPassword('');
+    } catch (error) {
+      Alert.alert('Error', 'Could not change your password.');
+    }
+  };
+
   const handleManageSubscription = async () => {
     try {
       await Purchases.showManageSubscriptions();
@@ -33,6 +83,49 @@ const AccountScreen = () => {
   return (
     <SafeAreaView style={styles.safeArea}>
       <ScrollView contentContainerStyle={styles.container}>
+        {/* Edit Profile Section */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Profile</Text>
+          <TextInput
+            style={styles.input}
+            value={name}
+            onChangeText={setName}
+            placeholder="Display Name"
+          />
+          <TouchableOpacity style={styles.button} onPress={handleUpdateName}>
+            <Text style={styles.buttonText}>Save Name</Text>
+          </TouchableOpacity>
+        </View>
+
+        {/* Change Password Section */}
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Security</Text>
+          <TextInput
+            style={styles.input}
+            value={currentPassword}
+            onChangeText={setCurrentPassword}
+            placeholder="Current Password"
+            secureTextEntry
+          />
+          <TextInput
+            style={styles.input}
+            value={newPassword}
+            onChangeText={setNewPassword}
+            placeholder="New Password"
+            secureTextEntry
+          />
+          <TextInput
+            style={styles.input}
+            value={confirmNewPassword}
+            onChangeText={setConfirmNewPassword}
+            placeholder="Confirm New Password"
+            secureTextEntry
+          />
+          <TouchableOpacity style={styles.button} onPress={handleChangePassword}>
+            <Text style={styles.buttonText}>Change Password</Text>
+          </TouchableOpacity>
+        </View>
+
         <TouchableOpacity style={styles.button} onPress={handleManageSubscription}>
           <Text style={styles.buttonText}>Manage Subscription</Text>
         </TouchableOpacity>
@@ -64,6 +157,26 @@ const styles = StyleSheet.create({
     padding: 20,
     alignItems: 'center',
   },
+  section: {
+    width: '100%',
+    marginBottom: 20,
+    alignItems: 'center',
+  },
+  sectionTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    marginBottom: 10,
+    alignSelf: 'flex-start',
+  },
+  input: {
+    width: '100%',
+    backgroundColor: '#ffffff',
+    padding: 15,
+    borderRadius: 10,
+    marginBottom: 10,
+    borderWidth: 1,
+    borderColor: '#ddd',
+  },
   button: {
     backgroundColor: '#007bff',
     paddingVertical: 15,
@@ -89,7 +202,7 @@ const styles = StyleSheet.create({
   },
   logoutButton: {
     backgroundColor: '#dc3545',
-    marginTop: 'auto', // Push to the bottom
+    marginTop: 'auto',
   },
   logoutButtonText: {
     color: '#ffffff',
