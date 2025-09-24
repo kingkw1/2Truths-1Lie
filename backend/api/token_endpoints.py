@@ -296,7 +296,7 @@ async def test_token_add():
     except Exception as e:
         return {"success": False, "error": str(e)}
     
-@router.post("/add-manual", response_model=TokenBalanceResponse)
+@router.post("/add-manual")
 async def add_tokens_manually(
     request: ManualTokenAddRequest,
     user_id: int = 10  # Hardcoded for testing - user fake1@gmail.com

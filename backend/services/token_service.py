@@ -50,15 +50,16 @@ class TokenService:
                 logger.debug(f"Retrieved balance for user {user_id}: {result['balance']}")
                 return TokenBalanceResponse(
                     balance=result['balance'],
-                    last_updated=result['last_updated']
+                    last_updated=result['last_updated'].isoformat() if result['last_updated'] else ""
                 )
             else:
                 # Initialize user with 0 balance if not exists
                 logger.info(f"Initializing new user balance for user {user_id}")
                 self._initialize_user_balance(user_id)
+                from datetime import datetime
                 return TokenBalanceResponse(
                     balance=0,
-                    last_updated=datetime.utcnow()
+                    last_updated=datetime.utcnow().isoformat()
                 )
                 
         except Exception as e:
