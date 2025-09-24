@@ -221,11 +221,12 @@ async def add_tokens_manually(
             )
         
         # Create a mock purchase event for manual addition
+        import time
         from token_models.token_models import TokenPurchaseEvent
         purchase_event = TokenPurchaseEvent(
             user_id=str(user_id),
             product_id="manual_test_tokens",
-            transaction_id=f"manual_{user_id}_{int(__import__('time').time())}",
+            transaction_id=f"manual_{user_id}_{int(time.time())}",
             tokens_purchased=request.amount,
             purchase_price="0.00",
             purchase_currency="USD"
