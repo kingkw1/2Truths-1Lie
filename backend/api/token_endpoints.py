@@ -214,23 +214,12 @@ async def test_db_connection():
 async def test_token_add():
     """Test token addition step by step"""
     try:
+        import uuid
+        from datetime import datetime
+        from token_models.token_models import TokenTransactionType
         from services.database_service import get_db_service
+        
         db = get_db_service()
-        
-        # Check if tables exist
-        tables_exist = {}
-        try:
-            result = db._execute_select("SELECT COUNT(*) as count FROM token_balances", (), fetch_one=True)
-            tables_exist["token_balances"] = True
-        except Exception as e:
-            tables_exist["token_balances"] = f"Error: {str(e)}"
-            
-        try:
-            result = db._execute_select("SELECT COUNT(*) as count FROM token_transactions", (), fetch_one=True)
-            tables_exist["token_transactions"] = True
-        except Exception as e:
-            tables_exist["token_transactions"] = f"Error: {str(e)}"
-        
         token_service = get_token_service()
         user_id = "10"
         amount = 25
@@ -238,21 +227,68 @@ async def test_token_add():
         # Get initial balance
         initial_balance = token_service.get_user_balance(user_id)
         
-        # Try to add tokens with detailed error catching
+        # Test each step individually
+        steps = {}
+        
+        # Step 1: Generate transaction ID
         try:
-            result = token_service.add_tokens_for_testing(user_id, amount, "Test addition")
-            add_error = None
+            transaction_id = str(uuid.uuid4())
+            steps["generate_transaction_id"] = "OK"
         except Exception as e:
-            result = False
-            add_error = str(e)
+            steps["generate_transaction_id"] = f"Error: {str(e)}"
+            
+        # Step 2: Calculate new balance
+        try:
+            current_balance = initial_balance.balance
+            new_balance = current_balance + amount
+            steps["calculate_balance"] = f"OK: {current_balance} + {amount} = {new_balance}"
+        except Exception as e:
+            steps["calculate_balance"] = f"Error: {str(e)}"
+            
+        # Step 3: Try database transaction directly
+        try:
+            metadata_json = '{"test": true, "method": "add_tokens_for_testing"}'
+            current_time = datetime.utcnow()
+            
+            # Check current balance in DB
+            current_balance_data = db._execute_select(
+                "SELECT balance FROM token_balances WHERE user_id = ?",
+                (user_id,),
+                fetch_one=True
+            )
+            
+            if current_balance_data:
+                db_balance = current_balance_data['balance']
+                steps["check_db_balance"] = f"OK: Found balance {db_balance}"
+            else:
+                steps["check_db_balance"] = "OK: No existing balance record"
+                
+        except Exception as e:
+            steps["check_db_balance"] = f"Error: {str(e)}"
+        
+        # Step 4: Try UPSERT operation
+        try:
+            balance_data = {
+                "user_id": user_id,
+                "balance": new_balance,
+                "last_updated": current_time
+            }
+            
+            rows = db._execute_upsert(
+                "token_balances", 
+                balance_data,
+                ["user_id"],  # conflict columns
+                ["balance", "last_updated"]  # update columns
+            )
+            steps["upsert_balance"] = f"OK: Updated {rows} rows"
+        except Exception as e:
+            steps["upsert_balance"] = f"Error: {str(e)}"
         
         # Get final balance
         final_balance = token_service.get_user_balance(user_id)
         
         return {
-            "tables_exist": tables_exist,
-            "success": result,
-            "add_error": add_error,
+            "steps": steps,
             "initial_balance": initial_balance.balance,
             "final_balance": final_balance.balance,
             "amount_added": amount
