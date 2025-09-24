@@ -150,6 +150,15 @@ export const FullscreenGuessScreen: React.FC<FullscreenGuessScreenProps> = ({
   const individualVideos = mediaData.filter(media => !media.isMergedVideo);
   const hasVideo = !!mergedVideo || individualVideos.length === 3;
   
+  // Log when challenge screen loads  
+  useEffect(() => {
+    if (challenge) {
+      console.log(`🎯 TIMING_DEBUG: FullscreenGuessScreen loaded challenge ${challenge.id}`);
+      console.log(`  Has merged video: ${!!mergedVideo}`);
+      console.log(`  Segments: ${mergedVideo?.segments?.length || 0}`);
+    }
+  }, [challenge, mergedVideo, individualVideos, mediaData]);
+  
   // Reduced logging - video data (enable for debugging if needed)
   // console.log('🔥 FULLSCREEN_SCREEN: mediaData count:', mediaData.length, 'hasVideo:', hasVideo);
 
@@ -157,7 +166,18 @@ export const FullscreenGuessScreen: React.FC<FullscreenGuessScreenProps> = ({
   const handleStatementTap = useCallback((index: number) => {
     if (guessSubmitted) return;
     
-    // Statement tapped - reduced logging
+    console.log(`🎯 TIMING_DEBUG: Statement ${index} tapped`);
+    
+    // Validate segment exists for tapped statement
+    if (mergedVideo?.segments) {
+      const segment = mergedVideo.segments.find(s => s.statementIndex === index);
+      if (segment) {
+        console.log(`🎯 TIMING_DEBUG: Playing segment ${index}: ${segment.startTime}ms - ${segment.endTime}ms (${segment.duration}ms)`);
+      } else {
+        console.warn(`⚠️ TIMING_WARNING: No segment found for statement ${index}`);
+      }
+    }
+    
     setSelectedStatement(index);
     setShowVideo(true);
 
@@ -165,7 +185,7 @@ export const FullscreenGuessScreen: React.FC<FullscreenGuessScreenProps> = ({
     if (Platform.OS === 'ios') {
       Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
     }
-  }, [guessSubmitted]);
+  }, [guessSubmitted, mergedVideo]);
 
   const handleStatementLongPress = useCallback((index: number) => {
     if (guessSubmitted) return;

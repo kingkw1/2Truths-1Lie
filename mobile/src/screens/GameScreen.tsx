@@ -326,7 +326,10 @@ export const GameScreen: React.FC<GameScreenProps> = ({
         console.log('✅ GAME: Successfully loaded challenges:', response.length);
         
         // Convert backend challenges to frontend format
-        const enhancedChallenges = response.map(convertBackendChallenge);
+        const enhancedChallenges = response.map((challenge) => {
+          return convertBackendChallenge(challenge);
+        });
+        
         dispatch(loadChallenges(enhancedChallenges));
       } else {
         const errorMessage = 'Invalid response format from challenges API';
@@ -365,6 +368,25 @@ export const GameScreen: React.FC<GameScreenProps> = ({
   };
 
   const handleSelectChallenge = (challenge: EnhancedChallenge) => {
+    console.log(`🎯 TIMING_DEBUG: Starting challenge ${challenge.id}`);
+    
+    // Validate timing data for the selected challenge
+    if (challenge.mediaData && challenge.mediaData.length > 0) {
+      const media = challenge.mediaData[0];
+      console.log(`🎯 TIMING_DEBUG: Selected challenge media:`);
+      console.log(`  Duration: ${media.duration}ms`);
+      console.log(`  Type: ${media.type}`);
+      console.log(`  Is merged: ${media.isMergedVideo}`);
+      console.log(`  Has segments: ${media.segments?.length || 0}`);
+      
+      if (media.isMergedVideo && media.segments) {
+        console.log(`🎯 TIMING_DEBUG: Selected challenge segments:`);
+        media.segments.forEach((segment, segIndex) => {
+          console.log(`  Segment ${segIndex}: ${segment.startTime}ms - ${segment.endTime}ms (${segment.duration}ms) for statement ${segment.statementIndex}`);
+        });
+      }
+    }
+    
     dispatch(selectChallenge(challenge));
     dispatch(startGuessingSession({
       challengeId: challenge.id,

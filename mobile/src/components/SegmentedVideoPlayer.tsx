@@ -82,6 +82,63 @@ export const SegmentedVideoPlayer: React.FC<SegmentedVideoPlayerProps> = ({
     };
   }, []);
 
+  // Validate timing data when component receives props
+  useEffect(() => {
+    console.log(`🎯 TIMING_DEBUG: SegmentedVideoPlayer received props:`);
+    console.log(`  Merged video:`, mergedVideo);
+    console.log(`  Segments:`, segments);
+    
+    // Validate merged video timing
+    if (mergedVideo.duration !== undefined) {
+      console.log(`🎯 TIMING_DEBUG: Merged video duration: ${mergedVideo.duration}ms`);
+      if (mergedVideo.duration < 1500) {
+        console.warn(`⚠️ TIMING_WARNING: Merged video duration suspiciously short (expecting ms):`, mergedVideo.duration);
+      }
+      if (mergedVideo.duration > 180000) {
+        console.warn(`⚠️ TIMING_WARNING: Merged video duration suspiciously long (expecting ms):`, mergedVideo.duration);
+      }
+    }
+    
+    // Validate segments timing
+    if (segments && segments.length > 0) {
+      console.log(`🎯 TIMING_DEBUG: Validating ${segments.length} video segments:`);
+      segments.forEach((segment, index) => {
+        console.log(`🎯 TIMING_DEBUG: Segment ${index}:`);
+        console.log(`  Statement: ${segment.statementIndex}`);
+        console.log(`  Start: ${segment.startTime}ms`);
+        console.log(`  End: ${segment.endTime}ms`);
+        console.log(`  Duration: ${segment.duration}ms`);
+        
+        // Validate segment timing
+        if (segment.duration < 500) {
+          console.warn(`⚠️ TIMING_WARNING: Segment ${index} duration suspiciously short (expecting ms):`, segment.duration);
+        }
+        if (segment.duration > 60000) {
+          console.warn(`⚠️ TIMING_WARNING: Segment ${index} duration suspiciously long (expecting ms):`, segment.duration);
+        }
+        if (segment.startTime < 0) {
+          console.warn(`⚠️ TIMING_WARNING: Segment ${index} negative start time:`, segment.startTime);
+        }
+        if (segment.endTime <= segment.startTime) {
+          console.warn(`⚠️ TIMING_WARNING: Segment ${index} end time not after start time:`, 'start=', segment.startTime, 'end=', segment.endTime);
+        }
+        if (segment.duration !== (segment.endTime - segment.startTime)) {
+          console.warn(`⚠️ TIMING_WARNING: Segment ${index} duration mismatch:`, 'calculated=', segment.endTime - segment.startTime, 'stated=', segment.duration);
+        }
+      });
+      
+      // Check for overlapping segments
+      const sortedSegments = [...segments].sort((a, b) => a.startTime - b.startTime);
+      for (let i = 0; i < sortedSegments.length - 1; i++) {
+        if (sortedSegments[i].endTime > sortedSegments[i + 1].startTime) {
+          console.warn(`⚠️ TIMING_WARNING: Overlapping segments detected:`, 
+            `segment ${sortedSegments[i].statementIndex} ends at ${sortedSegments[i].endTime}ms`,
+            `but segment ${sortedSegments[i + 1].statementIndex} starts at ${sortedSegments[i + 1].startTime}ms`);
+        }
+      }
+    }
+  }, [mergedVideo, segments]);
+
   // Load the merged video on component mount
   useEffect(() => {
     loadMergedVideo();
@@ -123,7 +180,36 @@ export const SegmentedVideoPlayer: React.FC<SegmentedVideoPlayerProps> = ({
       setIsLoading(status.isBuffering);
       setVideoStatus('loaded');
       setCurrentPosition(status.positionMillis || 0);
-      setVideoDuration(status.durationMillis || 0);
+      
+      // Validate and log video duration when available
+      const newDuration = status.durationMillis || 0;
+      if (newDuration !== videoDuration && newDuration > 0) {
+        console.log(`🎯 TIMING_DEBUG: Video duration loaded: ${newDuration}ms`);
+        
+        // Compare with expected merged video duration
+        if (mergedVideo.duration && Math.abs(newDuration - mergedVideo.duration) > 1000) {
+          console.warn(`⚠️ TIMING_WARNING: Video duration mismatch:`, 
+            'loaded=', newDuration, 'expected=', mergedVideo.duration, 'diff=', Math.abs(newDuration - mergedVideo.duration));
+        }
+        
+        // Validate duration makes sense for merged video
+        if (newDuration < 1500) {
+          console.warn(`⚠️ TIMING_WARNING: Loaded video duration suspiciously short (expecting ms):`, newDuration);
+        }
+        if (newDuration > 180000) {
+          console.warn(`⚠️ TIMING_WARNING: Loaded video duration suspiciously long (expecting ms):`, newDuration);
+        }
+        
+        // Validate segments fit within video duration
+        if (segments.length > 0) {
+          const maxSegmentEnd = Math.max(...segments.map(s => s.endTime));
+          if (maxSegmentEnd > newDuration + 1000) { // Allow 1s buffer
+            console.warn(`⚠️ TIMING_WARNING: Segments extend beyond video duration:`, 
+              'maxSegmentEnd=', maxSegmentEnd, 'videoDuration=', newDuration);
+          }
+        }
+      }
+      setVideoDuration(newDuration);
 
       // Auto-detect which segment is currently playing
       if (status.positionMillis && segments.length > 0) {
