@@ -624,11 +624,10 @@ export class VideoUploadService {
       const sortedVideos = [...uploadedVideos].sort((a, b) => a.statementIndex - b.statementIndex);
       
       try {
-        // Prepare FormData for the merge endpoint 
+        // Prepare FormData for the merge endpoint using React Native approach
         const mergeFormData = new FormData();
         
-        // Add each uploaded video file by downloading it and re-uploading for merging
-        // Note: This is a workaround since we already uploaded the videos individually
+        // Add each uploaded video file using React Native's file URI approach
         for (let i = 0; i < sortedVideos.length; i++) {
           const video = sortedVideos[i];
           const videoUri = videos.find(v => v.statementIndex === video.statementIndex)?.uri;
@@ -637,22 +636,13 @@ export class VideoUploadService {
             throw new Error(`Cannot find original video URI for statement ${video.statementIndex}`);
           }
           
-          // Read the video file as base64 and create a blob for the FormData
-          const base64Data = await FileSystem.readAsStringAsync(videoUri, {
-            encoding: FileSystem.EncodingType.Base64,
-          });
+          // Use React Native's FormData file format directly
+          mergeFormData.append(`video_${i}`, {
+            uri: videoUri,
+            type: 'video/mp4',
+            name: `statement_${i}_${Date.now()}.mp4`,
+          } as any);
           
-          // Create a blob from base64 data
-          const byteCharacters = atob(base64Data);
-          const byteNumbers = new Array(byteCharacters.length);
-          for (let j = 0; j < byteCharacters.length; j++) {
-            byteNumbers[j] = byteCharacters.charCodeAt(j);
-          }
-          const byteArray = new Uint8Array(byteNumbers);
-          const blob = new Blob([byteArray], { type: 'video/mp4' });
-          
-          // Add to FormData with the expected field names
-          mergeFormData.append(`video_${i}`, blob, `statement_${i}_${Date.now()}.mp4`);
           mergeFormData.append(`metadata_${i}`, JSON.stringify({
             statementIndex: video.statementIndex,
             duration: video.duration,
