@@ -21,6 +21,7 @@ import { revenueCatUserSync } from '../services/revenueCatUserSync';
 
 export const StoreScreen: React.FC = () => {
   const [purchasing, setPurchasing] = useState(false);
+  const [selectedPackage, setSelectedPackage] = useState<PurchasesPackage | null>(null);
   const { offerings, isLoading: offeringsLoading, error: offeringsError } = useOfferings();
   const { isPremium } = usePremiumStatus();
   const { user } = useAuth();
@@ -62,6 +63,8 @@ export const StoreScreen: React.FC = () => {
     debugRevenueCat();
   }, []);
 
+
+
   // Filter and separate product packages
   const allPackages = offerings?.current?.availablePackages || [];
   
@@ -99,6 +102,20 @@ export const StoreScreen: React.FC = () => {
     identifier: pkg.identifier,
     price: pkg.product.priceString
   })));
+
+  // Set default selected package to monthly when offerings load
+  React.useEffect(() => {
+    if (subscriptionPackages.length > 0 && !selectedPackage) {
+      const monthlyPackage = subscriptionPackages.find(pkg => 
+        pkg.identifier === 'pro_monthly' ||
+        pkg.identifier === 'monthly' ||
+        pkg.packageType === 'MONTHLY'
+      ) || subscriptionPackages[0]; // Fallback to first package
+      
+      console.log('🔍 Setting default selected package:', monthlyPackage?.identifier);
+      setSelectedPackage(monthlyPackage);
+    }
+  }, [subscriptionPackages, selectedPackage]);
 
   const handlePurchase = async (pkg: PurchasesPackage) => {
     try {
@@ -209,86 +226,98 @@ export const StoreScreen: React.FC = () => {
             <Text style={styles.benefitItem}>• Ad-Free Experience</Text>
           </View>
 
-          {/* Subscription Plan Buttons */}
-          <View style={styles.subscriptionButtonsContainer}>
-            <TouchableOpacity 
-              style={styles.subscriptionButton}
-              onPress={() => {
-                console.log('🔍 Monthly button pressed');
-                console.log('🔍 Available subscription packages:', subscriptionPackages.map(pkg => pkg.identifier));
+          {/* Plan Selector */}
+          <View style={styles.planSelectorContainer}>
+            <View style={styles.planOptionsContainer}>
+              {/* Monthly Plan Selector */}
+              <TouchableOpacity 
+                style={[
+                  styles.planSelector,
+                  selectedPackage?.packageType === 'MONTHLY' && styles.selectedPlan
+                ]}
+                onPress={() => {
+                  const monthlyPackage = subscriptionPackages.find(pkg => 
+                    pkg.identifier === 'pro_monthly' ||
+                    pkg.identifier === 'monthly' ||
+                    pkg.packageType === 'MONTHLY'
+                  );
+                  if (monthlyPackage) {
+                    console.log('🔍 Selected monthly plan:', monthlyPackage.identifier);
+                    setSelectedPackage(monthlyPackage);
+                  }
+                }}
+                disabled={purchasing}
+              >
+                <Text style={[
+                  styles.planTitle,
+                  selectedPackage?.packageType === 'MONTHLY' && styles.selectedPlanText
+                ]}>
+                  Monthly
+                </Text>
+                <Text style={[
+                  styles.planPrice,
+                  selectedPackage?.packageType === 'MONTHLY' && styles.selectedPlanText
+                ]}>
+                  $5/mo
+                </Text>
+              </TouchableOpacity>
+
+              {/* Annual Plan Selector */}
+              <TouchableOpacity 
+                style={[
+                  styles.planSelector,
+                  selectedPackage?.packageType === 'ANNUAL' && styles.selectedPlan
+                ]}
+                onPress={() => {
+                  const annualPackage = subscriptionPackages.find(pkg => 
+                    pkg.identifier === 'pro_annual' ||
+                    pkg.identifier === 'annual' ||
+                    pkg.packageType === 'ANNUAL'
+                  );
+                  if (annualPackage) {
+                    console.log('🔍 Selected annual plan:', annualPackage.identifier);
+                    setSelectedPackage(annualPackage);
+                  }
+                }}
+                disabled={purchasing}
+              >
+                {/* Save 17% Badge */}
+                <View style={styles.savingsBadge}>
+                  <Text style={styles.savingsBadgeText}>Save 17%!</Text>
+                </View>
                 
-                const monthlyPackage = subscriptionPackages.find(pkg => 
-                  pkg.identifier === 'pro_monthly' ||
-                  pkg.identifier === 'monthly' ||
-                  pkg.packageType === 'MONTHLY'
-                );
-                
-                if (monthlyPackage) {
-                  console.log('🔍 Found monthly package:', monthlyPackage.identifier);
-                  handlePurchase(monthlyPackage);
-                } else {
-                  console.log('🔍 No monthly package found, using first available:', subscriptionPackages[0]?.identifier);
-                  Alert.alert('Debug', `No monthly package found. Available: ${subscriptionPackages.map(pkg => pkg.identifier).join(', ')}`);
-                }
-              }}
-              disabled={purchasing || subscriptionPackages.length === 0}
-            >
-              <Text style={styles.subscriptionButtonText}>$5/mo</Text>
-            </TouchableOpacity>
-            
-            <TouchableOpacity 
-              style={[styles.subscriptionButton, styles.annualButton]}
-              onPress={() => {
-                console.log('🔍 Annual button pressed');
-                console.log('🔍 Available subscription packages:', subscriptionPackages.map(pkg => pkg.identifier));
-                
-                const annualPackage = subscriptionPackages.find(pkg => 
-                  pkg.identifier === 'pro_annual' ||
-                  pkg.identifier === 'annual' ||
-                  pkg.packageType === 'ANNUAL'
-                );
-                
-                if (annualPackage) {
-                  console.log('🔍 Found annual package:', annualPackage.identifier);
-                  handlePurchase(annualPackage);
-                } else {
-                  console.log('🔍 No annual package found, using first available:', subscriptionPackages[0]?.identifier);
-                  Alert.alert('Debug', `No annual package found. Available: ${subscriptionPackages.map(pkg => pkg.identifier).join(', ')}`);
-                }
-              }}
-              disabled={purchasing || subscriptionPackages.length === 0}
-            >
-              <Text style={styles.subscriptionButtonText}>$50/yr</Text>
-              <Text style={styles.savingsText}>(Save 17%!)</Text>
-            </TouchableOpacity>
+                <Text style={[
+                  styles.planTitle,
+                  selectedPackage?.packageType === 'ANNUAL' && styles.selectedPlanText
+                ]}>
+                  Annual
+                </Text>
+                <Text style={[
+                  styles.planPrice,
+                  selectedPackage?.packageType === 'ANNUAL' && styles.selectedPlanText
+                ]}>
+                  $50/yr
+                </Text>
+              </TouchableOpacity>
+            </View>
           </View>
 
-          {/* Primary CTA Button */}
+          {/* Single CTA Button */}
           <TouchableOpacity 
-            style={styles.primaryCtaButton}
+            style={[
+              styles.primaryCtaButton,
+              !selectedPackage && styles.disabledButton
+            ]}
             onPress={() => {
-              console.log('🔍 Free trial button pressed');
-              console.log('🔍 Available subscription packages:', subscriptionPackages.map(pkg => ({
-                identifier: pkg.identifier,
-                packageType: pkg.packageType,
-                price: pkg.product.priceString
-              })));
-              
-              const preferredPackage = subscriptionPackages.find(pkg => 
-                pkg.identifier === 'pro_annual' ||
-                pkg.identifier === 'annual' ||
-                pkg.packageType === 'ANNUAL'
-              ) || subscriptionPackages[0];
-              
-              if (preferredPackage) {
-                console.log('🔍 Using package for free trial:', preferredPackage.identifier);
-                handlePurchase(preferredPackage);
+              if (selectedPackage) {
+                console.log('🔍 Starting free trial with package:', selectedPackage.identifier);
+                handlePurchase(selectedPackage);
               } else {
-                console.log('🔍 No subscription packages available');
-                Alert.alert('Debug', `No subscription packages available. Total packages: ${allPackages.length}`);
+                console.log('🔍 No package selected');
+                Alert.alert('Please select a plan', 'Choose Monthly or Annual plan to continue');
               }
             }}
-            disabled={purchasing || subscriptionPackages.length === 0}
+            disabled={purchasing || !selectedPackage}
           >
             <Text style={styles.primaryCtaText}>
               {purchasing ? 'Processing...' : 'Start 7-Day Free Trial'}
@@ -542,42 +571,74 @@ const styles = StyleSheet.create({
   packagesContainer: {
     marginBottom: 16,
   },
-  subscriptionButtonsContainer: {
+  // Plan Selector Styles
+  planSelectorContainer: {
+    marginBottom: 20,
+  },
+  planOptionsContainer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    marginBottom: 16,
     gap: 12,
+    marginBottom: 16,
   },
-  subscriptionButton: {
+  planSelector: {
     flex: 1,
-    backgroundColor: '#2196F3',
-    paddingVertical: 16,
-    paddingHorizontal: 20,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 2,
+    borderColor: '#E0E0E0',
     borderRadius: 12,
+    padding: 16,
     alignItems: 'center',
-    shadowColor: '#2196F3',
+    position: 'relative',
+    shadowColor: '#000',
     shadowOffset: {
       width: 0,
-      height: 2,
+      height: 1,
     },
+    shadowOpacity: 0.1,
+    shadowRadius: 2,
+    elevation: 2,
+  },
+  selectedPlan: {
+    borderColor: '#2196F3',
+    backgroundColor: '#E3F2FD',
+    shadowColor: '#2196F3',
     shadowOpacity: 0.2,
     shadowRadius: 4,
-    elevation: 3,
+    elevation: 4,
   },
-  annualButton: {
-    backgroundColor: '#4CAF50',
-    shadowColor: '#4CAF50',
+  planTitle: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#333333',
+    marginBottom: 4,
   },
-  subscriptionButtonText: {
-    color: '#FFFFFF',
+  planPrice: {
     fontSize: 18,
     fontWeight: 'bold',
+    color: '#2196F3',
   },
-  savingsText: {
+  selectedPlanText: {
+    color: '#1976D2',
+  },
+  savingsBadge: {
+    position: 'absolute',
+    top: -8,
+    right: -4,
+    backgroundColor: '#4CAF50',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
+    zIndex: 1,
+  },
+  savingsBadgeText: {
     color: '#FFFFFF',
-    fontSize: 12,
-    fontWeight: '600',
-    marginTop: 2,
+    fontSize: 10,
+    fontWeight: 'bold',
+  },
+  disabledButton: {
+    backgroundColor: '#CCCCCC',
+    shadowOpacity: 0,
   },
   tokenPackageCard: {
     backgroundColor: '#FFFFFF',
