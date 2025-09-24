@@ -2376,6 +2376,24 @@ class DatabaseService:
                        created_at, updated_at, published_at
                 FROM challenges
             """, fetch_all=True)
+            
+            # DIAGNOSTIC LOGGING: Inspect first 5 rows to understand PostgreSQL data types
+            logger.info("=== DIAGNOSTIC: First 5 challenge rows from PostgreSQL ===")
+            for i, row in enumerate(results[:5]):
+                logger.info(f"Row {i+1} type: {type(row)}")
+                logger.info(f"Row {i+1} keys: {list(row.keys()) if isinstance(row, dict) else 'N/A (tuple)'}")
+                logger.info(f"Row {i+1} data: {dict(row) if isinstance(row, dict) else row}")
+                
+                # Inspect specific fields that are causing issues
+                statements_json = row["statements_json"] if isinstance(row, dict) else row[9]
+                metadata_json = row["merged_video_metadata_json"] if isinstance(row, dict) else row[10]
+                created_at = row["created_at"] if isinstance(row, dict) else row[12]
+                
+                logger.info(f"  statements_json type: {type(statements_json)}, value: {statements_json}")
+                logger.info(f"  metadata_json type: {type(metadata_json)}, value: {metadata_json}")
+                logger.info(f"  created_at type: {type(created_at)}, value: {created_at}")
+                logger.info("---")
+            logger.info("=== END DIAGNOSTIC ===")
                 
             for row in results:
                 try:
@@ -2383,10 +2401,72 @@ class DatabaseService:
                     statements_json = row["statements_json"] if isinstance(row, dict) else row[9]
                     metadata_json = row["merged_video_metadata_json"] if isinstance(row, dict) else row[10]
                     tags_json = row["tags_json"] if isinstance(row, dict) else row[11]
+                    created_at_raw = row["created_at"] if isinstance(row, dict) else row[12]
+                    updated_at_raw = row["updated_at"] if isinstance(row, dict) else row[13]
+                    published_at_raw = row["published_at"] if isinstance(row, dict) else row[14]
                     
-                    statements = [Statement(**stmt_data) for stmt_data in json.loads(statements_json)]
-                    merged_metadata = MergedVideoMetadata(**json.loads(metadata_json)) if metadata_json else None
-                    tags = json.loads(tags_json) if tags_json else []
+                    # POSTGRESQL FIX 1: Handle JSON strings vs already-parsed objects
+                    # PostgreSQL may return JSON as strings that need parsing, or as already-parsed objects
+                    if isinstance(statements_json, str):
+                        statements_data = json.loads(statements_json)
+                    else:
+                        statements_data = statements_json  # Already parsed
+                    
+                    if isinstance(metadata_json, str) and metadata_json:
+                        metadata_data = json.loads(metadata_json)
+                    elif metadata_json and not isinstance(metadata_json, str):
+                        metadata_data = metadata_json  # Already parsed
+                    else:
+                        metadata_data = None
+                    
+                    if isinstance(tags_json, str) and tags_json:
+                        tags_data = json.loads(tags_json)
+                    elif tags_json and not isinstance(tags_json, str):
+                        tags_data = tags_json  # Already parsed
+                    else:
+                        tags_data = []
+                    
+                    # POSTGRESQL FIX 2: Handle datetime objects vs ISO strings
+                    # PostgreSQL may return datetime objects directly instead of ISO strings
+                    def parse_datetime(dt_value):
+                        if dt_value is None:
+                            return None
+                        elif isinstance(dt_value, datetime):
+                            return dt_value  # Already a datetime object
+                        elif isinstance(dt_value, str):
+                            return datetime.fromisoformat(dt_value)
+                        else:
+                            logger.warning(f"Unexpected datetime type: {type(dt_value)}, value: {dt_value}")
+                            return None
+                    
+                    # POSTGRESQL FIX 3: Ensure statements_data is a list of dicts for Statement creation
+                    if not isinstance(statements_data, list):
+                        logger.error(f"statements_data is not a list: {type(statements_data)}, value: {statements_data}")
+                        continue
+                    
+                    # Create Statement objects with error handling
+                    statements = []
+                    for stmt_data in statements_data:
+                        try:
+                            if isinstance(stmt_data, dict):
+                                statements.append(Statement(**stmt_data))
+                            else:
+                                logger.error(f"Statement data is not a dict: {type(stmt_data)}, value: {stmt_data}")
+                                continue
+                        except Exception as stmt_e:
+                            logger.error(f"Error creating Statement object: {stmt_e}, data: {stmt_data}")
+                            continue
+                    
+                    # Create MergedVideoMetadata with error handling
+                    merged_metadata = None
+                    if metadata_data:
+                        try:
+                            if isinstance(metadata_data, dict):
+                                merged_metadata = MergedVideoMetadata(**metadata_data)
+                            else:
+                                logger.error(f"Metadata is not a dict: {type(metadata_data)}, value: {metadata_data}")
+                        except Exception as meta_e:
+                            logger.error(f"Error creating MergedVideoMetadata: {meta_e}, data: {metadata_data}")
                     
                     # Create challenge object
                     challenge = Challenge(
@@ -2401,16 +2481,17 @@ class DatabaseService:
                         correct_guess_count=(row["correct_guess_count"] if isinstance(row, dict) else row[7]) or 0,
                         is_merged_video=bool(row["is_merged_video"] if isinstance(row, dict) else row[8]),
                         merged_video_metadata=merged_metadata,
-                        tags=tags,
-                        created_at=datetime.fromisoformat(row["created_at"] if isinstance(row, dict) else row[12]) if (row["created_at"] if isinstance(row, dict) else row[12]) else None,
-                        updated_at=datetime.fromisoformat(row["updated_at"] if isinstance(row, dict) else row[13]) if (row["updated_at"] if isinstance(row, dict) else row[13]) else None,
-                        published_at=datetime.fromisoformat(row["published_at"] if isinstance(row, dict) else row[14]) if (row["published_at"] if isinstance(row, dict) else row[14]) else None
+                        tags=tags_data,
+                        created_at=parse_datetime(created_at_raw),
+                        updated_at=parse_datetime(updated_at_raw),
+                        published_at=parse_datetime(published_at_raw)
                     )
                     
                     challenges[challenge.challenge_id] = challenge
                     
                 except Exception as e:
                     logger.error(f"Error parsing challenge row: {e}")
+                    logger.error(f"Row data: {dict(row) if isinstance(row, dict) else row}")
                     continue
                 
             return challenges
