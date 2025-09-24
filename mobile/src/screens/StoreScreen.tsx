@@ -143,7 +143,8 @@ export const StoreScreen: React.FC = () => {
   }
 
   return (
-    <ScrollView style={styles.container}>
+    <SafeAreaView style={styles.safeArea}>
+      <ScrollView style={styles.container}>
       {/* Trial Banner Component */}
       <TrialBanner onUpgradePress={() => {}} />
 
@@ -165,14 +166,6 @@ export const StoreScreen: React.FC = () => {
       {/* Subscription Hero Section */}
       {!isPremium && (
         <View style={styles.heroSection}>
-          {/* Free Trial Callout for Judge Access */}
-          <View style={styles.judgeAccessContainer}>
-            <Text style={styles.judgeAccessTitle}>🏆 Hackathon Judges</Text>
-            <Text style={styles.judgeAccessText}>
-              Start your free trial to evaluate all premium features during the judging period.
-            </Text>
-          </View>
-
           {/* Benefits Section */}
           <View style={styles.benefitsContainer}>
             <Text style={styles.benefitsTitle}>Premium Benefits:</Text>
@@ -183,22 +176,34 @@ export const StoreScreen: React.FC = () => {
             <Text style={styles.benefitItem}>• Ad-Free Experience</Text>
           </View>
 
-          {/* Subscription Packages */}
-          <View style={styles.subscriptionPackagesContainer}>
-            {subscriptionPackages.map((pkg) => (
-              <View key={pkg.identifier} style={styles.packageWithBadge}>
-                {pkg.identifier === 'pro_annual' && (
-                  <View style={styles.bestValueBadge}>
-                    <Text style={styles.badgeText}>Best Value - Save 17%!</Text>
-                  </View>
-                )}
-                <ProductCard 
-                  pkg={pkg} 
-                  onPress={handlePurchase}
-                  disabled={purchasing}
-                />
-              </View>
-            ))}
+          {/* Subscription Plan Buttons */}
+          <View style={styles.subscriptionButtonsContainer}>
+            <TouchableOpacity 
+              style={styles.subscriptionButton}
+              onPress={() => {
+                const monthlyPackage = subscriptionPackages.find(pkg => pkg.identifier === 'pro_monthly');
+                if (monthlyPackage) {
+                  handlePurchase(monthlyPackage);
+                }
+              }}
+              disabled={purchasing || subscriptionPackages.length === 0}
+            >
+              <Text style={styles.subscriptionButtonText}>$5/mo</Text>
+            </TouchableOpacity>
+            
+            <TouchableOpacity 
+              style={[styles.subscriptionButton, styles.annualButton]}
+              onPress={() => {
+                const annualPackage = subscriptionPackages.find(pkg => pkg.identifier === 'pro_annual');
+                if (annualPackage) {
+                  handlePurchase(annualPackage);
+                }
+              }}
+              disabled={purchasing || subscriptionPackages.length === 0}
+            >
+              <Text style={styles.subscriptionButtonText}>$50/yr</Text>
+              <Text style={styles.savingsText}>(Save 17%!)</Text>
+            </TouchableOpacity>
           </View>
 
           {/* Primary CTA Button */}
@@ -232,26 +237,38 @@ export const StoreScreen: React.FC = () => {
           <View style={styles.tokenSection}>
             <Text style={styles.tokenSectionTitle}>Token Packs</Text>
             <View style={styles.tokenPackagesContainer}>
-              {tokenPackages.map((pkg) => (
-                <View key={pkg.identifier} style={styles.tokenPackageWrapper}>
-                  {pkg.identifier === 'token_pack_large' && (
-                    <View style={styles.mostPopularBadge}>
-                      <Text style={styles.badgeText}>Most Popular</Text>
-                    </View>
-                  )}
-                  <ProductCard 
-                    pkg={pkg} 
-                    onPress={handlePurchase}
-                    disabled={purchasing}
-                  />
-                  {/* Per-unit cost display */}
-                  <Text style={styles.perUnitCost}>
-                    {pkg.identifier === 'token_pack_small' && '($1.00 each)'}
-                    {pkg.identifier === 'token_pack_medium' && '($0.01 each)'}
-                    {pkg.identifier === 'token_pack_large' && '($0.20 each)'}
-                  </Text>
+              {/* Small Token Pack */}
+              <TouchableOpacity 
+                style={styles.tokenPackageCard}
+                onPress={() => {
+                  const smallPack = tokenPackages.find(pkg => pkg.identifier === 'token_pack_small');
+                  if (smallPack) handlePurchase(smallPack);
+                }}
+                disabled={purchasing}
+              >
+                <Text style={styles.tokenAmount}>5 Tokens</Text>
+                <Text style={styles.tokenPrice}>$1.99</Text>
+                <Text style={styles.tokenPerUnit}>($0.40 each)</Text>
+              </TouchableOpacity>
+              
+              {/* Large Token Pack */}
+              <View style={styles.tokenPackageWrapper}>
+                <View style={styles.mostPopularBadge}>
+                  <Text style={styles.badgeText}>Most Popular</Text>
                 </View>
-              ))}
+                <TouchableOpacity 
+                  style={styles.tokenPackageCard}
+                  onPress={() => {
+                    const largePack = tokenPackages.find(pkg => pkg.identifier === 'token_pack_large');
+                    if (largePack) handlePurchase(largePack);
+                  }}
+                  disabled={purchasing}
+                >
+                  <Text style={styles.tokenAmount}>25 Tokens</Text>
+                  <Text style={styles.tokenPrice}>$7.99</Text>
+                  <Text style={styles.tokenPerUnit}>($0.32 each)</Text>
+                </TouchableOpacity>
+              </View>
             </View>
           </View>
         </>
@@ -279,11 +296,16 @@ export const StoreScreen: React.FC = () => {
       >
         <Text style={styles.restoreButtonText}>Restore Purchases</Text>
       </TouchableOpacity>
-    </ScrollView>
+      </ScrollView>
+    </SafeAreaView>
   );
 };
 
 const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+    backgroundColor: '#FFFFFF',
+  },
   container: {
     flex: 1,
     padding: 16,
@@ -355,44 +377,7 @@ const styles = StyleSheet.create({
     lineHeight: 20,
   },
   
-  judgeAccessContainer: {
-    backgroundColor: '#FFF3E0',
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 16,
-    borderLeftWidth: 4,
-    borderLeftColor: '#FF9800',
-  },
-  judgeAccessTitle: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#F57C00',
-    marginBottom: 4,
-  },
-  judgeAccessText: {
-    fontSize: 14,
-    color: '#E65100',
-  },
-  
-  subscriptionPackagesContainer: {
-    marginBottom: 16,
-  },
-  
-  packageWithBadge: {
-    position: 'relative',
-    marginBottom: 12,
-  },
-  
-  bestValueBadge: {
-    position: 'absolute',
-    top: -8,
-    right: 8,
-    backgroundColor: '#FF5722',
-    paddingHorizontal: 12,
-    paddingVertical: 4,
-    borderRadius: 12,
-    zIndex: 1,
-  },
+
   
   mostPopularBadge: {
     position: 'absolute',
@@ -485,6 +470,76 @@ const styles = StyleSheet.create({
   packagesContainer: {
     marginBottom: 16,
   },
+  subscriptionButtonsContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 16,
+    gap: 12,
+  },
+  subscriptionButton: {
+    flex: 1,
+    backgroundColor: '#2196F3',
+    paddingVertical: 16,
+    paddingHorizontal: 20,
+    borderRadius: 12,
+    alignItems: 'center',
+    shadowColor: '#2196F3',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  annualButton: {
+    backgroundColor: '#4CAF50',
+    shadowColor: '#4CAF50',
+  },
+  subscriptionButtonText: {
+    color: '#FFFFFF',
+    fontSize: 18,
+    fontWeight: 'bold',
+  },
+  savingsText: {
+    color: '#FFFFFF',
+    fontSize: 12,
+    fontWeight: '600',
+    marginTop: 2,
+  },
+  tokenPackageCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    padding: 16,
+    alignItems: 'center',
+    borderWidth: 2,
+    borderColor: '#E0E0E0',
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  tokenAmount: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#333',
+    marginBottom: 4,
+  },
+  tokenPrice: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#2196F3',
+    marginBottom: 4,
+  },
+  tokenPerUnit: {
+    fontSize: 12,
+    color: '#666',
+    fontStyle: 'italic',
+  },
   restoreButton: {
     backgroundColor: '#6C757D',
     paddingVertical: 12,
@@ -492,6 +547,7 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     alignItems: 'center',
     marginTop: 16,
+    marginBottom: 32,
   },
   restoreButtonText: {
     color: '#FFFFFF',
