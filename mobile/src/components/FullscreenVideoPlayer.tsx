@@ -95,12 +95,13 @@ export const FullscreenVideoPlayer: React.FC<FullscreenVideoPlayerProps> = ({
       setVideoDuration(status.durationMillis || 0);
       
       // Debug playback status for segment 2 specifically
-      if (selectedSegment === 2 && status.positionMillis) {
+      if (selectedSegment === 2 && status.positionMillis && segments.length > 2) {
+        const currentSegment = segments[selectedSegment];
         console.log(`🎯 TIMING_DEBUG: Segment 2 playback status:`, {
           position: status.positionMillis,
           isPlaying: status.isPlaying,
           isBuffering: status.isBuffering,
-          expectedRange: '3538ms - 5276ms'
+          expectedRange: currentSegment ? `${currentSegment.startTime}ms - ${currentSegment.endTime}ms` : 'no segment data'
         });
       }
 
