@@ -4,7 +4,9 @@ S3 Media API Endpoints - Direct AWS S3 integration for media upload, streaming, 
 from fastapi import APIRouter, HTTPException, Depends, UploadFile, File, status
 from fastapi.responses import JSONResponse
 from typing import Optional
+from pydantic import BaseModel
 import logging
+import base64
 
 from services.s3_media_service import get_s3_media_service, S3MediaService
 from services.auth_service import get_current_user  # Using simpler auth dependency
@@ -13,6 +15,97 @@ logger = logging.getLogger(__name__)
 
 # Create router for S3 media endpoints
 router = APIRouter(prefix="/api/v1/s3-media", tags=["s3-media"])
+
+# Base64 upload model for React Native compatibility
+class Base64UploadRequest(BaseModel):
+    filename: str
+    contentType: str
+    fileContent: str  # base64 encoded file content
+    metadata: Optional[str] = None
+
+@router.post("/upload-base64")
+async def upload_video_base64(
+    request: Base64UploadRequest,
+    current_user: str = Depends(get_current_user),
+    s3_service: S3MediaService = Depends(get_s3_media_service)
+):
+    """
+    Upload video file from base64 content (React Native compatibility)
+    
+    - **filename**: Original filename
+    - **contentType**: MIME type (should be video/mp4)
+    - **fileContent**: Base64 encoded file content
+    - **metadata**: Optional JSON metadata string
+    - **Returns**: Media ID and storage URL for successful upload
+    - **Authentication**: Required
+    """
+    try:
+        # Decode base64 content
+        try:
+            file_content = base64.b64decode(request.fileContent)
+        except Exception as e:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Invalid base64 content: {str(e)}"
+            )
+        
+        # Validate file content
+        if len(file_content) == 0:
+            raise HTTPException(
+                status_code=400,
+                detail="Decoded file content is empty"
+            )
+        
+        # Parse metadata if provided
+        parsed_metadata = None
+        if request.metadata:
+            try:
+                import json
+                parsed_metadata = json.loads(request.metadata)
+                logger.info(f"Received video metadata: {parsed_metadata}")
+            except json.JSONDecodeError as e:
+                logger.warning(f"Invalid metadata JSON: {e}")
+        
+        # Upload to S3
+        media_id = await s3_service.upload_video_to_s3(
+            file_content=file_content,
+            content_type=request.contentType,
+            metadata=parsed_metadata
+        )
+        
+        # Generate signed URL
+        storage_url = await s3_service.generate_signed_url(media_id, expires_in=3600)
+        
+        logger.info(f"Base64 video uploaded successfully by user {current_user}: {media_id}")
+        
+        return JSONResponse(
+            content={
+                "success": True,
+                "media_id": media_id,
+                "storage_url": storage_url,
+                "message": "Video uploaded successfully from base64",
+                "file_info": {
+                    "original_filename": request.filename,
+                    "content_type": request.contentType,
+                    "file_size": len(file_content)
+                },
+                "metadata": parsed_metadata
+            },
+            status_code=status.HTTP_201_CREATED,
+            headers={
+                "X-Media-ID": media_id,
+                "X-Storage-Provider": "AWS-S3"
+            }
+        )
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Unexpected base64 upload error for user {current_user}: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail="Internal server error during base64 upload"
+        )
 
 @router.post("/upload")
 async def upload_video_to_s3(
