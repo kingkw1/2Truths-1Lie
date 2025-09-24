@@ -149,6 +149,10 @@ export const FullscreenGuessScreen: React.FC<FullscreenGuessScreenProps> = ({
   const mergedVideo = mediaData.find(media => media.isMergedVideo && media.segments);
   const individualVideos = mediaData.filter(media => !media.isMergedVideo);
   const hasVideo = !!mergedVideo || individualVideos.length === 3;
+  
+  console.log('🔥 FULLSCREEN_SCREEN: Challenge mediaData:', JSON.stringify(mediaData, null, 2));
+  console.log('🔥 FULLSCREEN_SCREEN: Individual videos:', JSON.stringify(individualVideos, null, 2));
+  console.log('🔥 FULLSCREEN_SCREEN: Has video:', hasVideo);
 
   // Statement selection and auto-submission handlers
   const handleStatementTap = useCallback((index: number) => {

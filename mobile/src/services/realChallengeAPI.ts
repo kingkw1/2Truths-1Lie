@@ -301,6 +301,25 @@ export class RealChallengeAPIService {
       const challenge = await response.json();
       console.log('✅ CHALLENGE: Retrieved successfully:', challenge.id);
 
+      // Transform statements into mediaData for video player compatibility
+      if (challenge.statements && Array.isArray(challenge.statements)) {
+        console.log('🎯 CHALLENGE: Transforming statements into mediaData...');
+        console.log('🎯 CHALLENGE: Raw statements:', JSON.stringify(challenge.statements, null, 2));
+        
+        challenge.mediaData = challenge.statements.map((statement: any, index: number) => ({
+          type: 'video' as const,
+          streamingUrl: statement.streaming_url || statement.media_url,
+          url: statement.streaming_url || statement.media_url,
+          duration: statement.duration_seconds || 0,
+          mediaId: statement.media_file_id,
+          cloudStorageKey: statement.cloud_storage_key,
+          storageType: 'cloud' as const,
+          isUploaded: true,
+        }));
+        
+        console.log('🎯 CHALLENGE: Transformed mediaData:', JSON.stringify(challenge.mediaData, null, 2));
+      }
+
       return {
         success: true,
         data: challenge,
@@ -366,7 +385,30 @@ export class RealChallengeAPIService {
       if (data.challenges && data.challenges.length > 0) {
         console.log('  - First challenge ID:', data.challenges[0].challenge_id);
         console.log('🎉 Returning challenges array with', data.challenges.length, 'items');
-        return data.challenges;  // Return the challenges array
+        
+        // Transform each challenge's statements into mediaData for video player compatibility
+        const transformedChallenges = data.challenges.map((challenge: any) => {
+          if (challenge.statements && Array.isArray(challenge.statements)) {
+            console.log('🎯 CHALLENGES: Transforming statements for challenge:', challenge.challenge_id);
+            console.log('🎯 CHALLENGES: Raw statements:', JSON.stringify(challenge.statements, null, 2));
+            
+            challenge.mediaData = challenge.statements.map((statement: any, index: number) => ({
+              type: 'video' as const,
+              streamingUrl: statement.streaming_url || statement.media_url,
+              url: statement.streaming_url || statement.media_url,
+              duration: statement.duration_seconds || 0,
+              mediaId: statement.media_file_id,
+              cloudStorageKey: statement.cloud_storage_key,
+              storageType: 'cloud' as const,
+              isUploaded: true,
+            }));
+            
+            console.log('🎯 CHALLENGES: Transformed mediaData:', JSON.stringify(challenge.mediaData, null, 2));
+          }
+          return challenge;
+        });
+        
+        return transformedChallenges;  // Return the challenges array
       } else {
         console.log('  - No challenges in response');
         console.log('🎉 Returning empty array');

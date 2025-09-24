@@ -195,7 +195,10 @@ export const FullscreenVideoPlayer: React.FC<FullscreenVideoPlayerProps> = ({
     if (!hasIndividualVideos || !videoRef.current || videoIndex >= individualVideos.length) return;
 
     const video = individualVideos[videoIndex];
+    console.log('🎬 FULLSCREEN_PLAYER: loadIndividualVideo - Raw video object:', JSON.stringify(video, null, 2));
+    
     const videoUrl = video.streamingUrl || video.url || '';
+    console.log('🎬 FULLSCREEN_PLAYER: loadIndividualVideo - Final videoUrl:', videoUrl);
 
     if (!videoUrl) {
       console.error('No video URL available for video index:', videoIndex);
