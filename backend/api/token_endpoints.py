@@ -214,6 +214,23 @@ async def test_db_connection():
 async def test_token_add():
     """Test token addition step by step"""
     try:
+        from services.database_service import get_db_service
+        db = get_db_service()
+        
+        # Check if tables exist
+        tables_exist = {}
+        try:
+            result = db._execute_select("SELECT COUNT(*) as count FROM token_balances", (), fetch_one=True)
+            tables_exist["token_balances"] = True
+        except Exception as e:
+            tables_exist["token_balances"] = f"Error: {str(e)}"
+            
+        try:
+            result = db._execute_select("SELECT COUNT(*) as count FROM token_transactions", (), fetch_one=True)
+            tables_exist["token_transactions"] = True
+        except Exception as e:
+            tables_exist["token_transactions"] = f"Error: {str(e)}"
+        
         token_service = get_token_service()
         user_id = "10"
         amount = 25
@@ -228,6 +245,7 @@ async def test_token_add():
         final_balance = token_service.get_user_balance(user_id)
         
         return {
+            "tables_exist": tables_exist,
             "success": result,
             "initial_balance": initial_balance.balance,
             "final_balance": final_balance.balance,
