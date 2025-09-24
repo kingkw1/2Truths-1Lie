@@ -5,7 +5,7 @@
 
 import React from 'react';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
-import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Alert } from 'react-native';
+import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Alert, Pressable } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { GameScreen } from '../screens/GameScreen';
 import { StoreScreen } from '../screens/StoreScreen';
@@ -13,6 +13,7 @@ import { ChallengeCreationScreen } from '../screens/ChallengeCreationScreen';
 import { TokenTestScreen } from '../screens/TokenTestScreen';
 import { MainStackParamList } from './types';
 import { useAuth } from '../hooks/useAuth';
+import { useTokenBalance } from '../hooks/useTokenBalance';
 import { ConditionalAuthContent, AuthGuard } from '../components/AuthGuard';
 import { AuthToggleButton } from '../components/AuthToggleButton';
 
@@ -24,22 +25,40 @@ interface MainNavigatorProps {
 
 const HomeScreen: React.FC<{ navigation: any; onLogout: () => void }> = ({ navigation, onLogout }) => {
   const { user, isAuthenticated, isGuest, triggerAuthFlow } = useAuth();
+  const { balance, loading: isLoading, error } = useTokenBalance();
 
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView contentContainerStyle={styles.scrollContentContainer}>
         <View style={styles.header}>
-          <Text style={styles.title}>2 Truths & 1 Lie</Text>
-          <View style={styles.userInfo}>
-            <Text style={styles.welcomeText}>
-              Welcome, {user?.name || 'Guest'}!
-            </Text>
-
-            <AuthToggleButton
-              onAuthAction={onLogout}
-              style={styles.authToggleButton}
-            />
+          <View style={styles.headerLeft}>
+            <Text style={styles.title}>2 Truths & 1 Lie</Text>
           </View>
+          
+          <View style={styles.headerRight}>
+            {/* Token Balance Display */}
+            {!isLoading && balance > 0 && (
+              <Pressable
+                style={styles.tokenBalance}
+                onPress={() => navigation.navigate('Store')}
+              >
+                <Text style={styles.tokenIcon}>🪙</Text>
+                <Text style={styles.tokenBalanceText}>{balance}</Text>
+              </Pressable>
+            )}
+            
+          </View>
+        </View>
+
+        <View style={styles.userInfo}>
+          <Text style={styles.welcomeText}>
+            Welcome, {user?.name || 'Guest'}!
+          </Text>
+
+          <AuthToggleButton
+            onAuthAction={onLogout}
+            style={styles.authToggleButton}
+          />
         </View>
         
         <Text style={styles.subtitle}>What would you like to do?</Text>
@@ -189,12 +208,21 @@ const styles = StyleSheet.create({
   },
   header: {
     marginBottom: 20,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+  },
+  headerLeft: {
+    flex: 1,
+  },
+  headerRight: {
+    alignItems: 'flex-end',
   },
   title: {
     fontSize: 28,
     fontWeight: 'bold',
     marginBottom: 10,
-    textAlign: 'center',
+    textAlign: 'left',
     color: '#333',
   },
   userInfo: {
@@ -255,5 +283,28 @@ const styles = StyleSheet.create({
     fontSize: 14,
     textAlign: 'center',
     lineHeight: 18,
+  },
+  tokenBalance: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#4CAF50',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 20,
+    marginBottom: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  tokenIcon: {
+    fontSize: 16,
+    marginRight: 6,
+  },
+  tokenBalanceText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: 'bold',
   },
 });
