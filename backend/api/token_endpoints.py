@@ -226,16 +226,11 @@ async def add_tokens_manually(
         )
         
         token_service = get_token_service()
-        logger.info(f"Attempting to add {request.amount} tokens to user {user_id}")
-        
-        # Use the testing method instead
-        success = token_service.add_tokens_for_testing(str(user_id), request.amount, request.description)
-        logger.info(f"Token addition result: {success}")
+        success = token_service.add_tokens_from_purchase(purchase_event)
         
         if success:
             # Get updated balance
-            balance_response = token_service.get_user_balance(str(user_id))
-            balance = balance_response.balance
+            balance = token_service.get_user_balance(str(user_id))
             logger.info(f"Manually added {request.amount} tokens to user {user_id}, new balance: {balance}")
             
             return TokenBalanceResponse(
@@ -254,7 +249,7 @@ async def add_tokens_manually(
         logger.error(f"Failed to manually add tokens for user {user_id}: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to add tokens manually"
+            detail=f"Failed to add tokens: {str(e)}"
         )
 
 def verify_revenuecat_webhook(payload: bytes, signature: str) -> bool:
