@@ -220,12 +220,15 @@ class TokenService:
         """Initialize a new user with 0 token balance"""
         try:
             # Use unified UPSERT to handle both PostgreSQL and SQLite
-            self.db._execute_upsert(
-                "token_balances",
-                {"user_id": user_id, "balance": 0},
-                ["user_id"],  # conflict columns
-                []  # don't update anything if exists
-            )
+            # Skip update on conflict - just insert if not exists
+            try:
+                self.db._execute_insert(
+                    "INSERT INTO token_balances (user_id, balance) VALUES (?, ?)",
+                    (user_id, 0)
+                )
+            except Exception:
+                # User already exists, ignore
+                pass
             logger.info(f"Initialized token balance for user {user_id}")
             
         except Exception as e:
