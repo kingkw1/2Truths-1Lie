@@ -2396,7 +2396,12 @@ class DatabaseService:
             logger.info("=== END DIAGNOSTIC ===")
                 
             for row in results:
+                # Robust error handling: wrap entire row processing in try-except
+                challenge_id = None
                 try:
+                    # Extract challenge_id early for error logging
+                    challenge_id = row["challenge_id"] if isinstance(row, dict) else row[0]
+                    
                     # Parse the data - handle both dict and tuple row formats
                     statements_json = row["statements_json"] if isinstance(row, dict) else row[9]
                     metadata_json = row["merged_video_metadata_json"] if isinstance(row, dict) else row[10]
@@ -2405,72 +2410,121 @@ class DatabaseService:
                     updated_at_raw = row["updated_at"] if isinstance(row, dict) else row[13]
                     published_at_raw = row["published_at"] if isinstance(row, dict) else row[14]
                     
-                    # POSTGRESQL FIX 1: Handle JSON strings vs already-parsed objects
-                    # PostgreSQL may return JSON as strings that need parsing, or as already-parsed objects
-                    if isinstance(statements_json, str):
-                        statements_data = json.loads(statements_json)
-                    else:
+                    # ROBUST JSON PARSING: Handle PostgreSQL string fields that need JSON parsing
+                    
+                    # Parse statements_json
+                    statements_data = []
+                    if statements_json is not None and isinstance(statements_json, str):
+                        try:
+                            statements_data = json.loads(statements_json)
+                        except json.JSONDecodeError as json_e:
+                            logger.error(f"Invalid JSON in statements_json for challenge {challenge_id}: {json_e}")
+                            statements_data = []
+                    elif statements_json is not None:
                         statements_data = statements_json  # Already parsed
                     
-                    if isinstance(metadata_json, str) and metadata_json:
-                        metadata_data = json.loads(metadata_json)
-                    elif metadata_json and not isinstance(metadata_json, str):
+                    # Parse metadata_json
+                    metadata_data = None
+                    if metadata_json is not None and isinstance(metadata_json, str):
+                        try:
+                            metadata_data = json.loads(metadata_json)
+                        except json.JSONDecodeError as json_e:
+                            logger.error(f"Invalid JSON in metadata_json for challenge {challenge_id}: {json_e}")
+                            metadata_data = None
+                    elif metadata_json is not None:
                         metadata_data = metadata_json  # Already parsed
-                    else:
-                        metadata_data = None
                     
-                    if isinstance(tags_json, str) and tags_json:
-                        tags_data = json.loads(tags_json)
-                    elif tags_json and not isinstance(tags_json, str):
+                    # Parse tags_json
+                    tags_data = []
+                    if tags_json is not None and isinstance(tags_json, str):
+                        try:
+                            tags_data = json.loads(tags_json)
+                        except json.JSONDecodeError as json_e:
+                            logger.error(f"Invalid JSON in tags_json for challenge {challenge_id}: {json_e}")
+                            tags_data = []
+                    elif tags_json is not None:
                         tags_data = tags_json  # Already parsed
-                    else:
-                        tags_data = []
                     
-                    # POSTGRESQL FIX 2: Handle datetime objects vs ISO strings
-                    # PostgreSQL may return datetime objects directly instead of ISO strings
+                    # POSTGRESQL FIX: Handle datetime objects vs ISO strings
                     def parse_datetime(dt_value):
                         if dt_value is None:
                             return None
                         elif isinstance(dt_value, datetime):
                             return dt_value  # Already a datetime object
                         elif isinstance(dt_value, str):
-                            return datetime.fromisoformat(dt_value)
+                            try:
+                                return datetime.fromisoformat(dt_value)
+                            except ValueError as dt_e:
+                                logger.error(f"Invalid datetime format for challenge {challenge_id}: {dt_e}, value: {dt_value}")
+                                return None
                         else:
-                            logger.warning(f"Unexpected datetime type: {type(dt_value)}, value: {dt_value}")
+                            logger.warning(f"Unexpected datetime type for challenge {challenge_id}: {type(dt_value)}, value: {dt_value}")
                             return None
                     
-                    # POSTGRESQL FIX 3: Ensure statements_data is a list of dicts for Statement creation
+                    # HANDLE INCONSISTENT DATA TYPES: Ensure statements_data is a list and contains valid data
                     if not isinstance(statements_data, list):
-                        logger.error(f"statements_data is not a list: {type(statements_data)}, value: {statements_data}")
-                        continue
+                        logger.error(f"statements_data is not a list for challenge {challenge_id}: {type(statements_data)}, value: {statements_data}")
+                        statements_data = []
                     
-                    # Create Statement objects with error handling
+                    # Create Statement objects with robust error handling for inconsistent data formats
                     statements = []
-                    for stmt_data in statements_data:
+                    for i, stmt_data in enumerate(statements_data):
                         try:
+                            # Check if statement data is a dictionary (expected format)
                             if isinstance(stmt_data, dict):
-                                statements.append(Statement(**stmt_data))
-                            else:
-                                logger.error(f"Statement data is not a dict: {type(stmt_data)}, value: {stmt_data}")
+                                # Validate required fields before creating Statement
+                                required_fields = ['statement_id', 'statement_type', 'media_url', 'media_file_id', 'duration_seconds']
+                                if all(field in stmt_data for field in required_fields):
+                                    statements.append(Statement(**stmt_data))
+                                else:
+                                    missing_fields = [field for field in required_fields if field not in stmt_data]
+                                    logger.error(f"Statement {i} for challenge {challenge_id} missing required fields: {missing_fields}")
+                                    continue
+                            
+                            # Handle inconsistent legacy data where statements might be simple strings
+                            elif isinstance(stmt_data, str):
+                                logger.warning(f"Challenge {challenge_id} has legacy string-based statement data at index {i}: {stmt_data}")
+                                # Skip legacy string-based statements as they can't be converted to Statement objects
                                 continue
+                            
+                            else:
+                                logger.error(f"Statement {i} for challenge {challenge_id} is not a dict or string: {type(stmt_data)}, value: {stmt_data}")
+                                continue
+                                
                         except Exception as stmt_e:
-                            logger.error(f"Error creating Statement object: {stmt_e}, data: {stmt_data}")
+                            logger.error(f"Error creating Statement object {i} for challenge {challenge_id}: {stmt_e}, data: {stmt_data}")
                             continue
                     
-                    # Create MergedVideoMetadata with error handling
+                    # Skip challenges with no valid statements
+                    if not statements:
+                        logger.warning(f"Challenge {challenge_id} has no valid statements, skipping")
+                        continue
+                    
+                    # Create MergedVideoMetadata with robust error handling
                     merged_metadata = None
                     if metadata_data:
                         try:
                             if isinstance(metadata_data, dict):
-                                merged_metadata = MergedVideoMetadata(**metadata_data)
+                                # Validate required fields for MergedVideoMetadata
+                                required_meta_fields = ['total_duration', 'segments', 'video_file_id']
+                                if all(field in metadata_data for field in required_meta_fields):
+                                    merged_metadata = MergedVideoMetadata(**metadata_data)
+                                else:
+                                    missing_fields = [field for field in required_meta_fields if field not in metadata_data]
+                                    logger.error(f"Metadata for challenge {challenge_id} missing required fields: {missing_fields}")
                             else:
-                                logger.error(f"Metadata is not a dict: {type(metadata_data)}, value: {metadata_data}")
+                                logger.error(f"Metadata for challenge {challenge_id} is not a dict: {type(metadata_data)}, value: {metadata_data}")
                         except Exception as meta_e:
-                            logger.error(f"Error creating MergedVideoMetadata: {meta_e}, data: {metadata_data}")
+                            logger.error(f"Error creating MergedVideoMetadata for challenge {challenge_id}: {meta_e}, data: {metadata_data}")
                     
-                    # Create challenge object
+                    # Ensure tags_data is a list
+                    if not isinstance(tags_data, list):
+                        logger.warning(f"tags_data for challenge {challenge_id} is not a list: {type(tags_data)}, converting to empty list")
+                        tags_data = []
+                    
+                    # Create challenge object with additional validation
                     challenge = Challenge(
-                        challenge_id=row["challenge_id"] if isinstance(row, dict) else row[0],
+                        challenge_id=challenge_id,
                         creator_id=row["creator_id"] if isinstance(row, dict) else row[1],
                         title=row["title"] if isinstance(row, dict) else row[2],
                         status=ChallengeStatus(row["status"] if isinstance(row, dict) else row[3]) if (row["status"] if isinstance(row, dict) else row[3]) else ChallengeStatus.DRAFT,
@@ -2490,9 +2544,16 @@ class DatabaseService:
                     challenges[challenge.challenge_id] = challenge
                     
                 except Exception as e:
-                    logger.error(f"Error parsing challenge row: {e}")
+                    # Comprehensive error logging with challenge_id context
+                    challenge_context = f" (challenge_id: {challenge_id})" if challenge_id else ""
+                    logger.error(f"Error parsing challenge row{challenge_context}: {e}")
                     logger.error(f"Row data: {dict(row) if isinstance(row, dict) else row}")
-                    continue
+                    
+                    # Log additional context for debugging
+                    if isinstance(row, dict) and 'statements_json' in row:
+                        logger.error(f"statements_json type: {type(row['statements_json'])}, value: {str(row['statements_json'])[:200]}...")
+                    
+                    continue  # Skip this row and continue with the next one
                 
             return challenges
             
