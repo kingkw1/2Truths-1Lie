@@ -1122,15 +1122,7 @@ export const MobileCameraRecorder: React.FC<MobileCameraRecorderProps> = ({
           )}
         </View>
 
-        {/* Processing indicator with enhanced styling */}
-        {isLoading && (
-          <View style={styles.processingIndicator}>
-            <ActivityIndicator size="small" color="#4a90e2" />
-            <Text style={styles.processingText}>
-              Please wait...
-            </Text>
-          </View>
-        )}
+        {/* Processing indicator removed as per user request - other loading indicators are sufficient */}
 
         {/* Recording progress bar */}
         {isRecording && (
@@ -1603,21 +1595,7 @@ const styles = StyleSheet.create({
   controlButtonText: {
     fontSize: 28,
   },
-  processingIndicator: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: 'rgba(255, 255, 255, 0.1)',
-    paddingHorizontal: 20,
-    paddingVertical: 10,
-    borderRadius: 20,
-    marginTop: 15,
-  },
-  processingText: {
-    color: 'white',
-    fontSize: 14,
-    marginLeft: 10,
-    fontWeight: '500',
-  },
+
   progressContainer: {
     alignSelf: 'stretch',
     marginTop: 20,
