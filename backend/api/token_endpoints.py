@@ -238,8 +238,13 @@ async def test_token_add():
         # Get initial balance
         initial_balance = token_service.get_user_balance(user_id)
         
-        # Try to add tokens
-        result = token_service.add_tokens_for_testing(user_id, amount, "Test addition")
+        # Try to add tokens with detailed error catching
+        try:
+            result = token_service.add_tokens_for_testing(user_id, amount, "Test addition")
+            add_error = None
+        except Exception as e:
+            result = False
+            add_error = str(e)
         
         # Get final balance
         final_balance = token_service.get_user_balance(user_id)
@@ -247,6 +252,7 @@ async def test_token_add():
         return {
             "tables_exist": tables_exist,
             "success": result,
+            "add_error": add_error,
             "initial_balance": initial_balance.balance,
             "final_balance": final_balance.balance,
             "amount_added": amount
