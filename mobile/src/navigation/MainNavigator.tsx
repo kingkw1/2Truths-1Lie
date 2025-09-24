@@ -5,6 +5,7 @@
 
 import React from 'react';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
+import { useFocusEffect } from '@react-navigation/native';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Alert, Pressable } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { GameScreen } from '../screens/GameScreen';
@@ -25,7 +26,15 @@ interface MainNavigatorProps {
 
 const HomeScreen: React.FC<{ navigation: any; onLogout: () => void }> = ({ navigation, onLogout }) => {
   const { user, isAuthenticated, isGuest, triggerAuthFlow } = useAuth();
-  const { balance, loading: isLoading, error } = useTokenBalance();
+  const { balance, loading: isLoading, error, refresh: refreshTokenBalance } = useTokenBalance();
+
+  // Refresh token balance when screen comes into focus (e.g., returning from Store)
+  useFocusEffect(
+    React.useCallback(() => {
+      console.log('🏠 HomeScreen focused - refreshing token balance...');
+      refreshTokenBalance();
+    }, [refreshTokenBalance])
+  );
 
   return (
     <SafeAreaView style={styles.container}>

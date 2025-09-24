@@ -15,6 +15,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { useOfferings } from '../hooks/useOfferings';
 import { usePremiumStatus } from '../hooks/usePremiumStatus';
 import { useAuth } from '../hooks/useAuth';
+import { useTokenBalance } from '../hooks/useTokenBalance';
 import { ProductCard } from '../components/ProductCard';
 import { TrialBanner } from '../components/TrialBanner';
 import { revenueCatUserSync } from '../services/revenueCatUserSync';
@@ -25,6 +26,7 @@ export const StoreScreen: React.FC = () => {
   const { offerings, isLoading: offeringsLoading, error: offeringsError } = useOfferings();
   const { isPremium } = usePremiumStatus();
   const { user } = useAuth();
+  const { balance, loading: tokenBalanceLoading, refresh: refreshTokenBalance } = useTokenBalance();
   
   // Debug RevenueCat connectivity
   React.useEffect(() => {
@@ -144,6 +146,10 @@ export const StoreScreen: React.FC = () => {
       } else {
         // Token purchase
         Alert.alert('Purchase Successful!', `You've purchased ${pkg.identifier}. Tokens will be added to your account shortly.`);
+        
+        // Refresh token balance after successful token purchase
+        console.log('🔄 Refreshing token balance after successful purchase...');
+        await refreshTokenBalance();
       }
     } catch (e: any) {
       // Handle user cancellation silently
@@ -372,6 +378,15 @@ export const StoreScreen: React.FC = () => {
               </View>
             </View>
           </View>
+
+          {/* Token Balance Display */}
+          {!tokenBalanceLoading && (
+            <View style={styles.currentBalanceContainer}>
+              <Text style={styles.currentBalanceText}>
+                Your Current Balance: {balance} 🪙
+              </Text>
+            </View>
+          )}
         </>
       )}
 
@@ -686,5 +701,21 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
     fontSize: 16,
     fontWeight: '600',
+  },
+  currentBalanceContainer: {
+    backgroundColor: '#F8F9FA',
+    padding: 16,
+    borderRadius: 12,
+    marginHorizontal: 20,
+    marginBottom: 16,
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#E9ECEF',
+  },
+  currentBalanceText: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#495057',
+    textAlign: 'center',
   },
 });
