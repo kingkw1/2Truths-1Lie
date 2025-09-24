@@ -461,13 +461,39 @@ async def revenuecat_webhook(
         logger.info(f"Processing webhook purchase: {tokens_to_add} tokens for user {app_user_id}, product {product_id}")
         
         try:
-            # Use the working method instead of add_tokens_from_purchase
-            success = token_service.add_tokens_for_testing(app_user_id, tokens_to_add, f"RevenueCat purchase: {product_id}")
-            logger.info(f"Token addition result: {success}")
+            # Use the same approach as the working manual endpoint
+            # Get current balance first
+            current_balance_response = token_service.get_user_balance(str(app_user_id))
+            current_balance = current_balance_response.balance
+            new_balance = current_balance + tokens_to_add
             
-            if not success:
-                logger.error(f"Token addition returned False for user {app_user_id}")
-                raise Exception("Token addition failed")
+            # Use direct database update like in manual endpoint
+            db_service = get_db_service()
+            import uuid
+            import time
+            
+            transaction_id = str(uuid.uuid4())
+            metadata_json = json.dumps({
+                "revenuecat_purchase": True,
+                "product_id": product_id,
+                "transaction_id": transaction_id,
+                "webhook_processed": True
+            })
+            
+            # Direct database update
+            db_service._execute_upsert(
+                "token_balances",
+                {
+                    "user_id": str(app_user_id),
+                    "balance": new_balance,
+                    "last_updated": "NOW()"
+                },
+                ["user_id"],
+                ["balance", "last_updated"]
+            )
+            
+            logger.info(f"Webhook: Added {tokens_to_add} tokens to user {app_user_id}, balance: {current_balance} -> {new_balance}")
+            success = True
                 
         except Exception as token_error:
             logger.error(f"Error adding tokens: {token_error}")
