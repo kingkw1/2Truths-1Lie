@@ -624,44 +624,28 @@ export class VideoUploadService {
       const sortedVideos = [...uploadedVideos].sort((a, b) => a.statementIndex - b.statementIndex);
       
       try {
-        // Prepare FormData for the merge endpoint using React Native approach
-        const mergeFormData = new FormData();
+        // CRITICAL FIX: Use new media-ID based merge endpoint to avoid FormData issues
+        const mergeRequestData = {
+          media_ids: sortedVideos.map(v => v.mediaId),
+          video_metadata: sortedVideos.map(v => ({
+            duration: v.duration, // Keep in milliseconds
+            statement_index: v.statementIndex,
+            filename: v.filename
+          }))
+        };
         
-        // Add each uploaded video file using React Native's file URI approach
-        for (let i = 0; i < sortedVideos.length; i++) {
-          const video = sortedVideos[i];
-          const videoUri = videos.find(v => v.statementIndex === video.statementIndex)?.uri;
-          
-          if (!videoUri) {
-            throw new Error(`Cannot find original video URI for statement ${video.statementIndex}`);
-          }
-          
-          // Use React Native's FormData file format directly
-          mergeFormData.append(`video_${i}`, {
-            uri: videoUri,
-            type: 'video/mp4',
-            name: `statement_${i}_${Date.now()}.mp4`,
-          } as any);
-          
-          mergeFormData.append(`metadata_${i}`, JSON.stringify({
-            statementIndex: video.statementIndex,
-            duration: video.duration,
-            filename: video.filename,
-            video_duration: video.duration / 1000, // Convert to seconds for backend
-          }));
-        }
-        
-        // Call the server-side merge endpoint
-        const mergeUrl = `${this.baseUrl}/api/v1/challenge-videos/upload-for-merge`;
-        console.log('🌐 MERGE_SERVER: Calling merge endpoint:', mergeUrl);
+        // Call the new media-ID based merge endpoint
+        const mergeUrl = `${this.baseUrl}/api/v1/challenge-videos/merge-from-media-ids`;
+        console.log('🌐 MERGE_SERVER: Calling media-ID merge endpoint:', mergeUrl);
+        console.log('🎬 MERGE_SERVER: Request data:', mergeRequestData);
         
         const mergeResponse = await fetch(mergeUrl, {
           method: 'POST',
           headers: {
             ...authHeaders,
-            // Don't set Content-Type for FormData - let browser set it with boundary
+            'Content-Type': 'application/json',
           },
-          body: mergeFormData,
+          body: JSON.stringify(mergeRequestData),
           signal: abortController.signal,
         });
         

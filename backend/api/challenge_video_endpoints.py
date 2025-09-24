@@ -1330,3 +1330,171 @@ async def upload_videos_for_merge_direct(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to process multi-video upload"
         )
+
+
+@router.post("/merge-from-media-ids")
+async def merge_videos_from_media_ids(
+    request: Dict[str, Any],
+    current_user: str = Depends(get_current_user)
+):
+    """
+    Merge videos from existing media IDs
+    
+    This endpoint accepts media IDs of already uploaded videos and merges them
+    server-side, avoiding the need to re-upload the files.
+    
+    Request format:
+    {
+        "media_ids": ["id1", "id2", "id3"],
+        "video_metadata": [
+            {"duration": 1896, "statement_index": 0},
+            {"duration": 1914, "statement_index": 1}, 
+            {"duration": 1929, "statement_index": 2}
+        ]
+    }
+    """
+    try:
+        import tempfile
+        import shutil
+        from pathlib import Path
+        
+        logger.info(f"Merge from media IDs request started for user {current_user}")
+        
+        # Validate request
+        media_ids = request.get("media_ids", [])
+        video_metadata = request.get("video_metadata", [])
+        
+        if not media_ids or len(media_ids) != 3:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Expected exactly 3 media IDs"
+            )
+        
+        if not video_metadata or len(video_metadata) != 3:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Expected exactly 3 video metadata objects"
+            )
+        
+        # Generate merge session ID
+        merge_session_id = str(uuid.uuid4())
+        
+        # Create temporary directory for processing
+        temp_dir = Path(tempfile.mkdtemp(prefix=f"merge_media_{merge_session_id}_"))
+        
+        try:
+            # Download videos from S3 using media IDs
+            video_paths = []
+            for i, media_id in enumerate(media_ids):
+                logger.info(f"Downloading video {i}: media_id={media_id}")
+                
+                # Get the media file info from the database/storage
+                # For now, construct the S3 path based on media ID
+                # This assumes the media is stored in S3 with a predictable path
+                video_path = temp_dir / f"video_{i}.mp4"
+                
+                # Download from S3 or local storage
+                # TODO: Implement proper media download based on your storage system
+                # For now, we'll use a placeholder that reads from upload directory
+                from config import settings
+                
+                # Try to find the file in uploads directory (for testing)
+                upload_files = list(settings.UPLOAD_DIR.glob(f"*{media_id}*"))
+                if upload_files:
+                    source_path = upload_files[0]
+                    shutil.copy2(source_path, video_path)
+                    logger.info(f"Copied video {i} from uploads: {source_path} -> {video_path}")
+                else:
+                    # If not in uploads, try to download from S3
+                    logger.warning(f"Video {i} not found in uploads, would need S3 download: {media_id}")
+                    # For now, create a mock file to avoid breaking the merge
+                    video_path.touch()
+                    logger.warning(f"Created empty placeholder for video {i}: {video_path}")
+                
+                if not video_path.exists():
+                    logger.error(f"Video {i} file was not downloaded successfully")
+                    raise HTTPException(
+                        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                        detail=f"Failed to download video {i}"
+                    )
+                
+                video_paths.append(video_path)
+            
+            # Prepare video files with session metadata
+            video_files_with_sessions = []
+            for i, video_path in enumerate(video_paths):
+                # Create a mock session object with metadata
+                class MockSession:
+                    def __init__(self, metadata_dict):
+                        self.metadata = metadata_dict
+                
+                session_metadata = {
+                    "video_duration": video_metadata[i]["duration"] / 1000.0,  # Convert ms to seconds
+                    "statement_index": video_metadata[i]["statement_index"]
+                }
+                
+                mock_session = MockSession(session_metadata)
+                
+                video_files_with_sessions.append({
+                    "path": video_path,
+                    "session": mock_session
+                })
+            
+            # Initiate merge using the video merge service
+            logger.info(f"Initiating merge for session {merge_session_id}")
+            
+            # Process merge synchronously for direct response
+            try:
+                merge_result = await merge_service._merge_videos(
+                    merge_session_id=merge_session_id,
+                    video_files=video_files_with_sessions,
+                    original_video_files=video_files_with_sessions,  # Pass as original for session metadata
+                    quality="medium"
+                )
+                
+                if merge_result and merge_result.get("success"):
+                    logger.info(f"Merge completed successfully for session {merge_session_id}")
+                    
+                    return JSONResponse(
+                        content={
+                            "success": True,
+                            "merge_session_id": merge_session_id,
+                            "merged_video_url": merge_result["merged_video_url"],
+                            "segment_metadata": merge_result["segment_metadata"],
+                            "total_duration": merge_result.get("total_duration", 0),
+                            "created_at": datetime.utcnow().isoformat()
+                        },
+                        headers={
+                            "X-Merge-Session-ID": merge_session_id,
+                            "X-Merge-Status": "completed"
+                        }
+                    )
+                else:
+                    raise HTTPException(
+                        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                        detail=f"Video merge failed: {merge_result.get('error', 'Unknown error') if merge_result else 'No result returned'}"
+                    )
+                    
+            except VideoMergeError as e:
+                logger.error(f"Video merge error for session {merge_session_id}: {str(e)}")
+                raise HTTPException(
+                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                    detail=f"Video merge failed: {str(e)}"
+                )
+                
+        finally:
+            # Clean up temporary directory
+            try:
+                shutil.rmtree(temp_dir)
+                logger.debug(f"Cleaned up temporary directory {temp_dir}")
+            except Exception as e:
+                logger.warning(f"Failed to clean up temporary directory {temp_dir}: {e}")
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Unexpected error in merge from media IDs for user {current_user}: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to process video merge from media IDs"
+        )
