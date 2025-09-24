@@ -283,6 +283,7 @@ class VideoMergeService:
                     merged_path, segment_metadata = await self._merge_videos(
                         prepared_videos, 
                         work_dir,
+                        original_video_files=merge_session["video_files"],  # Pass original session data
                         progress_callback=lambda p: self._update_merge_progress(merge_session_id, 40.0 + (p * 0.4))
                     )
                     merge_session["progress"] = 80.0
@@ -723,6 +724,7 @@ class VideoMergeService:
         self, 
         prepared_videos: List[Path], 
         work_dir: Path,
+        original_video_files: List[Dict] = None,
         progress_callback: Optional[callable] = None
     ) -> Tuple[Path, List[VideoSegmentMetadata]]:
         """Merge prepared videos into a single file"""
@@ -809,8 +811,8 @@ class VideoMergeService:
                     "MERGE_ERROR"
                 )
             
-            # Calculate segment metadata
-            segment_metadata = await self._calculate_segment_metadata(prepared_videos)
+            # Calculate segment metadata using original video files with session data
+            segment_metadata = await self._calculate_segment_metadata(original_video_files or prepared_videos)
             
             logger.info(f"Videos merged successfully: {output_path}")
             
@@ -825,59 +827,79 @@ class VideoMergeService:
                 "MERGE_ERROR"
             )
     
-    async def _calculate_segment_metadata(self, video_files: List[Path]) -> List[VideoSegmentMetadata]:
-        """Calculate segment start/end times for merged video"""
+    async def _calculate_segment_metadata(self, video_files) -> List[VideoSegmentMetadata]:
+        """Calculate segment start/end times for merged video using actual upload session durations"""
         
         segments = []
         current_time = 0.0
         
-        for i, video_path in enumerate(video_files):
-            
-            if self.ffmpeg_available:
-                try:
-                    # Get video duration using FFprobe
-                    cmd = [
-                        "ffprobe",
-                        "-v", "quiet",
-                        "-show_entries", "format=duration",
-                        "-of", "csv=p=0",
-                        str(video_path)
-                    ]
-                    
-                    result = await asyncio.create_subprocess_exec(
-                        *cmd,
-                        stdout=asyncio.subprocess.PIPE,
-                        stderr=asyncio.subprocess.PIPE
-                    )
-                    stdout, stderr = await result.communicate()
-                    
-                    if result.returncode != 0:
-                        logger.warning(f"FFprobe failed for video {i}: {stderr.decode()} - using default duration")
-                        duration = 10.0  # Default fallback
-                    else:
-                        duration = float(stdout.decode().strip())
-                        logger.info(f"Video {i}: FFmpeg detected duration = {duration}s")
-                        
-                except Exception as e:
-                    logger.warning(f"Error getting duration for video {i}: {str(e)} - using default")
-                    duration = 10.0  # Default fallback
+        for i, video_file in enumerate(video_files):
+            # Handle different input formats (Dict with session vs Path only)
+            if isinstance(video_file, dict):
+                video_path = video_file["path"]
+                session = video_file.get("session")
             else:
-                # FFmpeg not available - use default duration
-                logger.info(f"FFmpeg not available - using default duration for video {i}")
-                duration = 10.0  # Default to 10 seconds per video
+                # Fallback to path-only mode
+                video_path = video_file
+                session = None
+            
+            actual_duration_seconds = None
+            
+            # CRITICAL FIX: Use actual uploaded video duration from session metadata
+            if session and hasattr(session, 'metadata') and session.metadata:
+                # Extract duration from session metadata (already in seconds)
+                video_duration_seconds = session.metadata.get("video_duration")
+                if video_duration_seconds and isinstance(video_duration_seconds, (int, float)):
+                    actual_duration_seconds = float(video_duration_seconds)  # Duration already in seconds
+                    logger.info(f"Video {i}: Using actual uploaded duration from session = {actual_duration_seconds}s")
+            
+            # If we don't have session duration, try FFprobe as fallback
+            if actual_duration_seconds is None:
+                if self.ffmpeg_available:
+                    try:
+                        # Get video duration using FFprobe
+                        cmd = [
+                            "ffprobe",
+                            "-v", "quiet",
+                            "-show_entries", "format=duration",
+                            "-of", "csv=p=0",
+                            str(video_path)
+                        ]
+                        
+                        result = await asyncio.create_subprocess_exec(
+                            *cmd,
+                            stdout=asyncio.subprocess.PIPE,
+                            stderr=asyncio.subprocess.PIPE
+                        )
+                        stdout, stderr = await result.communicate()
+                        
+                        if result.returncode != 0:
+                            logger.warning(f"FFprobe failed for video {i}: {stderr.decode()} - using default duration")
+                            actual_duration_seconds = 10.0  # Default fallback
+                        else:
+                            actual_duration_seconds = float(stdout.decode().strip())
+                            logger.info(f"Video {i}: FFmpeg detected duration = {actual_duration_seconds}s")
+                            
+                    except Exception as e:
+                        logger.warning(f"Error getting duration for video {i}: {str(e)} - using default")
+                        actual_duration_seconds = 10.0  # Default fallback
+                else:
+                    # FFmpeg not available - use default duration
+                    logger.warning(f"Video {i}: No session metadata and FFmpeg not available - using default duration")
+                    actual_duration_seconds = 10.0  # Default to 10 seconds per video
             
             segment = VideoSegmentMetadata(
                 segment_index=i,
                 start_time=current_time,
-                end_time=current_time + duration,
-                duration=duration,
+                end_time=current_time + actual_duration_seconds,
+                duration=actual_duration_seconds,
                 statement_index=i
             )
             
-            logger.info(f"Video {i}: Segment metadata created - start_time={current_time}s, end_time={current_time + duration}s, duration={duration}s")
+            logger.info(f"Video {i}: Segment metadata created - start_time={current_time}s, end_time={current_time + actual_duration_seconds}s, duration={actual_duration_seconds}s")
             
             segments.append(segment)
-            current_time += duration
+            current_time += actual_duration_seconds
         
         return segments
     
@@ -1468,7 +1490,7 @@ class VideoMergeService:
                 
                 # Step 3: Merge videos
                 merged_path, segment_metadata = await self._merge_videos(
-                    prepared_videos, work_dir
+                    prepared_videos, work_dir, original_video_files=video_files
                 )
                 
                 # Step 4: Apply compression
