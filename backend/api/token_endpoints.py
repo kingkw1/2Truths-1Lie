@@ -460,9 +460,21 @@ async def revenuecat_webhook(
         token_service = get_token_service()
         logger.info(f"Processing webhook purchase: {tokens_to_add} tokens for user {app_user_id}, product {product_id}")
         
-        # Use the working method instead of add_tokens_from_purchase
-        success = token_service.add_tokens_for_testing(app_user_id, tokens_to_add, f"RevenueCat purchase: {product_id}")
-        logger.info(f"Token addition result: {success}")
+        try:
+            # Use the working method instead of add_tokens_from_purchase
+            success = token_service.add_tokens_for_testing(app_user_id, tokens_to_add, f"RevenueCat purchase: {product_id}")
+            logger.info(f"Token addition result: {success}")
+            
+            if not success:
+                logger.error(f"Token addition returned False for user {app_user_id}")
+                raise Exception("Token addition failed")
+                
+        except Exception as token_error:
+            logger.error(f"Error adding tokens: {token_error}")
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"Token addition failed: {str(token_error)}"
+            )
         
         if success:
             logger.info(f"Successfully processed token purchase: {tokens_to_add} tokens for user {app_user_id}")
@@ -487,3 +499,43 @@ async def revenuecat_webhook(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Internal server error processing webhook"
         )
+
+@router.post("/test-webhook-debug")
+async def test_webhook_debug():
+    """Test webhook processing step by step"""
+    try:
+        # Test parameters
+        app_user_id = "10"
+        product_id = "token_pack_small"
+        tokens_to_add = PRODUCT_TOKEN_MAP.get(product_id)
+        
+        # Test 1: Product mapping
+        result = {"tests": {}}
+        result["tests"]["product_mapping"] = f"OK - {product_id} = {tokens_to_add} tokens"
+        
+        # Test 2: Token service
+        try:
+            token_service = get_token_service()
+            result["tests"]["token_service"] = "OK - Service created"
+        except Exception as e:
+            result["tests"]["token_service"] = f"ERROR: {str(e)}"
+            return result
+        
+        # Test 3: Add tokens
+        try:
+            success = token_service.add_tokens_for_testing(app_user_id, tokens_to_add, "Webhook debug test")
+            result["tests"]["add_tokens"] = f"OK - Success: {success}"
+            
+            if success:
+                balance_response = token_service.get_user_balance(app_user_id)
+                result["tests"]["final_balance"] = f"OK - Balance: {balance_response.balance}"
+            else:
+                result["tests"]["add_tokens"] = "ERROR - Returned False"
+                
+        except Exception as e:
+            result["tests"]["add_tokens"] = f"ERROR: {str(e)}"
+        
+        return result
+        
+    except Exception as e:
+        return {"error": str(e)}
