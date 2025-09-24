@@ -37,13 +37,17 @@ export const StoreScreen: React.FC = () => {
         if (offerings.current) {
           console.log('🔍 DEBUG: Available packages count:', offerings.current.availablePackages?.length || 0);
           
-          // Log only essential package info
+          // Log detailed package info including billing period
           offerings.current.availablePackages?.forEach((pkg, index) => {
             console.log(`🔍 DEBUG: Package ${index + 1}:`, {
               identifier: pkg.identifier,
               productId: pkg.product.identifier,
               productType: pkg.product.productType,
               priceString: pkg.product.priceString,
+              packageType: pkg.packageType,
+              title: pkg.product.title,
+              description: pkg.product.description,
+              subscriptionPeriod: pkg.product.subscriptionPeriod,
             });
           });
         } else {
@@ -62,7 +66,13 @@ export const StoreScreen: React.FC = () => {
   const allPackages = offerings?.current?.availablePackages || [];
   
   const subscriptionPackages = allPackages.filter(pkg => 
-    pkg.identifier === 'pro_monthly' || pkg.identifier === 'pro_annual'
+    pkg.identifier === 'pro_monthly' || 
+    pkg.identifier === 'pro_annual' ||
+    pkg.identifier === 'monthly' ||
+    pkg.identifier === 'annual' ||
+    pkg.product.productType.toString().includes('SUBSCRIPTION') ||
+    pkg.packageType === 'MONTHLY' ||
+    pkg.packageType === 'ANNUAL'
   );
   
   const tokenPackages = allPackages.filter(pkg => 
@@ -76,10 +86,19 @@ export const StoreScreen: React.FC = () => {
   console.log('🛍️ All available packages:', allPackages.map(pkg => ({
     identifier: pkg.identifier,
     title: pkg.product.title,
-    type: pkg.product.productType
+    type: pkg.product.productType,
+    packageType: pkg.packageType,
+    price: pkg.product.priceString
   })));
-  console.log('📱 Subscription packages:', subscriptionPackages.length);
-  console.log('🪙 Token packages:', tokenPackages.length);
+  console.log('📱 Subscription packages found:', subscriptionPackages.map(pkg => ({
+    identifier: pkg.identifier,
+    packageType: pkg.packageType,
+    price: pkg.product.priceString
+  })));
+  console.log('🪙 Token packages found:', tokenPackages.map(pkg => ({
+    identifier: pkg.identifier,
+    price: pkg.product.priceString
+  })));
 
   const handlePurchase = async (pkg: PurchasesPackage) => {
     try {
@@ -110,8 +129,14 @@ export const StoreScreen: React.FC = () => {
         Alert.alert('Purchase Successful!', `You've purchased ${pkg.identifier}. Tokens will be added to your account shortly.`);
       }
     } catch (e: any) {
-      if (!e.userCancelled) {
-        Alert.alert('Error', e.message);
+      // Handle user cancellation silently
+      if (e.userCancelled || e.code === 'PurchaseCancelledError' || e.message?.includes('USER_CANCELED')) {
+        console.log('🔍 Purchase cancelled by user - no error shown');
+        // Don't show any error to user when they cancel
+      } else {
+        // Only show errors for actual problems
+        console.error('🔍 Purchase error:', e);
+        Alert.alert('Purchase Error', e.message || 'Something went wrong with your purchase. Please try again.');
       }
     } finally {
       setPurchasing(false);
@@ -141,6 +166,14 @@ export const StoreScreen: React.FC = () => {
       </View>
     );
   }
+
+  // Debug offerings structure
+  console.log('🔍 Offerings object:', {
+    hasOfferings: !!offerings,
+    hasCurrent: !!offerings?.current,
+    currentIdentifier: offerings?.current?.identifier,
+    packagesCount: offerings?.current?.availablePackages?.length || 0
+  });
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -181,9 +214,21 @@ export const StoreScreen: React.FC = () => {
             <TouchableOpacity 
               style={styles.subscriptionButton}
               onPress={() => {
-                const monthlyPackage = subscriptionPackages.find(pkg => pkg.identifier === 'pro_monthly');
+                console.log('🔍 Monthly button pressed');
+                console.log('🔍 Available subscription packages:', subscriptionPackages.map(pkg => pkg.identifier));
+                
+                const monthlyPackage = subscriptionPackages.find(pkg => 
+                  pkg.identifier === 'pro_monthly' ||
+                  pkg.identifier === 'monthly' ||
+                  pkg.packageType === 'MONTHLY'
+                );
+                
                 if (monthlyPackage) {
+                  console.log('🔍 Found monthly package:', monthlyPackage.identifier);
                   handlePurchase(monthlyPackage);
+                } else {
+                  console.log('🔍 No monthly package found, using first available:', subscriptionPackages[0]?.identifier);
+                  Alert.alert('Debug', `No monthly package found. Available: ${subscriptionPackages.map(pkg => pkg.identifier).join(', ')}`);
                 }
               }}
               disabled={purchasing || subscriptionPackages.length === 0}
@@ -194,9 +239,21 @@ export const StoreScreen: React.FC = () => {
             <TouchableOpacity 
               style={[styles.subscriptionButton, styles.annualButton]}
               onPress={() => {
-                const annualPackage = subscriptionPackages.find(pkg => pkg.identifier === 'pro_annual');
+                console.log('🔍 Annual button pressed');
+                console.log('🔍 Available subscription packages:', subscriptionPackages.map(pkg => pkg.identifier));
+                
+                const annualPackage = subscriptionPackages.find(pkg => 
+                  pkg.identifier === 'pro_annual' ||
+                  pkg.identifier === 'annual' ||
+                  pkg.packageType === 'ANNUAL'
+                );
+                
                 if (annualPackage) {
+                  console.log('🔍 Found annual package:', annualPackage.identifier);
                   handlePurchase(annualPackage);
+                } else {
+                  console.log('🔍 No annual package found, using first available:', subscriptionPackages[0]?.identifier);
+                  Alert.alert('Debug', `No annual package found. Available: ${subscriptionPackages.map(pkg => pkg.identifier).join(', ')}`);
                 }
               }}
               disabled={purchasing || subscriptionPackages.length === 0}
@@ -210,10 +267,25 @@ export const StoreScreen: React.FC = () => {
           <TouchableOpacity 
             style={styles.primaryCtaButton}
             onPress={() => {
-              const preferredPackage = subscriptionPackages.find(pkg => pkg.identifier === 'pro_annual') 
-                || subscriptionPackages[0];
+              console.log('🔍 Free trial button pressed');
+              console.log('🔍 Available subscription packages:', subscriptionPackages.map(pkg => ({
+                identifier: pkg.identifier,
+                packageType: pkg.packageType,
+                price: pkg.product.priceString
+              })));
+              
+              const preferredPackage = subscriptionPackages.find(pkg => 
+                pkg.identifier === 'pro_annual' ||
+                pkg.identifier === 'annual' ||
+                pkg.packageType === 'ANNUAL'
+              ) || subscriptionPackages[0];
+              
               if (preferredPackage) {
+                console.log('🔍 Using package for free trial:', preferredPackage.identifier);
                 handlePurchase(preferredPackage);
+              } else {
+                console.log('🔍 No subscription packages available');
+                Alert.alert('Debug', `No subscription packages available. Total packages: ${allPackages.length}`);
               }
             }}
             disabled={purchasing || subscriptionPackages.length === 0}
