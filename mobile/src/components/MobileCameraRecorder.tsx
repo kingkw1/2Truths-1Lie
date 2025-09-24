@@ -113,6 +113,34 @@ export const MobileCameraRecorder: React.FC<MobileCameraRecorderProps> = ({
   }, [isRecordingFromRedux, statementIndex]);
 
   const prevRecordingState = useRef(false);
+  const prevStatementIndex = useRef(statementIndex);
+
+  // Reset component state when statement index changes (for seamless transitions)
+  useEffect(() => {
+    if (prevStatementIndex.current !== statementIndex) {
+      console.log('🔄 Statement index changed from', prevStatementIndex.current, 'to', statementIndex);
+      
+      // Reset recording state for new statement
+      setIsRecording(false);
+      setRecordingDuration(0);
+      setIsPaused(false);
+      setActiveRecording(null);
+      setCurrentError(null);
+      
+      // Clear any active timers
+      if (recordingTimer.current) {
+        clearInterval(recordingTimer.current);
+        recordingTimer.current = null;
+      }
+      if (recordingTimeoutRef.current) {
+        clearTimeout(recordingTimeoutRef.current);
+        recordingTimeoutRef.current = null;
+      }
+      
+      // Update reference
+      prevStatementIndex.current = statementIndex;
+    }
+  }, [statementIndex]);
 
   // Initialize component and check permissions
   useEffect(() => {

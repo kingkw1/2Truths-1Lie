@@ -143,25 +143,23 @@ export const ChallengeCreationScreen: React.FC<ChallengeCreationScreenProps> = (
     console.log('🎬 RECORDING_COMPLETE: Media:', JSON.stringify(media, null, 2));
     console.log('🎬 RECORDING_COMPLETE: Is retake mode:', isRetakeMode);
 
-    setShowCameraModal(false);
-
     if (isRetakeMode) {
-      // If we're retaking a statement, return to fullscreen lie selection
+      // If we're retaking a statement, close modal and return to fullscreen lie selection
       console.log('🎬 RECORDING_COMPLETE: Retake complete, returning to fullscreen lie selection');
+      setShowCameraModal(false);
       setIsRetakeMode(false); // Reset retake mode
       setCurrentStep('fullscreen-lie-selection');
     } else {
       // Initial recording flow - move to next statement or lie selection
       if (currentStatementIndex < 2) {
         console.log('🎬 RECORDING_COMPLETE: Moving to next statement', currentStatementIndex + 2);
+        // Keep camera modal open and just change statement index for seamless transition
         setCurrentStatementIndex(currentStatementIndex + 1);
-        // Small delay before showing next camera to allow user to process success
-        setTimeout(() => {
-          setShowCameraModal(true);
-        }, 500);
+        // Note: Camera modal stays open, no delay needed
       } else {
         console.log('🎬 RECORDING_COMPLETE: All recordings complete, moving to fullscreen lie selection');
-        // All recordings complete, move to fullscreen lie selection step
+        // All recordings complete, close modal and move to fullscreen lie selection step
+        setShowCameraModal(false);
         // Do NOT trigger video merging yet - wait until preview/submit
         setCurrentStep('fullscreen-lie-selection');
       }
