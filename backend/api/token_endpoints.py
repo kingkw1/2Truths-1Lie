@@ -296,13 +296,20 @@ async def test_token_add():
     except Exception as e:
         return {"success": False, "error": str(e)}
     
-@router.post("/add-manual")
+@router.post("/add-manual", response_model=TokenBalanceResponse)
 async def add_tokens_manually(
     request: ManualTokenAddRequest,
-    user_id: int = 10  # Hardcoded for testing - user fake1@gmail.com
+    current_user: dict = Depends(get_current_user_with_permissions)
 ):
     """Manually add tokens to user balance (for testing purposes)"""
     try:
+        user_id = current_user.get("user_id") or current_user.get("id")
+        
+        if not user_id:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Unable to identify user"
+            )
         
         if request.amount <= 0:
             raise HTTPException(
