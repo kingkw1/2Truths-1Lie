@@ -103,11 +103,7 @@ export const MobileCameraRecorder: React.FC<MobileCameraRecorderProps> = ({
   useEffect(() => {
     // Only log recording state transitions, not every render
     if (isRecordingFromRedux !== prevRecordingState.current) {
-      console.log('🔄 Recording state changed:', {
-        statementIndex,
-        isRecording: isRecordingFromRedux,
-        duration: recordingState?.duration || 0
-      });
+      // Reduced logging - recording state change
       prevRecordingState.current = isRecordingFromRedux;
     }
   }, [isRecordingFromRedux, statementIndex]);
@@ -118,7 +114,7 @@ export const MobileCameraRecorder: React.FC<MobileCameraRecorderProps> = ({
   // Reset component state when statement index changes (for seamless transitions)
   useEffect(() => {
     if (prevStatementIndex.current !== statementIndex) {
-      console.log('🔄 Statement index changed from', prevStatementIndex.current, 'to', statementIndex);
+      // Statement index changed - resetting component state
       
       // Reset recording state for new statement
       setIsRecording(false);
@@ -153,7 +149,7 @@ export const MobileCameraRecorder: React.FC<MobileCameraRecorderProps> = ({
     
     // Safety timeout to ensure camera gets marked as ready
     const cameraReadyTimeout = setTimeout(() => {
-      console.log('⚠️ Camera ready timeout - forcing ready state and clearing loading');
+      // Camera ready timeout - forcing ready state
       setCameraReady(true);
       setIsLoading(false); // Force loading to false
     }, 5000); // Increased to 5 seconds
@@ -234,7 +230,7 @@ export const MobileCameraRecorder: React.FC<MobileCameraRecorderProps> = ({
       return;
     }
     
-    console.log('🎬 Initializing camera... setting loading=true');
+    // Initializing camera
     isInitializing.current = true;
     setIsLoading(true);
     
@@ -274,7 +270,7 @@ export const MobileCameraRecorder: React.FC<MobileCameraRecorderProps> = ({
       console.error('Camera initialization error:', error);
       setCameraReady(false);
     } finally {
-      console.log('🔧 Finally block: setting loading=false');
+      // Camera initialization complete
       setIsLoading(false);
       isInitializing.current = false;
     }
@@ -1128,12 +1124,9 @@ export const MobileCameraRecorder: React.FC<MobileCameraRecorderProps> = ({
                   isLoading && styles.controlButtonDisabled
                 ]}
                 onPress={() => {
-                  console.log('Stop button pressed - isLoading:', isLoading, 'isRecording (local):', isRecording, 'isRecordingFromRedux:', isRecordingFromRedux);
+                  // Stop button pressed - reduced logging
                   if (!isLoading) {
-                    console.log('Stop button: calling stopRecording()');
                     stopRecording();
-                  } else {
-                    console.log('Stop button: blocked by isLoading state');
                   }
                 }}
                 disabled={isLoading}
@@ -1169,7 +1162,7 @@ export const MobileCameraRecorder: React.FC<MobileCameraRecorderProps> = ({
           </View>
         )}
 
-        {/* Debug info overlay */}
+        {/* Debug info overlay - disabled to reduce screen clutter
         {isRecording && (
           <View style={{
             position: 'absolute',
@@ -1191,6 +1184,7 @@ export const MobileCameraRecorder: React.FC<MobileCameraRecorderProps> = ({
             </Text>
           </View>
         )}
+        */}
       </View>
       
       {/* Upload Progress Indicator */}

@@ -162,13 +162,8 @@ export const AuthToggleButton: React.FC<AuthToggleButtonProps> = ({
   const showSignOut = hasLoggedInThisSession && !isGuest;
   const showSignIn = !showSignOut;
   
-  console.log('📱 AuthToggleButton: Button state:', { 
-    hasLoggedInThisSession, 
-    isGuest, 
-    showSignOut, 
-    showSignIn,
-    userEmail: user?.email 
-  });
+  // Reduced logging - auth button state (enable for debugging if needed)
+  // console.log('📱 AuthToggleButton: Button state:', { showSignOut, showSignIn });
 
   const handlePress = async () => {
     try {

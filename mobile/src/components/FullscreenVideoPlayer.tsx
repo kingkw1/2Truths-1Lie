@@ -113,7 +113,7 @@ export const FullscreenVideoPlayer: React.FC<FullscreenVideoPlayerProps> = ({
                 videoRef.current?.setPositionAsync(effectiveEndTime);
               }
               
-              console.log(`🎬 FULLSCREEN_PLAYER: Reached end of segment ${selectedSegment} (${status.positionMillis}ms >= ${effectiveEndTime}ms), pausing`);
+              // Reached end of segment, pausing (reduced logging)
             }
           }
         }
@@ -169,7 +169,7 @@ export const FullscreenVideoPlayer: React.FC<FullscreenVideoPlayerProps> = ({
         }
         
         segmentTimerRef.current = setTimeout(async () => {
-          console.log(`🎬 SAFETY_TIMER: Force-pausing segment ${segmentIndex} after ${timerDuration_ms}ms (segment duration: ${segmentDuration_ms}ms, buffer: ${safetyBuffer_ms}ms)`);
+          // Safety timer: force-pausing segment (reduced logging)
           try {
             await videoRef.current?.pauseAsync();
             setHasReachedSegmentEnd(true);
@@ -178,7 +178,7 @@ export const FullscreenVideoPlayer: React.FC<FullscreenVideoPlayerProps> = ({
           }
         }, timerDuration_ms);
         
-        console.log(`🎬 FULLSCREEN_PLAYER: Loaded segment ${segmentIndex} (${segment.startTime}ms - ${segment.endTime}ms), duration=${segmentDuration_ms}ms, safety_timer=${timerDuration_ms}ms`);
+        // Loaded segment with safety timer (reduced logging)
       } else {
         console.log(`🎬 FULLSCREEN_PLAYER: Loaded segment ${segmentIndex} (${segment.startTime}ms - ${segment.endTime}ms), autoPlay=false`);
       }
@@ -238,7 +238,7 @@ export const FullscreenVideoPlayer: React.FC<FullscreenVideoPlayerProps> = ({
     if (selectedSegment !== undefined && selectedSegment !== null) {
       // Prevent rapid consecutive calls for the same segment
       if (lastSelectedSegment.current === selectedSegment) {
-        console.log(`🎬 FULLSCREEN_PLAYER: Segment ${selectedSegment} already selected, skipping`);
+        // Segment already selected, skipping (reduced logging)
         return;
       }
       
@@ -251,7 +251,7 @@ export const FullscreenVideoPlayer: React.FC<FullscreenVideoPlayerProps> = ({
       lastSelectedSegment.current = selectedSegment;
       // Reset the segment end flag when loading a new segment
       setHasReachedSegmentEnd(false);
-      console.log(`🎬 FULLSCREEN_PLAYER: Loading segment ${selectedSegment}`);
+      // Loading segment (reduced logging)
       
       if (hasMergedVideo) {
         loadMergedVideoSegment(selectedSegment);

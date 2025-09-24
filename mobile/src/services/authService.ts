@@ -630,14 +630,8 @@ export class AuthService {
     const isGuest = this.currentUser ? this.isGuestUser(this.currentUser) : false;
     const hasValidToken = !!this.authToken;
 
-    console.log('🔍 [AUTH STATUS DEBUG]:', {
-      isAuthenticated,
-      isGuest,
-      hasValidToken,
-      userId: this.currentUser?.id,
-      userEmail: this.currentUser?.email,
-      isGuestUserCheck: this.currentUser ? this.isGuestUser(this.currentUser) : 'no user'
-    });
+    // Reduced logging - auth status check (enable for debugging if needed)
+    // console.log('🔍 [AUTH STATUS DEBUG]:', { isAuthenticated, isGuest, hasValidToken });
 
     return {
       isAuthenticated,

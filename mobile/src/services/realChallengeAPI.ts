@@ -322,9 +322,7 @@ export class RealChallengeAPIService {
 
       // Transform statements into mediaData for video player compatibility
       if (challenge.statements && Array.isArray(challenge.statements)) {
-        console.log('🎯 CHALLENGE: Transforming statements into mediaData...');
-        console.log('🎯 CHALLENGE: Raw statements:', JSON.stringify(challenge.statements, null, 2));
-        
+        // Transform statements into mediaData for video player compatibility
         challenge.mediaData = challenge.statements.map((statement: any, index: number) => ({
           type: 'video' as const,
           streamingUrl: resolveMediaUrl(statement.streaming_url || statement.media_url),
@@ -335,8 +333,6 @@ export class RealChallengeAPIService {
           storageType: 'cloud' as const,
           isUploaded: true,
         }));
-        
-        console.log('🎯 CHALLENGE: Transformed mediaData:', JSON.stringify(challenge.mediaData, null, 2));
       }
 
       return {
@@ -373,17 +369,14 @@ export class RealChallengeAPIService {
       // Remove public_only parameter as backend doesn't support it
       const url = `${this.baseUrl}/api/v1/challenges/?skip=${skip}&limit=${limit}`;
       
-      console.log('🌐 Making API call to:', url);
-      console.log('📋 Request headers:', headers);
+      console.log('🌐 API Request: GET', url);
       
-      console.log('📡 About to fetch...');
       const response = await fetch(url, {
         method: 'GET',
         headers,
       });
 
-      console.log('📡 Fetch completed, status:', response.status);
-      console.log('📡 Response ok:', response.ok);
+      console.log('🌐 API Response:', response.status);
 
       if (!response.ok) {
         console.error('❌ API call failed with status:', response.status);
@@ -392,25 +385,15 @@ export class RealChallengeAPIService {
         throw new Error(`HTTP error! status: ${response.status}`);
       }
 
-      console.log('📡 About to parse JSON...');
       const data = await response.json();
-      console.log('✅ JSON parsed successfully');
-      console.log('✅ API Response received:');
-      console.log('  - Type:', typeof data);
-      console.log('  - Keys:', Object.keys(data));
-      console.log('  - Total count:', data.total_count);
-      console.log('  - Challenges array length:', data.challenges?.length || 0);
+      console.log('✅ API Response: Retrieved', data.challenges?.length || 0, 'challenges');
       
       if (data.challenges && data.challenges.length > 0) {
-        console.log('  - First challenge ID:', data.challenges[0].challenge_id);
-        console.log('🎉 Returning challenges array with', data.challenges.length, 'items');
         
         // Transform each challenge's statements into mediaData for video player compatibility
         const transformedChallenges = data.challenges.map((challenge: any) => {
           if (challenge.statements && Array.isArray(challenge.statements)) {
-            console.log('🎯 CHALLENGES: Transforming statements for challenge:', challenge.challenge_id);
-            console.log('🎯 CHALLENGES: Raw statements:', JSON.stringify(challenge.statements, null, 2));
-            
+            // Transform statements to mediaData (verbose logging reduced)
             challenge.mediaData = challenge.statements.map((statement: any, index: number) => ({
               type: 'video' as const,
               streamingUrl: resolveMediaUrl(statement.streaming_url || statement.media_url),
@@ -421,8 +404,6 @@ export class RealChallengeAPIService {
               storageType: 'cloud' as const,
               isUploaded: true,
             }));
-            
-            console.log('🎯 CHALLENGES: Transformed mediaData:', JSON.stringify(challenge.mediaData, null, 2));
           }
           return challenge;
         });

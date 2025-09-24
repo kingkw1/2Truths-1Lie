@@ -187,8 +187,8 @@ export const GameScreen: React.FC<GameScreenProps> = ({
   onBack,
   useFullscreenInterface = true, // Default to new interface
 }) => {
-  console.log('🏠🏠🏠 GAMESCREEN: Component rendered! 🏠🏠🏠');
-  console.log('🏠 GAMESCREEN: hideCreateButton =', hideCreateButton);
+  // Reduced logging - GameScreen render (enable for debugging if needed)
+  // console.log('🏠 GAMESCREEN: Component rendered, hideCreateButton =', hideCreateButton);
   
   const dispatch = useAppDispatch();
   const { isAuthenticated, isGuest, triggerAuthFlow } = useAuth();
