@@ -73,30 +73,38 @@ def extract_s3_key_from_url(url: str) -> Optional[str]:
     return None
 
 async def get_signed_url_for_video(video_url: str) -> str:
-    """Convert S3 URL to signed URL for video access"""
+    """Convert media reference to accessible URL for video streaming"""
     if not video_url:
         return video_url
     
-    # Extract S3 key from the URL
-    s3_key = extract_s3_key_from_url(video_url)
-    if not s3_key:
-        # Not an S3 URL, return as is (might be local URL)
+    # Check if it's already a full URL (http/https)
+    if video_url.startswith(('http://', 'https://')):
         return video_url
     
-    try:
-        # Get cloud storage service instance
-        cloud_storage = await get_cloud_storage_service()
-        if not cloud_storage:
-            # Cloud storage not available, return original URL
-            return video_url
-            
-        # Generate signed URL for the S3 key
-        signed_url = await cloud_storage.get_file_url(s3_key)
-        return signed_url
-    except Exception as e:
-        logger.error(f"Failed to generate signed URL for video {video_url}: {e}")
-        # Return original URL as fallback
+    # Check if it's already a relative API path
+    if video_url.startswith('/api/'):
         return video_url
+    
+    # Extract S3 key from S3 URL patterns
+    s3_key = extract_s3_key_from_url(video_url)
+    if s3_key:
+        try:
+            # Handle S3 storage
+            cloud_storage = await get_cloud_storage_service()
+            if cloud_storage:
+                signed_url = await cloud_storage.get_file_url(s3_key)
+                return signed_url
+        except Exception as e:
+            logger.error(f"Failed to generate S3 signed URL for {video_url}: {e}")
+    
+    # Handle media ID - assume it's a local media file reference
+    # For local storage, construct a media streaming URL
+    if len(video_url) > 8 and '-' in video_url:  # Looks like a UUID/media ID
+        # Return the media serving endpoint path that the mobile app can use
+        return f"/api/v1/media/{video_url}"
+    
+    # Fallback: return original URL
+    return video_url
 
 # Optional authentication dependency
 security = HTTPBearer(auto_error=False)

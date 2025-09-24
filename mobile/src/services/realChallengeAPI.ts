@@ -7,6 +7,25 @@ import { Platform } from 'react-native';
 import { authService } from './authService';
 import { getApiBaseUrl } from '../config/apiConfig';
 
+// Helper function to convert relative API paths to full URLs
+function resolveMediaUrl(url: string): string {
+  if (!url) return url;
+  
+  // Already a full URL
+  if (url.startsWith('http://') || url.startsWith('https://')) {
+    return url;
+  }
+  
+  // Relative API path - convert to full URL
+  if (url.startsWith('/api/')) {
+    const baseUrl = getApiBaseUrl();
+    return `${baseUrl}${url}`;
+  }
+  
+  // Raw media ID or other format - return as is
+  return url;
+}
+
 export interface Challenge {
   challenge_id: string;
   creator_id: string;
@@ -308,8 +327,8 @@ export class RealChallengeAPIService {
         
         challenge.mediaData = challenge.statements.map((statement: any, index: number) => ({
           type: 'video' as const,
-          streamingUrl: statement.streaming_url || statement.media_url,
-          url: statement.streaming_url || statement.media_url,
+          streamingUrl: resolveMediaUrl(statement.streaming_url || statement.media_url),
+          url: resolveMediaUrl(statement.streaming_url || statement.media_url),
           duration: statement.duration_seconds || 0,
           mediaId: statement.media_file_id,
           cloudStorageKey: statement.cloud_storage_key,
@@ -394,8 +413,8 @@ export class RealChallengeAPIService {
             
             challenge.mediaData = challenge.statements.map((statement: any, index: number) => ({
               type: 'video' as const,
-              streamingUrl: statement.streaming_url || statement.media_url,
-              url: statement.streaming_url || statement.media_url,
+              streamingUrl: resolveMediaUrl(statement.streaming_url || statement.media_url),
+              url: resolveMediaUrl(statement.streaming_url || statement.media_url),
               duration: statement.duration_seconds || 0,
               mediaId: statement.media_file_id,
               cloudStorageKey: statement.cloud_storage_key,
