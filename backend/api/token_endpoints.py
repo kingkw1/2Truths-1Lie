@@ -84,7 +84,7 @@ async def get_token_balance(
     """Get current token balance for authenticated user"""
     try:
         token_service = get_token_service()
-        user_id = current_user.get('user_id') or current_user.get('email')
+        user_id = current_user.get('sub') or current_user.get('user_id') or current_user.get('email')
         
         if not user_id:
             raise HTTPException(
@@ -114,7 +114,7 @@ async def spend_tokens(
     """Spend tokens for authenticated user"""
     try:
         token_service = get_token_service()
-        user_id = current_user.get('user_id') or current_user.get('email')
+        user_id = current_user.get('sub') or current_user.get('user_id') or current_user.get('email')
         
         if not user_id:
             raise HTTPException(
@@ -162,7 +162,7 @@ async def get_transaction_history(
     """Get transaction history for authenticated user"""
     try:
         token_service = get_token_service()
-        user_id = current_user.get('user_id') or current_user.get('email')
+        user_id = current_user.get('sub') or current_user.get('user_id') or current_user.get('email')
         
         if not user_id:
             raise HTTPException(

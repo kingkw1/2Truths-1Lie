@@ -11,7 +11,6 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { GameScreen } from '../screens/GameScreen';
 import { StoreScreen } from '../screens/StoreScreen';
 import { ChallengeCreationScreen } from '../screens/ChallengeCreationScreen';
-import { TokenTestScreen } from '../screens/TokenTestScreen';
 import { MainStackParamList } from './types';
 import { useAuth } from '../hooks/useAuth';
 import { useTokenBalance } from '../hooks/useTokenBalance';
@@ -143,17 +142,6 @@ const HomeScreen: React.FC<{ navigation: any; onLogout: () => void }> = ({ navig
               Purchase premium features
             </Text>
           </TouchableOpacity>
-
-          <TouchableOpacity
-            style={[styles.menuButton, { backgroundColor: '#FF9500' }]}
-            onPress={() => navigation.navigate('TokenTest')}
-          >
-            <Text style={styles.menuButtonIcon}>🪙</Text>
-            <Text style={styles.menuButtonText}>Token Test</Text>
-            <Text style={styles.menuButtonDescription}>
-              Test token management features
-            </Text>
-          </TouchableOpacity>
         </AuthGuard>
       </ScrollView>
     </SafeAreaView>
@@ -196,7 +184,6 @@ export const MainNavigator: React.FC<MainNavigatorProps> = ({ onLogout }) => {
         )}
       </Stack.Screen>
       <Stack.Screen name="Store" component={StoreScreen} />
-      <Stack.Screen name="TokenTest" component={TokenTestScreen} options={{ title: '🪙 Token Test' }} />
     </Stack.Navigator>
   );
 };

@@ -46,11 +46,12 @@ export const getAuthToken = async (): Promise<string | null> => {
 };
 
 /**
- * Make authenticated API request
+ * Make authenticated API request with automatic token refresh
  */
 export const makeAuthenticatedRequest = async (
   endpoint: string, 
-  options: RequestInit = {}
+  options: RequestInit = {},
+  retryCount = 0
 ): Promise<any> => {
   const baseUrl = getApiBaseUrl();
   const token = await getAuthToken();
@@ -84,8 +85,34 @@ export const makeAuthenticatedRequest = async (
     
     const errorMessage = errorData.detail || errorData.message || `HTTP ${response.status}: ${response.statusText}`;
     
+    // Handle token expiration (401 unauthorized or 500 server errors that might be token-related)
+    if ((response.status === 401 || (response.status === 500 && errorMessage.includes('Failed to retrieve token balance'))) && retryCount === 0) {
+      console.log('🔄 Token appears expired, attempting refresh...');
+      
+      try {
+        // Dynamically import authService to avoid circular dependencies
+        const { authService } = await import('./authService');
+        const newToken = await authService.refreshToken();
+        
+        console.log('✅ Token refreshed successfully, retrying request...');
+        
+        // Store the new token
+        await AsyncStorage.setItem('authToken', newToken);
+        
+        // Retry the request with the new token (only once)
+        return makeAuthenticatedRequest(endpoint, options, retryCount + 1);
+        
+      } catch (refreshError) {
+        console.error('❌ Token refresh failed:', refreshError);
+        // Clear invalid tokens
+        await AsyncStorage.removeItem('authToken');
+        await AsyncStorage.removeItem('refreshToken');
+        throw new Error('Authentication expired. Please log in again.');
+      }
+    }
+    
     if (response.status === 401) {
-      // Token expired or invalid - should trigger re-authentication
+      // Token expired or invalid and we already tried refresh
       await AsyncStorage.removeItem('authToken');
       throw new Error('Authentication expired. Please log in again.');
     }
