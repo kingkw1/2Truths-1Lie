@@ -1,5 +1,6 @@
 """
 Token Management API Endpoints
+Includes manual token addition for testing
 """
 from fastapi import APIRouter, HTTPException, Depends, status, Request, Header
 from fastapi.security import HTTPAuthorizationCredentials
