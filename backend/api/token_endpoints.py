@@ -458,7 +458,11 @@ async def revenuecat_webhook(
         
         # Add tokens to user balance
         token_service = get_token_service()
-        success = token_service.add_tokens_from_purchase(purchase_event)
+        logger.info(f"Processing webhook purchase: {tokens_to_add} tokens for user {app_user_id}, product {product_id}")
+        
+        # Use the working method instead of add_tokens_from_purchase
+        success = token_service.add_tokens_for_testing(app_user_id, tokens_to_add, f"RevenueCat purchase: {product_id}")
+        logger.info(f"Token addition result: {success}")
         
         if success:
             logger.info(f"Successfully processed token purchase: {tokens_to_add} tokens for user {app_user_id}")
