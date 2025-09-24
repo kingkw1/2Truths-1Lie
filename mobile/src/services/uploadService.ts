@@ -619,18 +619,35 @@ export class VideoUploadService {
       
       // Return success with mock merge data for now
       // In a future update, we'll call a proper server-side merge endpoint
+      
+      // Calculate actual cumulative timing based on real video durations
+      let cumulativeTime = 0;
+      const segmentMetadata = uploadedVideos.map((video, index) => {
+        const startTime = cumulativeTime;
+        const durationInSeconds = video.duration / 1000; // Convert milliseconds to seconds
+        const endTime = startTime + durationInSeconds;
+        
+        cumulativeTime = endTime; // Update for next segment
+        
+        return {
+          statementIndex: video.statementIndex,
+          startTime: startTime, // In seconds
+          endTime: endTime, // In seconds 
+          duration: durationInSeconds, // In seconds
+        };
+      });
+      
       const mockResult = {
         merge_session_id: `merge_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`,
         merged_video_url: uploadedVideos[0]?.mediaId || 'merged_placeholder',
-        segment_metadata: uploadedVideos.map((video, index) => ({
-          statementIndex: video.statementIndex,
-          startTime: index * 3, // Mock timing
-          endTime: (index + 1) * 3,
-          duration: Math.round(video.duration / 1000),
-        })),
+        segment_metadata: segmentMetadata,
       };
       
       console.log('✅ MERGE_UPLOAD: Mock merge completed:', mockResult);
+      console.log('🎬 TIMING_FIX: Segment metadata with actual durations:');
+      segmentMetadata.forEach((segment, index) => {
+        console.log(`  Segment ${index}: start=${segment.startTime}s, end=${segment.endTime}s, duration=${segment.duration}s`);
+      });
       
       // Clean up
       this.activeUploads.delete(uploadId);

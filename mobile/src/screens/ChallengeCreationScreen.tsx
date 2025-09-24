@@ -335,9 +335,9 @@ export const ChallengeCreationScreen: React.FC<ChallengeCreationScreenProps> = (
           return {
             text: statement.text || `Statement ${index + 1}`,
             media_file_id: mergeResult.mergedVideoUrl || '', // Use merged video URL as media file ID
-            segment_start_time: segmentData?.startTime ? segmentData.startTime / 1000 : undefined, // Convert to seconds
-            segment_end_time: segmentData?.endTime ? segmentData.endTime / 1000 : undefined, // Convert to seconds
-            segment_duration: segmentData ? (segmentData.endTime - segmentData.startTime) / 1000 : undefined, // Convert to seconds
+            segment_start_time: segmentData?.startTime, // Already in seconds from upload service
+            segment_end_time: segmentData?.endTime, // Already in seconds from upload service
+            segment_duration: segmentData ? (segmentData.endTime - segmentData.startTime) : undefined, // Already in seconds from upload service
           };
         }),
         lie_statement_index: lieStatementIndex,
@@ -349,17 +349,17 @@ export const ChallengeCreationScreen: React.FC<ChallengeCreationScreenProps> = (
         merge_session_id: mergeResult.mergeSessionId,
         merged_video_metadata: mergeResult.segmentMetadata ? {
           total_duration: mergeResult.segmentMetadata.reduce((total, segment) =>
-            total + (segment.endTime - segment.startTime), 0) / 1000, // Convert from milliseconds to seconds
+            total + (segment.endTime - segment.startTime), 0), // Already in seconds from upload service
           segments: mergeResult.segmentMetadata.map(segment => ({
             statement_index: segment.statementIndex,
-            start_time: segment.startTime / 1000, // Convert from milliseconds to seconds
-            end_time: segment.endTime / 1000, // Convert from milliseconds to seconds
-            duration: (segment.endTime - segment.startTime) / 1000, // Convert from milliseconds to seconds
+            start_time: segment.startTime, // Already in seconds from upload service
+            end_time: segment.endTime, // Already in seconds from upload service
+            duration: (segment.endTime - segment.startTime), // Already in seconds from upload service
           })),
           video_file_id: mergeResult.mergedVideoUrl || '',
           compression_applied: true, // Assume compression was applied during merge
           original_total_duration: mergeResult.segmentMetadata.reduce((total, segment) =>
-            total + (segment.endTime - segment.startTime), 0) / 1000, // Convert from milliseconds to seconds
+            total + (segment.endTime - segment.startTime), 0), // Already in seconds from upload service
         } : undefined,
       };
 
