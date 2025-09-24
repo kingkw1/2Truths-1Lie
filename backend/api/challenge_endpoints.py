@@ -205,7 +205,27 @@ async def get_challenge(
             )
         
         logger.debug(f"Challenge retrieved: {challenge.challenge_id}")
-        return challenge
+        
+        # Transform challenge to dictionary and enrich with creator name
+        challenge_dict = enrich_challenge_with_creator_name(challenge)
+        
+        # Generate signed URLs for statement media
+        if challenge_dict.get("statements"):
+            for statement in challenge_dict["statements"]:
+                if statement.get("streaming_url"):
+                    statement["streaming_url"] = await get_signed_url_for_video(statement["streaming_url"])
+                if statement.get("media_url"):
+                    statement["media_url"] = await get_signed_url_for_video(statement["media_url"])
+        
+        # Add merged video information if available with signed URL
+        if challenge.is_merged_video and challenge.merged_video_url:
+            # Generate signed URL for merged video
+            signed_video_url = await get_signed_url_for_video(challenge.merged_video_url)
+            # Update the merged_video_url field directly in the response
+            challenge_dict["merged_video_url"] = signed_video_url
+        
+        # Convert back to Challenge model for response
+        return Challenge(**challenge_dict)
         
     except HTTPException:
         raise
