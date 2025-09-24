@@ -240,20 +240,37 @@ class AuthService:
     def verify_signed_url(self, media_id: str, user_id: str, expires_at: str, signature: str) -> bool:
         """Verify signed URL for media access"""
         try:
+            logger.info(f"=== VERIFY_SIGNED_URL DEBUG ===")
+            logger.info(f"Media ID: {media_id}")
+            logger.info(f"User ID: {user_id}")
+            logger.info(f"Expires at: {expires_at}")
+            logger.info(f"Received signature: {signature}")
+            logger.info(f"Current time: {int(time.time())}")
+            
             # Check expiration
-            if int(expires_at) < time.time():
+            expires_timestamp = int(expires_at)
+            current_timestamp = int(time.time())
+            logger.info(f"Expiration check: {expires_timestamp} > {current_timestamp} = {expires_timestamp > current_timestamp}")
+            
+            if expires_timestamp < current_timestamp:
+                logger.error("Signed URL has expired")
                 return False
             
             # Verify signature
             message = f"{media_id}:{user_id}:{expires_at}"
+            logger.info(f"Message for signing: '{message}'")
+            
             expected_signature = hmac.new(
                 settings.SECRET_KEY.encode(),
                 message.encode(),
                 hashlib.sha256
             ).hexdigest()
+            logger.info(f"Expected signature: {expected_signature}")
+            logger.info(f"Signature match: {hmac.compare_digest(signature, expected_signature)}")
             
             return hmac.compare_digest(signature, expected_signature)
-        except (ValueError, TypeError):
+        except (ValueError, TypeError) as e:
+            logger.error(f"Error in verify_signed_url: {e}")
             return False
     
     def revoke_token(self, token: str) -> bool:

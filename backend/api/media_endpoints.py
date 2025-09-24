@@ -169,7 +169,14 @@ async def stream_video(
     try:
         # Check for signed URL access (bypasses normal auth for direct links)
         if user and expires and signature:
+            logger.info(f"=== SIGNED URL VERIFICATION ===")
+            logger.info(f"Media ID: {media_id}")
+            logger.info(f"User: {user}")
+            logger.info(f"Expires: {expires}")
+            logger.info(f"Signature: {signature}")
+            
             if not auth_service.verify_signed_url(media_id, user, expires, signature):
+                logger.error(f"Signed URL verification failed for media {media_id}, user {user}")
                 raise HTTPException(
                     status_code=status.HTTP_403_FORBIDDEN,
                     detail="Invalid or expired signed URL"
