@@ -198,6 +198,17 @@ class ManualTokenAddRequest(BaseModel):
     """Request to manually add tokens (testing only)"""
     amount: int
     description: str = "Manual token addition for testing"
+
+@router.get("/test-db")
+async def test_db_connection():
+    """Test database connection for token service"""
+    try:
+        token_service = get_token_service()
+        # Try to get balance for user 10
+        balance_response = token_service.get_user_balance("10")
+        return {"success": True, "balance": balance_response.balance, "user_id": "10"}
+    except Exception as e:
+        return {"success": False, "error": str(e)}
     
 @router.post("/add-manual", response_model=TokenBalanceResponse)
 async def add_tokens_manually(
