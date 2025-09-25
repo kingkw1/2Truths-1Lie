@@ -1393,23 +1393,35 @@ async def merge_videos_from_media_ids(
                 # This assumes the media is stored in S3 with a predictable path
                 video_path = temp_dir / f"video_{i}.mp4"
                 
-                # Download from S3 or local storage
-                # TODO: Implement proper media download based on your storage system
-                # For now, we'll use a placeholder that reads from upload directory
-                from config import settings
+                # Download from S3 using the S3 media service
+                from services.s3_media_service import get_s3_media_service
+                s3_service = get_s3_media_service()
                 
-                # Try to find the file in uploads directory (for testing)
-                upload_files = list(settings.UPLOAD_DIR.glob(f"*{media_id}*"))
-                if upload_files:
-                    source_path = upload_files[0]
-                    shutil.copy2(source_path, video_path)
-                    logger.info(f"Copied video {i} from uploads: {source_path} -> {video_path}")
-                else:
-                    # If not in uploads, try to download from S3
-                    logger.warning(f"Video {i} not found in uploads, would need S3 download: {media_id}")
-                    # For now, create a mock file to avoid breaking the merge
-                    video_path.touch()
-                    logger.warning(f"Created empty placeholder for video {i}: {video_path}")
+                try:
+                    # First, get the S3 key for this media ID
+                    s3_key = s3_service.get_s3_key_from_media_id(media_id)
+                    if not s3_key:
+                        logger.error(f"S3 key not found for media_id: {media_id}")
+                        raise HTTPException(
+                            status_code=status.HTTP_404_NOT_FOUND,
+                            detail=f"Video not found for media_id: {media_id}"
+                        )
+                    
+                    # Download the file from S3
+                    logger.info(f"Downloading video {i} from S3: {s3_key}")
+                    s3_service.s3_client.download_file(
+                        s3_service.bucket_name,
+                        s3_key,
+                        str(video_path)
+                    )
+                    logger.info(f"Successfully downloaded video {i}: {s3_key} -> {video_path}")
+                    
+                except Exception as download_error:
+                    logger.error(f"Failed to download video {i} from S3: {download_error}")
+                    raise HTTPException(
+                        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                        detail=f"Failed to download video {i}: {str(download_error)}"
+                    )
                 
                 if not video_path.exists():
                     logger.error(f"Video {i} file was not downloaded successfully")
