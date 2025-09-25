@@ -1717,28 +1717,31 @@ class VideoMergeService:
                     video_content = f.read()
                 
                 # Upload merged video to S3
-                s3_result = await self.cloud_storage.upload_file(
+                s3_url = await self.cloud_storage.upload_file(
                     file_data=video_content,
                     key=output_filename,
                     content_type="video/mp4",
                     metadata={
                         "merge_session_id": merge_session_id,
-                        "video_count": len(video_files),
+                        "video_count": str(len(video_files)),
                         "quality_preset": quality_preset,
-                        "file_size": file_size,
-                        "user_id": user_id,
+                        "file_size": str(file_size),
+                        "user_id": str(user_id),
                         "created_at": datetime.utcnow().isoformat()
                     }
                 )
+                
+                # Generate a file ID from the filename
+                file_id = output_filename.replace('.mp4', '')
                 
                 self._update_merge_progress(merge_session_id, 95.0)
                 
                 # Update merge session
                 merge_session["status"] = MergeSessionStatus.COMPLETED
-                merge_session["merged_video_path"] = s3_result["file_url"]
+                merge_session["merged_video_path"] = s3_url
                 merge_session["merged_video_metadata"] = {
-                    "file_id": s3_result["file_id"],
-                    "file_url": s3_result["file_url"],
+                    "file_id": file_id,
+                    "file_url": s3_url,
                     "file_size": file_size,
                     "video_count": len(video_files),
                     "quality_preset": quality_preset
@@ -1746,13 +1749,13 @@ class VideoMergeService:
                 
                 self._update_merge_progress(merge_session_id, 100.0)
                 
-                logger.info(f"Temp video merge completed successfully: {s3_result['file_url']}")
+                logger.info(f"Temp video merge completed successfully: {s3_url}")
                 
                 return {
                     "success": True,
                     "status": MergeSessionStatus.COMPLETED,
-                    "video_file_id": s3_result["file_id"],
-                    "final_video_url": s3_result["file_url"],
+                    "video_file_id": file_id,
+                    "final_video_url": s3_url,
                     "metadata": merge_session["merged_video_metadata"],
                     "merge_session_id": merge_session_id
                 }
