@@ -1445,10 +1445,9 @@ async def merge_videos_from_media_ids(
             
             # Process merge synchronously for direct response
             try:
-                merge_result = await merge_service._merge_videos(
+                merge_result = await merge_service._process_merge_sync(
                     merge_session_id=merge_session_id,
-                    video_files=video_files_with_sessions,
-                    original_video_files=video_files_with_sessions,  # Pass as original for session metadata
+                    video_paths=video_paths,
                     quality="medium"
                 )
                 
