@@ -64,10 +64,16 @@ const HomeScreen: React.FC<{ navigation: any; onLogout: () => void }> = ({ navig
         {/* Profile Card */}
         <Pressable
           style={styles.profileCard}
-          onPress={() => navigation.navigate('Account')}
+          onPress={() => {
+            if (isGuest || !isAuthenticated) {
+              triggerAuthFlow();
+            } else {
+              navigation.navigate('Account');
+            }
+          }}
         >
           <Text style={styles.welcomeText}>
-            Welcome, {user?.name || 'Guest'}!
+            {isGuest || !isAuthenticated ? 'Sign In to Your Account' : `Welcome, ${user?.name}!`}
           </Text>
           <Text style={styles.profileCardIcon}>〉</Text>
         </Pressable>
