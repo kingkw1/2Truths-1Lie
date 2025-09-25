@@ -24,7 +24,7 @@ class Settings(BaseSettings):
     # Security settings
     SECRET_KEY: str = "your-secret-key-change-in-production"
     ALGORITHM: str = "HS256"
-    ACCESS_TOKEN_EXPIRE_MINUTES: int = 30
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = 240  # 4 hours for video recording sessions
     
     # Token management settings
     REVENUECAT_WEBHOOK_SECRET: Optional[str] = None

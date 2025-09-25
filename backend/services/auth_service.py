@@ -107,8 +107,10 @@ class AuthService:
     
     def create_refresh_token(self, user_id: str) -> str:
         """Create refresh token for token renewal"""
+        # Determine session type based on user_id pattern
+        session_type = "guest" if user_id.startswith("guest_") else "user"
         return self.create_access_token(
-            data={"sub": user_id, "type": "refresh"},
+            data={"sub": user_id, "type": session_type, "token_type": "refresh"},
             expires_delta=timedelta(days=7)
         )
     
