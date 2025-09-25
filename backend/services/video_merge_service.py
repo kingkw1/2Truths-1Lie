@@ -1827,6 +1827,39 @@ class VideoMergeService:
             
             logger.info(f"Processed {len(video_files)} temp video files for merge")
             
+            # DIAGNOSTIC LOGGING POINT 1: Before the Merge - Get duration of each source clip
+            logger.info("🔍 DIAGNOSTIC: Analyzing source video clips before temp merge...")
+            source_durations = []
+            
+            for i, video_file in enumerate(video_files):
+                temp_file_path = video_file['file_path']
+                
+                # Use ffprobe to get accurate duration
+                try:
+                    result = await asyncio.create_subprocess_exec(
+                        'ffprobe', '-v', 'quiet', '-show_entries', 'format=duration',
+                        '-of', 'csv=p=0', str(temp_file_path),
+                        stdout=asyncio.subprocess.PIPE,
+                        stderr=asyncio.subprocess.PIPE
+                    )
+                    stdout, stderr = await result.communicate()
+                    
+                    if result.returncode == 0:
+                        duration = float(stdout.decode().strip())
+                        source_durations.append(duration)
+                        logger.info(f"🔍 DIAGNOSTIC: Source clip {i} duration: {duration:.6f} seconds")
+                    else:
+                        logger.warning(f"🔍 DIAGNOSTIC: Could not get duration for source clip {i}")
+                        source_durations.append(0.0)
+                        
+                except Exception as e:
+                    logger.warning(f"🔍 DIAGNOSTIC: Error getting duration for source clip {i}: {e}")
+                    source_durations.append(0.0)
+            
+            total_expected_duration = sum(source_durations)
+            logger.info(f"🔍 DIAGNOSTIC: Source clip durations: {source_durations}")
+            logger.info(f"🔍 DIAGNOSTIC: Total expected merged duration: {total_expected_duration:.6f} seconds")
+            
             # Create merge session
             merge_session = {
                 "merge_session_id": merge_session_id,
@@ -1882,32 +1915,35 @@ class VideoMergeService:
             # Get compression settings
             compression_settings = self._get_compression_settings(quality_preset)
             
-            # Build FFmpeg command with mobile video handling
+            # Build FFmpeg command with expo-av optimized settings for better seeking compatibility
             ffmpeg_cmd = [
                 'ffmpeg',
                 '-f', 'concat',
                 '-safe', '0',
                 '-i', str(video_list_file),
-                # Video filters for vertical mobile format - no transpose, keep original orientation
-                '-vf', 'scale=720:1280:force_original_aspect_ratio=decrease,pad=720:1280:(ow-iw)/2:(oh-ih)/2',
-                '-c:v', compression_settings['video_codec'],
-                '-preset', 'ultrafast',  # Use ultrafast preset to prevent hanging
-                '-crf', '28',  # Higher CRF for faster encoding
-                '-profile:v', 'baseline',  # Use baseline profile for compatibility
-                '-level', '4.0',  # Higher level to support larger frame sizes
-                '-pix_fmt', 'yuv420p',  # Ensure compatible pixel format
-                '-c:a', compression_settings['audio_codec'],
-                '-b:a', '96k',  # Lower audio bitrate for faster processing
+                '-c:v', 'libx264',  # Re-encode video for consistent format
+                '-preset', 'medium',  # Better quality for mobile playback
+                '-crf', '21',  # Higher quality for better seeking
+                '-g', '15',  # More frequent keyframes (every 0.5 seconds at 30fps)
+                '-keyint_min', '5',  # Minimum keyframe interval for fine seeking
+                '-force_key_frames', 'expr:gte(t,n_forced*0.5)',  # Force keyframes every 0.5 seconds
+                '-c:a', 'aac',  # Re-encode audio
+                '-b:a', '128k',  # Audio bitrate
                 '-ar', '44100',  # Standard audio sample rate
-                '-ac', '2',  # Stereo audio
-                '-movflags', '+faststart',
+                '-movflags', '+faststart',  # Optimize for streaming
+                '-pix_fmt', 'yuv420p',  # Ensure compatibility with mobile players
+                '-profile:v', 'baseline',  # H.264 baseline profile for maximum compatibility
+                '-level', '3.1',  # H.264 level for mobile compatibility
                 '-max_muxing_queue_size', '2048',  # Larger queue for async processing
                 '-threads', '4',  # Limit threads to prevent resource issues
                 '-y',  # Overwrite output file
                 str(output_path)
             ]
             
-            logger.info(f"Running FFmpeg merge: {' '.join(ffmpeg_cmd)}")
+            # DIAGNOSTIC LOGGING POINT 2: The FFmpeg Command
+            ffmpeg_command_str = ' '.join(ffmpeg_cmd)
+            logger.info(f"🔍 DIAGNOSTIC: Executing temp merge FFmpeg command: {ffmpeg_command_str}")
+            logger.info(f"Running FFmpeg merge: {ffmpeg_command_str}")
             self._update_merge_progress(merge_session_id, 30.0)
             
             # Execute FFmpeg
@@ -1937,6 +1973,38 @@ class VideoMergeService:
                 raise VideoMergeError("Merged video file is empty")
             
             logger.info(f"Merge completed, file size: {file_size} bytes")
+            
+            # DIAGNOSTIC LOGGING POINT 3: After the Merge - Check actual merged video duration
+            logger.info("🔍 DIAGNOSTIC: Analyzing merged video file after FFmpeg completion...")
+            try:
+                result = await asyncio.create_subprocess_exec(
+                    'ffprobe', '-v', 'quiet', '-show_entries', 'format=duration',
+                    '-of', 'csv=p=0', str(output_path),
+                    stdout=asyncio.subprocess.PIPE,
+                    stderr=asyncio.subprocess.PIPE
+                )
+                stdout, stderr = await result.communicate()
+                
+                if result.returncode == 0:
+                    actual_merged_duration = float(stdout.decode().strip())
+                    logger.info(f"🔍 DIAGNOSTIC: Actual merged video duration: {actual_merged_duration:.6f} seconds")
+                    
+                    # Compare with expected duration
+                    if 'total_expected_duration' in locals():
+                        duration_difference = actual_merged_duration - total_expected_duration
+                        logger.info(f"🔍 DIAGNOSTIC: Duration difference (actual vs expected): {duration_difference:.6f} seconds")
+                        
+                        if abs(duration_difference) > 0.1:  # More than 100ms difference
+                            logger.warning(f"🔍 DIAGNOSTIC: Significant duration mismatch detected!")
+                            logger.warning(f"🔍 DIAGNOSTIC: Expected: {total_expected_duration:.6f}s, Got: {actual_merged_duration:.6f}s")
+                    else:
+                        logger.warning("🔍 DIAGNOSTIC: total_expected_duration not available for comparison")
+                else:
+                    logger.warning("🔍 DIAGNOSTIC: Could not get merged video duration via ffprobe")
+                    
+            except Exception as e:
+                logger.warning(f"🔍 DIAGNOSTIC: Error analyzing merged video duration: {e}")
+            
             self._update_merge_progress(merge_session_id, 80.0)
             
             # Upload to S3
