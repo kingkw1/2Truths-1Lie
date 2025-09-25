@@ -653,8 +653,8 @@ class VideoMergeService:
                     "-c:v", "libx264",
                     "-preset", "fast",  # Changed from "medium" to "fast" for better compatibility
                     "-crf", "23",
-                    # Video filters - transpose=2 rotates 90° counterclockwise to fix mobile orientation
-                    "-vf", f"transpose=2,scale={target_width}:{target_height}:force_original_aspect_ratio=decrease",
+                    # Video filters - no transpose, keep original orientation
+                    "-vf", f"scale={target_width}:{target_height}:force_original_aspect_ratio=decrease",
                     "-r", str(target_fps),
                     "-c:a", "aac" if video_info["audio_present"] else "-an",
                     "-movflags", "+faststart",
@@ -1661,8 +1661,8 @@ class VideoMergeService:
                 '-f', 'concat',
                 '-safe', '0',
                 '-i', str(video_list_file),
-                # Video filters for vertical mobile format - transpose=2 rotates 90° counterclockwise
-                '-vf', 'transpose=2,scale=720:1280:force_original_aspect_ratio=decrease,pad=720:1280:(ow-iw)/2:(oh-ih)/2',
+                # Video filters for vertical mobile format - no transpose, keep original orientation
+                '-vf', 'scale=720:1280:force_original_aspect_ratio=decrease,pad=720:1280:(ow-iw)/2:(oh-ih)/2',
                 '-c:v', compression_settings['video_codec'],
                 '-preset', 'ultrafast',  # Use ultrafast preset to prevent hanging
                 '-crf', '28',  # Higher CRF for faster encoding
