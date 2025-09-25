@@ -192,8 +192,8 @@ class S3CloudStorageService(CloudStorageService):
                 )
             )
             
-            # Return public URL
-            url = f"https://{self.bucket_name}.s3.{self.region_name}.amazonaws.com/{key}"
+            # Return presigned URL for secure access (expires in 24 hours)
+            url = self.generate_presigned_url(key, expiration=86400)
             logger.info(f"Uploaded file to S3: {key}")
             return url
             
@@ -236,7 +236,8 @@ class S3CloudStorageService(CloudStorageService):
                     )
                 )
             
-            url = f"https://{self.bucket_name}.s3.{self.region_name}.amazonaws.com/{key}"
+            # Return presigned URL for secure access (expires in 24 hours)
+            url = self.generate_presigned_url(key, expiration=86400)
             logger.info(f"Uploaded file stream to S3: {key}")
             return url
             
@@ -426,6 +427,20 @@ class S3CloudStorageService(CloudStorageService):
         except ClientError as e:
             logger.error(f"Error listing S3 files with prefix '{prefix}': {e}")
             raise CloudStorageError(f"Failed to list files: {e}")
+    
+    def generate_presigned_url(self, key: str, expiration: int = 3600) -> str:
+        """Generate a presigned URL for S3 object access"""
+        try:
+            url = self.s3_client.generate_presigned_url(
+                'get_object',
+                Params={'Bucket': self.bucket_name, 'Key': key},
+                ExpiresIn=expiration
+            )
+            logger.info(f"Generated presigned URL for {key} (expires in {expiration}s)")
+            return url
+        except ClientError as e:
+            logger.error(f"Error generating presigned URL for {key}: {e}")
+            raise CloudStorageError(f"Failed to generate presigned URL: {e}")
 
 # Factory function to create cloud storage service
 def create_cloud_storage_service(
