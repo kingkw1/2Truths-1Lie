@@ -36,6 +36,7 @@ export type MainStackParamList = {
     returnTo?: keyof MainStackParamList;
   } | undefined;
   Store: undefined;
+  Account: undefined;
 };
 
 // Enhanced navigation state types for better type safety
