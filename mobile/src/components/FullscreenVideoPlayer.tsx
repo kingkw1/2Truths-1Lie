@@ -30,7 +30,6 @@ export const FullscreenVideoPlayer: React.FC<FullscreenVideoPlayerProps> = ({
 }) => {
   const videoRef = useRef<Video>(null);
   const timeoutIdRef = useRef<NodeJS.Timeout | null>(null);
-  const pendingSegmentRef = useRef<VideoSegment | null>(null);
   const fadeAnim = useRef(new Animated.Value(1)).current;
 
   const [isPlaying, setIsPlaying] = useState(autoPlay);
@@ -74,52 +73,130 @@ export const FullscreenVideoPlayer: React.FC<FullscreenVideoPlayerProps> = ({
     setCurrentPosition(status.positionMillis);
     setVideoDuration(status.durationMillis || 0);
 
-    const segmentToPlay = pendingSegmentRef.current;
-
-    // A segment is pending and the video has just started playing.
-    if (segmentToPlay && status.isPlaying && !status.isBuffering) {
-      const remainingDuration = segmentToPlay.endTime - status.positionMillis;
-
-      // Clear any existing timer, just in case.
-      if (timeoutIdRef.current) {
-        clearTimeout(timeoutIdRef.current);
-      }
-
-      // PHASE 2: Simple timeout-based timing - trust the accurate backend segment metadata
-      console.log(`🎯 SIMPLE_TIMING: Segment (${segmentToPlay.startTime}-${segmentToPlay.endTime}ms) - scheduling pause in ${remainingDuration}ms`);
-      console.log(`🎯 SIMPLE_TIMING: Current position: ${status.positionMillis}ms, Segment end: ${segmentToPlay.endTime}ms`);
-      
-      timeoutIdRef.current = setTimeout(() => {
-        console.log(`🎯 SIMPLE_TIMING: Pausing at segment boundary`);
-        videoRef.current?.pauseAsync();
-      }, remainingDuration > 0 ? remainingDuration : 0);
-
-      // IMPORTANT: Clear the intent so this only runs once per playback.
-      pendingSegmentRef.current = null;
-    }
+    // Simplified status update - timing is now handled directly in playSegment
   }, []);
 
   const playSegment = useCallback(async (segment: VideoSegment) => {
-    if (!videoRef.current || !mergedVideo?.streamingUrl) return;
+    const callId = Math.random().toString(36).substr(2, 9);
+    console.log(`🎯 CALL_DEBUG [${callId}]: playSegment called for segment ${segment.statementIndex}`);
+    
+    if (!videoRef.current || !mergedVideo?.streamingUrl) {
+      console.log(`🎯 CALL_DEBUG [${callId}]: Cannot play segment - videoRef: ${!!videoRef.current}, mergedVideo: ${!!mergedVideo?.streamingUrl}`);
+      return;
+    }
 
-    if (timeoutIdRef.current) clearTimeout(timeoutIdRef.current);
-
-    pendingSegmentRef.current = segment;
+    // Clear any existing timeout first
+    if (timeoutIdRef.current) {
+      console.log(`🎯 CALL_DEBUG [${callId}]: Clearing existing timeout`);
+      clearTimeout(timeoutIdRef.current);
+      timeoutIdRef.current = null;
+    }
 
     try {
       setIsLoading(true);
+      
+      // Ensure video is loaded
       if (currentVideoUrl !== mergedVideo.streamingUrl) {
+        console.log(`🎯 CALL_DEBUG [${callId}]: Loading video URL: ${mergedVideo.streamingUrl}`);
         await videoRef.current.loadAsync({ uri: mergedVideo.streamingUrl }, { shouldPlay: false });
         setCurrentVideoUrl(mergedVideo.streamingUrl);
+        // Wait for video to be fully loaded
+        await new Promise(resolve => setTimeout(resolve, 500));
       }
       
-      await videoRef.current.setPositionAsync(segment.startTime);
+      // Get initial status
+      const initialStatus = await videoRef.current.getStatusAsync();
+      console.log(`🎯 CALL_DEBUG [${callId}]: Initial status - isLoaded: ${initialStatus.isLoaded}, position: ${initialStatus.isLoaded ? initialStatus.positionMillis : 'unknown'}ms`);
+      
+      if (!initialStatus.isLoaded) {
+        console.error(`🎯 CALL_DEBUG [${callId}]: Video not loaded, cannot seek`);
+        setIsLoading(false);
+        return;
+      }
+      
+      // Convert startTime from milliseconds to seconds for setPositionAsync
+      const startTimeSeconds = segment.startTime / 1000;
+      console.log(`🎯 CALL_DEBUG [${callId}]: Seeking to ${startTimeSeconds}s (${segment.startTime}ms)`);
+      
+      // Try different approach: pause first, then seek
+      await videoRef.current.pauseAsync();
+      console.log(`🎯 CALL_DEBUG [${callId}]: Video paused`);
+      
+      // Try seeking multiple times with different approaches
+      let seekAttempts = 0;
+      let seekSuccessful = false;
+      
+      while (seekAttempts < 3 && !seekSuccessful) {
+        seekAttempts++;
+        console.log(`🎯 CALL_DEBUG [${callId}]: Seek attempt ${seekAttempts}`);
+        
+        try {
+          if (seekAttempts === 1) {
+            // First attempt: basic seek
+            await videoRef.current.setPositionAsync(startTimeSeconds);
+          } else if (seekAttempts === 2) {
+            // Second attempt: with tolerance
+            await videoRef.current.setPositionAsync(startTimeSeconds, { toleranceMillisBefore: 0, toleranceMillisAfter: 0 });
+          } else {
+            // Third attempt: unload and reload, then seek
+            await videoRef.current.unloadAsync();
+            await new Promise(resolve => setTimeout(resolve, 100));
+            await videoRef.current.loadAsync({ uri: mergedVideo.streamingUrl }, { shouldPlay: false });
+            await new Promise(resolve => setTimeout(resolve, 200));
+            await videoRef.current.setPositionAsync(startTimeSeconds);
+          }
+          
+          // Wait for seek to complete
+          await new Promise(resolve => setTimeout(resolve, 300));
+          
+          // Verify position
+          const status = await videoRef.current.getStatusAsync();
+          if (status.isLoaded) {
+            const actualPositionMs = status.positionMillis || 0;
+            const expectedPositionMs = segment.startTime;
+            const positionDiff = Math.abs(actualPositionMs - expectedPositionMs);
+            
+            console.log(`🎯 CALL_DEBUG [${callId}]: Attempt ${seekAttempts} - Expected ${expectedPositionMs}ms, got ${actualPositionMs}ms, diff: ${positionDiff}ms`);
+            
+            if (positionDiff <= 100) {
+              seekSuccessful = true;
+              break;
+            }
+          }
+        } catch (seekError) {
+          console.error(`🎯 CALL_DEBUG [${callId}]: Seek attempt ${seekAttempts} failed:`, seekError);
+        }
+      }
+      
+      if (!seekSuccessful) {
+        console.error(`🎯 CALL_DEBUG [${callId}]: All seek attempts failed! This indicates the merged video lacks proper keyframes for seeking.`);
+        console.error(`🎯 BACKEND_ISSUE [${callId}]: The merged video was likely created with 'ffmpeg -c copy' which doesn't ensure seekable keyframes.`);
+        // Continue with playback - the backend FFmpeg fix should resolve this for new videos
+      }
+      
+      // Set up the timeout for the exact segment duration
+      const segmentDurationMs = segment.endTime - segment.startTime;
+      console.log(`🎯 CALL_DEBUG [${callId}]: Setting timeout for ${segmentDurationMs}ms`);
+      
+      timeoutIdRef.current = setTimeout(() => {
+        console.log(`🎯 CALL_DEBUG [${callId}]: Timeout fired - pausing video`);
+        videoRef.current?.pauseAsync();
+      }, segmentDurationMs);
+      
+      // Start playback
       if (autoPlay) {
+        console.log(`🎯 CALL_DEBUG [${callId}]: Starting playback`);
         await videoRef.current.playAsync();
       }
+      
+      setIsLoading(false);
+      console.log(`🎯 CALL_DEBUG [${callId}]: playSegment completed successfully`);
     } catch (error) {
-      console.error('[ERROR] Error during segment playback initiation:', error);
-      pendingSegmentRef.current = null;
+      console.error(`🎯 CALL_DEBUG [${callId}]: Error during segment playback:`, error);
+      if (timeoutIdRef.current) {
+        clearTimeout(timeoutIdRef.current);
+        timeoutIdRef.current = null;
+      }
       setIsLoading(false);
     }
   }, [mergedVideo, currentVideoUrl, autoPlay]);

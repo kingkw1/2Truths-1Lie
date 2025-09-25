@@ -774,13 +774,19 @@ class VideoMergeService:
             for video_path in prepared_videos:
                 f.write(f"file '{video_path.absolute()}'\n")
         
-        # Merge videos using concat demuxer (fastest method for same format)
+        # Merge videos with re-encoding to ensure seekable keyframes at segment boundaries
         cmd = [
             "ffmpeg",
             "-f", "concat",
             "-safe", "0",
             "-i", str(concat_file),
-            "-c", "copy",  # Copy streams without re-encoding
+            "-c:v", "libx264",  # Re-encode video to ensure consistent keyframe placement
+            "-preset", "fast",  # Balance speed vs quality
+            "-crf", "23",       # Good quality
+            "-g", "30",         # Keyframe every 30 frames (~1 second at 30fps)
+            "-keyint_min", "15", # Minimum keyframe interval
+            "-c:a", "aac",      # Re-encode audio for consistency
+            "-b:a", "128k",     # Audio bitrate
             "-movflags", "+faststart",
             "-y",
             str(output_path)
