@@ -19,6 +19,13 @@ import { AuthGuard } from '../components/AuthGuard';
 
 const Stack = createNativeStackNavigator<MainStackParamList>();
 
+// Placeholder for ChangePasswordScreen
+const ChangePasswordScreen: React.FC = () => (
+  <SafeAreaView style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+    <Text>Change Password Screen</Text>
+  </SafeAreaView>
+);
+
 interface MainNavigatorProps {
   onLogout: () => void;
 }
@@ -159,6 +166,7 @@ export const MainNavigator: React.FC<MainNavigatorProps> = ({ onLogout }) => {
       </Stack.Screen>
       <Stack.Screen name="Store" component={StoreScreen} />
       <Stack.Screen name="Account" component={AccountScreen} />
+      <Stack.Screen name="ChangePassword" component={ChangePasswordScreen} />
     </Stack.Navigator>
   );
 };
