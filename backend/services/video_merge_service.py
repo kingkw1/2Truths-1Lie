@@ -1634,12 +1634,15 @@ class VideoMergeService:
                         # For direct string paths from temp storage
                         file_path = str(video_file)
                     
-                    logger.debug(f"Adding to video list: {file_path}")
+                    # Convert to absolute path to avoid FFmpeg working directory issues
+                    abs_path = Path(file_path).resolve()
+                    
+                    logger.debug(f"Adding to video list: {abs_path}")
                     # Ensure path exists
-                    if not Path(file_path).exists():
-                        logger.error(f"Video file does not exist: {file_path}")
-                        raise VideoMergeError(f"Video file not found: {file_path}")
-                    f.write(f"file '{file_path}'\n")
+                    if not abs_path.exists():
+                        logger.error(f"Video file does not exist: {abs_path}")
+                        raise VideoMergeError(f"Video file not found: {abs_path}")
+                    f.write(f"file '{abs_path}'\n")
             
             # Log the video list contents for debugging
             with open(video_list_file, 'r') as f:

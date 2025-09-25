@@ -15,7 +15,7 @@ class Settings(BaseSettings):
     
     # Upload settings
     UPLOAD_DIR: Path = Path("uploads")
-    TEMP_DIR: Path = Path("temp")
+    TEMP_DIR: Path = Path("temp").resolve()  # Ensure absolute path
     MAX_FILE_SIZE: int = 100_000_000  # 100MB
     MAX_CHUNK_SIZE: int = 10_485_760  # 10MB
     DEFAULT_CHUNK_SIZE: int = 1_048_576  # 1MB
