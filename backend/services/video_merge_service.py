@@ -2005,6 +2005,39 @@ class VideoMergeService:
             except Exception as e:
                 logger.warning(f"🔍 DIAGNOSTIC: Error analyzing merged video duration: {e}")
             
+            # CRITICAL FIX: Calculate segment metadata based on actual video durations
+            logger.info("🔍 DIAGNOSTIC: Calculating segment metadata from actual video durations...")
+            
+            # Create segment metadata using the actual source durations
+            segment_metadata = []
+            current_start_time = 0.0
+            
+            for i, actual_duration in enumerate(source_durations):
+                if actual_duration > 0:
+                    # Create internal VideoSegmentMetadata object for validation
+                    segment = VideoSegmentMetadata(
+                        statement_index=i,
+                        start_time=current_start_time,
+                        end_time=current_start_time + actual_duration,
+                        duration=actual_duration
+                    )
+                    
+                    # Convert to mobile-friendly format (camelCase)
+                    segment_dict = {
+                        "statementIndex": i,
+                        "startTime": current_start_time,
+                        "endTime": current_start_time + actual_duration,
+                        "duration": actual_duration
+                    }
+                    segment_metadata.append(segment_dict)
+                    
+                    logger.info(f"🔍 DIAGNOSTIC: Segment {i}: {current_start_time:.3f}s - {current_start_time + actual_duration:.3f}s ({actual_duration:.3f}s)")
+                    current_start_time += actual_duration
+                else:
+                    logger.warning(f"🔍 DIAGNOSTIC: Skipping segment {i} - invalid duration: {actual_duration}")
+            
+            logger.info(f"🔍 DIAGNOSTIC: Created {len(segment_metadata)} segment metadata entries with mobile-compatible format")
+            
             self._update_merge_progress(merge_session_id, 80.0)
             
             # Upload to S3
@@ -2053,7 +2086,8 @@ class VideoMergeService:
                     "video_file_id": file_id,
                     "final_video_url": s3_url,
                     "metadata": merge_session["merged_video_metadata"],
-                    "merge_session_id": merge_session_id
+                    "merge_session_id": merge_session_id,
+                    "segment_metadata": segment_metadata  # CRITICAL FIX: Include actual segment metadata
                 }
                 
             except Exception as e:

@@ -1677,7 +1677,8 @@ async def merge_from_temp_ids(
             "merged_video_url": result["final_video_url"],
             "merge_metadata": result["metadata"],
             "merge_session_id": result["merge_session_id"],
-            "temp_files_cleaned": len(video_files)
+            "temp_files_cleaned": len(video_files),
+            "segment_metadata": result.get("segment_metadata", [])  # CRITICAL FIX: Include segment metadata
         }
         
     except HTTPException:
