@@ -1649,28 +1649,17 @@ async def merge_from_temp_ids(
         
         logger.info(f"Found {len(video_files)} temporary video files to merge")
         
-        # Use video merge service to merge and upload to S3
-        session_id = merge_service.create_merge_session(current_user)
+        # Use video merge service to merge temp files directly
+        result = await merge_service.merge_temp_videos(
+            temp_video_files=video_files,
+            user_id=current_user["user_id"],
+            quality_preset="medium"
+        )
         
-        # Add video files to the merge session
-        for i, video_file in enumerate(video_files):
-            with open(video_file, 'rb') as f:
-                video_data = f.read()
-            
-            merge_service.add_video_to_session(
-                session_id=session_id,
-                video_data=video_data,
-                filename=f"statement_{i}.mp4",
-                metadata={"statement_index": i}
-            )
-        
-        # Execute the merge
-        result = merge_service.execute_merge(session_id)
-        
-        if result.status != MergeSessionStatus.COMPLETED:
+        if not result["success"]:
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail=f"Video merge failed: {result.error_message}"
+                detail=f"Video merge failed: {result.get('error', 'Unknown error')}"
             )
         
         # Clean up temporary files
@@ -1683,9 +1672,10 @@ async def merge_from_temp_ids(
         
         return {
             "success": True,
-            "merged_video_id": result.video_file_id,
-            "merged_video_url": result.final_video_url,
-            "merge_metadata": result.metadata,
+            "merged_video_id": result["video_file_id"],
+            "merged_video_url": result["final_video_url"],
+            "merge_metadata": result["metadata"],
+            "merge_session_id": result["merge_session_id"],
             "temp_files_cleaned": len(video_files)
         }
         

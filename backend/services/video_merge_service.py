@@ -7,6 +7,7 @@ import subprocess
 import json
 import uuid
 import logging
+import time
 from pathlib import Path
 from typing import List, Dict, Any, Optional, Tuple
 from datetime import datetime, timedelta
@@ -1533,3 +1534,218 @@ class VideoMergeService:
                 "success": False,
                 "error": str(e)
             }
+
+    async def merge_temp_videos(
+        self, 
+        temp_video_files: List[str], 
+        user_id: str, 
+        quality_preset: str = "medium"
+    ) -> Dict[str, Any]:
+        """
+        Merge videos from temporary files directly without using upload sessions.
+        
+        Args:
+            temp_video_files: List of temporary video file paths
+            user_id: User ID for the merge
+            quality_preset: Quality preset for the merge
+            
+        Returns:
+            Dict with merge results including final video URL
+        """
+        merge_session_id = f"temp_merge_{user_id}_{int(time.time())}"
+        
+        logger.info(f"Starting temp video merge {merge_session_id} for {len(temp_video_files)} files")
+        
+        try:
+            # Create work directory
+            work_dir = self.temp_dir / f"merge_{merge_session_id}"
+            work_dir.mkdir(parents=True, exist_ok=True)
+            
+            # Validate and process temp video files
+            video_files = []
+            for i, temp_file_path in enumerate(temp_video_files):
+                temp_file = Path(temp_file_path)
+                if not temp_file.exists():
+                    raise VideoMergeError(f"Temporary video file not found: {temp_file_path}")
+                
+                # Create video file info similar to what we expect from upload sessions
+                video_info = {
+                    "file_id": f"temp_{i}",
+                    "user_id": user_id,
+                    "filename": f"statement_{i}.mp4",
+                    "file_path": str(temp_file),
+                    "metadata": {
+                        "statement_index": i,
+                        "temp_file": True
+                    }
+                }
+                
+                # Get video data using FFprobe
+                try:
+                    video_data = self._get_default_video_data(video_info, temp_file)
+                    video_info.update(video_data)
+                except Exception as e:
+                    logger.warning(f"Could not get video data for {temp_file}: {e}")
+                    # Use defaults
+                    video_info.update({
+                        "duration": 10.0,
+                        "width": 1080,
+                        "height": 1920,
+                        "fps": 30.0,
+                        "format": "mp4"
+                    })
+                
+                video_files.append(video_info)
+            
+            logger.info(f"Processed {len(video_files)} temp video files for merge")
+            
+            # Create merge session
+            merge_session = {
+                "merge_session_id": merge_session_id,
+                "user_id": user_id,
+                "status": MergeSessionStatus.PROCESSING,
+                "video_files": video_files,
+                "quality_preset": quality_preset,
+                "created_at": datetime.utcnow(),
+                "updated_at": datetime.utcnow(),
+                "progress": 0.0,
+                "error_message": None,
+                "merged_video_path": None,
+                "merged_video_metadata": None
+            }
+            
+            self.merge_sessions[merge_session_id] = merge_session
+            
+            # Process merge synchronously since we're in temp mode
+            self._update_merge_progress(merge_session_id, 10.0)
+            
+            # Generate output filename
+            output_filename = f"merged_video_{user_id}_{int(time.time())}.mp4"
+            output_path = work_dir / output_filename
+            
+            # Prepare video list for FFmpeg
+            video_list_file = work_dir / "video_list.txt"
+            with open(video_list_file, 'w') as f:
+                for video_file in video_files:
+                    f.write(f"file '{video_file['file_path']}'\n")
+            
+            self._update_merge_progress(merge_session_id, 20.0)
+            
+            # Get compression settings
+            compression_settings = self._get_compression_settings(quality_preset)
+            
+            # Build FFmpeg command
+            ffmpeg_cmd = [
+                'ffmpeg',
+                '-f', 'concat',
+                '-safe', '0',
+                '-i', str(video_list_file),
+                '-c:v', compression_settings['video_codec'],
+                '-preset', compression_settings['preset'],
+                '-crf', str(compression_settings['crf']),
+                '-c:a', compression_settings['audio_codec'],
+                '-b:a', compression_settings['audio_bitrate'],
+                '-movflags', '+faststart',
+                '-y',  # Overwrite output file
+                str(output_path)
+            ]
+            
+            logger.info(f"Running FFmpeg merge: {' '.join(ffmpeg_cmd)}")
+            self._update_merge_progress(merge_session_id, 30.0)
+            
+            # Execute FFmpeg
+            process = await asyncio.create_subprocess_exec(
+                *ffmpeg_cmd,
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE
+            )
+            
+            stdout, stderr = await process.communicate()
+            
+            if process.returncode != 0:
+                error_msg = stderr.decode() if stderr else "Unknown FFmpeg error"
+                logger.error(f"FFmpeg merge failed: {error_msg}")
+                merge_session["status"] = MergeSessionStatus.FAILED
+                merge_session["error_message"] = error_msg
+                raise VideoMergeError(f"Video merge failed: {error_msg}")
+            
+            self._update_merge_progress(merge_session_id, 70.0)
+            
+            # Verify output file
+            if not output_path.exists():
+                raise VideoMergeError("Merged video file was not created")
+            
+            file_size = output_path.stat().st_size
+            if file_size == 0:
+                raise VideoMergeError("Merged video file is empty")
+            
+            logger.info(f"Merge completed, file size: {file_size} bytes")
+            self._update_merge_progress(merge_session_id, 80.0)
+            
+            # Upload to S3
+            try:
+                with open(output_path, 'rb') as f:
+                    video_content = f.read()
+                
+                # Upload merged video to S3
+                s3_result = await self.cloud_storage.upload_file(
+                    file_content=video_content,
+                    filename=output_filename,
+                    content_type="video/mp4",
+                    user_id=user_id,
+                    metadata={
+                        "merge_session_id": merge_session_id,
+                        "video_count": len(video_files),
+                        "quality_preset": quality_preset,
+                        "file_size": file_size,
+                        "created_at": datetime.utcnow().isoformat()
+                    }
+                )
+                
+                self._update_merge_progress(merge_session_id, 95.0)
+                
+                # Update merge session
+                merge_session["status"] = MergeSessionStatus.COMPLETED
+                merge_session["merged_video_path"] = s3_result["file_url"]
+                merge_session["merged_video_metadata"] = {
+                    "file_id": s3_result["file_id"],
+                    "file_url": s3_result["file_url"],
+                    "file_size": file_size,
+                    "video_count": len(video_files),
+                    "quality_preset": quality_preset
+                }
+                
+                self._update_merge_progress(merge_session_id, 100.0)
+                
+                logger.info(f"Temp video merge completed successfully: {s3_result['file_url']}")
+                
+                return {
+                    "success": True,
+                    "status": MergeSessionStatus.COMPLETED,
+                    "video_file_id": s3_result["file_id"],
+                    "final_video_url": s3_result["file_url"],
+                    "metadata": merge_session["merged_video_metadata"],
+                    "merge_session_id": merge_session_id
+                }
+                
+            except Exception as e:
+                logger.error(f"S3 upload failed for temp merge {merge_session_id}: {str(e)}")
+                merge_session["status"] = MergeSessionStatus.FAILED
+                merge_session["error_message"] = f"Upload failed: {str(e)}"
+                raise VideoMergeError(f"Failed to upload merged video: {str(e)}")
+                
+        except VideoMergeError:
+            raise
+        except Exception as e:
+            logger.error(f"Temp video merge failed for session {merge_session_id}: {str(e)}")
+            if merge_session_id in self.merge_sessions:
+                self.merge_sessions[merge_session_id]["status"] = MergeSessionStatus.FAILED
+                self.merge_sessions[merge_session_id]["error_message"] = str(e)
+            raise VideoMergeError(f"Merge processing failed: {str(e)}")
+            
+        finally:
+            # Clean up work directory
+            try:
+                await self._cleanup_temp_files(work_dir)
+            except Exception as e:
+                logger.warning(f"Cleanup failed for temp merge {merge_session_id}: {e}")
