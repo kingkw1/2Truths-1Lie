@@ -1650,6 +1650,7 @@ async def merge_from_temp_ids(
         logger.info(f"Found {len(video_files)} temporary video files to merge")
         
         # Use video merge service to merge temp files directly
+        # video_files contains string paths, which is what merge_temp_videos expects
         result = await merge_service.merge_temp_videos(
             temp_video_files=video_files,
             user_id=current_user,

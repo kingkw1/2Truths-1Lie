@@ -1627,7 +1627,13 @@ class VideoMergeService:
             video_list_file = work_dir / "video_list.txt"
             with open(video_list_file, 'w') as f:
                 for video_file in video_files:
-                    file_path = video_file['file_path']
+                    # video_file is a dict with file_path, extract the actual path
+                    if isinstance(video_file, dict):
+                        file_path = video_file['file_path']
+                    else:
+                        # For direct string paths from temp storage
+                        file_path = str(video_file)
+                    
                     logger.debug(f"Adding to video list: {file_path}")
                     # Ensure path exists
                     if not Path(file_path).exists():
