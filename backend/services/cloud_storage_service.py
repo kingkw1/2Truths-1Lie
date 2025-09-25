@@ -175,6 +175,7 @@ class S3CloudStorageService(CloudStorageService):
             extra_args = {
                 'ContentType': content_type,
                 'CacheControl': 'public, max-age=31536000',  # 1 year cache
+                'ACL': 'public-read'  # Make files publicly accessible
             }
             
             if metadata:
@@ -213,6 +214,7 @@ class S3CloudStorageService(CloudStorageService):
             extra_args = {
                 'ContentType': content_type,
                 'CacheControl': 'public, max-age=31536000',
+                'ACL': 'public-read'  # Make files publicly accessible
             }
             
             if metadata:
