@@ -1627,7 +1627,18 @@ class VideoMergeService:
             video_list_file = work_dir / "video_list.txt"
             with open(video_list_file, 'w') as f:
                 for video_file in video_files:
-                    f.write(f"file '{video_file['file_path']}'\n")
+                    file_path = video_file['file_path']
+                    logger.debug(f"Adding to video list: {file_path}")
+                    # Ensure path exists
+                    if not Path(file_path).exists():
+                        logger.error(f"Video file does not exist: {file_path}")
+                        raise VideoMergeError(f"Video file not found: {file_path}")
+                    f.write(f"file '{file_path}'\n")
+            
+            # Log the video list contents for debugging
+            with open(video_list_file, 'r') as f:
+                video_list_contents = f.read()
+                logger.info(f"Video list file contents:\n{video_list_contents}")
             
             self._update_merge_progress(merge_session_id, 20.0)
             
