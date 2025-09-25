@@ -1652,7 +1652,7 @@ async def merge_from_temp_ids(
         # Use video merge service to merge temp files directly
         result = await merge_service.merge_temp_videos(
             temp_video_files=video_files,
-            user_id=current_user["user_id"],
+            user_id=current_user,
             quality_preset="medium"
         )
         
