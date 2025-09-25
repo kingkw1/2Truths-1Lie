@@ -650,6 +650,7 @@ class VideoMergeService:
                 cmd = [
                     "ffmpeg",
                     "-i", str(input_path),
+                    "-autorotate",  # Auto-rotate based on metadata for correct orientation
                     "-c:v", "libx264",
                     "-preset", "fast",  # Changed from "medium" to "fast" for better compatibility
                     "-crf", "23",
@@ -1660,8 +1661,9 @@ class VideoMergeService:
                 '-f', 'concat',
                 '-safe', '0',
                 '-i', str(video_list_file),
-                # Simplified video filters - auto-rotate and scale down for compatibility
-                '-vf', 'transpose=1,scale=720:1280:force_original_aspect_ratio=decrease,pad=720:1280:(ow-iw)/2:(oh-ih)/2',
+                '-autorotate',  # Auto-rotate based on metadata
+                # Video filters for vertical mobile format
+                '-vf', 'scale=720:1280:force_original_aspect_ratio=decrease,pad=720:1280:(ow-iw)/2:(oh-ih)/2',
                 '-c:v', compression_settings['video_codec'],
                 '-preset', 'ultrafast',  # Use ultrafast preset to prevent hanging
                 '-crf', '28',  # Higher CRF for faster encoding
