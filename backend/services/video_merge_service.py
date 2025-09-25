@@ -1660,20 +1660,21 @@ class VideoMergeService:
                 '-f', 'concat',
                 '-safe', '0',
                 '-i', str(video_list_file),
-                # Video filters to handle rotation and normalize format
-                '-vf', 'transpose=1,scale=1080:1920:force_original_aspect_ratio=decrease,pad=1080:1920:(ow-iw)/2:(oh-ih)/2',
+                # Simplified video filters - auto-rotate and scale down for compatibility
+                '-vf', 'transpose=1,scale=720:1280:force_original_aspect_ratio=decrease,pad=720:1280:(ow-iw)/2:(oh-ih)/2',
                 '-c:v', compression_settings['video_codec'],
-                '-preset', 'faster',  # Use faster preset to avoid hanging
-                '-crf', str(compression_settings['crf']),
+                '-preset', 'ultrafast',  # Use ultrafast preset to prevent hanging
+                '-crf', '28',  # Higher CRF for faster encoding
                 '-profile:v', 'baseline',  # Use baseline profile for compatibility
-                '-level', '3.1',  # Ensure compatibility
+                '-level', '4.0',  # Higher level to support larger frame sizes
                 '-pix_fmt', 'yuv420p',  # Ensure compatible pixel format
                 '-c:a', compression_settings['audio_codec'],
-                '-b:a', compression_settings['audio_bitrate'],
+                '-b:a', '96k',  # Lower audio bitrate for faster processing
                 '-ar', '44100',  # Standard audio sample rate
                 '-ac', '2',  # Stereo audio
                 '-movflags', '+faststart',
-                '-max_muxing_queue_size', '1024',  # Handle async encoding
+                '-max_muxing_queue_size', '2048',  # Larger queue for async processing
+                '-threads', '4',  # Limit threads to prevent resource issues
                 '-y',  # Overwrite output file
                 str(output_path)
             ]
