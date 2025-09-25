@@ -774,20 +774,25 @@ class VideoMergeService:
             for video_path in prepared_videos:
                 f.write(f"file '{video_path.absolute()}'\n")
         
-        # Merge videos with re-encoding to ensure seekable keyframes at segment boundaries
+        # Merge videos with expo-av optimized settings for better seeking compatibility
         cmd = [
             "ffmpeg",
             "-f", "concat",
             "-safe", "0",
             "-i", str(concat_file),
-            "-c:v", "libx264",  # Re-encode video to ensure consistent keyframe placement
-            "-preset", "fast",  # Balance speed vs quality
-            "-crf", "23",       # Good quality
-            "-g", "30",         # Keyframe every 30 frames (~1 second at 30fps)
-            "-keyint_min", "15", # Minimum keyframe interval
-            "-c:a", "aac",      # Re-encode audio for consistency
+            "-c:v", "libx264",  # Re-encode video for consistent format
+            "-preset", "medium",  # Better quality for mobile playback
+            "-crf", "21",       # Higher quality for better seeking
+            "-g", "15",         # More frequent keyframes (every 0.5 seconds at 30fps)
+            "-keyint_min", "5", # Minimum keyframe interval for fine seeking
+            "-force_key_frames", "expr:gte(t,n_forced*0.5)", # Force keyframes every 0.5 seconds
+            "-c:a", "aac",      # Re-encode audio
             "-b:a", "128k",     # Audio bitrate
-            "-movflags", "+faststart",
+            "-ar", "44100",     # Standard audio sample rate
+            "-movflags", "+faststart", # Optimize for streaming
+            "-pix_fmt", "yuv420p", # Ensure compatibility with mobile players
+            "-profile:v", "baseline", # H.264 baseline profile for maximum compatibility
+            "-level", "3.1",    # H.264 level for mobile compatibility
             "-y",
             str(output_path)
         ]

@@ -122,56 +122,46 @@ export const FullscreenVideoPlayer: React.FC<FullscreenVideoPlayerProps> = ({
       await videoRef.current.pauseAsync();
       console.log(`🎯 CALL_DEBUG [${callId}]: Video paused`);
       
-      // Try seeking multiple times with different approaches
-      let seekAttempts = 0;
-      let seekSuccessful = false;
+      // Since seeking is unreliable with expo-av and merged videos, 
+      // use a position-monitoring approach instead
+      let segmentStarted = false;
       
-      while (seekAttempts < 3 && !seekSuccessful) {
-        seekAttempts++;
-        console.log(`🎯 CALL_DEBUG [${callId}]: Seek attempt ${seekAttempts}`);
-        
+      if (segment.startTime === 0) {
+        // For the first segment, seeking to 0 usually works
+        console.log(`🎯 CALL_DEBUG [${callId}]: First segment - seeking to start`);
         try {
-          if (seekAttempts === 1) {
-            // First attempt: basic seek
-            await videoRef.current.setPositionAsync(startTimeSeconds);
-          } else if (seekAttempts === 2) {
-            // Second attempt: with tolerance
-            await videoRef.current.setPositionAsync(startTimeSeconds, { toleranceMillisBefore: 0, toleranceMillisAfter: 0 });
-          } else {
-            // Third attempt: unload and reload, then seek
-            await videoRef.current.unloadAsync();
-            await new Promise(resolve => setTimeout(resolve, 100));
-            await videoRef.current.loadAsync({ uri: mergedVideo.streamingUrl }, { shouldPlay: false });
-            await new Promise(resolve => setTimeout(resolve, 200));
-            await videoRef.current.setPositionAsync(startTimeSeconds);
-          }
-          
-          // Wait for seek to complete
+          await videoRef.current.setPositionAsync(0);
+          segmentStarted = true;
+        } catch (seekError) {
+          console.error(`🎯 CALL_DEBUG [${callId}]: Even seeking to 0 failed:`, seekError);
+        }
+      } else {
+        // For subsequent segments, try seeking but don't rely on it
+        console.log(`🎯 CALL_DEBUG [${callId}]: Attempting to seek to ${startTimeSeconds}s`);
+        try {
+          await videoRef.current.setPositionAsync(startTimeSeconds);
           await new Promise(resolve => setTimeout(resolve, 300));
           
-          // Verify position
           const status = await videoRef.current.getStatusAsync();
           if (status.isLoaded) {
             const actualPositionMs = status.positionMillis || 0;
             const expectedPositionMs = segment.startTime;
             const positionDiff = Math.abs(actualPositionMs - expectedPositionMs);
             
-            console.log(`🎯 CALL_DEBUG [${callId}]: Attempt ${seekAttempts} - Expected ${expectedPositionMs}ms, got ${actualPositionMs}ms, diff: ${positionDiff}ms`);
+            console.log(`🎯 CALL_DEBUG [${callId}]: Seek result - Expected ${expectedPositionMs}ms, got ${actualPositionMs}ms, diff: ${positionDiff}ms`);
             
-            if (positionDiff <= 100) {
-              seekSuccessful = true;
-              break;
+            if (positionDiff <= 500) { // More lenient tolerance
+              segmentStarted = true;
             }
           }
         } catch (seekError) {
-          console.error(`🎯 CALL_DEBUG [${callId}]: Seek attempt ${seekAttempts} failed:`, seekError);
+          console.error(`🎯 CALL_DEBUG [${callId}]: Seek failed:`, seekError);
         }
-      }
-      
-      if (!seekSuccessful) {
-        console.error(`🎯 CALL_DEBUG [${callId}]: All seek attempts failed! This indicates the merged video lacks proper keyframes for seeking.`);
-        console.error(`🎯 BACKEND_ISSUE [${callId}]: The merged video was likely created with 'ffmpeg -c copy' which doesn't ensure seekable keyframes.`);
-        // Continue with playback - the backend FFmpeg fix should resolve this for new videos
+        
+        if (!segmentStarted) {
+          console.warn(`🎯 CALL_DEBUG [${callId}]: Seeking failed - will play from current position with timeout-based segment control`);
+          segmentStarted = true; // Continue anyway
+        }
       }
       
       // Set up the timeout for the exact segment duration
