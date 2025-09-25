@@ -24,6 +24,9 @@ import { MediaCapture, VideoSegment } from '../types';
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 
+// Latency compensation: pause slightly early to account for command delay.
+const PAUSE_BUFFER_MS = 100;
+
 // Helper to convert seconds (potentially float) to integer milliseconds
 const toMillis = (seconds: number) => {
   // Heuristic to handle potentially mixed data types (some in seconds, some in ms).
@@ -131,19 +134,28 @@ export const FullscreenVideoPlayer: React.FC<FullscreenVideoPlayerProps> = ({
 
     // Synchronize and schedule the timer ONLY when playback has actually started
     if (pendingSegment && status.isPlaying) {
-      // Calculate remaining time from the CURRENT position.
+      // Calculate remaining time from the CURRENT position and apply the buffer.
       const remainingDuration = pendingSegment.endTimeMillis - status.positionMillis;
+      const timerDuration = remainingDuration - PAUSE_BUFFER_MS;
 
-      console.log(`[DEBUG] Sync: Playback started for segment. Pos: ${status.positionMillis}ms. Scheduling pause in ${remainingDuration}ms.`);
+      console.log(`[DEBUG] Sync: Playback started. Pos: ${status.positionMillis}. Remaining: ${remainingDuration}ms. Scheduling pause in ${timerDuration}ms (w/ ${PAUSE_BUFFER_MS}ms buffer).`);
 
-      if (remainingDuration > 0) {
+      if (timerDuration > 0) {
         timeoutIdRef.current = setTimeout(() => {
-          console.log(`[DEBUG] setTimeout fired: Pausing video at expected time ${pendingSegment.endTimeMillis}ms.`);
-          videoRef.current?.pauseAsync();
-        }, remainingDuration);
+          const video = videoRef.current;
+          if (video) {
+            console.log(`[DEBUG] setTimeout fired: Pausing and seeking to end: ${pendingSegment.endTimeMillis}ms.`);
+            video.pauseAsync();
+            video.setPositionAsync(pendingSegment.endTimeMillis); // Corrective seek
+          }
+        }, timerDuration);
       } else {
-        // If we've already passed the end time, pause immediately.
-        videoRef.current?.pauseAsync();
+        // If we're already past the buffer time, pause and seek immediately.
+        const video = videoRef.current;
+        if (video) {
+          video.pauseAsync();
+          video.setPositionAsync(pendingSegment.endTimeMillis);
+        }
       }
 
       // Clear the pending segment ref to ensure this logic only runs once per play intent.
