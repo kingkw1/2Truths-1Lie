@@ -58,6 +58,7 @@ export const FullscreenVideoPlayer: React.FC<FullscreenVideoPlayerProps> = ({
 }) => {
   const videoRef = useRef<Video>(null);
   const timeoutIdRef = useRef<NodeJS.Timeout | null>(null); // For precise pausing
+  const pendingSegmentRef = useRef<NormalizedSegment | null>(null); // Holds the segment intended for playback
   const fadeAnim = useRef(new Animated.Value(1)).current;
 
   // State for UI and playback control
@@ -110,39 +111,62 @@ export const FullscreenVideoPlayer: React.FC<FullscreenVideoPlayerProps> = ({
     }
   }, [isLoading, fadeAnim]);
 
-  // Step 4: Refactor the onPlaybackStatusUpdate Callback
+  // Step 3: Implement Synchronized Timer in onPlaybackStatusUpdate
   const handlePlaybackStatusUpdate = useCallback((status: AVPlaybackStatus) => {
     if (!status.isLoaded) {
       setIsLoading(false);
       if (status.error) {
-        console.error('Video playback error:', status.error);
+        console.error('[ERROR] Video playback error:', status.error);
       }
       return;
     }
 
-    // Update UI-related state
+    // Update UI state
     setIsPlaying(status.isPlaying);
     setIsLoading(status.isBuffering);
     setCurrentPosition(status.positionMillis);
     setVideoDuration(status.durationMillis || 0);
 
-    console.log(`[DEBUG] Playback Status: pos=${status.positionMillis}ms, playing=${status.isPlaying}, buffering=${status.isBuffering}`);
-  }, []); // No dependencies needed as it only uses the 'status' object
+    const pendingSegment = pendingSegmentRef.current;
 
-  // Step 3: Implement the Hybrid setTimeout Timer for Pausing
+    // Synchronize and schedule the timer ONLY when playback has actually started
+    if (pendingSegment && status.isPlaying) {
+      // Calculate remaining time from the CURRENT position.
+      const remainingDuration = pendingSegment.endTimeMillis - status.positionMillis;
+
+      console.log(`[DEBUG] Sync: Playback started for segment. Pos: ${status.positionMillis}ms. Scheduling pause in ${remainingDuration}ms.`);
+
+      if (remainingDuration > 0) {
+        timeoutIdRef.current = setTimeout(() => {
+          console.log(`[DEBUG] setTimeout fired: Pausing video at expected time ${pendingSegment.endTimeMillis}ms.`);
+          videoRef.current?.pauseAsync();
+        }, remainingDuration);
+      } else {
+        // If we've already passed the end time, pause immediately.
+        videoRef.current?.pauseAsync();
+      }
+
+      // Clear the pending segment ref to ensure this logic only runs once per play intent.
+      pendingSegmentRef.current = null;
+    }
+
+    // Continuous logging for debugging
+    // console.log(`[STATUS] pos=${status.positionMillis}ms, playing=${status.isPlaying}, buffering=${status.isBuffering}`);
+  }, []); // No dependencies needed, relies on refs and status
+
+  // Step 2: Modify playSegment to Signal Intent
   const playSegment = useCallback(async (segment: NormalizedSegment) => {
     if (!videoRef.current || !mergedVideo?.streamingUrl) {
       console.log('[DEBUG] playSegment aborted: Video ref or URL not ready.');
       return;
     }
-    console.log(`[DEBUG] playSegment called for:`, segment);
+    console.log(`[DEBUG] playSegment INTENT for:`, segment);
 
-
-    // Always clear the previous timeout to prevent orphaned timers
+    // Clear any pending timer and set the new segment as the playback goal
     if (timeoutIdRef.current) {
-      console.log('[DEBUG] Clearing previous timeout.');
       clearTimeout(timeoutIdRef.current);
     }
+    pendingSegmentRef.current = segment;
 
     try {
       setIsLoading(true);
@@ -154,37 +178,20 @@ export const FullscreenVideoPlayer: React.FC<FullscreenVideoPlayerProps> = ({
         setCurrentVideoUrl(mergedVideo.streamingUrl);
       }
       
-      // Seek to the precise start time
-      console.log(`[DEBUG] Seeking to: ${segment.startTimeMillis}ms`);
+      // Seek to the precise start time and request playback
+      console.log(`[DEBUG] Seeking to: ${segment.startTimeMillis}ms and requesting play.`);
       await videoRef.current.setPositionAsync(segment.startTimeMillis);
-
       if (autoPlay) {
-        // Start playback
-        console.log('[DEBUG] Starting playback...');
         await videoRef.current.playAsync();
-
-        // Calculate the exact duration to play
-        const durationToPlay = segment.endTimeMillis - segment.startTimeMillis;
-        console.log(`[DEBUG] Calculated durationToPlay: ${durationToPlay}ms (End: ${segment.endTimeMillis} - Start: ${segment.startTimeMillis})`);
-
-        if (durationToPlay > 0) {
-          // Schedule the precise pause
-          console.log(`[DEBUG] Scheduling pause in ${durationToPlay}ms.`);
-          timeoutIdRef.current = setTimeout(() => {
-            console.log(`[DEBUG] setTimeout fired: Pausing video at expected time ${segment.endTimeMillis}ms.`);
-            videoRef.current?.pauseAsync();
-          }, durationToPlay);
-        } else {
-          // If duration is invalid, just pause immediately
-          console.warn(`[DEBUG] Invalid duration (${durationToPlay}ms). Pausing immediately.`);
-          videoRef.current.pauseAsync();
-        }
       }
     } catch (error) {
-      console.error('[ERROR] Error during segment playback:', error);
-    } finally {
-      setIsLoading(false);
+      console.error('[ERROR] Error during segment playback initiation:', error);
+      pendingSegmentRef.current = null; // Clear intent on error
+      setIsLoading(false); // Ensure loading state is reset on error
     }
+    // Note: We don't set isLoading(false) in a finally block here,
+    // because we want the loading indicator to persist until playback truly starts,
+    // which is handled by the onPlaybackStatusUpdate callback.
   }, [mergedVideo, currentVideoUrl, autoPlay]);
 
   // Load and play individual video (no change needed for this part)
