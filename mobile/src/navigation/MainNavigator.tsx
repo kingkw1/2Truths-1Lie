@@ -1,6 +1,6 @@
 /**
  * Main App Navigator
- * Handles navigation between main app screens (Home, Game, Create)
+ * Handles navigation between main app screens (Home, Game, Create, Account)
  */
 
 import React from 'react';
@@ -10,14 +10,21 @@ import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Alert, Pressable 
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { GameScreen } from '../screens/GameScreen';
 import { StoreScreen } from '../screens/StoreScreen';
+import AccountScreen from '../screens/AccountScreen'; // Import AccountScreen
 import { ChallengeCreationScreen } from '../screens/ChallengeCreationScreen';
 import { MainStackParamList } from './types';
 import { useAuth } from '../hooks/useAuth';
 import { useTokenBalance } from '../hooks/useTokenBalance';
-import { ConditionalAuthContent, AuthGuard } from '../components/AuthGuard';
-import { AuthToggleButton } from '../components/AuthToggleButton';
+import { AuthGuard } from '../components/AuthGuard';
 
 const Stack = createNativeStackNavigator<MainStackParamList>();
+
+// Placeholder for ChangePasswordScreen
+const ChangePasswordScreen: React.FC = () => (
+  <SafeAreaView style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+    <Text>Change Password Screen</Text>
+  </SafeAreaView>
+);
 
 interface MainNavigatorProps {
   onLogout: () => void;
@@ -27,10 +34,8 @@ const HomeScreen: React.FC<{ navigation: any; onLogout: () => void }> = ({ navig
   const { user, isAuthenticated, isGuest, triggerAuthFlow } = useAuth();
   const { balance, loading: isLoading, error, refresh: refreshTokenBalance } = useTokenBalance();
 
-  // Refresh token balance when screen comes into focus (e.g., returning from Store)
   useFocusEffect(
     React.useCallback(() => {
-      console.log('🏠 HomeScreen focused - refreshing token balance...');
       refreshTokenBalance();
     }, [refreshTokenBalance])
   );
@@ -44,7 +49,6 @@ const HomeScreen: React.FC<{ navigation: any; onLogout: () => void }> = ({ navig
           </View>
           
           <View style={styles.headerRight}>
-            {/* Token Balance Display */}
             {!isLoading && balance > 0 && (
               <Pressable
                 style={styles.tokenBalance}
@@ -54,20 +58,19 @@ const HomeScreen: React.FC<{ navigation: any; onLogout: () => void }> = ({ navig
                 <Text style={styles.tokenBalanceText}>{balance}</Text>
               </Pressable>
             )}
-            
           </View>
         </View>
 
-        <View style={styles.userInfo}>
+        {/* Profile Card */}
+        <Pressable
+          style={styles.profileCard}
+          onPress={() => navigation.navigate('Account')}
+        >
           <Text style={styles.welcomeText}>
             Welcome, {user?.name || 'Guest'}!
           </Text>
-
-          <AuthToggleButton
-            onAuthAction={onLogout}
-            style={styles.authToggleButton}
-          />
-        </View>
+          <Text style={styles.profileCardIcon}>〉</Text>
+        </Pressable>
         
         <Text style={styles.subtitle}>What would you like to do?</Text>
 
@@ -84,41 +87,22 @@ const HomeScreen: React.FC<{ navigation: any; onLogout: () => void }> = ({ navig
             <Text style={styles.menuButtonDescription}>
               Play existing challenges and test your detective skills
             </Text>
-            {isGuest && (
-              <Text style={styles.guestModeText}>Playing as guest</Text>
-            )}
           </TouchableOpacity>
 
           <TouchableOpacity
             style={[styles.menuButton, styles.secondaryButton]}
             onPress={() => {
-              console.log('🎯 CREATE_BUTTON: Create Challenge button pressed in HomeScreen');
-              console.log('🎯 CREATE_BUTTON: Auth state:', { isAuthenticated, isGuest });
-
               if (!isAuthenticated || isGuest) {
-                console.log('🚨 CREATE_BUTTON: Blocking guest user - showing auth popup');
                 Alert.alert(
                   'Sign In Required',
                   'Please sign in to create a challenge',
                   [
-                    {
-                      text: 'Cancel',
-                      style: 'cancel',
-                    },
-                    {
-                      text: 'Sign In',
-                      style: 'default',
-                      onPress: () => {
-                        console.log('🎯 CREATE_BUTTON: Navigating to auth...');
-                        triggerAuthFlow();
-                      },
-                    },
+                    { text: 'Cancel', style: 'cancel' },
+                    { text: 'Sign In', style: 'default', onPress: triggerAuthFlow },
                   ]
                 );
                 return;
               }
-
-              console.log('✅ CREATE_BUTTON: User authenticated - navigating to Create');
               navigation.navigate('Create');
             }}
           >
@@ -127,9 +111,6 @@ const HomeScreen: React.FC<{ navigation: any; onLogout: () => void }> = ({ navig
             <Text style={styles.menuButtonDescription}>
               Record your own two truths and a lie
             </Text>
-            {isGuest && (
-              <Text style={styles.guestModeText}>Progress won't be saved</Text>
-            )}
           </TouchableOpacity>
 
           <TouchableOpacity
@@ -184,6 +165,8 @@ export const MainNavigator: React.FC<MainNavigatorProps> = ({ onLogout }) => {
         )}
       </Stack.Screen>
       <Stack.Screen name="Store" component={StoreScreen} />
+      <Stack.Screen name="Account" component={AccountScreen} />
+      <Stack.Screen name="ChangePassword" component={ChangePasswordScreen} />
     </Stack.Navigator>
   );
 };
@@ -221,23 +204,23 @@ const styles = StyleSheet.create({
     textAlign: 'left',
     color: '#333',
   },
-  userInfo: {
+  profileCard: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 20,
+    backgroundColor: '#f0f0f0',
+    borderRadius: 10,
+    padding: 15,
+    marginBottom: 30,
   },
   welcomeText: {
     fontSize: 16,
-    color: '#666',
-    marginBottom: 8,
+    color: '#333',
+    fontWeight: '500',
   },
-  authToggleButton: {
-    marginTop: 8,
-  },
-  guestModeText: {
-    color: 'rgba(255, 255, 255, 0.7)',
-    fontSize: 12,
-    fontStyle: 'italic',
-    marginTop: 4,
+  profileCardIcon: {
+    fontSize: 20,
+    color: '#888',
   },
   subtitle: {
     fontSize: 18,

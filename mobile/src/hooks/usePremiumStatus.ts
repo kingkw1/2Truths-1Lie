@@ -27,7 +27,13 @@ export const usePremiumStatus = (): PremiumStatus => {
       setPremiumStatus(prev => ({ ...prev, loading: true, error: null }));
       
       const customerInfo = await Purchases.getCustomerInfo();
-      const premiumEntitlement = customerInfo.entitlements.active['premium'];
+      
+      // Debug: Log all available entitlements
+      console.log('🔍 usePremiumStatus: Available entitlements:', Object.keys(customerInfo.entitlements.active));
+      console.log('🔍 usePremiumStatus: Active subscriptions:', customerInfo.activeSubscriptions);
+      
+      // Check for the correct entitlement name
+      const premiumEntitlement = customerInfo.entitlements.active['pro_investigator'];
       
       if (premiumEntitlement) {
         const isInTrial = premiumEntitlement.willRenew && premiumEntitlement.periodType === 'trial';
@@ -75,7 +81,8 @@ export const usePremiumStatus = (): PremiumStatus => {
     
     // Listen for purchase updates
     const purchaseUpdateListener = (customerInfo: CustomerInfo) => {
-      const premiumEntitlement = customerInfo.entitlements.active['premium'];
+      // Check for the correct entitlement name
+      const premiumEntitlement = customerInfo.entitlements.active['pro_investigator'];
       
       if (premiumEntitlement) {
         const isInTrial = premiumEntitlement.willRenew && premiumEntitlement.periodType === 'trial';
