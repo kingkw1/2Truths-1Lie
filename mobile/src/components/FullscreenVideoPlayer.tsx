@@ -8,7 +8,7 @@ import {
   ActivityIndicator,
   Animated,
 } from 'react-native';
-import { Video, AVPlaybackStatus, ResizeMode } from 'expo-av';
+import { VideoView, useVideoPlayer, VideoSource } from 'expo-video';
 import { MediaCapture, VideoSegment } from '../types';
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
@@ -114,69 +114,82 @@ export const FullscreenVideoPlayer: React.FC<FullscreenVideoPlayerProps> = ({
         return;
       }
       
-      // Convert startTime from milliseconds to seconds for setPositionAsync
-      const startTimeSeconds = segment.startTime / 1000;
-      console.log(`🎯 CALL_DEBUG [${callId}]: Seeking to ${startTimeSeconds}s (${segment.startTime}ms)`);
+      // Use playFromPositionAsync for atomic seek + play operation
+      // This should be more reliable than separate setPositionAsync + playAsync calls
       
-      // Try different approach: pause first, then seek
-      await videoRef.current.pauseAsync();
-      console.log(`🎯 CALL_DEBUG [${callId}]: Video paused`);
+      // Ensure we have timing data in milliseconds
+      const startTimeMillis = segment.startTime; // Already in milliseconds from our data
+      const endTimeMillis = segment.endTime;     // Already in milliseconds from our data
+      const durationToPlay = endTimeMillis - startTimeMillis;
       
-      // Since seeking is unreliable with expo-av and merged videos, 
-      // use a position-monitoring approach instead
-      let segmentStarted = false;
+      console.log(`🎯 CALL_DEBUG [${callId}]: Using playFromPositionAsync`);
+      console.log(`🎯 CALL_DEBUG [${callId}]: Start: ${startTimeMillis}ms, End: ${endTimeMillis}ms, Duration: ${durationToPlay}ms`);
       
-      if (segment.startTime === 0) {
-        // For the first segment, seeking to 0 usually works
-        console.log(`🎯 CALL_DEBUG [${callId}]: First segment - seeking to start`);
+      // Set up the precise stop timer BEFORE starting playback
+      console.log(`🎯 CALL_DEBUG [${callId}]: Setting precise stop timer for ${durationToPlay}ms`);
+      timeoutIdRef.current = setTimeout(() => {
+        console.log(`🎯 CALL_DEBUG [${callId}]: Precise stop timer fired - pausing video`);
+        videoRef.current?.pauseAsync();
+      }, durationToPlay);
+      
+      // Since both setPositionAsync and playFromPositionAsync fail with merged videos,
+      // use a fast-forward approach to reach the target position
+      if (autoPlay) {
+        console.log(`🎯 CALL_DEBUG [${callId}]: Attempting fast-forward approach to ${startTimeMillis}ms`);
+        
         try {
-          await videoRef.current.setPositionAsync(0);
-          segmentStarted = true;
-        } catch (seekError) {
-          console.error(`🎯 CALL_DEBUG [${callId}]: Even seeking to 0 failed:`, seekError);
+          if (startTimeMillis === 0) {
+            // For first segment, just play from beginning
+            console.log(`🎯 CALL_DEBUG [${callId}]: Playing from beginning (segment 0)`);
+            await videoRef.current.setPositionAsync(0);
+            await videoRef.current.playAsync();
+          } else {
+            // For other segments, use fast-forward approach
+            console.log(`🎯 CALL_DEBUG [${callId}]: Fast-forwarding to segment start`);
+            
+            // Start from beginning at high speed
+            await videoRef.current.setPositionAsync(0);
+            await videoRef.current.setRateAsync(8.0, true); // 8x speed, preserve pitch
+            await videoRef.current.playAsync();
+            
+            // Calculate fast-forward duration (time to reach target position at 8x speed)
+            const fastForwardDuration = startTimeMillis / 8;
+            
+            console.log(`🎯 CALL_DEBUG [${callId}]: Fast-forwarding for ${fastForwardDuration}ms to reach ${startTimeMillis}ms`);
+            
+            // Wait for fast-forward to complete
+            setTimeout(async () => {
+              try {
+                // Set back to normal speed
+                if (videoRef.current) {
+                  await videoRef.current.setRateAsync(1.0, true);
+                  console.log(`🎯 CALL_DEBUG [${callId}]: Reached target position, playing at normal speed`);
+                }
+              } catch (rateError) {
+                console.error(`🎯 CALL_DEBUG [${callId}]: Failed to set normal playback rate:`, rateError);
+              }
+            }, fastForwardDuration);
+          }
+          
+          console.log(`🎯 CALL_DEBUG [${callId}]: Fast-forward approach initiated successfully`);
+        } catch (error) {
+          console.error(`🎯 CALL_DEBUG [${callId}]: Fast-forward approach failed:`, error);
+          // Ultimate fallback: just play from current position
+          try {
+            await videoRef.current.playAsync();
+          } catch (fallbackError) {
+            console.error(`🎯 CALL_DEBUG [${callId}]: Even basic playAsync failed:`, fallbackError);
+          }
         }
       } else {
-        // For subsequent segments, try seeking but don't rely on it
-        console.log(`🎯 CALL_DEBUG [${callId}]: Attempting to seek to ${startTimeSeconds}s`);
+        // If not auto-playing, try basic seek (even though it likely won't work)
+        const startTimeSeconds = startTimeMillis / 1000;
+        console.log(`🎯 CALL_DEBUG [${callId}]: Auto-play disabled, attempting basic seek to ${startTimeSeconds}s`);
         try {
           await videoRef.current.setPositionAsync(startTimeSeconds);
-          await new Promise(resolve => setTimeout(resolve, 300));
-          
-          const status = await videoRef.current.getStatusAsync();
-          if (status.isLoaded) {
-            const actualPositionMs = status.positionMillis || 0;
-            const expectedPositionMs = segment.startTime;
-            const positionDiff = Math.abs(actualPositionMs - expectedPositionMs);
-            
-            console.log(`🎯 CALL_DEBUG [${callId}]: Seek result - Expected ${expectedPositionMs}ms, got ${actualPositionMs}ms, diff: ${positionDiff}ms`);
-            
-            if (positionDiff <= 500) { // More lenient tolerance
-              segmentStarted = true;
-            }
-          }
-        } catch (seekError) {
-          console.error(`🎯 CALL_DEBUG [${callId}]: Seek failed:`, seekError);
+        } catch (error) {
+          console.error(`🎯 CALL_DEBUG [${callId}]: Basic seek failed:`, error);
         }
-        
-        if (!segmentStarted) {
-          console.warn(`🎯 CALL_DEBUG [${callId}]: Seeking failed - will play from current position with timeout-based segment control`);
-          segmentStarted = true; // Continue anyway
-        }
-      }
-      
-      // Set up the timeout for the exact segment duration
-      const segmentDurationMs = segment.endTime - segment.startTime;
-      console.log(`🎯 CALL_DEBUG [${callId}]: Setting timeout for ${segmentDurationMs}ms`);
-      
-      timeoutIdRef.current = setTimeout(() => {
-        console.log(`🎯 CALL_DEBUG [${callId}]: Timeout fired - pausing video`);
-        videoRef.current?.pauseAsync();
-      }, segmentDurationMs);
-      
-      // Start playback
-      if (autoPlay) {
-        console.log(`🎯 CALL_DEBUG [${callId}]: Starting playback`);
-        await videoRef.current.playAsync();
       }
       
       setIsLoading(false);
