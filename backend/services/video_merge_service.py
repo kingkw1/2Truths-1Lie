@@ -1654,18 +1654,26 @@ class VideoMergeService:
             # Get compression settings
             compression_settings = self._get_compression_settings(quality_preset)
             
-            # Build FFmpeg command
+            # Build FFmpeg command with mobile video handling
             ffmpeg_cmd = [
                 'ffmpeg',
                 '-f', 'concat',
                 '-safe', '0',
                 '-i', str(video_list_file),
+                # Video filters to handle rotation and normalize format
+                '-vf', 'transpose=1,scale=1080:1920:force_original_aspect_ratio=decrease,pad=1080:1920:(ow-iw)/2:(oh-ih)/2',
                 '-c:v', compression_settings['video_codec'],
-                '-preset', compression_settings['preset'],
+                '-preset', 'faster',  # Use faster preset to avoid hanging
                 '-crf', str(compression_settings['crf']),
+                '-profile:v', 'baseline',  # Use baseline profile for compatibility
+                '-level', '3.1',  # Ensure compatibility
+                '-pix_fmt', 'yuv420p',  # Ensure compatible pixel format
                 '-c:a', compression_settings['audio_codec'],
                 '-b:a', compression_settings['audio_bitrate'],
+                '-ar', '44100',  # Standard audio sample rate
+                '-ac', '2',  # Stereo audio
                 '-movflags', '+faststart',
+                '-max_muxing_queue_size', '1024',  # Handle async encoding
                 '-y',  # Overwrite output file
                 str(output_path)
             ]
