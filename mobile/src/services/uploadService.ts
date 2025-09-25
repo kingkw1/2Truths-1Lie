@@ -414,6 +414,149 @@ export class VideoUploadService {
   }
 
   /**
+   * Upload a single video to temporary backend storage (React Native compatible)
+   */
+  public async uploadVideoToTempStorage(
+    videoUri: string,
+    filename?: string,
+    metadata: any = {},
+    options: UploadOptions = {},
+    onProgress?: (progress: UploadProgress) => void
+  ): Promise<{
+    success: boolean;
+    tempId?: string;
+    error?: string;
+  }> {
+    const startTime = Date.now();
+    const uploadId = `temp_upload_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
+    
+    try {
+      console.log('🚀 TEMP_UPLOAD: Starting temporary video upload...');
+      
+      // Ensure we have an auth token
+      if (!this.authToken) {
+        console.log('🔐 TEMP_UPLOAD: No auth token found, initializing auth service...');
+        await authService.initialize();
+        const token = authService.getAuthToken();
+        if (token) {
+          this.setAuthToken(token);
+          console.log('✅ TEMP_UPLOAD: Auth token acquired for upload');
+        } else {
+          throw new Error('Failed to acquire authentication token for upload');
+        }
+      }
+
+      // Test network connectivity
+      const isConnected = await this.testNetworkConnectivity();
+      if (!isConnected) {
+        throw new Error('Network connection failed - please check your internet connection');
+      }
+      
+      // Create abort controller for this upload
+      const abortController = new AbortController();
+      this.activeUploads.set(uploadId, abortController);
+
+      onProgress?.({ stage: 'preparing', progress: 5, startTime });
+
+      // Get file info
+      const fileInfo = await FileSystem.getInfoAsync(videoUri);
+      if (!fileInfo.exists) {
+        throw new Error('Video file not found');
+      }
+
+      // Handle file size safely
+      let fileSize = 0;
+      if ('size' in fileInfo) {
+        fileSize = fileInfo.size || 0;
+      }
+
+      onProgress?.({ stage: 'preparing', progress: 10, startTime });
+
+      // Get auth headers
+      const authHeaders = this.getAuthHeaders(false);
+      
+      // Read video file as base64 for JSON upload
+      console.log('📁 TEMP_UPLOAD: Reading video file as base64...');
+      
+      const base64Data = await FileSystem.readAsStringAsync(videoUri, {
+        encoding: FileSystem.EncodingType.Base64,
+      });
+      
+      console.log('📁 TEMP_UPLOAD: Base64 data length:', base64Data.length);
+
+      onProgress?.({ stage: 'uploading', progress: 20, startTime });
+
+      // Use the JSON endpoint for React Native compatibility
+      const uploadUrl = `${this.baseUrl}/api/v1/challenge-videos/upload-temp-video-json`;
+
+      // Prepare JSON payload
+      const jsonPayload = {
+        filename: filename || 'video.mp4',
+        video_data: base64Data,
+        metadata: metadata
+      };
+
+      // Create timeout promise
+      const timeoutMs = options?.timeout || 60000;
+      const timeoutPromise = new Promise((_, reject) => {
+        const timeoutId = setTimeout(() => {
+          reject(new Error(`Temp upload timeout after ${timeoutMs}ms`));
+        }, timeoutMs);
+        
+        abortController.signal.addEventListener('abort', () => {
+          clearTimeout(timeoutId);
+        });
+      });
+
+      console.log('📁 TEMP_UPLOAD: Making JSON request to:', uploadUrl);
+      console.log('📁 TEMP_UPLOAD: Payload size:', JSON.stringify(jsonPayload).length);
+      
+      // Race between fetch and timeout
+      const response = await Promise.race([
+        fetch(uploadUrl, {
+          method: 'POST',
+          headers: {
+            ...authHeaders,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify(jsonPayload),
+          signal: abortController.signal,
+        }),
+        timeoutPromise
+      ]) as Response;
+
+      console.log('📡 TEMP_UPLOAD: Response received - Status:', response.status);
+
+      if (!response.ok) {
+        const errorText = await response.text();
+        console.error('❌ TEMP_UPLOAD: Upload failed:', errorText);
+        throw new Error(`Temp upload failed (${response.status}): ${errorText}`);
+      }
+
+      const result = await response.json();
+      console.log('✅ TEMP_UPLOAD: Upload successful:', result);
+
+      onProgress?.({ stage: 'finalizing', progress: 100, startTime });
+
+      // Clean up
+      this.activeUploads.delete(uploadId);
+
+      return {
+        success: true,
+        tempId: result.temp_id,
+      };
+
+    } catch (error: any) {
+      console.error('❌ TEMP_UPLOAD: Upload failed:', error);
+      
+      // Clean up
+      this.activeUploads.delete(uploadId);
+      
+      throw new Error(`Failed to upload video to temp storage: ${error.message || error}`);
+    }
+  }
+
+  /**
    * Single attempt to upload multiple videos for merging (internal method)
    */
   private async _uploadVideosForMergeAttempt(
@@ -549,23 +692,18 @@ export class VideoUploadService {
         });
       });
 
-      // WORKAROUND: React Native FormData doesn't properly send file objects to multipart endpoints
-      // Solution: Upload each video individually using our working chunked upload system
-      console.log('🔧 MERGE_UPLOAD: Using individual upload approach due to React Native FormData limitations');
+      // ARCHITECTURE FIX: Use temporary backend storage to preserve architecture
+      // Individual videos are NEVER uploaded to S3, only stored temporarily on backend
+      console.log('🏗️ TEMP_UPLOAD: Using temporary backend storage to preserve architecture');
       
       onProgress?.({ stage: 'uploading', progress: 30, startTime });
       
-      // Upload each video individually
-      const uploadedVideos: Array<{
-        statementIndex: number;
-        mediaId: string;
-        duration: number;
-        filename: string;
-      }> = [];
+      // Upload each video to temporary backend storage
+      const tempIds: string[] = [];
       
       for (let i = 0; i < videos.length; i++) {
         const video = videos[i];
-        console.log(`🚀 MERGE_UPLOAD: Uploading video ${i + 1}/${videos.length} (statement ${video.statementIndex})...`);
+        console.log(`🚀 TEMP_UPLOAD: Uploading video ${i + 1}/${videos.length} to temp storage (statement ${video.statementIndex})...`);
         
         onProgress?.({ 
           stage: 'uploading', 
@@ -574,19 +712,16 @@ export class VideoUploadService {
         });
         
         try {
-          // Use the individual video upload method that works
-          const uploadResult = await this.uploadVideo(
+          // Upload to temporary backend storage
+          const tempResult = await this.uploadVideoToTempStorage(
             video.uri,
             video.filename,
-            video.duration,
-            {
-              timeout: 30000, // 30 second timeout per video
-              retryAttempts: 1,
-            },
-            (videoProgress: UploadProgress) => {
+            { statementIndex: video.statementIndex, duration: video.duration },
+            { timeout: 30000, retryAttempts: 1 },
+            (tempProgress: UploadProgress) => {
               // Report sub-progress for this video
               const baseProgress = 30 + (i * 50 / videos.length);
-              const videoContribution = (videoProgress.progress / 100) * (50 / videos.length);
+              const videoContribution = (tempProgress.progress / 100) * (50 / videos.length);
               onProgress?.({
                 stage: 'uploading',
                 progress: baseProgress + videoContribution,
@@ -595,49 +730,30 @@ export class VideoUploadService {
             }
           );
           
-          if (!uploadResult.success || !uploadResult.mediaId) {
-            throw new Error(`Failed to upload video ${i + 1}: ${uploadResult.error || 'Unknown error'}`);
+          if (!tempResult.success || !tempResult.tempId) {
+            throw new Error(`Failed to upload video ${i + 1} to temp storage: ${tempResult.error || 'Unknown error'}`);
           }
           
-          uploadedVideos.push({
-            statementIndex: video.statementIndex,
-            mediaId: uploadResult.mediaId,
-            duration: video.duration,
-            filename: video.filename,
-          });
-          
-          console.log(`✅ MERGE_UPLOAD: Video ${i + 1} uploaded successfully, mediaId: ${uploadResult.mediaId}`);
+          tempIds.push(tempResult.tempId);
+          console.log(`✅ TEMP_UPLOAD: Video ${i + 1} uploaded to temp storage, tempId: ${tempResult.tempId}`);
           
         } catch (videoError) {
-          console.error(`❌ MERGE_UPLOAD: Failed to upload video ${i + 1}:`, videoError);
-          throw new Error(`Failed to upload video ${i + 1}: ${videoError}`);
+          console.error(`❌ TEMP_UPLOAD: Failed to upload video ${i + 1} to temp storage:`, videoError);
+          throw new Error(`Failed to upload video ${i + 1} to temp storage: ${videoError}`);
         }
       }
       
-      console.log('✅ MERGE_UPLOAD: All videos uploaded individually');
+      console.log('✅ TEMP_UPLOAD: All videos uploaded to temporary storage');
       onProgress?.({ stage: 'finalizing', progress: 80, startTime });
       
-      // CRITICAL FIX: Call the real server-side merge endpoint instead of mock
-      console.log('🎬 MERGE_SERVER: Calling server-side video merge...');
-      
-      // Sort uploaded videos by statement index to ensure correct order
-      const sortedVideos = [...uploadedVideos].sort((a, b) => a.statementIndex - b.statementIndex);
+      // Call server-side merge from temporary storage
+      console.log('🎬 MERGE_SERVER: Calling server-side merge from temp storage...');
       
       try {
-        // CRITICAL FIX: Use new media-ID based merge endpoint to avoid FormData issues
-        const mergeRequestData = {
-          media_ids: sortedVideos.map(v => v.mediaId),
-          video_metadata: sortedVideos.map(v => ({
-            duration: v.duration, // Keep in milliseconds
-            statement_index: v.statementIndex,
-            filename: v.filename
-          }))
-        };
-        
-        // Call the new media-ID based merge endpoint
-        const mergeUrl = `${this.baseUrl}/api/v1/challenge-videos/merge-from-media-ids`;
-        console.log('🌐 MERGE_SERVER: Calling media-ID merge endpoint:', mergeUrl);
-        console.log('🎬 MERGE_SERVER: Request data:', mergeRequestData);
+        // Call the temp-based merge endpoint  
+        const mergeUrl = `${this.baseUrl}/api/v1/challenge-videos/merge-from-temp-ids`;
+        console.log('🌐 MERGE_SERVER: Calling temp merge endpoint:', mergeUrl);
+        console.log('🎬 MERGE_SERVER: Temp IDs:', tempIds);
         
         const mergeResponse = await fetch(mergeUrl, {
           method: 'POST',
@@ -645,7 +761,7 @@ export class VideoUploadService {
             ...authHeaders,
             'Content-Type': 'application/json',
           },
-          body: JSON.stringify(mergeRequestData),
+          body: JSON.stringify(tempIds),
           signal: abortController.signal,
         });
         
@@ -674,47 +790,8 @@ export class VideoUploadService {
         };
         
       } catch (mergeError) {
-        console.error('❌ MERGE_SERVER: Server merge failed, falling back to mock:', mergeError);
-        
-        // Fallback to mock implementation if server merge fails
-        console.log('🔄 MERGE_FALLBACK: Using client-side segment calculation as fallback');
-        
-        // Calculate actual cumulative timing based on real video durations
-        let cumulativeTime = 0;
-        const segmentMetadata = sortedVideos.map((video, index) => {
-          const startTime = cumulativeTime;
-          const durationInSeconds = video.duration / 1000; // Convert milliseconds to seconds
-          const endTime = startTime + durationInSeconds;
-          
-          cumulativeTime = endTime; // Update for next segment
-          
-          return {
-            statementIndex: video.statementIndex,
-            startTime: startTime, // In seconds
-            endTime: endTime, // In seconds 
-            duration: durationInSeconds, // In seconds
-          };
-        });
-        
-        const mockResult = {
-          merge_session_id: `merge_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`,
-          merged_video_url: sortedVideos[0]?.mediaId || 'merged_placeholder',
-          segment_metadata: segmentMetadata,
-        };
-        
-        console.log('✅ MERGE_FALLBACK: Mock merge completed as fallback:', mockResult);
-        
-        // Clean up
-        this.activeUploads.delete(uploadId);
-        
-        onProgress?.({ stage: 'finalizing', progress: 100, startTime });
-
-        return {
-          success: true,
-          mergeSessionId: mockResult.merge_session_id,
-          mergedVideoUrl: mockResult.merged_video_url,
-          segmentMetadata: mockResult.segment_metadata,
-        };
+        console.error('❌ MERGE_SERVER: Temp merge failed:', mergeError);
+        throw new Error(`Server merge from temp storage failed: ${mergeError}`);
       }
 
 
