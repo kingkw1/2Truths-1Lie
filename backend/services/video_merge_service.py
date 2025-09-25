@@ -733,6 +733,47 @@ class VideoMergeService:
         
         output_path = work_dir / "merged_video.mp4"
         
+        # DIAGNOSTIC LOGGING POINT 1: Before the Merge - Get duration of each source clip
+        logger.info("🔍 DIAGNOSTIC: Analyzing source video clips before merge...")
+        source_durations = []
+        
+        for i, video_path in enumerate(prepared_videos):
+            try:
+                if self.ffmpeg_available:
+                    # Use ffprobe to get precise duration of each source clip
+                    cmd = [
+                        "ffprobe",
+                        "-v", "quiet",
+                        "-show_entries", "format=duration",
+                        "-of", "csv=p=0",
+                        str(video_path)
+                    ]
+                    
+                    result = await asyncio.create_subprocess_exec(
+                        *cmd,
+                        stdout=asyncio.subprocess.PIPE,
+                        stderr=asyncio.subprocess.PIPE
+                    )
+                    stdout, stderr = await result.communicate()
+                    
+                    if result.returncode == 0:
+                        duration = float(stdout.decode().strip())
+                        source_durations.append(duration)
+                        logger.info(f"🔍 DIAGNOSTIC: Source clip {i} duration: {duration:.6f} seconds")
+                    else:
+                        logger.error(f"🔍 DIAGNOSTIC: Failed to get duration for clip {i}: {stderr.decode()}")
+                        source_durations.append(0.0)
+                else:
+                    source_durations.append(0.0)
+                    logger.warning(f"🔍 DIAGNOSTIC: FFmpeg not available, cannot get duration for clip {i}")
+            except Exception as e:
+                logger.error(f"🔍 DIAGNOSTIC: Error getting duration for clip {i}: {str(e)}")
+                source_durations.append(0.0)
+        
+        total_expected_duration = sum(source_durations)
+        logger.info(f"🔍 DIAGNOSTIC: Source clip durations: {source_durations}")
+        logger.info(f"🔍 DIAGNOSTIC: Total expected merged duration: {total_expected_duration:.6f} seconds")
+        
         # If FFmpeg is not available, use the first video as the output
         if not self.ffmpeg_available:
             logger.warning("FFmpeg not available - using first video as merged output")
@@ -797,7 +838,10 @@ class VideoMergeService:
             str(output_path)
         ]
         
-        logger.debug(f"Merging videos with command: {' '.join(cmd)}")
+        # DIAGNOSTIC LOGGING POINT 2: The FFmpeg Command
+        ffmpeg_command_str = ' '.join(cmd)
+        logger.info(f"🔍 DIAGNOSTIC: Executing FFmpeg command: {ffmpeg_command_str}")
+        logger.debug(f"Merging videos with command: {ffmpeg_command_str}")
         
         try:
             process = await asyncio.create_subprocess_exec(
@@ -823,6 +867,39 @@ class VideoMergeService:
                     f"Failed to merge videos: {error_msg}",
                     "MERGE_ERROR"
                 )
+            
+            # DIAGNOSTIC LOGGING POINT 3: After the Merge - Get actual duration of merged video
+            logger.info("🔍 DIAGNOSTIC: Analyzing merged video file after FFmpeg completion...")
+            try:
+                duration_cmd = [
+                    "ffprobe",
+                    "-v", "quiet",
+                    "-show_entries", "format=duration",
+                    "-of", "csv=p=0",
+                    str(output_path)
+                ]
+                
+                duration_result = await asyncio.create_subprocess_exec(
+                    *duration_cmd,
+                    stdout=asyncio.subprocess.PIPE,
+                    stderr=asyncio.subprocess.PIPE
+                )
+                duration_stdout, duration_stderr = await duration_result.communicate()
+                
+                if duration_result.returncode == 0:
+                    actual_merged_duration = float(duration_stdout.decode().strip())
+                    logger.info(f"🔍 DIAGNOSTIC: Actual merged video duration: {actual_merged_duration:.6f} seconds")
+                    
+                    # Compare with expected
+                    duration_difference = abs(actual_merged_duration - total_expected_duration)
+                    logger.info(f"🔍 DIAGNOSTIC: Duration difference (actual vs expected): {duration_difference:.6f} seconds")
+                    
+                    if duration_difference > 0.1:  # More than 100ms difference
+                        logger.warning(f"🔍 DIAGNOSTIC: Significant duration mismatch detected! Expected: {total_expected_duration:.6f}s, Actual: {actual_merged_duration:.6f}s")
+                else:
+                    logger.error(f"🔍 DIAGNOSTIC: Failed to get merged video duration: {duration_stderr.decode()}")
+            except Exception as e:
+                logger.error(f"🔍 DIAGNOSTIC: Error analyzing merged video duration: {str(e)}")
             
             # PHASE 1 FIX: Calculate segment metadata using the FINAL MERGED VIDEO
             logger.info("🎯 Calculating segment metadata from final merged video...")
@@ -909,6 +986,15 @@ class VideoMergeService:
             
             segments.append(segment)
             current_time += actual_duration_seconds
+        
+        # DIAGNOSTIC LOGGING POINT 4: Final Metadata - Log segment timing metadata (fallback method)
+        logger.info("🔍 DIAGNOSTIC: Final segment timing metadata being returned (from fallback method):")
+        for i, segment in enumerate(segments):
+            logger.info(f"🔍 DIAGNOSTIC: Segment {i}: start={segment.start_time*1000:.3f}ms, end={segment.end_time*1000:.3f}ms, duration={segment.duration*1000:.3f}ms")
+        
+        if segments:
+            final_segment = segments[-1]
+            logger.info(f"🔍 DIAGNOSTIC: Calculated final segment endTime: {final_segment.end_time*1000:.3f} milliseconds")
         
         return segments
 
@@ -1030,6 +1116,16 @@ class VideoMergeService:
                     segments.append(segment)
             
             logger.info(f"🎯 SEGMENT METADATA CALCULATED FROM FINAL MERGED VIDEO - {len(segments)} segments")
+            
+            # DIAGNOSTIC LOGGING POINT 4: Final Metadata - Log segment timing metadata
+            logger.info("🔍 DIAGNOSTIC: Final segment timing metadata being returned:")
+            for i, segment in enumerate(segments):
+                logger.info(f"🔍 DIAGNOSTIC: Segment {i}: start={segment.start_time*1000:.3f}ms, end={segment.end_time*1000:.3f}ms, duration={segment.duration*1000:.3f}ms")
+            
+            if segments:
+                final_segment = segments[-1]
+                logger.info(f"🔍 DIAGNOSTIC: Calculated final segment endTime: {final_segment.end_time*1000:.3f} milliseconds")
+            
             return segments
             
         except Exception as e:
