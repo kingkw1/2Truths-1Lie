@@ -85,8 +85,12 @@ export const FullscreenVideoPlayer: React.FC<FullscreenVideoPlayerProps> = ({
         clearTimeout(timeoutIdRef.current);
       }
 
-      // Schedule the simple pause command.
+      // PHASE 2: Simple timeout-based timing - trust the accurate backend segment metadata
+      console.log(`🎯 SIMPLE_TIMING: Segment (${segmentToPlay.startTime}-${segmentToPlay.endTime}ms) - scheduling pause in ${remainingDuration}ms`);
+      console.log(`🎯 SIMPLE_TIMING: Current position: ${status.positionMillis}ms, Segment end: ${segmentToPlay.endTime}ms`);
+      
       timeoutIdRef.current = setTimeout(() => {
+        console.log(`🎯 SIMPLE_TIMING: Pausing at segment boundary`);
         videoRef.current?.pauseAsync();
       }, remainingDuration > 0 ? remainingDuration : 0);
 

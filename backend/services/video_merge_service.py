@@ -813,8 +813,12 @@ class VideoMergeService:
                     "MERGE_ERROR"
                 )
             
-            # Calculate segment metadata using original video files with session data
-            segment_metadata = await self._calculate_segment_metadata(original_video_files or prepared_videos)
+            # PHASE 1 FIX: Calculate segment metadata using the FINAL MERGED VIDEO
+            logger.info("🎯 Calculating segment metadata from final merged video...")
+            segment_metadata = await self._calculate_segment_metadata(
+                original_video_files or prepared_videos, 
+                merged_video_path=output_path  # Pass the merged video for analysis
+            )
             
             logger.info(f"Videos merged successfully: {output_path}")
             
@@ -829,8 +833,8 @@ class VideoMergeService:
                 "MERGE_ERROR"
             )
     
-    async def _calculate_segment_metadata(self, video_files) -> List[VideoSegmentMetadata]:
-        """Calculate segment start/end times for merged video using actual upload session durations"""
+    async def _calculate_segment_metadata_from_original_videos(self, video_files) -> List[VideoSegmentMetadata]:
+        """Calculate segment start/end times using original video files (fallback method)"""
         
         segments = []
         current_time = 0.0
@@ -847,48 +851,42 @@ class VideoMergeService:
             
             actual_duration_seconds = None
             
-            # CRITICAL FIX: Use actual uploaded video duration from session metadata
-            if session and hasattr(session, 'metadata') and session.metadata:
-                # Extract duration from session metadata (already in seconds)
+            # Try FFprobe first for accuracy
+            if self.ffmpeg_available:
+                try:
+                    cmd = [
+                        "ffprobe",
+                        "-v", "quiet",
+                        "-show_entries", "format=duration",
+                        "-of", "csv=p=0",
+                        str(video_path)
+                    ]
+                    
+                    result = await asyncio.create_subprocess_exec(
+                        *cmd,
+                        stdout=asyncio.subprocess.PIPE,
+                        stderr=asyncio.subprocess.PIPE
+                    )
+                    stdout, stderr = await result.communicate()
+                    
+                    if result.returncode == 0:
+                        actual_duration_seconds = float(stdout.decode().strip())
+                        logger.info(f"Video {i}: FFprobe detected duration = {actual_duration_seconds}s")
+                        
+                except Exception as e:
+                    logger.warning(f"FFprobe failed for video {i}: {str(e)}")
+            
+            # Fallback to session metadata if FFprobe failed
+            if actual_duration_seconds is None and session and hasattr(session, 'metadata') and session.metadata:
                 video_duration_seconds = session.metadata.get("video_duration")
                 if video_duration_seconds and isinstance(video_duration_seconds, (int, float)):
-                    actual_duration_seconds = float(video_duration_seconds)  # Duration already in seconds
-                    logger.info(f"Video {i}: Using actual uploaded duration from session = {actual_duration_seconds}s")
+                    actual_duration_seconds = float(video_duration_seconds)
+                    logger.info(f"Video {i}: Using session duration = {actual_duration_seconds}s")
             
-            # If we don't have session duration, try FFprobe as fallback
+            # Final fallback to default
             if actual_duration_seconds is None:
-                if self.ffmpeg_available:
-                    try:
-                        # Get video duration using FFprobe
-                        cmd = [
-                            "ffprobe",
-                            "-v", "quiet",
-                            "-show_entries", "format=duration",
-                            "-of", "csv=p=0",
-                            str(video_path)
-                        ]
-                        
-                        result = await asyncio.create_subprocess_exec(
-                            *cmd,
-                            stdout=asyncio.subprocess.PIPE,
-                            stderr=asyncio.subprocess.PIPE
-                        )
-                        stdout, stderr = await result.communicate()
-                        
-                        if result.returncode != 0:
-                            logger.warning(f"FFprobe failed for video {i}: {stderr.decode()} - using default duration")
-                            actual_duration_seconds = 10.0  # Default fallback
-                        else:
-                            actual_duration_seconds = float(stdout.decode().strip())
-                            logger.info(f"Video {i}: FFmpeg detected duration = {actual_duration_seconds}s")
-                            
-                    except Exception as e:
-                        logger.warning(f"Error getting duration for video {i}: {str(e)} - using default")
-                        actual_duration_seconds = 10.0  # Default fallback
-                else:
-                    # FFmpeg not available - use default duration
-                    logger.warning(f"Video {i}: No session metadata and FFmpeg not available - using default duration")
-                    actual_duration_seconds = 10.0  # Default to 10 seconds per video
+                actual_duration_seconds = 10.0
+                logger.warning(f"Video {i}: Using default duration = {actual_duration_seconds}s")
             
             segment = VideoSegmentMetadata(
                 segment_index=i,
@@ -898,12 +896,134 @@ class VideoMergeService:
                 statement_index=i
             )
             
-            logger.info(f"Video {i}: Segment metadata created - start_time={current_time}s, end_time={current_time + actual_duration_seconds}s, duration={actual_duration_seconds}s")
-            
             segments.append(segment)
             current_time += actual_duration_seconds
         
         return segments
+
+    async def _calculate_segment_metadata(self, video_files, merged_video_path: Path = None) -> List[VideoSegmentMetadata]:
+        """
+        PHASE 1 FIX: Calculate segment metadata using FFprobe on the FINAL MERGED VIDEO
+        This ensures segment boundaries match the actual merged video structure
+        """
+        
+        # If we don't have the merged video path or FFmpeg is unavailable, use fallback
+        if not merged_video_path or not self.ffmpeg_available:
+            logger.warning("Using fallback segment calculation - merged video analysis not available")
+            return await self._calculate_segment_metadata_from_original_videos(video_files)
+        
+        # CRITICAL: Use FFprobe to analyze the FINAL MERGED VIDEO
+        logger.info(f"🎯 ANALYZING FINAL MERGED VIDEO: {merged_video_path}")
+        
+        try:
+            # Get detailed frame information from the merged video
+            cmd = [
+                "ffprobe",
+                "-v", "quiet",
+                "-show_frames",
+                "-select_streams", "v:0",  # Video stream only
+                "-show_entries", "frame=pkt_pts_time,key_frame",
+                "-of", "csv=p=0",
+                str(merged_video_path)
+            ]
+            
+            result = await asyncio.create_subprocess_exec(
+                *cmd,
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE
+            )
+            stdout, stderr = await result.communicate()
+            
+            if result.returncode != 0:
+                logger.error(f"FFprobe frame analysis failed: {stderr.decode()}")
+                return await self._calculate_segment_metadata_from_original_videos(video_files)
+            
+            # Parse frame data to find keyframes (segment boundaries)
+            frame_lines = stdout.decode().strip().split('\n')
+            keyframes = []
+            
+            for line in frame_lines:
+                if line.strip():
+                    parts = line.split(',')
+                    if len(parts) >= 2:
+                        time_str, is_keyframe = parts[0], parts[1]
+                        if is_keyframe == '1':  # Keyframe
+                            try:
+                                keyframes.append(float(time_str))
+                            except ValueError:
+                                continue
+            
+            logger.info(f"🎯 Found {len(keyframes)} keyframes in merged video")
+            
+            # Now get the total duration of the merged video
+            duration_cmd = [
+                "ffprobe",
+                "-v", "quiet",
+                "-show_entries", "format=duration",
+                "-of", "csv=p=0",
+                str(merged_video_path)
+            ]
+            
+            duration_result = await asyncio.create_subprocess_exec(
+                *duration_cmd,
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE
+            )
+            duration_stdout, duration_stderr = await duration_result.communicate()
+            
+            if duration_result.returncode != 0:
+                logger.error(f"Failed to get merged video duration: {duration_stderr.decode()}")
+                return await self._calculate_segment_metadata_from_original_videos(video_files)
+            
+            total_duration = float(duration_stdout.decode().strip())
+            logger.info(f"🎯 Merged video total duration: {total_duration}s")
+            
+            # Create segments based on the expected number of videos
+            expected_segments = len(video_files)
+            segments = []
+            
+            if len(keyframes) >= expected_segments + 1:
+                # We have enough keyframes to define segment boundaries
+                for i in range(expected_segments):
+                    start_time = keyframes[i] if i < len(keyframes) else (i * total_duration / expected_segments)
+                    end_time = keyframes[i + 1] if i + 1 < len(keyframes) else total_duration
+                    
+                    segment = VideoSegmentMetadata(
+                        segment_index=i,
+                        start_time=start_time,
+                        end_time=end_time,
+                        duration=end_time - start_time,
+                        statement_index=i
+                    )
+                    
+                    logger.info(f"🎯 ACCURATE SEGMENT {i}: start={start_time:.3f}s, end={end_time:.3f}s, duration={end_time - start_time:.3f}s")
+                    segments.append(segment)
+            else:
+                # Not enough keyframes, divide duration evenly but use actual merged video duration
+                logger.warning(f"Only {len(keyframes)} keyframes found, expected {expected_segments + 1}. Using even division.")
+                segment_duration = total_duration / expected_segments
+                
+                for i in range(expected_segments):
+                    start_time = i * segment_duration
+                    end_time = (i + 1) * segment_duration if i < expected_segments - 1 else total_duration
+                    
+                    segment = VideoSegmentMetadata(
+                        segment_index=i,
+                        start_time=start_time,
+                        end_time=end_time,
+                        duration=end_time - start_time,
+                        statement_index=i
+                    )
+                    
+                    logger.info(f"🎯 CALCULATED SEGMENT {i}: start={start_time:.3f}s, end={end_time:.3f}s, duration={end_time - start_time:.3f}s")
+                    segments.append(segment)
+            
+            logger.info(f"🎯 SEGMENT METADATA CALCULATED FROM FINAL MERGED VIDEO - {len(segments)} segments")
+            return segments
+            
+        except Exception as e:
+            logger.error(f"Error analyzing merged video for segments: {str(e)}")
+            return await self._calculate_segment_metadata_from_original_videos(video_files)
     
     async def _compress_merged_video(
         self, 
