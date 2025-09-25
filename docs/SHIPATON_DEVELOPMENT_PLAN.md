@@ -1,122 +1,87 @@
-# **Master Development Plan: 2Truths-1Lie (Shipaton Edition)**
+# **Master Development Plan: 2Truths-1Lie (Final Push)**
 
-**Project Status**: ACTIVE SPRINT - Shipaton Submission Phase
-**Current Date**: September 19, 2025
-**KiRo Hackathon**: ✅ COMPLETED September 15, 2025
+**Project Status**: ACTIVE SPRINT - Final Submission Push
+**Current Date**: September 25, 2025
+**KiRo Hackathon**: ✅ COMPLETED
 **Shipaton Hackathon Deadline**: September 30, 2025
-**App Status**: ✅ LIVE ON GOOGLE PLAY (v1) - Awaiting Monetization & iOS Release
+**App Status**: ✅ BACKEND STABLE, ANDROID PURCHASES WORKING
 
 ---
-## 🎯 Executive Summary
+## 🎯 Executive Summary & Status Update
 
-The 2Truths-1Lie app has successfully completed its initial development and deployment for the Kiro Hackathon. The project now enters its **active and final sprint phase** for the RevenueCat Shipaton. The following plan outlines the day-by-day tasks required to integrate a full monetization model with RevenueCat, launch the app on the iOS App Store, and prepare all necessary submission materials by the September 30th deadline.
+After successfully resolving critical backend networking and client-side video playback issues, the project is now stable. The focus for the final 6 days of the Shipaton shifts entirely to completing the core submission requirements and polishing the user experience. This updated plan prioritizes the mandatory iOS submission and the implementation of the monetization features to ensure a competitive entry for the hackathon.
 
-## 🚀 ACTIVE SPRINT: Phase 9 - Shipaton Submission (Sept 18 - Sept 30)
+## 🚀 ACTIVE SPRINT: Final Push (Sept 25 - Sept 30)
 
-**Status**: IN PROGRESS
-**Goal**: To implement the full Hybrid Freemium monetization model, launch on iOS, and submit a competitive entry to the RevenueCat Shipaton, targeting the HAMM, Design, Build & Grow, #BuildInPublic, and Best Vibes awards.
+**Goal**: To finalize and ship a fully functional, monetized, cross-platform app. The primary targets are the **HAMM** and **Design** awards, supported by a strong entry for the **Build & Grow** and **#BuildInPublic** awards.
 
-### **Detailed 13-Day Shipaton Sprint Schedule**
+### **Updated 6-Day Sprint Schedule**
 
-This schedule provides a granular, checklist-style format for the final sprint.
+#### **Final Week: Implementation, Polish, and Submission**
 
-#### **WEEK 1: Foundational Sprint (Monetization & Core Systems)**
-
-* **Day 1 (Thurs, Sept 18): Strategy & Setup** ✅
-    * **Development Focus**:
-        * [ ] Set up RevenueCat account and configure initial products/entitlements in the dashboard.
-        * [x] Strategize and finalize the Hybrid Freemium monetization model for the **HAMM Award**.
-    * **Public Focus**:
-        * [x] Post official "Shipaton Kickoff" on Twitter/X and Devpost.
-
-* **Day 2 (Fri, Sept 19) - Day 3 (Sat, Sept 20): RevenueCat Integration (Android)**
-    * **Development Focus**:
-        * [ ] Integrate the RevenueCat SDK into the live Android build.
-        * [ ] Build and polish the UI for the in-app store, purchase flow, and premium modals to target the **Design Award**.
-        * [ ] Implement and thoroughly test the purchase, restore, and promo code flows for judges.
-    * **Public Focus**:
-        * [ ] Post a screenshot of the new paywall UI and ask for feedback for the **#BuildInPublic Award**.
-        * [ ] Share a code snippet or story about using an AI tool to support the **Best Vibes Award**.
-
-* **Day 4 (Sun, Sept 21) - Day 5 (Mon, Sept 22): iOS Integration & Cross-Platform Validation**
+* **Day 8 (Thurs, Sept 25): iOS Launch Push & Critical Flow Validation**
     * **Development Focus**:
         * [ ] Begin the iOS port and complete the Expo iOS setup.
         * [ ] Generate the first iOS TestFlight beta build.
         * [ ] Wire up the RevenueCat SDK on the iOS side, ensuring 100% feature parity.
         * [ ] Submit in-app purchase items for review in App Store Connect.
-    * **Public Focus**:
-        * [ ] Document and share challenges from the iOS porting process (e.g., provisioning profiles, build issues).
-
-* **Day 6 (Tues, Sept 23): Polished User Authentication**
-    * **Development Focus**:
-        * [ ] Implement a password recovery flow using an email service.
-        * [ ] Build a basic user profile screen (view username/email, log out).
-    * **Public Focus**:
-        * [ ] Post an update about adding these professional and security-focused features.
-
-* **Day 7 (Weds, Sept 24): Enhanced Moderation & Stability**
-    * **Development Focus**:
-        * [ ] Enhance the "Report" button with backend logic to flag items for manual review.
-        * [ ] Add a user-facing confirmation modal after a report is submitted.
-    * **Public Focus**:
-        * [ ] Post an end-of-week recap video or thread showing off the new auth and moderation flows.
-
-#### **WEEK 2: Polish, Launch & Submission Sprint**
-
-* **Day 8 (Thurs, Sept 25): iOS Launch Push & Critical Flow Validation**
-    * **Development Focus**:
         * [ ] **Critical Milestone**: Conduct a full, practice run-through of test purchase flows on both Android and iOS TestFlight.
         * [ ] Finalize the iOS build for submission.
         * [ ] **Submit the app to the Apple App Store for review**.
     * **Public Focus**:
+        * [ ] Document and share challenges from the iOS porting process (e.g., provisioning profiles, build issues).
         * [ ] Post a screenshot of the "Waiting for Review" status in App Store Connect.
 
-* **Day 9 (Fri, Sept 26): The Design & Polish Sprint**
+* **Day 9 (Fri, Sept 26): MONETIZATION FUNCTIONALITY & POLISH SPRINT**
     * **Development Focus**:
-        * [ ] Dedicate the day to UI/UX excellence for the **RevenueCat Design Award**.
-        * [ ] Refine all animations, screen transitions, and ensure branding is cohesive.
-        * [ ] Create the final 1024x1024 app icon.
-        * [ ] Create final high-resolution screenshots (1179x2556px, no frames).
+        * [ ] **Implement Subscription Perks:** Make the `isPremium` status unlock features. Start with the easiest, highest-impact ones:
+            * [ ] Remove the daily limit on challenge creation for Pro users.
+            * [ ] Add a visual "Pro" badge next to the user's name.
+        * [ ] **Implement Token Spending:** Implement the "Wizard of Oz" 50/50 hint. This involves creating a "Use Hint" button, wiring it to a backend endpoint that decrements the user's token balance, and showing the hint in the UI.
+        * [ ] **UI/UX Polish:** If time permits, refine animations and screen transitions for the **Design Award**.
     * **Public Focus**:
-        * [ ] Post before-and-after GIFs to showcase UI improvements and explain the design thinking.
+        * [ ] Post a video/GIF of the newly working premium features with the caption: "It's alive! The subscription now unlocks perks, and tokens can be spent on hints. Bringing the monetization model to life for the @RevenueCat #Shipaton."
 
 * **Day 10 (Sat, Sept 27): Growth & Onboarding**
     * **Development Focus**:
-        * [ ] Refine the new-user onboarding flow to clearly introduce premium features.
-        * [ ] Analyze early download data and bootstrap metrics with friends/family for the **Build & Grow Award**.
+        * [ ] Refine the new-user onboarding flow to clearly introduce the premium features and the 7-day free trial.
     * **Public Focus**:
-        * [ ] Share early download numbers and discuss improving the user experience based on feedback.
+        * [ ] Document your growth story for the **Build & Grow Award** submission. Write about the challenges you've overcome (like the video bug!) and any early user feedback.
 
 * **Day 11 (Sun, Sept 28): Rapid Bug Bash & Narrative Assembly**
     * **Development Focus**:
-        * [ ] **Rapid Bug Bash**: Dedicate a focused block of time to fixing critical, high-impact bugs.
-        * [ ] Write the final documentation and instructions for judges, including how to use the promo code.
+        * [ ] **Rapid Bug Bash**: Dedicate a focused block of time to fixing critical bugs on both platforms, especially in the purchase and gameplay flows.
     * **Public Focus**:
-        * [ ] Draft the submission essays for each targeted award category on Devpost.
+        * [ ] Draft the written submission essays for each targeted award category on Devpost (HAMM, Design, Build & Grow, etc.).
 
-* **Day 12 (Mon, Sept 29): Final Assets & Award-Winning Video Production**
+* **Day 12 (Mon, Sept 29): Final Assets & Video Production**
     * **Development Focus**:
         * [ ] Conduct a final, full QA pass on both the Android and iOS versions of the app.
     * **Public Focus**:
-        * [ ] Record and edit the final 3-minute demo video.
-        * [ ] Ensure the video includes specific shots that support the **Design**, **HAMM**, and **Best Vibes** awards.
+        * [ ] Record and edit the final 3-minute demo video. Ensure it clearly shows the purchase flow, the unlocked premium features, and the polished UI.
 
 * **Day 13 (Tues, Sept 30): SUBMISSION DAY**
     * **Development Focus**:
         * [ ] Perform a final smoke test on both platforms.
-        * [ ] Double-check that all submission requirements are gathered and ready for upload (video, URLs, icon, screenshots, promo code).
+        * [ ] Assemble and double-check all submission materials (video URL, app URLs, icons, screenshots, promo code/trial info).
     * **Public Focus**:
         * [ ] **Submit the project on Devpost before the 11:45 pm Pacific Time deadline**.
         * [ ] Post the final "WE SHIPPED!" update on social channels.
 
 ---
-### 🎯 **Updated Shipaton Success Metrics (KPIs)**
+## 🏆 Bonus Features (To Tackle If Time Allows)
 
-* **Development Metrics**:
-    * [ ] 100% completion of RevenueCat SDK integration on both Android and iOS.
-    * [ ] Successful submission to the Apple App Store by Day 8 (Sept 25).
-    * [ ] Zero critical bugs in the purchase or core gameplay flows at submission.
-* **Hackathon Metrics**:
-    * [ ] All submission materials (video, icons, screenshots, promo codes) completed by Day 13.
-    * [ ] At least 10 high-quality #BuildInPublic posts on Twitter/X and Devpost throughout the sprint.
-    * [ ] A final submission that is eligible for at least 4 of the 5 targeted award categories.
+This is a prioritized list of extra features. If you find yourself waiting for the iOS review or you finish a day's tasks early, tackle these in order to make your submission even more competitive.
+
+1.  **High-Impact Polish (For the Design Award)**
+    * **Dark Mode:** Implementing a dark theme is a highly visible feature that shows design maturity.
+    * **Haptic Feedback:** Adding subtle vibrations on button presses and key interactions makes the app feel more responsive and premium.
+    * **Refine Animations:** Smooth out screen transitions and add a subtle animation to the "Correct!" / "Fooled You!" screens.
+
+2.  **Community & Trust Features**
+    * **Edit Profile (Name):** Implement the UI and backend endpoint to allow users to change their display name.
+    * **"Report" Confirmation:** Add the user-facing confirmation modal after a user reports a challenge, making the moderation system feel more complete.
+
+3.  **Advanced Account Management (Lower Priority)**
+    * **Change Password Flow:** Building the dedicated screen and backend endpoint for password changes.
+    * **Password Recovery Flow:** This requires integrating an email service and is a lower priority for the hackathon itself.
