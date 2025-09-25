@@ -1509,3 +1509,191 @@ async def merge_videos_from_media_ids(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to process video merge from media IDs"
         )
+
+
+@router.post("/upload-temp-video-json")
+async def upload_temp_video_json(
+    request: Request,
+    current_user: str = Depends(get_current_user)
+):
+    """
+    Upload a single video to temporary backend storage via JSON (React Native compatible).
+    
+    Expected request format:
+    {
+        "filename": "video.mp4",
+        "video_data": "base64_encoded_video_data",
+        "metadata": {...}
+    }
+    """
+    try:
+        import json
+        import tempfile
+        import base64
+        from pathlib import Path
+        from config import settings
+        
+        logger.info(f"JSON temporary video upload started for user {current_user}")
+        
+        # Parse JSON request body
+        request_data = await request.json()
+        
+        # Extract data from request
+        filename = request_data.get("filename", "video.mp4")
+        video_data_b64 = request_data.get("video_data")
+        metadata = request_data.get("metadata", {})
+        
+        if not video_data_b64:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="video_data is required"
+            )
+        
+        # Decode base64 video data
+        try:
+            video_data = base64.b64decode(video_data_b64)
+        except Exception as e:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail=f"Invalid base64 video data: {str(e)}"
+            )
+        
+        # Validate file size (max 50MB per video)
+        max_file_size = 50 * 1024 * 1024  # 50MB
+        if len(video_data) > max_file_size:
+            raise HTTPException(
+                status_code=status.HTTP_413_REQUEST_ENTITY_TOO_LARGE,
+                detail=f"Video file too large: {len(video_data)} bytes (max: {max_file_size})"
+            )
+        
+        # Generate temp_id
+        temp_id = str(uuid.uuid4())
+        
+        # Create temp directory if it doesn't exist
+        temp_dir = Path(settings.TEMP_DIR)
+        temp_dir.mkdir(parents=True, exist_ok=True)
+        
+        # Save video to temp file
+        temp_file_path = temp_dir / f"temp_video_{temp_id}_{filename}"
+        
+        with open(temp_file_path, 'wb') as f:
+            f.write(video_data)
+        
+        logger.info(f"Temporary video saved: {temp_file_path} (size: {len(video_data)} bytes)")
+        
+        return {
+            "success": True,
+            "temp_id": temp_id,
+            "file_info": {
+                "filename": filename,
+                "size": len(video_data),
+                "temp_path": str(temp_file_path)
+            }
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Temporary video upload failed: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to process temporary video upload: {str(e)}"
+        )
+
+
+@router.post("/merge-from-temp-ids")
+async def merge_from_temp_ids(
+    temp_ids: List[str],
+    current_user: str = Depends(get_current_user)
+):
+    """
+    Merge videos from temporary backend storage IDs and upload to S3.
+    
+    This is the proper architecture where individual videos never go to S3.
+    """
+    try:
+        import json
+        from pathlib import Path
+        from config import settings
+        
+        logger.info(f"Video merge from temp IDs requested by user {current_user}")
+        logger.info(f"Temp IDs to merge: {temp_ids}")
+        
+        if not temp_ids or len(temp_ids) == 0:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="No temp_ids provided"
+            )
+        
+        # Collect video files from temp storage
+        temp_dir = Path(settings.TEMP_DIR)
+        video_files = []
+        
+        for temp_id in temp_ids:
+            # Find the temp file for this ID
+            temp_files = list(temp_dir.glob(f"temp_video_{temp_id}_*"))
+            if not temp_files:
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail=f"Temporary video with ID {temp_id} not found"
+                )
+            
+            temp_file = temp_files[0]  # Should only be one match
+            if not temp_file.exists():
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail=f"Temporary video file not found: {temp_file}"
+                )
+            
+            video_files.append(str(temp_file))
+        
+        logger.info(f"Found {len(video_files)} temporary video files to merge")
+        
+        # Use video merge service to merge and upload to S3
+        session_id = merge_service.create_merge_session(current_user)
+        
+        # Add video files to the merge session
+        for i, video_file in enumerate(video_files):
+            with open(video_file, 'rb') as f:
+                video_data = f.read()
+            
+            merge_service.add_video_to_session(
+                session_id=session_id,
+                video_data=video_data,
+                filename=f"statement_{i}.mp4",
+                metadata={"statement_index": i}
+            )
+        
+        # Execute the merge
+        result = merge_service.execute_merge(session_id)
+        
+        if result.status != MergeSessionStatus.COMPLETED:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail=f"Video merge failed: {result.error_message}"
+            )
+        
+        # Clean up temporary files
+        for video_file in video_files:
+            try:
+                Path(video_file).unlink()
+                logger.debug(f"Cleaned up temporary file: {video_file}")
+            except Exception as e:
+                logger.warning(f"Failed to clean up temporary file {video_file}: {e}")
+        
+        return {
+            "success": True,
+            "merged_video_id": result.video_file_id,
+            "merged_video_url": result.final_video_url,
+            "merge_metadata": result.metadata,
+            "temp_files_cleaned": len(video_files)
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Video merge from temp IDs failed: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to merge videos from temporary storage: {str(e)}"
+        )
