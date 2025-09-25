@@ -1718,15 +1718,15 @@ class VideoMergeService:
                 
                 # Upload merged video to S3
                 s3_result = await self.cloud_storage.upload_file(
-                    file_content=video_content,
-                    filename=output_filename,
+                    file_data=video_content,
+                    key=output_filename,
                     content_type="video/mp4",
-                    user_id=user_id,
                     metadata={
                         "merge_session_id": merge_session_id,
                         "video_count": len(video_files),
                         "quality_preset": quality_preset,
                         "file_size": file_size,
+                        "user_id": user_id,
                         "created_at": datetime.utcnow().isoformat()
                     }
                 )
