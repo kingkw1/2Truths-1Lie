@@ -12,12 +12,12 @@ import {
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import Purchases from 'react-native-purchases';
-import { usePremium } from '../hooks/usePremium';
+import { usePremiumStatus } from '../hooks/usePremiumStatus';
 import { useAuth } from '../hooks/useAuth';
 
 const AccountScreen = () => {
   const navigation = useNavigation();
-  const isPremium = usePremium();
+  const { isPremium } = usePremiumStatus();
   const { user } = useAuth();
 
   const handleManageSubscription = async () => {
@@ -29,12 +29,8 @@ const AccountScreen = () => {
   };
 
   const handleLogout = () => {
-    // In a real app, you would call your auth provider's logout method
+    // TODO: Dispatch logout action and clear user session
     Alert.alert('Log Out', 'You have been logged out.');
-  };
-
-  const openURL = (url: string) => {
-    Linking.openURL(url).catch(err => Alert.alert('Error', `Failed to open URL: ${err}`));
   };
 
   const handleEditProfile = () => {
@@ -86,11 +82,11 @@ const AccountScreen = () => {
 
         {/* Legal Card */}
         <View style={styles.card}>
-          <Pressable style={styles.cardRow} onPress={() => openURL('https://www.yourapp.com/privacy')}>
+          <Pressable style={styles.cardRow} onPress={() => Linking.openURL('https://kingkw1.github.io/2Truths-1Lie/privacy-policy.html')}>
             <Text style={styles.label}>Privacy Policy</Text>
           </Pressable>
           <View style={styles.divider} />
-          <Pressable style={styles.cardRow} onPress={() => openURL('https://www.yourapp.com/terms')}>
+          <Pressable style={styles.cardRow} onPress={() => Linking.openURL('https://kingkw1.github.io/2Truths-1Lie/terms-of-service.html')}>
             <Text style={styles.label}>Terms of Service</Text>
           </Pressable>
         </View>
