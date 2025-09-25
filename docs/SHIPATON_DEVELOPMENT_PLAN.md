@@ -1,6 +1,6 @@
-# **Master Development Plan: 2Truths-1Lie (Final Push - Android Focus)**
+# **Master Development Plan: 2Truths-1Lie (Final Battle Plan)**
 
-**Project Status**: ACTIVE SPRINT - Final Submission Push (Android-Only)
+**Project Status**: ACTIVE SPRINT - Final 6-Day Push (Android-Only)
 **Current Date**: September 25, 2025
 **Shipaton Hackathon Deadline**: September 30, 2025
 **App Status**: ✅ BACKEND STABLE, ANDROID PURCHASES WORKING
@@ -8,58 +8,56 @@
 ---
 ## 🎯 Executive Summary & Status Update
 
-Following a strategic decision to focus all resources on a single platform, the project's goal for the final 6 days is to create a polished, feature-complete, and highly competitive **Android application**. After resolving critical backend and video playback issues, the app is stable. This updated plan reallocates the time from the iOS port to implement high-impact design features and community-focused functionality, maximizing our chances for a winning submission.
+After resolving all major backend and video playback issues, the project is stable and enters its final 6-day sprint. The strategy has been refined to focus exclusively on a flawless Android submission. The following "battle plan" prioritizes tasks into tiers, ensuring that mission-critical features are completed first, followed by high-impact polish, to create the most competitive entry possible for the RevenueCat Shipaton.
 
 ## 🚀 ACTIVE SPRINT: Final Push (Sept 25 - Sept 30)
 
-**Goal**: To finalize and ship a flawless Android app with a fully functional Hybrid Freemium model. The primary targets are the **HAMM** and **Design** awards, supported by a strong entry for the **Build & Grow** and **#BuildInPublic** awards.
+**Goal**: To ship a flawless Android app with a fully functional monetization model. The primary targets are the **HAMM** and **Design** awards, with a strong supporting entry for the **Build & Grow** and **#BuildInPublic** awards.
 
 ### **Updated 6-Day Sprint Schedule**
 
-#### **Final Week: Deep Polish and Flawless Execution on Android**
+#### **Final Week: The Battle Plan**
 
-* **Day 8 (Thurs, Sept 25): MONETIZATION FUNCTIONALITY SPRINT**
-    * **Development Focus**:
-        * [ ] **Implement Subscription Perks:** Make the `isPremium` status unlock features:
-            * [ ] Remove the daily limit on challenge creation for Pro users.
-            * [ ] Add a visual "Pro" badge next to the user's name in the UI.
-        * [ ] **Implement Token Spending:** Implement the "Wizard of Oz" 50/50 hint.
-            * [ ] Create the "Use Hint" button in the gameplay UI.
-            * [ ] Wire it to a backend endpoint that decrements the user's token balance.
+* **Day 8-9 (Thurs, Sept 25 - Fri, Sept 26): TIER 1 - MONETIZATION FUNCTIONALITY SPRINT**
+    * **Development Focus**: This is the #1 priority. Make the purchase flows deliver tangible value.
+        * [ ] **Implement Subscription Perks:**
+            * [ ] Unlock unlimited challenge creation for `isPremium` users.
+            * [ ] Display a visual "Pro" badge in the UI for subscribers.
+        * [ ] **Implement Token Spending:**
+            * [ ] Implement the "Wizard of Oz" 50/50 hint functionality.
+            * [ ] Create the "Use Hint" button and wire it to the backend to decrement the token balance.
     * **Public Focus**:
-        * [ ] Post about the strategic pivot: "Update on my #Shipaton journey: I've decided to focus 100% on a flawless Android submission to make it as polished as possible. iOS will be 'Coming Soon!' Today's goal: making the in-app purchases actually unlock cool features. #BuildInPublic".
+        * [ ] Post about the strategic pivot to Android-only.
+        * [ ] On Friday, post a video/GIF of the newly working premium features with a compelling caption for the **#BuildInPublic Award**.
 
-* **Day 9 (Fri, Sept 26): HIGH-IMPACT POLISH (DESIGN AWARD FOCUS)**
-    * **Development Focus**:
-        * [ ] **Implement Dark Mode:** A highly visible feature that shows design maturity.
-        * [ ] **Add Haptic Feedback:** Integrate subtle vibrations for button presses and key interactions to make the app feel more responsive.
-        * [ ] **Refine Animations:** Smooth out screen transitions and polish the "Correct!" / "Fooled You!" animations.
+* **Day 10 (Sat, Sept 27): TIER 2 - HIGH-IMPACT POLISH SPRINT (DESIGN AWARD)**
+    * **Development Focus**: Focus on features that provide the most "wow" factor for the **Design Award**.
+        * [ ] Implement a Dark Mode theme.
+        * [ ] Add subtle haptic feedback to key interactions.
+        * [ ] Refine any jarring screen transitions or animations.
     * **Public Focus**:
-        * [ ] Post a video/GIF showcasing the new Dark Mode and animations with the caption: "Polishing for the @RevenueCat #DesignAward! Added a dark mode and smoothed out some animations. #Shipaton #AndroidDev".
+        * [ ] Post a video showcasing the new Dark Mode and polished animations.
 
-* **Day 10 (Sat, Sept 27): COMMUNITY & TRUST SPRINT**
-    * **Development Focus**:
-        * [ ] **Implement Edit Profile (Name):** Build the UI and backend endpoint to allow users to change their display name.
-        * [ ] **Refine the New-User Onboarding Flow:** Ensure the first-time experience is smooth and clearly introduces the app's value and premium features.
+* **Day 11 (Sun, Sept 28): TIER 3 (COMPLETENESS) & TIER 1 (STABILITY)**
+    * **Development Focus (Morning)**: Implement "app completeness" features that build user trust.
+        * [ ] Implement the "Edit Profile (Name)" feature.
+        * [ ] Implement the ability for a user to delete their own challenges.
+    * **Development Focus (Afternoon)**:
+        * [ ] **Rapid Bug Bash**: Hunt down and fix any remaining crashes or major bugs in the core user flow.
     * **Public Focus**:
-        * [ ] Document your growth story for the **Build & Grow Award** submission. Write about the challenges overcome and how you're now focused on community-building features.
+        * [ ] Draft the written submission essays for each targeted award category on Devpost.
 
-* **Day 11 (Sun, Sept 28): Rapid Bug Bash & Narrative Assembly**
-    * **Development Focus**:
-        * [ ] **Rapid Bug Bash**: Dedicate a focused block of time to fixing any remaining bugs in the purchase, gameplay, and new feature flows on Android.
-    * **Public Focus**:
-        * [ ] Draft the written submission essays for each targeted award category on Devpost (HAMM, Design, Build & Grow, etc.).
-
-* **Day 12 (Mon, Sept 29): Final Assets & Video Production**
+* **Day 12 (Mon, Sept 29): TIER 1 - FINAL ASSETS & VIDEO**
     * **Development Focus**:
         * [ ] Conduct a final, full QA pass on the Android app.
     * **Public Focus**:
-        * [ ] Record and edit the final 3-minute demo video, showcasing the polished Android app, the purchase flow, and all the new features like dark mode and profile editing.
+        * [ ] Record and edit the new 3-minute demo video. It must showcase the polished Android app, the purchase flow, and the unlocked premium features.
+        * [ ] Finalize all visual assets (icon, high-res screenshots).
 
-* **Day 13 (Tues, Sept 30): SUBMISSION DAY**
+* **Day 13 (Tues, Sept 30): TIER 1 - SUBMISSION DAY**
     * **Development Focus**:
-        * [ ] Perform a final smoke test and update the app on the Google Play Store.
-        * [ ] Assemble and double-check all submission materials (video URL, Google Play URL, icons, screenshots, promo code/trial info).
+        * [ ] Perform a final smoke test and submit the updated build to the Google Play Store.
+        * [ ] Assemble and double-check all submission materials (video URL, Google Play URL, assets, promo code info).
     * **Public Focus**:
         * [ ] **Submit the project on Devpost before the 11:45 pm Pacific Time deadline**.
         * [ ] Post the final "WE SHIPPED!" update on social channels.
@@ -77,19 +75,11 @@ Following a strategic decision to focus all resources on a single platform, the 
     * [ ] A final submission that is highly competitive for the HAMM and Design awards.
 
 ---
-## 🏆 Bonus Features (To Tackle If Time Allows)
+### ⛔ **Deferred Features (Post-Hackathon Roadmap)**
 
-This is a prioritized list of extra features. If you find yourself waiting for the iOS review or you finish a day's tasks early, tackle these in order to make your submission even more competitive.
-
-1.  **High-Impact Polish (For the Design Award)**
-    * **Dark Mode:** Implementing a dark theme is a highly visible feature that shows design maturity.
-    * **Haptic Feedback:** Adding subtle vibrations on button presses and key interactions makes the app feel more responsive and premium.
-    * **Refine Animations:** Smooth out screen transitions and add a subtle animation to the "Correct!" / "Fooled You!" screens.
-
-2.  **Community & Trust Features**
-    * **Edit Profile (Name):** Implement the UI and backend endpoint to allow users to change their display name.
-    * **"Report" Confirmation:** Add the user-facing confirmation modal after a user reports a challenge, making the moderation system feel more complete.
-
-3.  **Advanced Account Management (Lower Priority)**
-    * **Change Password Flow:** Building the dedicated screen and backend endpoint for password changes.
-    * **Password Recovery Flow:** This requires integrating an email service and is a lower priority for the hackathon itself.
+The following features are now officially out of scope for the hackathon submission and will be part of the long-term roadmap:
+* Full Emotion Analysis API Integration
+* Progression, Rewards, and Leaderboards
+* Advanced Account Management (Password Recovery)
+* Comprehensive Content Moderation Tools (Admin Dashboards)
+* Swipe Navigation
