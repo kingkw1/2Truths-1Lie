@@ -17,7 +17,8 @@ import { useAuth } from '../hooks/useAuth';
 
 const AccountScreen = () => {
   const navigation = useNavigation();
-  const { isPremium } = usePremiumStatus();
+  const premiumStatusHook = usePremiumStatus() as any; // Type assertion to handle refresh method
+  const { isPremium, loading, error, customerInfo } = premiumStatusHook;
   const { user } = useAuth();
 
   const handleManageSubscription = async () => {
@@ -25,6 +26,45 @@ const AccountScreen = () => {
       await Purchases.showManageSubscriptions();
     } catch (e) {
       Alert.alert('Error', 'Could not open manage subscriptions.');
+    }
+  };
+
+  const handleDebugSubscription = async () => {
+    try {
+      // Force refresh customer info from RevenueCat servers (bypassing cache)
+      const freshCustomerInfo = await Purchases.getCustomerInfo();
+      
+      console.log('🔍 DEBUG: Fresh customer info:', {
+        activeEntitlements: Object.keys(freshCustomerInfo.entitlements.active),
+        allEntitlements: Object.keys(freshCustomerInfo.entitlements.all),
+        activeSubscriptions: freshCustomerInfo.activeSubscriptions,
+        allPurchasedProductIdentifiers: freshCustomerInfo.allPurchasedProductIdentifiers,
+      });
+      
+      // Check multiple possible entitlement names
+      const possibleEntitlements = ['premium', 'pro', 'investigator', 'pro_access'];
+      const activeEntitlementNames = Object.keys(freshCustomerInfo.entitlements.active);
+      const foundEntitlements = possibleEntitlements.filter(name => 
+        freshCustomerInfo.entitlements.active[name] !== undefined
+      );
+
+      // Trigger a manual refresh of the premium status hook if available
+      if (premiumStatusHook.refresh) {
+        await premiumStatusHook.refresh();
+      }
+
+      // Show debug info to user
+      Alert.alert(
+        'Debug Subscription Status',
+        `Active Entitlements: ${activeEntitlementNames.join(', ') || 'None'}\n` +
+        `Found Known Entitlements: ${foundEntitlements.join(', ') || 'None'}\n` +
+        `Active Subscriptions: ${freshCustomerInfo.activeSubscriptions.join(', ') || 'None'}\n` +
+        `All Purchased: ${freshCustomerInfo.allPurchasedProductIdentifiers.join(', ') || 'None'}\n` +
+        `Current isPremium: ${isPremium}\n` +
+        `Loading: ${loading}`
+      );
+    } catch (e) {
+      Alert.alert('Debug Error', `Failed to debug: ${e}`);
     }
   };
 
@@ -73,10 +113,15 @@ const AccountScreen = () => {
           <Text style={styles.cardTitle}>SUBSCRIPTION</Text>
           <View style={styles.cardRow}>
             <Text style={styles.label}>Status</Text>
-            <Text style={styles.value}>{isPremium ? 'Pro Member' : 'Free User'}</Text>
+            <Text style={styles.value}>
+              {loading ? 'Checking...' : error ? 'Error loading' : isPremium ? 'Pro Member' : 'Free User'}
+            </Text>
           </View>
           <TouchableOpacity style={styles.button} onPress={handleManageSubscription}>
             <Text style={styles.buttonText}>Manage Subscription</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={[styles.button, styles.debugButton]} onPress={handleDebugSubscription}>
+            <Text style={styles.buttonText}>Debug Subscription Status</Text>
           </TouchableOpacity>
         </View>
 
@@ -165,6 +210,10 @@ const styles = StyleSheet.create({
     color: '#ffffff',
     fontSize: 16,
     fontWeight: 'bold',
+  },
+  debugButton: {
+    backgroundColor: '#17a2b8',
+    marginTop: 8,
   },
   logoutButton: {
     backgroundColor: '#dc3545',
