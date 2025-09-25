@@ -50,13 +50,13 @@ class ChallengeService:
                 # Check both camelCase and snake_case field names
                 for time_field in ["start_time", "startTime"]:
                     if time_field in converted_segment and converted_segment[time_field] is not None and converted_segment[time_field] < 1000:
-                        converted_segment[time_field] = int(converted_segment[time_field] * 1000)
+                        converted_segment[time_field] = round(converted_segment[time_field] * 1000)
                 for time_field in ["end_time", "endTime"]:
                     if time_field in converted_segment and converted_segment[time_field] is not None and converted_segment[time_field] < 1000:
-                        converted_segment[time_field] = int(converted_segment[time_field] * 1000)
+                        converted_segment[time_field] = round(converted_segment[time_field] * 1000)
                 for time_field in ["duration"]:
                     if time_field in converted_segment and converted_segment[time_field] is not None and converted_segment[time_field] < 1000:
-                        converted_segment[time_field] = int(converted_segment[time_field] * 1000)
+                        converted_segment[time_field] = round(converted_segment[time_field] * 1000)
                 converted_segments.append(converted_segment)
             else:
                 converted_segments.append(segment)

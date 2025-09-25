@@ -1,14 +1,3 @@
-/**
- * Fullscreen Video Player for Modern Fullscreen Interface
- * 
- * Features:
- * - True fullscreen video display with no borders/padding
- * - Minimal controls hidden by default
- * - Optimized for immersive viewing experience
- * - Supports both merged videos with segments and individual videos
- * - Touch-friendly interaction for mobile use
- */
-
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import {
   View,
@@ -40,40 +29,27 @@ export const FullscreenVideoPlayer: React.FC<FullscreenVideoPlayerProps> = ({
   autoPlay = false,
 }) => {
   const videoRef = useRef<Video>(null);
+  const timeoutIdRef = useRef<NodeJS.Timeout | null>(null);
+  const pendingSegmentRef = useRef<VideoSegment | null>(null);
   const fadeAnim = useRef(new Animated.Value(1)).current;
-  
+
   const [isPlaying, setIsPlaying] = useState(autoPlay);
   const [isLoading, setIsLoading] = useState(false);
   const [showControls, setShowControls] = useState(false);
   const [currentPosition, setCurrentPosition] = useState(0);
   const [videoDuration, setVideoDuration] = useState(0);
   const [currentVideoUrl, setCurrentVideoUrl] = useState('');
-  const [hasReachedSegmentEnd, setHasReachedSegmentEnd] = useState(false);
-  const segmentTimerRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Determine video source and type
   const hasMergedVideo = !!mergedVideo && segments.length > 0;
   const hasIndividualVideos = individualVideos.length >= 3;
-  
-  // Log when video player initializes
-  useEffect(() => {
-    console.log(`🎯 TIMING_DEBUG: FullscreenVideoPlayer initialized`);
-    console.log(`  selectedSegment: ${selectedSegment}`);
-    console.log(`  hasMergedVideo: ${hasMergedVideo}`);
-    console.log(`  segments.length: ${segments.length}`);
-  }, [selectedSegment, hasMergedVideo, segments.length]);
 
-  // Hide controls after 3 seconds of inactivity
   useEffect(() => {
     if (showControls) {
-      const timer = setTimeout(() => {
-        setShowControls(false);
-      }, 3000);
+      const timer = setTimeout(() => setShowControls(false), 3000);
       return () => clearTimeout(timer);
     }
   }, [showControls]);
 
-  // Auto-hide loading indicator with fade animation
   useEffect(() => {
     if (isLoading) {
       fadeAnim.setValue(1);
@@ -86,169 +62,73 @@ export const FullscreenVideoPlayer: React.FC<FullscreenVideoPlayerProps> = ({
     }
   }, [isLoading, fadeAnim]);
 
-  // Handle video playback status updates
   const handlePlaybackStatusUpdate = useCallback((status: AVPlaybackStatus) => {
-    if (status.isLoaded) {
-      setIsPlaying(status.isPlaying);
-      setIsLoading(status.isBuffering);
-      setCurrentPosition(status.positionMillis || 0);
-      setVideoDuration(status.durationMillis || 0);
-      
-      // Debug playback status for segment 2 specifically
-      if (selectedSegment === 2 && status.positionMillis && segments.length > 2) {
-        const currentSegment = segments[selectedSegment];
-        console.log(`🎯 TIMING_DEBUG: Segment 2 playback status:`, {
-          position: status.positionMillis,
-          isPlaying: status.isPlaying,
-          isBuffering: status.isBuffering,
-          expectedRange: currentSegment ? `${currentSegment.startTime}ms - ${currentSegment.endTime}ms` : 'no segment data'
-        });
-      }
-
-      // For merged video: pause when we reach the end of the current segment
-      if (hasMergedVideo && segments.length > 0 && selectedSegment !== undefined && selectedSegment !== null) {
-        const currentSegment = segments[selectedSegment];
-        if (currentSegment && status.positionMillis) {
-          // Aggressive approach to prevent video bleed:
-          // 1. Larger buffer before segment end
-          const segmentEndBuffer = 300; // increased from 150ms to 300ms
-          const effectiveEndTime = currentSegment.endTime - segmentEndBuffer;
-          
-          // 2. Warning zone to prepare for end
-          const warningZone = 500; // 500ms before actual end
-          const warningTime = currentSegment.endTime - warningZone;
-          
-          if (status.positionMillis >= effectiveEndTime) {
-            // Only pause and log once per segment
-            if (!hasReachedSegmentEnd) {
-              setHasReachedSegmentEnd(true);
-              
-              // Immediately pause AND seek back if we've gone past the intended end
-              videoRef.current?.pauseAsync();
-              
-              // If we've somehow gone past the actual end time, seek back to prevent bleed
-              if (status.positionMillis >= currentSegment.endTime) {
-                console.log(`🎬 FULLSCREEN_PLAYER: Video went past segment end (${status.positionMillis}ms >= ${currentSegment.endTime}ms), seeking back`);
-                videoRef.current?.setPositionAsync(effectiveEndTime);
-              }
-              
-              // Reached end of segment, pausing (reduced logging)
-            }
-          }
-        }
-      }
-    } else {
+    if (!status.isLoaded) {
+      if (status.error) console.error('[ERROR] Video playback error:', status.error);
       setIsLoading(false);
-      if ('error' in status && status.error) {
-        console.error('Video playback error:', status.error);
+      return;
+    }
+
+    setIsPlaying(status.isPlaying);
+    setIsLoading(status.isBuffering);
+    setCurrentPosition(status.positionMillis);
+    setVideoDuration(status.durationMillis || 0);
+
+    const segmentToPlay = pendingSegmentRef.current;
+
+    // A segment is pending and the video has just started playing.
+    if (segmentToPlay && status.isPlaying && !status.isBuffering) {
+      const remainingDuration = segmentToPlay.endTime - status.positionMillis;
+
+      // Clear any existing timer, just in case.
+      if (timeoutIdRef.current) {
+        clearTimeout(timeoutIdRef.current);
       }
-    }
-  }, [hasMergedVideo, segments, selectedSegment, hasReachedSegmentEnd]);
 
-  // Load and play merged video segment
-  const loadMergedVideoSegment = useCallback(async (segmentIndex: number) => {
-    console.log(`🎯 TIMING_DEBUG: FullscreenVideoPlayer loadMergedVideoSegment called:`);
-    console.log(`  segmentIndex: ${segmentIndex}`);
-    console.log(`  hasMergedVideo: ${hasMergedVideo}`);
-    console.log(`  segments.length: ${segments.length}`);
-    
-    if (!hasMergedVideo || !videoRef.current || segmentIndex >= segments.length) {
-      console.log(`🎯 TIMING_DEBUG: Skipping loadMergedVideoSegment - invalid conditions`);
-      return;
-    }
+      // PHASE 2: Simple timeout-based timing - trust the accurate backend segment metadata
+      console.log(`🎯 SIMPLE_TIMING: Segment (${segmentToPlay.startTime}-${segmentToPlay.endTime}ms) - scheduling pause in ${remainingDuration}ms`);
+      console.log(`🎯 SIMPLE_TIMING: Current position: ${status.positionMillis}ms, Segment end: ${segmentToPlay.endTime}ms`);
+      
+      timeoutIdRef.current = setTimeout(() => {
+        console.log(`🎯 SIMPLE_TIMING: Pausing at segment boundary`);
+        videoRef.current?.pauseAsync();
+      }, remainingDuration > 0 ? remainingDuration : 0);
 
-    const segment = segments[segmentIndex];
-    const videoUrl = mergedVideo!.streamingUrl;
-    
-    console.log(`🎯 TIMING_DEBUG: Loading merged video segment ${segmentIndex}:`);
-    console.log(`  startTime: ${segment.startTime}ms`);
-    console.log(`  endTime: ${segment.endTime}ms`);
-    console.log(`  duration: ${segment.duration}ms`);
-    console.log(`  videoUrl: ${videoUrl}`);
-
-    if (!videoUrl) {
-      console.error('No video URL available for merged video');
-      return;
+      // IMPORTANT: Clear the intent so this only runs once per playback.
+      pendingSegmentRef.current = null;
     }
+  }, []);
+
+  const playSegment = useCallback(async (segment: VideoSegment) => {
+    if (!videoRef.current || !mergedVideo?.streamingUrl) return;
+
+    if (timeoutIdRef.current) clearTimeout(timeoutIdRef.current);
+
+    pendingSegmentRef.current = segment;
 
     try {
       setIsLoading(true);
-      console.log(`🎯 TIMING_DEBUG: Starting video load process for segment ${segmentIndex}`);
-
-      // Load video if not already loaded or different URL
-      if (currentVideoUrl !== videoUrl) {
-        console.log(`🎯 TIMING_DEBUG: Loading new video URL: ${videoUrl}`);
-        await videoRef.current.loadAsync(
-          { uri: videoUrl },
-          { shouldPlay: false, positionMillis: segment.startTime },
-          false
-        );
-        setCurrentVideoUrl(videoUrl);
-        console.log(`🎯 TIMING_DEBUG: Video loaded successfully`);
-      } else {
-        console.log(`🎯 TIMING_DEBUG: Video already loaded, reusing existing`);
-      }
-
-      // Robust seeking with retry mechanism
-      console.log(`🎯 TIMING_DEBUG: Seeking to segment start: ${segment.startTime}ms`);
-      
-      // Simple seek to the segment start time
-      console.log(`🎯 TIMING_DEBUG: Seeking to segment start: ${segment.startTime}ms`);
-      try {
-        await videoRef.current.setPositionAsync(segment.startTime);
-        console.log(`✅ TIMING_SUCCESS: Seek completed to ${segment.startTime}ms`);
-      } catch (error) {
-        console.error(`❌ TIMING_ERROR: Failed to seek to ${segment.startTime}ms:`, error);
+      if (currentVideoUrl !== mergedVideo.streamingUrl) {
+        await videoRef.current.loadAsync({ uri: mergedVideo.streamingUrl }, { shouldPlay: false });
+        setCurrentVideoUrl(mergedVideo.streamingUrl);
       }
       
+      await videoRef.current.setPositionAsync(segment.startTime);
       if (autoPlay) {
-        console.log(`🎯 TIMING_DEBUG: Starting playback for segment ${segmentIndex}`);
         await videoRef.current.playAsync();
-        console.log(`🎯 TIMING_DEBUG: Playback started successfully`);
-        
-        // Set up a safety timer to force-pause the video
-        // This acts as a backup in case the playback status callback misses the end
-        const segmentDuration_ms = segment.endTime - segment.startTime; // Duration in milliseconds
-        const safetyBuffer_ms = 50; // Stop 50ms before the actual end (reduced from 200ms)
-        const timerDuration_ms = Math.max(100, segmentDuration_ms - safetyBuffer_ms); // Timer duration in milliseconds
-        
-        // Clear any existing timer
-        if (segmentTimerRef.current) {
-          clearTimeout(segmentTimerRef.current);
-        }
-        
-        segmentTimerRef.current = setTimeout(async () => {
-          // Safety timer: force-pausing segment (reduced logging)
-          try {
-            await videoRef.current?.pauseAsync();
-            setHasReachedSegmentEnd(true);
-          } catch (error) {
-            console.error('Error in safety timer pause:', error);
-          }
-        }, timerDuration_ms);
-        
-        console.log(`🎯 TIMING_DEBUG: Safety timer set for ${timerDuration_ms}ms`);
-      } else {
-        console.log(`� TIMING_DEBUG: Video loaded for segment ${segmentIndex}, autoPlay disabled`);
       }
-
     } catch (error) {
-      console.error(`❌ TIMING_ERROR: Failed to load segment ${segmentIndex}:`, error);
-    } finally {
+      console.error('[ERROR] Error during segment playback initiation:', error);
+      pendingSegmentRef.current = null;
       setIsLoading(false);
-      console.log(`🎯 TIMING_DEBUG: Video loading process completed for segment ${segmentIndex}`);
     }
-  }, [hasMergedVideo, mergedVideo, segments, currentVideoUrl, autoPlay]);
+  }, [mergedVideo, currentVideoUrl, autoPlay]);
 
-  // Load and play individual video
   const loadIndividualVideo = useCallback(async (videoIndex: number) => {
     if (!hasIndividualVideos || !videoRef.current || videoIndex >= individualVideos.length) return;
 
     const video = individualVideos[videoIndex];
-    console.log('🎬 FULLSCREEN_PLAYER: loadIndividualVideo - Raw video object:', JSON.stringify(video, null, 2));
-    
     const videoUrl = video.streamingUrl || video.url || '';
-    console.log('🎬 FULLSCREEN_PLAYER: loadIndividualVideo - Final videoUrl:', videoUrl);
 
     if (!videoUrl) {
       console.error('No video URL available for video index:', videoIndex);
@@ -257,8 +137,6 @@ export const FullscreenVideoPlayer: React.FC<FullscreenVideoPlayerProps> = ({
 
     try {
       setIsLoading(true);
-
-      // Load video if not already loaded or different URL  
       if (currentVideoUrl !== videoUrl) {
         await videoRef.current.loadAsync(
           { uri: videoUrl },
@@ -267,13 +145,9 @@ export const FullscreenVideoPlayer: React.FC<FullscreenVideoPlayerProps> = ({
         );
         setCurrentVideoUrl(videoUrl);
       } else {
-        // Same video, just restart
         await videoRef.current.setPositionAsync(0);
-        if (autoPlay) {
-          await videoRef.current.playAsync();
-        }
+        if (autoPlay) await videoRef.current.playAsync();
       }
-
     } catch (error) {
       console.error('Error loading individual video:', error);
     } finally {
@@ -281,71 +155,33 @@ export const FullscreenVideoPlayer: React.FC<FullscreenVideoPlayerProps> = ({
     }
   }, [hasIndividualVideos, individualVideos, currentVideoUrl, autoPlay]);
 
-  // Effect to load video when selectedSegment changes
-  const lastSelectedSegment = useRef<number | null>(null);
-  
   useEffect(() => {
-    console.log(`🎯 TIMING_DEBUG: FullscreenVideoPlayer selectedSegment changed to: ${selectedSegment}`);
-    console.log(`  lastSelectedSegment: ${lastSelectedSegment.current}`);
-    console.log(`  hasMergedVideo: ${hasMergedVideo}`);
-    console.log(`  hasIndividualVideos: ${hasIndividualVideos}`);
-    
-    if (selectedSegment !== undefined && selectedSegment !== null) {
-      // Prevent rapid consecutive calls for the same segment
-      if (lastSelectedSegment.current === selectedSegment) {
-        console.log(`🎯 TIMING_DEBUG: Segment ${selectedSegment} already selected, skipping`);
-        return;
-      }
-      
-      // Clear any existing safety timer when switching segments
-      if (segmentTimerRef.current) {
-        clearTimeout(segmentTimerRef.current);
-        segmentTimerRef.current = null;
-      }
-      
-      lastSelectedSegment.current = selectedSegment;
-      // Reset the segment end flag when loading a new segment
-      setHasReachedSegmentEnd(false);
-      console.log(`🎯 TIMING_DEBUG: Loading segment ${selectedSegment}`);
-      
-      if (hasMergedVideo) {
-        loadMergedVideoSegment(selectedSegment);
-      } else if (hasIndividualVideos) {
-        loadIndividualVideo(selectedSegment);
-      }
-    }
-  }, [selectedSegment, hasMergedVideo, hasIndividualVideos, loadMergedVideoSegment, loadIndividualVideo]);
+    if (selectedSegment === undefined || selectedSegment === null) return;
 
-  // Cleanup timer on unmount
+    if (hasMergedVideo && segments[selectedSegment]) {
+      playSegment(segments[selectedSegment]);
+    } else if (hasIndividualVideos) {
+      loadIndividualVideo(selectedSegment);
+    }
+  }, [selectedSegment, hasMergedVideo, hasIndividualVideos, segments, playSegment, loadIndividualVideo]);
+
   useEffect(() => {
     return () => {
-      if (segmentTimerRef.current) {
-        clearTimeout(segmentTimerRef.current);
-      }
+      if (timeoutIdRef.current) clearTimeout(timeoutIdRef.current);
     };
   }, []);
 
-  // Toggle play/pause
   const togglePlayPause = useCallback(async () => {
     if (!videoRef.current) return;
-
     try {
-      if (isPlaying) {
-        await videoRef.current.pauseAsync();
-      } else {
-        await videoRef.current.playAsync();
-      }
+      isPlaying ? await videoRef.current.pauseAsync() : await videoRef.current.playAsync();
     } catch (error) {
       console.error('Error toggling playback:', error);
     }
   }, [isPlaying]);
 
-  // Handle screen touch to show/hide controls
-  const handleScreenTouch = useCallback(() => {
-    setShowControls(true);
-  }, []);
+  const handleScreenTouch = useCallback(() => setShowControls(true), []);
 
-  // Early return if no video sources available
   if (!hasMergedVideo && !hasIndividualVideos) {
     return (
       <View style={styles.container}>
@@ -360,24 +196,19 @@ export const FullscreenVideoPlayer: React.FC<FullscreenVideoPlayerProps> = ({
       activeOpacity={1}
       onPress={handleScreenTouch}
     >
-      {/* Fullscreen Video */}
       <Video
         ref={videoRef}
         style={styles.video}
         useNativeControls={false}
-        resizeMode={ResizeMode.COVER} // Use COVER for fullscreen experience
+        resizeMode={ResizeMode.COVER}
         isLooping={false}
         onPlaybackStatusUpdate={handlePlaybackStatusUpdate}
       />
-
-      {/* Loading Indicator */}
       {isLoading && (
         <Animated.View style={[styles.loadingOverlay, { opacity: fadeAnim }]}>
           <ActivityIndicator size="large" color="#ffffff" />
         </Animated.View>
       )}
-
-      {/* Minimal Play/Pause Control (only shown when controls are visible) */}
       {showControls && !isLoading && (
         <TouchableOpacity
           style={styles.playPauseButton}
@@ -389,7 +220,6 @@ export const FullscreenVideoPlayer: React.FC<FullscreenVideoPlayerProps> = ({
           </Text>
         </TouchableOpacity>
       )}
-
     </TouchableOpacity>
   );
 };
