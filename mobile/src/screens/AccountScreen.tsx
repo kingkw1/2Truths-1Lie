@@ -10,16 +10,19 @@ import {
   StyleSheet,
   Alert,
 } from 'react-native';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, CommonActions } from '@react-navigation/native';
 import Purchases from 'react-native-purchases';
 import { usePremiumStatus } from '../hooks/usePremiumStatus';
 import { useAuth } from '../hooks/useAuth';
+import { useAppDispatch } from '../store/hooks';
+import { logout as masterLogout } from '../store/actions';
 
 const AccountScreen = () => {
   const navigation = useNavigation();
+  const dispatch = useAppDispatch();
   const premiumStatusHook = usePremiumStatus() as any; // Type assertion to handle refresh method
   const { isPremium, loading, error, customerInfo } = premiumStatusHook;
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
 
   const handleManageSubscription = async () => {
     try {
@@ -68,9 +71,33 @@ const AccountScreen = () => {
     }
   };
 
-  const handleLogout = () => {
-    // TODO: Dispatch logout action and clear user session
-    Alert.alert('Log Out', 'You have been logged out.');
+  const handleLogout = async () => {
+    try {
+      // 1. Log out from RevenueCat
+      await Purchases.logOut();
+      console.log('Logged out from RevenueCat');
+
+      // 2. Dispatch the master logout action to reset Redux state
+      dispatch(masterLogout());
+      console.log('Dispatched master logout action');
+
+      // 3. Clear local auth data and create a new guest session
+      await logout();
+      console.log('Cleared auth data and created new guest session');
+
+      // 4. Reset the navigation stack to the authentication flow
+      navigation.dispatch(
+        CommonActions.reset({
+          index: 0,
+          routes: [{ name: 'Auth' }],
+        })
+      );
+      console.log('Reset navigation to Auth screen');
+
+    } catch (e) {
+      console.error('Logout failed', e);
+      Alert.alert('Error', 'An error occurred during logout. Please try again.');
+    }
   };
 
   const handleEditProfile = () => {
