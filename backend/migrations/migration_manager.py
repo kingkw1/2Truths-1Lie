@@ -12,6 +12,7 @@ import json
 import logging
 import sqlite3
 import psycopg2
+import importlib.util
 from typing import Dict, List, Optional, Any, Tuple
 from datetime import datetime
 from abc import ABC, abstractmethod
@@ -677,3 +678,50 @@ COMMIT;
         
         logger.info(f"Rollback script created: {rollback_file}")
         return rollback_file
+
+    def apply_versioned_migrations(self, db_conn):
+        """
+        Applies all unapplied versioned migrations from the 'versions' directory.
+        """
+        versions_dir = os.path.join(self.migration_dir, 'versions')
+        if not os.path.isdir(versions_dir):
+            logger.info("No 'versions' directory found, skipping versioned migrations.")
+            return
+
+        self.create_migration_tracking_table(db_conn)
+
+        with db_conn.cursor() as cursor:
+            cursor.execute("SELECT migration_id FROM migration_history")
+            applied_migrations = {row[0] for row in cursor.fetchall()}
+
+        migration_files = sorted(
+            [f for f in os.listdir(versions_dir) if f.endswith('.py') and not f.startswith('__')]
+        )
+
+        for filename in migration_files:
+            migration_id = os.path.splitext(filename)[0]
+            if migration_id in applied_migrations:
+                continue
+
+            logger.info(f"Applying migration: {migration_id}")
+            try:
+                spec = importlib.util.spec_from_file_location(
+                    migration_id, os.path.join(versions_dir, filename)
+                )
+                migration_module = importlib.util.module_from_spec(spec)
+                spec.loader.exec_module(migration_module)
+
+                migration_module.upgrade(db_conn)
+
+                with db_conn.cursor() as cursor:
+                    cursor.execute(
+                        "INSERT INTO migration_history (migration_id, description) VALUES (%s, %s)",
+                        (migration_id, migration_module.__doc__ or "")
+                    )
+                db_conn.commit()
+                logger.info(f"Successfully applied migration: {migration_id}")
+
+            except Exception as e:
+                db_conn.rollback()
+                logger.error(f"Failed to apply migration {migration_id}: {e}")
+                raise
