@@ -53,6 +53,16 @@ export const FullscreenVideoPlayer: React.FC<FullscreenVideoPlayerProps> = ({
 
   const isOwner = challenge?.creator_id === currentUser?.id;
 
+  useEffect(() => {
+    console.log('---[DELETE BUTTON DEBUG - FullscreenVideoPlayer]---');
+    console.log('Challenge Object:', JSON.stringify(challenge, null, 2));
+    console.log('CurrentUser Object:', JSON.stringify(currentUser, null, 2));
+    console.log('Challenge Creator ID:', challenge?.creator_id, '| Type:', typeof challenge?.creator_id);
+    console.log('Current User ID:', currentUser?.id, '| Type:', typeof currentUser?.id);
+    console.log('Is Owner?', isOwner);
+    console.log('----------------------------------------------------');
+  }, [challenge, currentUser, isOwner]);
+
   const performDelete = async () => {
     if (!challenge?.challenge_id || !challenge?.id) {
       Alert.alert('Error', 'Challenge ID is missing, cannot delete.');
