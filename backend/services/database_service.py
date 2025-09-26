@@ -2611,25 +2611,39 @@ class DatabaseService:
             logger.error(f"Error loading all challenges: {e}")
             return {}
     
-    def delete_challenge_from_db(self, challenge_id: str) -> bool:
-        """Delete a challenge from the database"""
+    def delete_challenge(self, challenge_id: str) -> bool:
+        """
+        Delete a challenge and its associated records from the database.
+        Relies on 'ON DELETE CASCADE' for related records like guesses.
+
+        Args:
+            challenge_id: The ID of the challenge to delete.
+
+        Returns:
+            True if the challenge was found and deleted, False otherwise.
+
+        Raises:
+            DatabaseError: For underlying database issues.
+        """
+        operation = "delete_challenge"
+        self._validate_database_operation(operation)
+
         try:
-            with self.get_connection() as conn:
-                cursor = self.get_cursor(conn)
-                
-                if self.is_postgres:
-                    cursor.execute("DELETE FROM challenges WHERE challenge_id = %s", (challenge_id,))
-                    cursor.execute("DELETE FROM guesses WHERE challenge_id = %s", (challenge_id,))
-                else:
-                    cursor.execute("DELETE FROM challenges WHERE challenge_id = ?", (challenge_id,))
-                    cursor.execute("DELETE FROM guesses WHERE challenge_id = ?", (challenge_id,))
-                
-                conn.commit()
-                return cursor.rowcount > 0
-                
+            # The database schema uses ON DELETE CASCADE for guesses,
+            # so we only need to delete from the challenges table.
+            query = "DELETE FROM challenges WHERE challenge_id = ?"
+            rows_affected = self._execute_query(query, (challenge_id,))
+
+            if rows_affected > 0:
+                logger.info(f"Successfully deleted challenge {challenge_id} and its associated records.")
+                return True
+            else:
+                logger.warning(f"Attempted to delete challenge {challenge_id}, but it was not found.")
+                return False
+
         except Exception as e:
-            logger.error(f"Error deleting challenge {challenge_id}: {e}")
-            return False
+            categorized_error = self._handle_database_exception(operation, e, query, (challenge_id,))
+            raise categorized_error
     
     def save_guess(self, guess) -> bool:
         """Save a guess to the database"""

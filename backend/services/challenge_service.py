@@ -23,6 +23,14 @@ class ChallengeServiceError(Exception):
     """Custom exception for challenge service errors"""
     pass
 
+class ChallengeNotFoundError(ChallengeServiceError):
+    """Raised when a challenge is not found."""
+    pass
+
+class ChallengeAccessDeniedError(ChallengeServiceError):
+    """Raised when a user is denied access to a challenge."""
+    pass
+
 class ChallengeService:
     """Service for managing challenges and guesses"""
     
@@ -685,24 +693,48 @@ class ChallengeService:
         ]
         return sorted(challenge_guesses, key=lambda x: x.submitted_at, reverse=True)
     
-    async def delete_challenge(self, challenge_id: str, creator_id: str) -> bool:
-        """Delete a challenge (only draft challenges)"""
+    async def delete_challenge(self, challenge_id: str, user_id: str) -> bool:
+        """
+        Delete a challenge after verifying ownership.
+        
+        Args:
+            challenge_id: The ID of the challenge to delete.
+            user_id: The ID of the user attempting to delete the challenge.
+
+        Returns:
+            True if the challenge was successfully deleted.
+
+        Raises:
+            ChallengeNotFoundError: If the challenge is not found.
+            ChallengeAccessDeniedError: If the user is not the creator.
+        """
         challenge = self.challenges.get(challenge_id)
+        
         if not challenge:
-            return False
+            raise ChallengeNotFoundError(f"Challenge with ID {challenge_id} not found.")
+
+        if challenge.creator_id != user_id:
+            raise ChallengeAccessDeniedError(f"User {user_id} is not authorized to delete challenge {challenge_id}.")
+
+        # Call the database service to delete the challenge
+        from services.database_service import get_db_service
+        db_service = get_db_service()
         
-        if challenge.creator_id != creator_id:
-            raise ChallengeServiceError("Access denied")
-        
-        if challenge.status != ChallengeStatus.DRAFT:
-            raise ChallengeServiceError("Only draft challenges can be deleted")
-        
-        # Remove challenge
-        del self.challenges[challenge_id]
-        await self._save_challenges()
-        
-        logger.info(f"Challenge {challenge_id} deleted by user {creator_id}")
-        return True
+        if db_service.delete_challenge(challenge_id):
+            # If deletion from DB is successful, remove from in-memory cache
+            if challenge_id in self.challenges:
+                del self.challenges[challenge_id]
+
+            logger.info(f"Challenge {challenge_id} deleted by user {user_id}")
+            return True
+        else:
+            # This case might occur if the DB is out of sync with the cache
+            logger.warning(f"Challenge {challenge_id} was not found in the database for deletion, but existed in cache.")
+            # Even if not in DB, remove from cache for consistency
+            if challenge_id in self.challenges:
+                del self.challenges[challenge_id]
+            # We can still raise not found because the end state is that it's gone
+            raise ChallengeNotFoundError(f"Challenge with ID {challenge_id} not found in database.")
     
     async def flag_challenge(self, challenge_id: str, user_id: str, reason: str) -> bool:
         """Flag a challenge for manual review"""

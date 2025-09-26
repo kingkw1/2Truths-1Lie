@@ -10,7 +10,7 @@ import logging
 
 from services.auth_service import get_current_user, get_authenticated_user
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
-from services.challenge_service import challenge_service
+from services.challenge_service import challenge_service, ChallengeNotFoundError, ChallengeAccessDeniedError
 from services.upload_service import ChunkedUploadService
 from services.cloud_storage_service import create_cloud_storage_service, CloudStorageError
 from services.database_service import get_db_service
@@ -526,34 +526,43 @@ async def get_user_challenges(
 @router.delete("/{challenge_id}", status_code=status.HTTP_204_NO_CONTENT)
 async def delete_challenge(
     challenge_id: str,
-    user_id: str = Depends(get_current_user)
+    user_id: str = Depends(get_authenticated_user)
 ):
     """
-    Delete a challenge (only by creator)
+    Delete a challenge.
+
+    This endpoint is protected and requires user authentication.
+    - Returns 404 if the challenge is not found.
+    - Returns 403 if the user is not the creator of the challenge.
+    - Returns 204 on successful deletion.
     """
     try:
         logger.info(f"User {user_id} attempting to delete challenge {challenge_id}")
         
-        success = await challenge_service.delete_challenge(
+        await challenge_service.delete_challenge(
             challenge_id=challenge_id,
             user_id=user_id
         )
         
-        if not success:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="Cannot delete challenge - not authorized or challenge not found"
-            )
+        logger.info(f"Challenge {challenge_id} deleted successfully by user {user_id}")
         
-        logger.info(f"Challenge {challenge_id} deleted by user {user_id}")
-        
-    except HTTPException:
-        raise
+    except ChallengeNotFoundError as e:
+        logger.warning(f"Delete failed: challenge not found. User: {user_id}, Challenge: {challenge_id}. Error: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Challenge not found"
+        )
+    except ChallengeAccessDeniedError as e:
+        logger.warning(f"Delete failed: access denied. User: {user_id}, Challenge: {challenge_id}. Error: {e}")
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You are not authorized to delete this challenge"
+        )
     except Exception as e:
-        logger.error(f"Failed to delete challenge {challenge_id}: {str(e)}", exc_info=True)
+        logger.error(f"Unexpected error deleting challenge {challenge_id}: {str(e)}", exc_info=True)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to delete challenge"
+            detail="An unexpected error occurred while deleting the challenge"
         )
 
 
