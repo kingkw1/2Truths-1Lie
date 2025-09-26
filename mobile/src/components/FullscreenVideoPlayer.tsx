@@ -51,25 +51,18 @@ export const FullscreenVideoPlayer: React.FC<FullscreenVideoPlayerProps> = ({
   const [videoDuration, setVideoDuration] = useState(0);
   const [currentVideoUrl, setCurrentVideoUrl] = useState('');
 
-  const isOwner = challenge?.creator_id === currentUser?.id;
-
-  useEffect(() => {
-    console.log('---[DELETE BUTTON DEBUG - FullscreenVideoPlayer]---');
-    console.log('Challenge Object:', JSON.stringify(challenge, null, 2));
-    console.log('CurrentUser Object:', JSON.stringify(currentUser, null, 2));
-    console.log('Challenge Creator ID:', challenge?.creator_id, '| Type:', typeof challenge?.creator_id);
-    console.log('Current User ID:', currentUser?.id, '| Type:', typeof currentUser?.id);
-    console.log('Is Owner?', isOwner);
-    console.log('----------------------------------------------------');
-  }, [challenge, currentUser, isOwner]);
+  // Corrected property name from creator_id to creatorId
+  const isOwner = challenge?.creatorId === currentUser?.id;
 
   const performDelete = async () => {
-    if (!challenge?.challenge_id || !challenge?.id) {
+    // Corrected property name from challenge_id to id
+    if (!challenge?.id) {
       Alert.alert('Error', 'Challenge ID is missing, cannot delete.');
       return;
     }
     try {
-      const response = await realChallengeAPI.deleteChallenge(challenge.challenge_id);
+      // The API service expects the UUID, which is challenge.id
+      const response = await realChallengeAPI.deleteChallenge(challenge.id);
       if (response.success) {
         Alert.alert('Success', 'Challenge has been deleted.');
         dispatch(removeChallenge(challenge.id));
