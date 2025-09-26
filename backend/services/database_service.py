@@ -353,16 +353,24 @@ class DatabaseService:
         # Validate environment and database configuration
         self._validate_environment_requirements()
         
-        # Initialize bcrypt context - handle potential 72-byte limit issues during initialization
+        # Initialize bcrypt context with robust error handling
         try:
             self.pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
-        except ValueError as e:
-            if "password cannot be longer than 72 bytes" in str(e):
-                logger.warning(f"bcrypt initialization hit 72-byte limit during setup: {e}")
-                # This should not normally happen, but if it does, we need to handle it
-                raise RuntimeError("bcrypt library configuration issue - please check deployment environment")
-            else:
-                raise e
+            logger.info("bcrypt context initialized successfully")
+        except Exception as e:
+            logger.error(f"bcrypt initialization failed: {e}")
+            # Try alternative bcrypt configuration
+            try:
+                import bcrypt
+                # Use direct bcrypt instead of passlib if initialization fails
+                self.use_direct_bcrypt = True
+                logger.warning("Falling back to direct bcrypt implementation")
+            except ImportError:
+                logger.error("bcrypt library not available")
+                raise RuntimeError(f"Password hashing initialization failed: {e}")
+        
+        # Set fallback flag
+        self.use_direct_bcrypt = getattr(self, 'use_direct_bcrypt', False)
         
         # Set up database-specific properties
         if self.database_mode == DatabaseMode.POSTGRESQL_ONLY:
@@ -1534,7 +1542,15 @@ class DatabaseService:
         # bcrypt has a 72-byte limit, truncate if necessary
         if len(password) > 72:
             password = password[:72]
-        return self.pwd_context.hash(password)
+        
+        if self.use_direct_bcrypt:
+            import bcrypt
+            # Encode password to bytes and hash directly
+            password_bytes = password.encode('utf-8')[:72]  # Ensure byte limit
+            salt = bcrypt.gensalt()
+            return bcrypt.hashpw(password_bytes, salt).decode('utf-8')
+        else:
+            return self.pwd_context.hash(password)
     
     def verify_password(self, plain_password: str, hashed_password: str) -> bool:
         """Verify a password against its hash"""
@@ -1542,12 +1558,23 @@ class DatabaseService:
             # bcrypt has a 72-byte limit, truncate if necessary
             if len(plain_password) > 72:
                 plain_password = plain_password[:72]
-            return self.pwd_context.verify(plain_password, hashed_password)
+            
+            if self.use_direct_bcrypt:
+                import bcrypt
+                # Use direct bcrypt verification
+                password_bytes = plain_password.encode('utf-8')[:72]
+                hash_bytes = hashed_password.encode('utf-8')
+                return bcrypt.checkpw(password_bytes, hash_bytes)
+            else:
+                return self.pwd_context.verify(plain_password, hashed_password)
+                
         except ValueError as e:
             if "password cannot be longer than 72 bytes" in str(e):
-                # Fallback: truncate and try again
-                truncated_password = plain_password[:72]
-                return self.pwd_context.verify(truncated_password, hashed_password)
+                # Final fallback: use direct bcrypt with truncation
+                import bcrypt
+                password_bytes = plain_password[:72].encode('utf-8')
+                hash_bytes = hashed_password.encode('utf-8')
+                return bcrypt.checkpw(password_bytes, hash_bytes)
             else:
                 raise e
     
