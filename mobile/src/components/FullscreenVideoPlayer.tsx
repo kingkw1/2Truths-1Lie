@@ -7,21 +7,13 @@ import {
   Dimensions,
   ActivityIndicator,
   Animated,
-  Alert,
 } from 'react-native';
 import { Video, AVPlaybackStatus, ResizeMode } from 'expo-av';
-import { MediaCapture, VideoSegment, EnhancedChallenge } from '../types';
-import { AuthUser } from '../services/authService';
-import { useAppDispatch } from '../store';
-import { removeChallenge } from '../store/slices/guessingGameSlice';
-import { realChallengeAPI } from '../services/realChallengeAPI';
+import { MediaCapture, VideoSegment } from '../types';
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 
 interface FullscreenVideoPlayerProps {
-  challenge: EnhancedChallenge;
-  currentUser: AuthUser | null;
-  onDelete: () => void;
   mergedVideo?: MediaCapture;
   segments?: VideoSegment[];
   individualVideos?: MediaCapture[];
@@ -30,9 +22,6 @@ interface FullscreenVideoPlayerProps {
 }
 
 export const FullscreenVideoPlayer: React.FC<FullscreenVideoPlayerProps> = ({
-  challenge,
-  currentUser,
-  onDelete,
   mergedVideo,
   segments = [],
   individualVideos = [],
@@ -42,7 +31,6 @@ export const FullscreenVideoPlayer: React.FC<FullscreenVideoPlayerProps> = ({
   const videoRef = useRef<Video>(null);
   const timeoutIdRef = useRef<NodeJS.Timeout | null>(null);
   const fadeAnim = useRef(new Animated.Value(1)).current;
-  const dispatch = useAppDispatch();
 
   const [isPlaying, setIsPlaying] = useState(autoPlay);
   const [isLoading, setIsLoading] = useState(false);
@@ -50,43 +38,6 @@ export const FullscreenVideoPlayer: React.FC<FullscreenVideoPlayerProps> = ({
   const [currentPosition, setCurrentPosition] = useState(0);
   const [videoDuration, setVideoDuration] = useState(0);
   const [currentVideoUrl, setCurrentVideoUrl] = useState('');
-
-  // Corrected property name from creator_id to creatorId
-  const isOwner = challenge?.creatorId === currentUser?.id;
-
-  const performDelete = async () => {
-    // Corrected property name from challenge_id to id
-    if (!challenge?.id) {
-      Alert.alert('Error', 'Challenge ID is missing, cannot delete.');
-      return;
-    }
-    try {
-      // The API service expects the UUID, which is challenge.id
-      const response = await realChallengeAPI.deleteChallenge(challenge.id);
-      if (response.success) {
-        Alert.alert('Success', 'Challenge has been deleted.');
-        dispatch(removeChallenge(challenge.id));
-        onDelete();
-      } else {
-        throw new Error(response.error || 'Failed to delete challenge.');
-      }
-    } catch (error: any) {
-      console.error('Error deleting challenge:', error);
-      Alert.alert('Error', error.message || 'An unexpected error occurred while deleting.');
-    }
-  };
-
-  const handleDeleteChallenge = () => {
-    Alert.alert(
-      'Delete Challenge',
-      'Are you sure you want to permanently delete this challenge?',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        { text: 'Delete', style: 'destructive', onPress: performDelete },
-      ],
-      { cancelable: true }
-    );
-  };
 
   const handlePlaybackStatusUpdate = useCallback((status: AVPlaybackStatus) => {
     if (!status.isLoaded) return;
@@ -126,6 +77,8 @@ export const FullscreenVideoPlayer: React.FC<FullscreenVideoPlayerProps> = ({
       }).start();
     }
   }, [isLoading, fadeAnim]);
+
+
 
   const playSegment = useCallback(async (segmentIndex: number, seekMethod: 'setPosition' | 'playFromPosition' | 'fastForward' = 'setPosition') => {
     const callId = Math.random().toString(36).substring(7);
@@ -255,6 +208,8 @@ export const FullscreenVideoPlayer: React.FC<FullscreenVideoPlayerProps> = ({
     };
   }, []);
 
+
+
   const handleScreenTouch = useCallback(() => setShowControls(true), []);
 
   if (!hasMergedVideo && !hasIndividualVideos) {
@@ -293,14 +248,6 @@ export const FullscreenVideoPlayer: React.FC<FullscreenVideoPlayerProps> = ({
           <Text style={styles.playPauseIcon}>
             {isPlaying ? '⏸️' : '▶️'}
           </Text>
-        </TouchableOpacity>
-      )}
-      {isOwner && (
-        <TouchableOpacity
-          style={styles.deleteButton}
-          onPress={handleDeleteChallenge}
-        >
-          <Text style={styles.deleteButtonText}>🗑️</Text>
         </TouchableOpacity>
       )}
     </TouchableOpacity>
@@ -353,21 +300,6 @@ const styles = StyleSheet.create({
     color: '#ffffff',
     fontSize: 18,
     textAlign: 'center',
-  },
-  deleteButton: {
-    position: 'absolute',
-    bottom: 30,
-    left: 20,
-    backgroundColor: 'rgba(0, 0, 0, 0.6)',
-    width: 50,
-    height: 50,
-    borderRadius: 25,
-    justifyContent: 'center',
-    alignItems: 'center',
-    zIndex: 10,
-  },
-  deleteButtonText: {
-    fontSize: 24,
   },
 });
 
