@@ -2,6 +2,7 @@ export const lightColors = {
   background: '#f4f4f8',
   card: '#ffffff',
   text: '#343a40',
+  headerText: '#ffffff',
   primary: '#007bff',
   secondary: '#FF9500', // Using secondary for the orange button
   tertiary: '#AF52DE', // Using tertiary for the purple button
@@ -45,6 +46,7 @@ export const darkColors = {
   background: '#121212',
   card: '#1e1e1e',
   text: '#ffffff',
+  headerText: '#ffffff',
   primary: '#007bff',
   secondary: '#FF9500',
   tertiary: '#C789E8',

@@ -867,12 +867,12 @@ const getStyles = (colors) => StyleSheet.create({
   },
   cancelButton: {
     fontSize: 16,
-    color: colors.card, // white text on primary background
+    color: colors.headerText,
   },
   headerTitle: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: colors.card, // white text on primary background
+    color: colors.headerText,
   },
   headerSpacer: {
     width: 60,

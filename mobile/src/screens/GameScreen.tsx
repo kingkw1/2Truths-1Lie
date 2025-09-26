@@ -968,13 +968,13 @@ const getStyles = (colors) => StyleSheet.create({
   headerTitle: {
     fontSize: 24,
     fontWeight: 'bold',
-    color: colors.card,
+    color: colors.headerText,
     flex: 1,
     textAlign: 'center',
   },
   backButton: {
     fontSize: 16,
-    color: colors.card,
+    color: colors.headerText,
   },
   title: {
     fontSize: 24,
