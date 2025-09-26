@@ -353,7 +353,16 @@ class DatabaseService:
         # Validate environment and database configuration
         self._validate_environment_requirements()
         
-        self.pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+        # Initialize bcrypt context - handle potential 72-byte limit issues during initialization
+        try:
+            self.pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+        except ValueError as e:
+            if "password cannot be longer than 72 bytes" in str(e):
+                logger.warning(f"bcrypt initialization hit 72-byte limit during setup: {e}")
+                # This should not normally happen, but if it does, we need to handle it
+                raise RuntimeError("bcrypt library configuration issue - please check deployment environment")
+            else:
+                raise e
         
         # Set up database-specific properties
         if self.database_mode == DatabaseMode.POSTGRESQL_ONLY:
@@ -1529,10 +1538,18 @@ class DatabaseService:
     
     def verify_password(self, plain_password: str, hashed_password: str) -> bool:
         """Verify a password against its hash"""
-        # bcrypt has a 72-byte limit, truncate if necessary
-        if len(plain_password) > 72:
-            plain_password = plain_password[:72]
-        return self.pwd_context.verify(plain_password, hashed_password)
+        try:
+            # bcrypt has a 72-byte limit, truncate if necessary
+            if len(plain_password) > 72:
+                plain_password = plain_password[:72]
+            return self.pwd_context.verify(plain_password, hashed_password)
+        except ValueError as e:
+            if "password cannot be longer than 72 bytes" in str(e):
+                # Fallback: truncate and try again
+                truncated_password = plain_password[:72]
+                return self.pwd_context.verify(truncated_password, hashed_password)
+            else:
+                raise e
     
     def create_user(self, email: str, password: str, name: Optional[str] = None) -> Optional[Dict[str, Any]]:
         """
