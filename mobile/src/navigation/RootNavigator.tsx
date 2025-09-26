@@ -4,10 +4,11 @@
  * Enhanced with improved auth transitions and deep linking support
  */
 
-import React, { useEffect, useRef } from 'react';
-import { NavigationContainer, NavigationContainerRef } from '@react-navigation/native';
+import React, { useEffect, useRef, useContext } from 'react';
+import { NavigationContainer, NavigationContainerRef, DefaultTheme, DarkTheme } from '@react-navigation/native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { AuthNavigator } from './AuthNavigator';
+import { ThemeContext } from '../context/ThemeContext';
 import { MainNavigator } from './MainNavigator';
 import { RootStackParamList } from './types';
 import { useAuth } from '../hooks/useAuth';
@@ -27,8 +28,22 @@ export const RootNavigator: React.FC = () => {
 
 const RootNavigatorContent: React.FC = () => {
   const { isAuthenticated, isLoading, logout, user } = useAuth();
+  const { theme, colors } = useContext(ThemeContext);
   const navigationRef = useRef<NavigationContainerRef<RootStackParamList>>(null);
   const fadeAnim = useRef(new Animated.Value(1)).current;
+  const styles = getStyles(colors);
+
+  const navigationTheme = {
+    ...(theme === 'dark' ? DarkTheme : DefaultTheme),
+    colors: {
+      ...(theme === 'dark' ? DarkTheme.colors : DefaultTheme.colors),
+      primary: colors.primary,
+      background: colors.background,
+      card: colors.card,
+      text: colors.text,
+      border: colors.border,
+    },
+  };
 
   // Initialize navigation manager
   useEffect(() => {
@@ -76,7 +91,7 @@ const RootNavigatorContent: React.FC = () => {
   if (isLoading) {
     return (
       <View style={styles.loadingContainer}>
-        <ActivityIndicator size="large" color="#007AFF" />
+        <ActivityIndicator size="large" color={colors.primary} />
         <Text style={styles.loadingText}>
           {user ? 'Signing you in...' : 'Loading...'}
         </Text>
@@ -92,6 +107,7 @@ const RootNavigatorContent: React.FC = () => {
   return (
     <NavigationContainer
       ref={navigationRef}
+      theme={navigationTheme}
       onStateChange={(state) => {
         // Enhanced navigation state logging for debugging
         console.log('Navigation state changed:', state?.routes?.[0]?.name);
@@ -102,8 +118,7 @@ const RootNavigatorContent: React.FC = () => {
           id={undefined}
           screenOptions={{
             headerShown: false,
-            contentStyle: { backgroundColor: '#fff' },
-            // Native stack doesn't need gesture config - it's built-in
+            // contentStyle is now handled by the navigation theme
             animation: 'slide_from_right',
           }}
         >
@@ -134,7 +149,7 @@ const RootNavigatorContent: React.FC = () => {
   );
 };
 
-const styles = StyleSheet.create({
+const getStyles = (colors) => StyleSheet.create({
   container: {
     flex: 1,
   },
@@ -142,18 +157,20 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    backgroundColor: '#fff',
+    backgroundColor: colors.background,
   },
   loadingText: {
     marginTop: 12,
     fontSize: 16,
-    color: '#666',
+    color: colors.text,
+    opacity: 0.8,
     fontWeight: '500',
   },
   loadingSubtext: {
     marginTop: 8,
     fontSize: 14,
-    color: '#999',
+    color: colors.text,
+    opacity: 0.6,
     textAlign: 'center',
   },
 });

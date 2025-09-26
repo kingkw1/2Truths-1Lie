@@ -3,6 +3,8 @@ export const lightColors = {
   card: '#ffffff',
   text: '#343a40',
   primary: '#007bff',
+  secondary: '#FF9500', // Using secondary for the orange button
+  tertiary: '#AF52DE', // Using tertiary for the purple button
   border: '#e9ecef',
   error: '#dc3545',
   placeholder: '#6c757d',
@@ -44,6 +46,8 @@ export const darkColors = {
   card: '#1e1e1e',
   text: '#ffffff',
   primary: '#007bff',
+  secondary: '#FF9500',
+  tertiary: '#C789E8',
   border: '#2c2c2c',
   error: '#dc3545',
   placeholder: '#6c757d',
