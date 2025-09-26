@@ -73,29 +73,33 @@ const AccountScreen = () => {
 
   const handleLogout = async () => {
     try {
-      // 1. Log out from RevenueCat
-      await Purchases.logOut();
-      console.log('Logged out from RevenueCat');
-
-      // 2. Dispatch the master logout action to reset Redux state
+      // Dispatch the master logout action to immediately reset the app's state.
+      // This will set isAuthenticated to false, triggering the RootNavigator to switch to the Auth flow.
       dispatch(masterLogout());
-      console.log('Dispatched master logout action');
+      console.log('Dispatched master logout action to reset Redux state.');
 
-      // 3. Clear local auth data and create a new guest session
-      await logout();
-      console.log('Cleared auth data and created new guest session');
-
-      // 4. Reset the navigation stack to the authentication flow
+      // Reset the navigation stack to the authentication flow.
       navigation.dispatch(
         CommonActions.reset({
           index: 0,
           routes: [{ name: 'Auth' }],
         })
       );
-      console.log('Reset navigation to Auth screen');
+      console.log('Reset navigation to Auth screen.');
+
+      // Perform background cleanup tasks after the UI has been updated.
+      // These tasks do not need to block the user's navigation.
+      await Promise.all([
+        Purchases.logOut().catch(e => console.error('RevenueCat logout failed:', e)),
+        logout().catch(e => console.error('Auth service logout failed:', e)),
+      ]);
+
+      console.log('Finished background logout tasks.');
 
     } catch (e) {
       console.error('Logout failed', e);
+      // This alert might not be visible if navigation has already occurred,
+      // but it's good practice to have it.
       Alert.alert('Error', 'An error occurred during logout. Please try again.');
     }
   };
