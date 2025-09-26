@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useContext } from 'react';
 import { 
   View, 
   Text, 
@@ -19,14 +19,17 @@ import { useTokenBalance } from '../hooks/useTokenBalance';
 import { ProductCard } from '../components/ProductCard';
 import { TrialBanner } from '../components/TrialBanner';
 import { revenueCatUserSync } from '../services/revenueCatUserSync';
+import { ThemeContext } from '../context/ThemeContext';
 
 export const StoreScreen: React.FC = () => {
+  const { colors } = useContext(ThemeContext);
   const [purchasing, setPurchasing] = useState(false);
   const [selectedPackage, setSelectedPackage] = useState<PurchasesPackage | null>(null);
   const { offerings, isLoading: offeringsLoading, error: offeringsError } = useOfferings();
   const { isPremium } = usePremiumStatus();
   const { user } = useAuth();
   const { balance, loading: tokenBalanceLoading, refresh: refreshTokenBalance } = useTokenBalance();
+  const styles = getStyles(colors);
   
   // Debug RevenueCat connectivity
   React.useEffect(() => {
@@ -179,7 +182,7 @@ export const StoreScreen: React.FC = () => {
   const error = offeringsError;
 
   if (isLoading) {
-    return <ActivityIndicator testID="loading-indicator" style={styles.center} />;
+    return <ActivityIndicator testID="loading-indicator" color={colors.primary} style={styles.center} />;
   }
 
   if (error) {
@@ -417,10 +420,10 @@ export const StoreScreen: React.FC = () => {
   );
 };
 
-const styles = StyleSheet.create({
+const getStyles = (colors) => StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.background,
   },
   container: {
     flex: 1,
@@ -430,35 +433,35 @@ const styles = StyleSheet.create({
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
+    backgroundColor: colors.background,
   },
   title: {
     fontSize: 24,
     fontWeight: 'bold',
     textAlign: 'center',
     marginVertical: 16,
+    color: colors.text,
   },
   premiumBanner: {
-    backgroundColor: '#E8F5E8',
+    backgroundColor: colors.successBackground,
     borderRadius: 12,
     padding: 16,
     marginBottom: 16,
     borderLeftWidth: 4,
-    borderLeftColor: '#4CAF50',
+    borderLeftColor: colors.success,
   },
   premiumTitle: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#2E7D32',
+    color: colors.successText,
     marginBottom: 4,
   },
   premiumText: {
     fontSize: 14,
-    color: '#2E7D32',
+    color: colors.successText,
   },
-  
-  // Hero Section Styles
   heroSection: {
-    backgroundColor: '#F5F5F5',
+    backgroundColor: colors.storeHeroBackground,
     borderRadius: 16,
     padding: 20,
     marginBottom: 24,
@@ -471,55 +474,50 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
     elevation: 3,
   },
-  
   benefitsContainer: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.card,
     borderRadius: 12,
     padding: 16,
     marginBottom: 16,
     borderWidth: 1,
-    borderColor: '#E0E0E0',
+    borderColor: colors.border,
   },
   benefitsTitle: {
     fontSize: 16,
     fontWeight: 'bold',
-    color: '#333',
+    color: colors.text,
     marginBottom: 8,
   },
   benefitItem: {
     fontSize: 14,
-    color: '#555',
+    color: colors.text,
+    opacity: 0.8,
     marginBottom: 4,
     lineHeight: 20,
   },
-  
-
-  
   mostPopularBadge: {
     position: 'absolute',
     top: -8,
     right: 8,
-    backgroundColor: '#4CAF50',
+    backgroundColor: colors.storeBadgeBackground,
     paddingHorizontal: 12,
     paddingVertical: 4,
     borderRadius: 12,
     zIndex: 1,
   },
-  
   badgeText: {
-    color: '#FFFFFF',
+    color: colors.storeBadgeText,
     fontSize: 12,
     fontWeight: 'bold',
   },
-  
   primaryCtaButton: {
-    backgroundColor: '#2196F3',
+    backgroundColor: colors.primary,
     paddingVertical: 16,
     paddingHorizontal: 32,
     borderRadius: 12,
     alignItems: 'center',
     marginTop: 8,
-    shadowColor: '#2196F3',
+    shadowColor: colors.primary,
     shadowOffset: {
       width: 0,
       height: 4,
@@ -528,65 +526,54 @@ const styles = StyleSheet.create({
     shadowRadius: 8,
     elevation: 6,
   },
-  
   primaryCtaText: {
-    color: '#FFFFFF',
+    color: colors.card,
     fontSize: 18,
     fontWeight: 'bold',
   },
-  
-  // À La Carte Section Styles
   separatorContainer: {
     alignItems: 'center',
     marginVertical: 24,
   },
-  
   separatorText: {
     fontSize: 16,
-    color: '#666666',
+    color: colors.storeSeparatorText,
     fontStyle: 'italic',
   },
-  
   tokenSection: {
-    backgroundColor: '#FAFAFA',
+    backgroundColor: colors.storeHeroBackground,
     borderRadius: 12,
     padding: 16,
     marginBottom: 16,
   },
-  
   tokenSectionTitle: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#333',
+    color: colors.text,
     textAlign: 'center',
     marginBottom: 16,
   },
-  
   tokenPackagesContainer: {
     flexDirection: 'row',
     justifyContent: 'space-around',
     flexWrap: 'wrap',
   },
-  
   tokenPackageWrapper: {
     position: 'relative',
     flex: 1,
     marginHorizontal: 4,
     maxWidth: '48%',
   },
-  
   perUnitCost: {
     textAlign: 'center',
     fontSize: 12,
-    color: '#666666',
+    color: colors.placeholder,
     marginTop: 4,
     fontStyle: 'italic',
   },
-  
   packagesContainer: {
     marginBottom: 16,
   },
-  // Plan Selector Styles
   planSelectorContainer: {
     marginBottom: 20,
   },
@@ -598,9 +585,9 @@ const styles = StyleSheet.create({
   },
   planSelector: {
     flex: 1,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.card,
     borderWidth: 2,
-    borderColor: '#E0E0E0',
+    borderColor: colors.border,
     borderRadius: 12,
     padding: 16,
     alignItems: 'center',
@@ -615,9 +602,9 @@ const styles = StyleSheet.create({
     elevation: 2,
   },
   selectedPlan: {
-    borderColor: '#2196F3',
-    backgroundColor: '#E3F2FD',
-    shadowColor: '#2196F3',
+    borderColor: colors.primary,
+    backgroundColor: colors.selectedCard,
+    shadowColor: colors.primary,
     shadowOpacity: 0.2,
     shadowRadius: 4,
     elevation: 4,
@@ -625,43 +612,43 @@ const styles = StyleSheet.create({
   planTitle: {
     fontSize: 16,
     fontWeight: 'bold',
-    color: '#333333',
+    color: colors.text,
     marginBottom: 4,
   },
   planPrice: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#2196F3',
+    color: colors.storePlanPrice,
   },
   selectedPlanText: {
-    color: '#1976D2',
+    color: colors.storeSelectedPlanText,
   },
   savingsBadge: {
     position: 'absolute',
     top: -8,
     right: -4,
-    backgroundColor: '#4CAF50',
+    backgroundColor: colors.storeBadgeBackground,
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderRadius: 12,
     zIndex: 1,
   },
   savingsBadgeText: {
-    color: '#FFFFFF',
+    color: colors.storeBadgeText,
     fontSize: 10,
     fontWeight: 'bold',
   },
   disabledButton: {
-    backgroundColor: '#CCCCCC',
+    backgroundColor: colors.disabled,
     shadowOpacity: 0,
   },
   tokenPackageCard: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: colors.card,
     borderRadius: 12,
     padding: 16,
     alignItems: 'center',
     borderWidth: 2,
-    borderColor: '#E0E0E0',
+    borderColor: colors.border,
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
@@ -674,22 +661,22 @@ const styles = StyleSheet.create({
   tokenAmount: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#333',
+    color: colors.text,
     marginBottom: 4,
   },
   tokenPrice: {
     fontSize: 16,
     fontWeight: 'bold',
-    color: '#2196F3',
+    color: colors.storePlanPrice,
     marginBottom: 4,
   },
   tokenPerUnit: {
     fontSize: 12,
-    color: '#666',
+    color: colors.placeholder,
     fontStyle: 'italic',
   },
   restoreButton: {
-    backgroundColor: '#6C757D',
+    backgroundColor: colors.storeRestoreButtonBackground,
     paddingVertical: 12,
     paddingHorizontal: 24,
     borderRadius: 8,
@@ -698,24 +685,24 @@ const styles = StyleSheet.create({
     marginBottom: 32,
   },
   restoreButtonText: {
-    color: '#FFFFFF',
+    color: colors.card,
     fontSize: 16,
     fontWeight: '600',
   },
   currentBalanceContainer: {
-    backgroundColor: '#F8F9FA',
+    backgroundColor: colors.storeBalanceBackground,
     padding: 16,
     borderRadius: 12,
     marginHorizontal: 20,
     marginBottom: 16,
     alignItems: 'center',
     borderWidth: 1,
-    borderColor: '#E9ECEF',
+    borderColor: colors.border,
   },
   currentBalanceText: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#495057',
+    color: colors.storeBalanceText,
     textAlign: 'center',
   },
 });

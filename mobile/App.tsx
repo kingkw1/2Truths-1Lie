@@ -58,6 +58,7 @@ import { StoreProvider } from './src/store/StoreProvider';
 import { ErrorBoundary } from './src/components/ErrorBoundary';
 import { RootNavigator } from './src/navigation';
 import { SafeAreaProvider } from 'react-native-safe-area-context';
+import { ThemeProvider } from './src/context/ThemeContext';
 
 // Note: The Play Billing Library version issue was addressed by running `npx expo prebuild --clean`.
 // This command forces a clean build of the native Android project, which resolves the issue by using the version of the Play Billing Library included with the `react-native-purchases` package.
@@ -119,7 +120,9 @@ export default function App() {
     <SafeAreaProvider>
       <ErrorBoundary>
         <StoreProvider>
-          <AppContent />
+          <ThemeProvider>
+            <AppContent />
+          </ThemeProvider>
         </StoreProvider>
       </ErrorBoundary>
     </SafeAreaProvider>

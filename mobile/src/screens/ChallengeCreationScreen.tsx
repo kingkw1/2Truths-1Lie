@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useContext } from 'react';
 import {
   View,
   Text,
@@ -32,6 +32,7 @@ import { errorHandlingService } from '../services/errorHandlingService';
 import { useErrorHandling } from '../hooks/useErrorHandling';
 import { AuthStatusBanner } from '../components/ProtectedScreen';
 import { useAuth } from '../hooks/useAuth';
+import { ThemeContext } from '../context/ThemeContext';
 
 /**
  * Opens device settings for the app
@@ -66,6 +67,7 @@ export const ChallengeCreationScreen: React.FC<ChallengeCreationScreenProps> = (
   onComplete,
   onCancel,
 }) => {
+  const { colors } = useContext(ThemeContext);
   const dispatch = useAppDispatch();
   const {
     currentChallenge,
@@ -95,6 +97,8 @@ export const ChallengeCreationScreen: React.FC<ChallengeCreationScreenProps> = (
       }
     }
   );
+
+  const styles = getStyles(colors);
 
   // Initialize new challenge and mobile media integration on mount
   useEffect(() => {
@@ -819,7 +823,7 @@ export const ChallengeCreationScreen: React.FC<ChallengeCreationScreenProps> = (
       {isMergingVideos && (
         <View style={styles.loadingOverlay}>
           <View style={styles.loadingContainer}>
-            <ActivityIndicator size="large" color="#007AFF" />
+            <ActivityIndicator size="large" color={colors.primary} />
             <Text style={styles.loadingTitle}>🎬 Processing Videos</Text>
             <Text style={styles.loadingSubtitle}>Merging your video statements...</Text>
           </View>
@@ -832,13 +836,13 @@ export const ChallengeCreationScreen: React.FC<ChallengeCreationScreenProps> = (
           <View style={styles.loadingContainer}>
             {!submissionSuccess ? (
               <>
-                <ActivityIndicator size="large" color="#007AFF" />
+                <ActivityIndicator size="large" color={colors.primary} />
                 <Text style={styles.loadingTitle}>🚀 Creating Challenge</Text>
                 <Text style={styles.loadingSubtitle}>Finalizing your challenge...</Text>
               </>
             ) : (
               <>
-                <Text style={[styles.loadingTitle, { color: '#34C759' }]}>✅ Challenge Created!</Text>
+                <Text style={[styles.loadingTitle, { color: colors.success }]}>✅ Challenge Created!</Text>
                 <Text style={styles.loadingSubtitle}>Your challenge is ready to play!</Text>
               </>
             )}
@@ -849,26 +853,26 @@ export const ChallengeCreationScreen: React.FC<ChallengeCreationScreenProps> = (
   );
 };
 
-const styles = StyleSheet.create({
+const getStyles = (colors) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: colors.background,
   },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     padding: 20,
-    backgroundColor: '#4a90e2',
+    backgroundColor: colors.primary, // Using primary color for header
   },
   cancelButton: {
     fontSize: 16,
-    color: 'white',
+    color: colors.headerText,
   },
   headerTitle: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: 'white',
+    color: colors.headerText,
   },
   headerSpacer: {
     width: 60,
@@ -878,33 +882,34 @@ const styles = StyleSheet.create({
     padding: 20,
   },
   scrollContentContainer: {
-    paddingBottom: Platform.OS === 'android' ? 100 : 50, // Extra bottom padding for Android navigation bar
+    paddingBottom: Platform.OS === 'android' ? 100 : 50,
   },
   stepTitle: {
     fontSize: 24,
     fontWeight: 'bold',
     textAlign: 'center',
     marginBottom: 10,
-    color: '#333',
+    color: colors.text,
   },
   stepDescription: {
     fontSize: 16,
     textAlign: 'center',
     marginBottom: 30,
-    color: '#666',
+    color: colors.text,
+    opacity: 0.8,
     lineHeight: 22,
   },
   rateLimitContainer: {
-    backgroundColor: '#fff3e0',
+    backgroundColor: colors.warningBackground,
     padding: 15,
     borderRadius: 8,
     marginBottom: 25,
     borderLeftWidth: 4,
-    borderLeftColor: '#ff9800',
+    borderLeftColor: colors.warningAction,
   },
   rateLimitText: {
     fontSize: 14,
-    color: '#e65100',
+    color: colors.warningText,
     textAlign: 'center',
     fontWeight: '500',
   },
@@ -920,8 +925,8 @@ const styles = StyleSheet.create({
     width: 30,
     height: 30,
     borderRadius: 15,
-    backgroundColor: '#4a90e2',
-    color: 'white',
+    backgroundColor: colors.primary,
+    color: colors.card,
     textAlign: 'center',
     lineHeight: 30,
     fontSize: 16,
@@ -931,11 +936,11 @@ const styles = StyleSheet.create({
   instructionText: {
     flex: 1,
     fontSize: 16,
-    color: '#333',
+    color: colors.text,
     lineHeight: 22,
   },
   tipsContainer: {
-    backgroundColor: '#e8f5e8',
+    backgroundColor: colors.successBackground,
     padding: 20,
     borderRadius: 10,
     marginBottom: 30,
@@ -943,19 +948,20 @@ const styles = StyleSheet.create({
   tipsTitle: {
     fontSize: 16,
     fontWeight: 'bold',
-    color: '#2e7d32',
+    color: colors.successText,
     marginBottom: 10,
   },
   tipText: {
     fontSize: 14,
-    color: '#388e3c',
+    color: colors.successText,
+    opacity: 0.9,
     marginBottom: 5,
   },
   statementsContainer: {
     marginBottom: 30,
   },
   statementCard: {
-    backgroundColor: 'white',
+    backgroundColor: colors.card,
     padding: 20,
     marginBottom: 15,
     borderRadius: 10,
@@ -968,8 +974,8 @@ const styles = StyleSheet.create({
     elevation: 3,
   },
   selectedStatementCard: {
-    borderColor: '#4a90e2',
-    backgroundColor: '#e3f2fd',
+    borderColor: colors.primary,
+    backgroundColor: colors.selectedCard,
   },
   statementHeader: {
     flexDirection: 'row',
@@ -980,36 +986,37 @@ const styles = StyleSheet.create({
   statementNumber: {
     fontSize: 16,
     fontWeight: 'bold',
-    color: '#333',
+    color: colors.text,
   },
   retakeButton: {
-    backgroundColor: '#ff9800',
+    backgroundColor: colors.warningAction,
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 6,
   },
   retakeButtonText: {
-    color: 'white',
+    color: colors.card,
     fontSize: 12,
     fontWeight: 'bold',
   },
   videoPlaceholder: {
-    backgroundColor: '#f0f0f0',
+    backgroundColor: colors.background,
     padding: 20,
     borderRadius: 8,
     alignItems: 'center',
   },
   videoPlaceholderText: {
     fontSize: 16,
-    color: '#666',
+    color: colors.text,
+    opacity: 0.8,
     marginBottom: 5,
   },
   videoDuration: {
     fontSize: 14,
-    color: '#999',
+    color: colors.placeholder,
   },
   lieIndicator: {
-    backgroundColor: '#ffeb3b',
+    backgroundColor: colors.warningBackground,
     padding: 10,
     borderRadius: 8,
     marginTop: 10,
@@ -1018,7 +1025,7 @@ const styles = StyleSheet.create({
   lieIndicatorText: {
     fontSize: 14,
     fontWeight: 'bold',
-    color: '#f57f17',
+    color: colors.warningText,
   },
   incompleteContainer: {
     alignItems: 'center',
@@ -1026,12 +1033,13 @@ const styles = StyleSheet.create({
   },
   incompleteText: {
     fontSize: 16,
-    color: '#666',
+    color: colors.text,
+    opacity: 0.8,
     textAlign: 'center',
     marginBottom: 20,
   },
   previewContainer: {
-    backgroundColor: 'white',
+    backgroundColor: colors.card,
     padding: 20,
     borderRadius: 10,
     marginBottom: 30,
@@ -1044,7 +1052,7 @@ const styles = StyleSheet.create({
   previewTitle: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#333',
+    color: colors.text,
     marginBottom: 20,
     textAlign: 'center',
   },
@@ -1052,7 +1060,7 @@ const styles = StyleSheet.create({
     marginBottom: 15,
     paddingBottom: 15,
     borderBottomWidth: 1,
-    borderBottomColor: '#eee',
+    borderBottomColor: colors.border,
   },
   previewStatementHeader: {
     flexDirection: 'row',
@@ -1063,26 +1071,27 @@ const styles = StyleSheet.create({
   previewStatementNumber: {
     fontSize: 14,
     fontWeight: 'bold',
-    color: '#333',
+    color: colors.text,
   },
   previewLieTag: {
     fontSize: 12,
-    color: '#f44336',
+    color: colors.error,
     fontWeight: 'bold',
   },
   previewVideoPlaceholder: {
-    backgroundColor: '#f8f8f8',
+    backgroundColor: colors.background,
     padding: 15,
     borderRadius: 6,
     alignItems: 'center',
   },
   previewVideoText: {
     fontSize: 14,
-    color: '#666',
+    color: colors.text,
+    opacity: 0.8,
   },
   previewVideoDuration: {
     fontSize: 12,
-    color: '#999',
+    color: colors.placeholder,
     marginTop: 2,
   },
   previewActions: {
@@ -1091,31 +1100,31 @@ const styles = StyleSheet.create({
     gap: 15,
   },
   primaryButton: {
-    backgroundColor: '#4a90e2',
+    backgroundColor: colors.primary,
     padding: 15,
     borderRadius: 10,
     alignItems: 'center',
     flex: 1,
   },
   primaryButtonText: {
-    color: 'white',
+    color: colors.card,
     fontSize: 16,
     fontWeight: 'bold',
   },
   secondaryButton: {
-    backgroundColor: '#f0f0f0',
+    backgroundColor: colors.border,
     padding: 15,
     borderRadius: 10,
     alignItems: 'center',
     flex: 1,
   },
   secondaryButtonText: {
-    color: '#333',
+    color: colors.text,
     fontSize: 16,
     fontWeight: 'bold',
   },
   disabledButton: {
-    backgroundColor: '#ccc',
+    backgroundColor: colors.disabled,
   },
   loadingOverlay: {
     position: 'absolute',
@@ -1129,7 +1138,7 @@ const styles = StyleSheet.create({
     zIndex: 1000,
   },
   loadingContainer: {
-    backgroundColor: 'white',
+    backgroundColor: colors.card,
     padding: 30,
     borderRadius: 15,
     alignItems: 'center',
@@ -1140,12 +1149,13 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     marginBottom: 10,
     textAlign: 'center',
+    color: colors.text,
   },
   loadingSubtitle: {
     fontSize: 14,
-    color: '#666',
+    color: colors.text,
+    opacity: 0.8,
     textAlign: 'center',
     marginBottom: 15,
   },
-
 });

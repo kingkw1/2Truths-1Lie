@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useContext } from 'react';
 import {
   SafeAreaView,
   ScrollView,
@@ -9,17 +9,21 @@ import {
   Linking,
   StyleSheet,
   Alert,
+  Switch,
 } from 'react-native';
 import { useNavigation } from '@react-navigation/native';
 import Purchases from 'react-native-purchases';
 import { usePremiumStatus } from '../hooks/usePremiumStatus';
 import { useAuth } from '../hooks/useAuth';
+import { ThemeContext } from '../context/ThemeContext';
 
 const AccountScreen = () => {
   const navigation = useNavigation();
+  const { theme, colors, toggleTheme } = useContext(ThemeContext);
   const premiumStatusHook = usePremiumStatus() as any; // Type assertion to handle refresh method
   const { isPremium, loading, error, customerInfo } = premiumStatusHook;
   const { user, logout } = useAuth();
+  const styles = getStyles(colors);
 
   const handleManageSubscription = async () => {
     try {
@@ -118,6 +122,20 @@ const AccountScreen = () => {
           </Pressable>
         </View>
 
+        {/* App Preferences Card */}
+        <View style={styles.card}>
+          <Text style={styles.cardTitle}>APP PREFERENCES</Text>
+          <View style={styles.cardRow}>
+            <Text style={styles.label}>Dark Mode</Text>
+            <Switch
+              value={theme === 'dark'}
+              onValueChange={toggleTheme}
+              trackColor={{ false: '#767577', true: '#81b0ff' }}
+              thumbColor={theme === 'dark' ? '#f4f3f4' : '#f4f3f4'}
+            />
+          </View>
+        </View>
+
         {/* Subscription Card */}
         <View style={styles.card}>
           <Text style={styles.cardTitle}>SUBSCRIPTION</Text>
@@ -155,20 +173,20 @@ const AccountScreen = () => {
   );
 };
 
-const styles = StyleSheet.create({
+const getStyles = (colors) => StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: '#f4f4f8',
+    backgroundColor: colors.background,
   },
   container: {
     padding: 16,
   },
   card: {
-    backgroundColor: '#ffffff',
+    backgroundColor: colors.card,
     borderRadius: 12,
     padding: 16,
     marginBottom: 16,
-    shadowColor: '#000',
+    shadowColor: '#000', // Shadow can be tricky with dark mode, keeping it simple
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.1,
     shadowRadius: 4,
@@ -177,7 +195,8 @@ const styles = StyleSheet.create({
   cardTitle: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#6c757d',
+    color: colors.text,
+    opacity: 0.7,
     marginBottom: 12,
     textTransform: 'uppercase',
   },
@@ -189,28 +208,30 @@ const styles = StyleSheet.create({
   },
   label: {
     fontSize: 16,
-    color: '#343a40',
+    color: colors.text,
   },
   value: {
     fontSize: 16,
-    color: '#6c757d',
+    color: colors.text,
+    opacity: 0.6,
   },
   editText: {
     fontSize: 16,
-    color: '#007bff',
+    color: colors.primary,
     marginLeft: 8,
   },
   chevron: {
     fontSize: 20,
-    color: '#adb5bd',
+    color: colors.text,
+    opacity: 0.5,
   },
   divider: {
     height: 1,
-    backgroundColor: '#e9ecef',
+    backgroundColor: colors.border,
     marginHorizontal: -16, // Extend to card edges
   },
   button: {
-    backgroundColor: '#007bff',
+    backgroundColor: colors.primary,
     paddingVertical: 12,
     borderRadius: 8,
     alignItems: 'center',

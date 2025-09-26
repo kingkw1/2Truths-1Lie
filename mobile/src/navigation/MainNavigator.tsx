@@ -3,10 +3,11 @@
  * Handles navigation between main app screens (Home, Game, Create, Account)
  */
 
-import React from 'react';
+import React, { useContext } from 'react';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { useFocusEffect } from '@react-navigation/native';
 import { View, Text, StyleSheet, TouchableOpacity, ScrollView, Alert, Pressable } from 'react-native';
+import { ThemeContext } from '../context/ThemeContext';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { GameScreen } from '../screens/GameScreen';
 import { StoreScreen } from '../screens/StoreScreen';
@@ -30,7 +31,13 @@ interface MainNavigatorProps {
   onLogout: () => void;
 }
 
-const HomeScreen: React.FC<{ navigation: any; onLogout: () => void }> = ({ navigation, onLogout }) => {
+interface HomeScreenProps {
+  navigation: any;
+  onLogout: () => void;
+  styles: any;
+}
+
+const HomeScreen: React.FC<HomeScreenProps> = ({ navigation, onLogout, styles }) => {
   const { user, isAuthenticated, isGuest, triggerAuthFlow } = useAuth();
   const { balance, loading: isLoading, error, refresh: refreshTokenBalance } = useTokenBalance();
 
@@ -120,7 +127,7 @@ const HomeScreen: React.FC<{ navigation: any; onLogout: () => void }> = ({ navig
           </TouchableOpacity>
 
           <TouchableOpacity
-            style={[styles.menuButton, { backgroundColor: '#AF52DE' }]}
+            style={[styles.menuButton, styles.tertiaryButton]}
             onPress={() => navigation.navigate('Store')}
           >
             <Text style={styles.menuButtonIcon}>🛍️</Text>
@@ -136,18 +143,20 @@ const HomeScreen: React.FC<{ navigation: any; onLogout: () => void }> = ({ navig
 };
 
 export const MainNavigator: React.FC<MainNavigatorProps> = ({ onLogout }) => {
+  const { colors } = useContext(ThemeContext);
+  const styles = getStyles(colors);
+
   return (
     <Stack.Navigator
       screenOptions={{
         headerShown: false,
-        contentStyle: { backgroundColor: '#fff' },
         animation: 'slide_from_right',
       }}
       initialRouteName="Home"
     >
       <Stack.Screen name="Home">
         {({ navigation }) => (
-          <HomeScreen navigation={navigation} onLogout={onLogout} />
+          <HomeScreen navigation={navigation} onLogout={onLogout} styles={styles} />
         )}
       </Stack.Screen>
       <Stack.Screen name="Game">
@@ -177,10 +186,10 @@ export const MainNavigator: React.FC<MainNavigatorProps> = ({ onLogout }) => {
   );
 };
 
-const styles = StyleSheet.create({
+const getStyles = (colors) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: colors.background,
   },
   scrollContentContainer: {
     flexGrow: 1,
@@ -189,7 +198,7 @@ const styles = StyleSheet.create({
   },
   fullScreen: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: colors.background,
   },
   header: {
     marginBottom: 20,
@@ -208,34 +217,37 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
     marginBottom: 10,
     textAlign: 'left',
-    color: '#333',
+    color: colors.text,
   },
   profileCard: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    backgroundColor: '#f0f0f0',
+    backgroundColor: colors.card,
     borderRadius: 10,
     padding: 15,
     marginBottom: 30,
+    borderWidth: 1,
+    borderColor: colors.border,
   },
   welcomeText: {
     fontSize: 16,
-    color: '#333',
+    color: colors.text,
     fontWeight: '500',
   },
   profileCardIcon: {
     fontSize: 20,
-    color: '#888',
+    color: colors.placeholder,
   },
   subtitle: {
     fontSize: 18,
     marginBottom: 40,
     textAlign: 'center',
-    color: '#666',
+    color: colors.text,
+    opacity: 0.7,
   },
   menuButton: {
-    backgroundColor: '#007AFF',
+    backgroundColor: colors.primary,
     padding: 25,
     borderRadius: 12,
     marginBottom: 20,
@@ -247,17 +259,20 @@ const styles = StyleSheet.create({
     elevation: 3,
   },
   primaryButton: {
-    backgroundColor: '#34C759',
+    backgroundColor: colors.success,
   },
   secondaryButton: {
-    backgroundColor: '#FF9500',
+    backgroundColor: colors.secondary,
+  },
+  tertiaryButton: {
+    backgroundColor: colors.tertiary,
   },
   menuButtonIcon: {
     fontSize: 32,
     marginBottom: 8,
   },
   menuButtonText: {
-    color: 'white',
+    color: colors.card,
     fontSize: 18,
     fontWeight: 'bold',
     textAlign: 'center',
@@ -272,7 +287,7 @@ const styles = StyleSheet.create({
   tokenBalance: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#4CAF50',
+    backgroundColor: colors.success,
     paddingHorizontal: 12,
     paddingVertical: 8,
     borderRadius: 20,
@@ -288,7 +303,7 @@ const styles = StyleSheet.create({
     marginRight: 6,
   },
   tokenBalanceText: {
-    color: '#FFFFFF',
+    color: colors.card,
     fontSize: 16,
     fontWeight: 'bold',
   },
