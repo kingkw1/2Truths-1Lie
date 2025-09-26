@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useContext } from 'react';
 import {
   View,
   Text,
@@ -17,6 +17,7 @@ import { LoadingOverlay } from '../components/LoadingOverlay';
 import { Toast } from '../components/Toast';
 import { AuthButton } from '../components/AuthButton';
 import { useToast } from '../hooks/useToast';
+import { ThemeContext } from '../context/ThemeContext';
 
 interface LoginScreenProps {
   onLoginSuccess: () => void;
@@ -36,6 +37,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
   guestMigration = false,
   returnTo,
 }) => {
+  const { colors } = useContext(ThemeContext);
   const [email, setEmail] = useState(initialEmail);
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
@@ -47,6 +49,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
   }>({});
   
   const { toast, showSuccess, showError, hideToast } = useToast();
+  const styles = getStyles(colors);
 
   const validateEmail = (email: string): boolean => {
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
@@ -164,7 +167,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
                   clearError('general');
                 }}
                 placeholder="Enter your email"
-                placeholderTextColor="#999"
+                placeholderTextColor={colors.placeholder}
                 keyboardType="email-address"
                 autoCapitalize="none"
                 autoCorrect={false}
@@ -190,7 +193,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
                   clearError('general');
                 }}
                 placeholder="Enter your password"
-                placeholderTextColor="#999"
+                placeholderTextColor={colors.placeholder}
                 secureTextEntry
                 autoCapitalize="none"
                 autoCorrect={false}
@@ -245,10 +248,10 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
   );
 };
 
-const styles = StyleSheet.create({
+const getStyles = (colors) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#fff',
+    backgroundColor: colors.background,
   },
   keyboardAvoidingView: {
     flex: 1,
@@ -267,18 +270,19 @@ const styles = StyleSheet.create({
   },
   backButtonText: {
     fontSize: 16,
-    color: '#007AFF',
+    color: colors.primary,
     fontWeight: '500',
   },
   title: {
     fontSize: 32,
     fontWeight: 'bold',
-    color: '#333',
+    color: colors.text,
     marginBottom: 8,
   },
   subtitle: {
     fontSize: 16,
-    color: '#666',
+    color: colors.text,
+    opacity: 0.7,
     lineHeight: 22,
   },
   form: {
@@ -290,41 +294,42 @@ const styles = StyleSheet.create({
   label: {
     fontSize: 16,
     fontWeight: '600',
-    color: '#333',
+    color: colors.text,
     marginBottom: 8,
   },
   input: {
     borderWidth: 1,
-    borderColor: '#ddd',
+    borderColor: colors.border,
     borderRadius: 8,
     padding: 16,
     fontSize: 16,
-    backgroundColor: '#f9f9f9',
+    backgroundColor: colors.card,
+    color: colors.text,
   },
   inputError: {
-    borderColor: '#ff4444',
-    backgroundColor: '#fff5f5',
+    borderColor: colors.error,
+    backgroundColor: colors.background,
   },
   errorText: {
-    color: '#ff4444',
+    color: colors.error,
     fontSize: 14,
     marginTop: 4,
   },
   generalErrorContainer: {
-    backgroundColor: '#fff5f5',
+    backgroundColor: colors.card,
     borderWidth: 1,
-    borderColor: '#ff4444',
+    borderColor: colors.error,
     borderRadius: 8,
     padding: 12,
     marginBottom: 20,
   },
   generalErrorText: {
-    color: '#ff4444',
+    color: colors.error,
     fontSize: 14,
     textAlign: 'center',
   },
   signInButton: {
-    backgroundColor: '#007AFF',
+    backgroundColor: colors.primary,
     borderRadius: 8,
     padding: 16,
     alignItems: 'center',
@@ -336,7 +341,7 @@ const styles = StyleSheet.create({
     elevation: 3,
   },
   signInButtonDisabled: {
-    backgroundColor: '#ccc',
+    backgroundColor: colors.border,
   },
   signInButtonText: {
     color: 'white',
@@ -351,11 +356,12 @@ const styles = StyleSheet.create({
   },
   signUpText: {
     fontSize: 16,
-    color: '#666',
+    color: colors.text,
+    opacity: 0.7,
   },
   signUpLink: {
     fontSize: 16,
-    color: '#007AFF',
+    color: colors.primary,
     fontWeight: '600',
   },
 });

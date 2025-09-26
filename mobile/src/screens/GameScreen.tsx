@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useRef } from 'react';
+import React, { useEffect, useState, useRef, useContext } from 'react';
 import {
   View,
   Text,
@@ -39,6 +39,7 @@ import { AuthStatusBanner } from '../components/ProtectedScreen';
 import { ReportButton } from '../components/ReportButton';
 import { ReportModal, ModerationReason } from '../components/ReportModal';
 import { submitReport } from '../store/slices/reportingSlice';
+import { ThemeContext } from '../context/ThemeContext';
 
 // Helper function to convert backend challenge to frontend format
 const convertBackendChallenge = (backendChallenge: BackendChallenge): EnhancedChallenge => {
@@ -240,6 +241,7 @@ export const GameScreen: React.FC<GameScreenProps> = ({
   onBack,
   useFullscreenInterface = true, // Default to new interface
 }) => {
+  const { colors } = useContext(ThemeContext);
   // Reduced logging - GameScreen render (enable for debugging if needed)
   // console.log('🏠 GAMESCREEN: Component rendered, hideCreateButton =', hideCreateButton);
   
@@ -267,6 +269,8 @@ export const GameScreen: React.FC<GameScreenProps> = ({
   const [reportingChallengeId, setReportingChallengeId] = useState<string | null>(null);
   const [isSubmittingReport, setIsSubmittingReport] = useState(false);
   const gameplayScrollRef = useRef<ScrollView>(null);
+
+  const styles = getStyles(colors);
 
   // Debug logging for challenge creation modal state
   useEffect(() => {
@@ -582,7 +586,7 @@ export const GameScreen: React.FC<GameScreenProps> = ({
       {/* Loading State */}
       {(isLoading || isRetrying) && (
         <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#4a90e2" />
+          <ActivityIndicator size="large" color={colors.primary} />
           <Text style={styles.loadingText}>
             {isRetrying ? 'Retrying...' : 'Loading challenges...'}
           </Text>
@@ -621,7 +625,7 @@ export const GameScreen: React.FC<GameScreenProps> = ({
             
             {errorInfo.isAutoRetrying && (
               <View style={styles.autoRetryContainer}>
-                <ActivityIndicator size="small" color="#4a90e2" />
+                <ActivityIndicator size="small" color={colors.primary} />
                 <Text style={styles.autoRetryText}>
                   Auto-retrying... ({errorInfo.retryCount}/{errorInfo.maxRetries})
                 </Text>
@@ -949,48 +953,49 @@ const FloatingSubmitButton: React.FC<{ visible: boolean; onPress: () => void; te
 // Platform-aware bottom padding so buttons aren't hidden behind system UI (Android nav bar)
 const bottomPadding = Platform.OS === 'android' ? 96 : 20;
 
-const styles = StyleSheet.create({
+const getStyles = (colors) => StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: colors.background,
   },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     padding: 20,
-    backgroundColor: '#4a90e2',
+    backgroundColor: colors.primary,
   },
   headerTitle: {
     fontSize: 24,
     fontWeight: 'bold',
-    color: 'white',
+    color: colors.card,
     flex: 1,
     textAlign: 'center',
   },
   backButton: {
     fontSize: 16,
-    color: 'white',
+    color: colors.card,
   },
   title: {
     fontSize: 24,
     fontWeight: 'bold',
     textAlign: 'center',
     marginVertical: 20,
-    color: '#333',
+    color: colors.text,
   },
   subtitle: {
     fontSize: 16,
     textAlign: 'center',
     marginBottom: 20,
-    color: '#666',
+    color: colors.text,
+    opacity: 0.8,
   },
   challengeList: {
     flex: 1,
     padding: 20,
   },
   challengeCard: {
-    backgroundColor: 'white',
+    backgroundColor: colors.card,
     marginVertical: 10,
     borderRadius: 10,
     shadowColor: '#000',
@@ -1016,26 +1021,26 @@ const styles = StyleSheet.create({
     marginLeft: 8,
   },
   createChallengeCard: {
-    backgroundColor: '#e8f5e8',
-    borderColor: '#4caf50',
+    backgroundColor: colors.createChallengeCardBackground,
+    borderColor: colors.createChallengeCardBorder,
     borderWidth: 2,
   },
   createChallengeTitle: {
     fontSize: 20,
     fontWeight: 'bold',
-    color: '#2e7d32',
+    color: colors.createChallengeCardText,
     textAlign: 'center',
   },
   createChallengeSubtitle: {
     fontSize: 14,
-    color: '#388e3c',
+    color: colors.createChallengeCardText,
     textAlign: 'center',
     marginTop: 5,
   },
   sectionTitle: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#333',
+    color: colors.text,
     marginTop: 20,
     marginBottom: 10,
     textAlign: 'center',
@@ -1043,16 +1048,17 @@ const styles = StyleSheet.create({
   creatorName: {
     fontSize: 18,
     fontWeight: 'bold',
-    color: '#333',
+    color: colors.text,
   },
   difficultyText: {
     fontSize: 14,
-    color: '#666',
+    color: colors.text,
+    opacity: 0.7,
     marginTop: 5,
   },
   statsText: {
     fontSize: 12,
-    color: '#999',
+    color: colors.placeholder,
     marginTop: 5,
   },
   gameplayContainer: {
@@ -1061,7 +1067,7 @@ const styles = StyleSheet.create({
     paddingBottom: bottomPadding,
   },
   statementCard: {
-    backgroundColor: 'white',
+    backgroundColor: colors.card,
     padding: 20,
     marginVertical: 10,
     borderRadius: 10,
@@ -1074,28 +1080,28 @@ const styles = StyleSheet.create({
     elevation: 3,
   },
   selectedStatement: {
-    borderColor: '#4a90e2',
-    backgroundColor: '#e3f2fd',
+    borderColor: colors.primary,
+    backgroundColor: colors.selectedCard,
   },
   statementText: {
     fontSize: 16,
-    color: '#333',
+    color: colors.text,
     textAlign: 'center',
   },
   submitButton: {
-    backgroundColor: '#4a90e2',
+    backgroundColor: colors.primary,
     padding: 15,
     borderRadius: 10,
     marginTop: 20,
   },
   submitButtonText: {
-    color: 'white',
+    color: colors.card,
     fontSize: 18,
     fontWeight: 'bold',
     textAlign: 'center',
   },
   resultContainer: {
-    backgroundColor: 'white',
+    backgroundColor: colors.card,
     padding: 20,
     marginTop: 20,
     borderRadius: 10,
@@ -1107,50 +1113,51 @@ const styles = StyleSheet.create({
     marginBottom: 10,
   },
   correct: {
-    color: '#4caf50',
+    color: colors.success,
   },
   incorrect: {
-    color: '#f44336',
+    color: colors.incorrect,
   },
   scoreText: {
     fontSize: 18,
-    color: '#333',
+    color: colors.text,
     marginBottom: 10,
   },
   explanationText: {
     fontSize: 14,
-    color: '#666',
+    color: colors.text,
+    opacity: 0.8,
     textAlign: 'center',
     marginBottom: 20,
   },
   newGameButton: {
-    backgroundColor: '#4a90e2',
+    backgroundColor: colors.primary,
     padding: 15,
     borderRadius: 10,
   },
   newGameButtonText: {
-    color: 'white',
+    color: colors.card,
     fontSize: 16,
     fontWeight: 'bold',
   },
   videoToggleButton: {
-    backgroundColor: '#4a90e2',
+    backgroundColor: colors.primary,
     padding: 12,
     borderRadius: 8,
     marginBottom: 16,
     alignItems: 'center',
   },
   videoToggleText: {
-    color: 'white',
+    color: colors.card,
     fontSize: 16,
     fontWeight: '600',
   },
   videoPlayerContainer: {
-    backgroundColor: '#000', // Black background for better video viewing
+    backgroundColor: colors.videoPlayerBackground,
     borderRadius: 12,
     marginBottom: 20,
-    marginHorizontal: 8, // Minimal horizontal margins
-    padding: 8, // Reduced padding for more video space
+    marginHorizontal: 8,
+    padding: 8,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.1,
@@ -1163,14 +1170,14 @@ const styles = StyleSheet.create({
   gameplaySectionTitle: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#333',
+    color: colors.text,
     marginBottom: 12,
     textAlign: 'center',
   },
   statementNumber: {
     fontSize: 14,
     fontWeight: '600',
-    color: '#4a90e2',
+    color: colors.primary,
     marginBottom: 4,
   },
   loadingContainer: {
@@ -1179,30 +1186,31 @@ const styles = StyleSheet.create({
   },
   loadingText: {
     fontSize: 16,
-    color: '#666',
+    color: colors.text,
+    opacity: 0.8,
     marginTop: 10,
   },
   retryCountText: {
     fontSize: 12,
-    color: '#999',
+    color: colors.placeholder,
     marginTop: 5,
   },
   errorContainer: {
     alignItems: 'center',
     padding: 20,
-    backgroundColor: '#ffebee',
+    backgroundColor: colors.errorBackground,
     borderRadius: 10,
     marginVertical: 10,
     borderWidth: 1,
-    borderColor: '#ffcdd2',
+    borderColor: colors.errorBorder,
   },
   networkErrorContainer: {
-    backgroundColor: '#e3f2fd',
-    borderColor: '#bbdefb',
+    backgroundColor: colors.networkErrorBackground,
+    borderColor: colors.networkErrorBorder,
   },
   authErrorContainer: {
-    backgroundColor: '#fff3e0',
-    borderColor: '#ffcc02',
+    backgroundColor: colors.authErrorBackground,
+    borderColor: colors.authErrorBorder,
   },
   errorIcon: {
     fontSize: 32,
@@ -1211,13 +1219,14 @@ const styles = StyleSheet.create({
   errorTitle: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#333',
+    color: colors.text,
     marginBottom: 8,
     textAlign: 'center',
   },
   errorText: {
     fontSize: 14,
-    color: '#666',
+    color: colors.text,
+    opacity: 0.8,
     textAlign: 'center',
     marginBottom: 15,
     lineHeight: 20,
@@ -1229,23 +1238,23 @@ const styles = StyleSheet.create({
   },
   autoRetryText: {
     fontSize: 12,
-    color: '#4a90e2',
+    color: colors.primary,
     marginLeft: 8,
   },
   retryButton: {
-    backgroundColor: '#4a90e2',
+    backgroundColor: colors.primary,
     paddingHorizontal: 20,
     paddingVertical: 10,
     borderRadius: 8,
   },
   retryButtonText: {
-    color: 'white',
+    color: colors.card,
     fontSize: 14,
     fontWeight: '600',
   },
   lastUpdateText: {
     fontSize: 10,
-    color: '#999',
+    color: colors.placeholder,
     marginTop: 8,
     textAlign: 'center',
   },
@@ -1256,39 +1265,40 @@ const styles = StyleSheet.create({
   emptyText: {
     fontSize: 18,
     fontWeight: '600',
-    color: '#333',
+    color: colors.text,
     textAlign: 'center',
   },
   emptySubtext: {
     fontSize: 14,
-    color: '#666',
+    color: colors.text,
+    opacity: 0.8,
     textAlign: 'center',
     marginTop: 8,
   },
   challengeId: {
     fontSize: 10,
-    color: '#999',
+    color: colors.placeholder,
     marginTop: 5,
     fontFamily: 'monospace',
   },
   debugText: {
     fontSize: 12,
-    color: '#333',
+    color: colors.text,
     marginBottom: 5,
     fontFamily: 'monospace',
   },
   individualVideoContainer: {
     marginBottom: 20,
     padding: 15,
-    backgroundColor: '#f9f9f9',
+    backgroundColor: colors.card,
     borderRadius: 8,
     borderWidth: 1,
-    borderColor: '#ddd',
+    borderColor: colors.border,
   },
   videoLabel: {
     fontSize: 16,
     fontWeight: 'bold',
-    color: '#333',
+    color: colors.text,
     marginBottom: 10,
     textAlign: 'center',
   },
@@ -1297,7 +1307,7 @@ const styles = StyleSheet.create({
     left: 20,
     right: 20,
     bottom: Platform.OS === 'android' ? 24 : 34,
-    backgroundColor: '#4a90e2',
+    backgroundColor: colors.primary,
     padding: 16,
     borderRadius: 12,
     alignItems: 'center',
@@ -1309,13 +1319,13 @@ const styles = StyleSheet.create({
     shadowRadius: 4,
   },
   floatingSubmitButtonText: {
-    color: 'white',
+    color: colors.card,
     fontSize: 18,
     fontWeight: 'bold',
   },
   bottomSpacer: {
     height: 120,
-    backgroundColor: 'white',
+    backgroundColor: colors.card,
     width: '100%',
   },
   headerSpacer: {
