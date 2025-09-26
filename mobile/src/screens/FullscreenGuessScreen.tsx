@@ -36,6 +36,7 @@ import {
   endGuessingSession,
   clearGuessResult,
 } from '../store/slices/guessingGameSlice';
+import { selectUser } from '../store/slices/authSlice';
 import { FullscreenVideoPlayer } from '../components/FullscreenVideoPlayer';
 import { AnimatedFeedback } from '../shared/AnimatedFeedback';
 import { EnhancedChallenge, MediaCapture, VideoSegment, GuessResult } from '../types';
@@ -129,6 +130,7 @@ export const FullscreenGuessScreen: React.FC<FullscreenGuessScreenProps> = ({
   const { currentSession, guessSubmitted, guessResult, currentStreak } = useAppSelector(
     (state) => state.guessingGame
   );
+  const currentUser = useAppSelector(selectUser);
 
   const [selectedStatement, setSelectedStatement] = useState<number | null>(null);
   const [showVideo, setShowVideo] = useState(false);
@@ -365,11 +367,14 @@ export const FullscreenGuessScreen: React.FC<FullscreenGuessScreenProps> = ({
       <View style={styles.videoContainer}>
         {hasVideo && showVideo && (
           <FullscreenVideoPlayer
+            challenge={challenge}
+            currentUser={currentUser}
             mergedVideo={mergedVideo}
             segments={mergedVideo?.segments}
             individualVideos={individualVideos}
             selectedSegment={selectedStatement ?? undefined}
             autoPlay={true}
+            onDelete={onBack}
           />
         )}
         

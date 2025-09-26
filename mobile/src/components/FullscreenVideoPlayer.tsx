@@ -7,13 +7,21 @@ import {
   Dimensions,
   ActivityIndicator,
   Animated,
+  Alert,
 } from 'react-native';
 import { Video, AVPlaybackStatus, ResizeMode } from 'expo-av';
-import { MediaCapture, VideoSegment } from '../types';
+import { MediaCapture, VideoSegment, EnhancedChallenge } from '../types';
+import { AuthUser } from '../services/authService';
+import { useAppDispatch } from '../store';
+import { removeChallenge } from '../store/slices/guessingGameSlice';
+import { realChallengeAPI } from '../services/realChallengeAPI';
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 
 interface FullscreenVideoPlayerProps {
+  challenge: EnhancedChallenge;
+  currentUser: AuthUser | null;
+  onDelete: () => void;
   mergedVideo?: MediaCapture;
   segments?: VideoSegment[];
   individualVideos?: MediaCapture[];
@@ -22,6 +30,9 @@ interface FullscreenVideoPlayerProps {
 }
 
 export const FullscreenVideoPlayer: React.FC<FullscreenVideoPlayerProps> = ({
+  challenge,
+  currentUser,
+  onDelete,
   mergedVideo,
   segments = [],
   individualVideos = [],
@@ -31,6 +42,7 @@ export const FullscreenVideoPlayer: React.FC<FullscreenVideoPlayerProps> = ({
   const videoRef = useRef<Video>(null);
   const timeoutIdRef = useRef<NodeJS.Timeout | null>(null);
   const fadeAnim = useRef(new Animated.Value(1)).current;
+  const dispatch = useAppDispatch();
 
   const [isPlaying, setIsPlaying] = useState(autoPlay);
   const [isLoading, setIsLoading] = useState(false);
@@ -38,6 +50,40 @@ export const FullscreenVideoPlayer: React.FC<FullscreenVideoPlayerProps> = ({
   const [currentPosition, setCurrentPosition] = useState(0);
   const [videoDuration, setVideoDuration] = useState(0);
   const [currentVideoUrl, setCurrentVideoUrl] = useState('');
+
+  const isOwner = challenge?.creator_id === currentUser?.id;
+
+  const performDelete = async () => {
+    if (!challenge?.challenge_id || !challenge?.id) {
+      Alert.alert('Error', 'Challenge ID is missing, cannot delete.');
+      return;
+    }
+    try {
+      const response = await realChallengeAPI.deleteChallenge(challenge.challenge_id);
+      if (response.success) {
+        Alert.alert('Success', 'Challenge has been deleted.');
+        dispatch(removeChallenge(challenge.id));
+        onDelete();
+      } else {
+        throw new Error(response.error || 'Failed to delete challenge.');
+      }
+    } catch (error: any) {
+      console.error('Error deleting challenge:', error);
+      Alert.alert('Error', error.message || 'An unexpected error occurred while deleting.');
+    }
+  };
+
+  const handleDeleteChallenge = () => {
+    Alert.alert(
+      'Delete Challenge',
+      'Are you sure you want to permanently delete this challenge?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Delete', style: 'destructive', onPress: performDelete },
+      ],
+      { cancelable: true }
+    );
+  };
 
   const handlePlaybackStatusUpdate = useCallback((status: AVPlaybackStatus) => {
     if (!status.isLoaded) return;
@@ -78,8 +124,6 @@ export const FullscreenVideoPlayer: React.FC<FullscreenVideoPlayerProps> = ({
     }
   }, [isLoading, fadeAnim]);
 
-  
-
   const playSegment = useCallback(async (segmentIndex: number, seekMethod: 'setPosition' | 'playFromPosition' | 'fastForward' = 'setPosition') => {
     const callId = Math.random().toString(36).substring(7);
     console.log(`🎯 CALL_DEBUG [${callId}]: playSegment called with segmentIndex: ${segmentIndex}, seekMethod: ${seekMethod}`);
@@ -102,7 +146,6 @@ export const FullscreenVideoPlayer: React.FC<FullscreenVideoPlayerProps> = ({
     console.log(`🎯 CALL_DEBUG [${callId}]: Playing segment ${segmentIndex} from ${startTimeMs}ms to ${endTimeMs}ms (duration: ${durationMs}ms)`);
 
     try {
-      // Load video if not loaded
       if (currentVideoUrl !== mergedVideo.streamingUrl) {
         console.log(`🎯 CALL_DEBUG [${callId}]: Loading new video: ${mergedVideo.streamingUrl}`);
         setCurrentVideoUrl(mergedVideo.streamingUrl);
@@ -112,57 +155,30 @@ export const FullscreenVideoPlayer: React.FC<FullscreenVideoPlayerProps> = ({
         console.log(`🎯 CALL_DEBUG [${callId}]: Video loaded successfully`);
       }
 
-      // Get current status to check if video is ready
       const initialStatus = await videoRef.current.getStatusAsync();
       if (!initialStatus.isLoaded) {
         console.log(`🎯 CALL_DEBUG [${callId}]: Video not loaded, cannot seek`);
         return;
       }
 
-      console.log(`🎯 CALL_DEBUG [${callId}]: Initial position: ${initialStatus.positionMillis}ms, seeking to: ${startTimeMs}ms`);
-      
-      // Check video duration vs expected segment times
-      if (initialStatus.durationMillis) {
-        console.log(`🎯 CALL_DEBUG [${callId}]: Actual video duration: ${initialStatus.durationMillis}ms`);
-        console.log(`🎯 CALL_DEBUG [${callId}]: Expected segment end: ${endTimeMs}ms`);
-        
-        if (endTimeMs > initialStatus.durationMillis) {
-          console.log(`🎯 CALL_DEBUG [${callId}]: ⚠️  WARNING: Segment end (${endTimeMs}ms) exceeds actual video duration (${initialStatus.durationMillis}ms)`);
-          console.log(`🎯 CALL_DEBUG [${callId}]: This suggests the segment data doesn't match the actual merged video`);
-        }
-      }
-
-      // Clear any existing timeout
       if (timeoutIdRef.current) {
         clearTimeout(timeoutIdRef.current);
         timeoutIdRef.current = null;
       }
 
-      // Use precise setPositionAsync 
-      console.log(`🎯 CALL_DEBUG [${callId}]: Using setPositionAsync method`);
       await videoRef.current.setPositionAsync(startTimeMs);
       await videoRef.current.playAsync();
       setIsPlaying(true);
 
-      // Set timeout to stop at end time, but adjust if segment exceeds video duration
       let timeoutDuration = durationMs;
       if (initialStatus.durationMillis && endTimeMs > initialStatus.durationMillis) {
-        // Adjust timeout to actual remaining video duration
         const remainingDuration = initialStatus.durationMillis - startTimeMs;
-        timeoutDuration = Math.max(remainingDuration, 100); // At least 100ms
-        console.log(`🎯 CALL_DEBUG [${callId}]: Adjusted timeout from ${durationMs}ms to ${timeoutDuration}ms due to video duration limit`);
+        timeoutDuration = Math.max(remainingDuration, 100);
       }
       
-      console.log(`🎯 CALL_DEBUG [${callId}]: Setting timeout for ${timeoutDuration}ms to stop segment`);
       timeoutIdRef.current = setTimeout(async () => {
-        console.log(`🎯 CALL_DEBUG [${callId}]: Timeout reached, stopping segment playback`);
-        
         try {
           if (videoRef.current) {
-            const currentStatus = await videoRef.current.getStatusAsync();
-            if (currentStatus.isLoaded) {
-              console.log(`🎯 CALL_DEBUG [${callId}]: Final position when stopping: ${currentStatus.positionMillis}ms (target was ${endTimeMs}ms)`);
-            }
             await videoRef.current.pauseAsync();
             setIsPlaying(false);
           }
@@ -236,8 +252,6 @@ export const FullscreenVideoPlayer: React.FC<FullscreenVideoPlayerProps> = ({
     };
   }, []);
 
-
-
   const handleScreenTouch = useCallback(() => setShowControls(true), []);
 
   if (!hasMergedVideo && !hasIndividualVideos) {
@@ -276,6 +290,14 @@ export const FullscreenVideoPlayer: React.FC<FullscreenVideoPlayerProps> = ({
           <Text style={styles.playPauseIcon}>
             {isPlaying ? '⏸️' : '▶️'}
           </Text>
+        </TouchableOpacity>
+      )}
+      {isOwner && (
+        <TouchableOpacity
+          style={styles.deleteButton}
+          onPress={handleDeleteChallenge}
+        >
+          <Text style={styles.deleteButtonText}>🗑️</Text>
         </TouchableOpacity>
       )}
     </TouchableOpacity>
@@ -328,6 +350,21 @@ const styles = StyleSheet.create({
     color: '#ffffff',
     fontSize: 18,
     textAlign: 'center',
+  },
+  deleteButton: {
+    position: 'absolute',
+    bottom: 30,
+    left: 20,
+    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 10,
+  },
+  deleteButtonText: {
+    fontSize: 24,
   },
 });
 
