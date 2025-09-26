@@ -31,11 +31,15 @@ interface MainNavigatorProps {
   onLogout: () => void;
 }
 
-const HomeScreen: React.FC<{ navigation: any; onLogout: () => void }> = ({ navigation, onLogout }) => {
-  const { colors } = useContext(ThemeContext);
+interface HomeScreenProps {
+  navigation: any;
+  onLogout: () => void;
+  styles: any;
+}
+
+const HomeScreen: React.FC<HomeScreenProps> = ({ navigation, onLogout, styles }) => {
   const { user, isAuthenticated, isGuest, triggerAuthFlow } = useAuth();
   const { balance, loading: isLoading, error, refresh: refreshTokenBalance } = useTokenBalance();
-  const styles = getStyles(colors);
 
   useFocusEffect(
     React.useCallback(() => {
@@ -139,6 +143,9 @@ const HomeScreen: React.FC<{ navigation: any; onLogout: () => void }> = ({ navig
 };
 
 export const MainNavigator: React.FC<MainNavigatorProps> = ({ onLogout }) => {
+  const { colors } = useContext(ThemeContext);
+  const styles = getStyles(colors);
+
   return (
     <Stack.Navigator
       screenOptions={{
@@ -149,7 +156,7 @@ export const MainNavigator: React.FC<MainNavigatorProps> = ({ onLogout }) => {
     >
       <Stack.Screen name="Home">
         {({ navigation }) => (
-          <HomeScreen navigation={navigation} onLogout={onLogout} />
+          <HomeScreen navigation={navigation} onLogout={onLogout} styles={styles} />
         )}
       </Stack.Screen>
       <Stack.Screen name="Game">
