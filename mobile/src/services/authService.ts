@@ -580,6 +580,11 @@ export class AuthService {
    * Normalize authentication errors for consistent handling
    */
   private normalizeAuthError(error: any): Error {
+    // Check for network errors
+    if (error instanceof TypeError && error.message.includes('fetch')) {
+      return new Error('Network connection failed. Please check your internet connection and try again.');
+    }
+
     if (error instanceof Error) {
       return error;
     }
