@@ -10,16 +10,13 @@ import {
   StyleSheet,
   Alert,
 } from 'react-native';
-import { useNavigation, CommonActions } from '@react-navigation/native';
+import { useNavigation } from '@react-navigation/native';
 import Purchases from 'react-native-purchases';
 import { usePremiumStatus } from '../hooks/usePremiumStatus';
 import { useAuth } from '../hooks/useAuth';
-import { useAppDispatch } from '../store/hooks';
-import { logout as masterLogout } from '../store/actions';
 
 const AccountScreen = () => {
   const navigation = useNavigation();
-  const dispatch = useAppDispatch();
   const premiumStatusHook = usePremiumStatus() as any; // Type assertion to handle refresh method
   const { isPremium, loading, error, customerInfo } = premiumStatusHook;
   const { user, logout } = useAuth();
@@ -73,33 +70,15 @@ const AccountScreen = () => {
 
   const handleLogout = async () => {
     try {
-      // Dispatch the master logout action to immediately reset the app's state.
-      // This will set isAuthenticated to false, triggering the RootNavigator to switch to the Auth flow.
-      dispatch(masterLogout());
-      console.log('Dispatched master logout action to reset Redux state.');
-
-      // Reset the navigation stack to the authentication flow.
-      navigation.dispatch(
-        CommonActions.reset({
-          index: 0,
-          routes: [{ name: 'Auth' }],
-        })
-      );
-      console.log('Reset navigation to Auth screen.');
-
-      // Perform background cleanup tasks after the UI has been updated.
-      // These tasks do not need to block the user's navigation.
-      await Promise.all([
-        Purchases.logOut().catch(e => console.error('RevenueCat logout failed:', e)),
-        logout().catch(e => console.error('Auth service logout failed:', e)),
-      ]);
-
-      console.log('Finished background logout tasks.');
-
+      // The `logout` function from `useAuth` now handles everything:
+      // - Logging out from RevenueCat
+      // - Clearing the auth token from AsyncStorage
+      // - Updating the Redux state via `logoutUser` thunk
+      // The state change will automatically trigger navigation to the Auth screen.
+      await logout();
+      console.log('Logout successful.');
     } catch (e) {
       console.error('Logout failed', e);
-      // This alert might not be visible if navigation has already occurred,
-      // but it's good practice to have it.
       Alert.alert('Error', 'An error occurred during logout. Please try again.');
     }
   };

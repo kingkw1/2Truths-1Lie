@@ -3,7 +3,7 @@
  * Simplified mobile version for better performance
  */
 
-import { configureStore, combineReducers } from '@reduxjs/toolkit';
+import { configureStore } from '@reduxjs/toolkit';
 import guessingGameReducer from './slices/guessingGameSlice';
 import challengeCreationReducer from './slices/challengeCreationSlice';
 import gameSessionReducer from './slices/gameSessionSlice';
@@ -13,34 +13,22 @@ import networkReducer from './slices/networkSlice';
 import authReducer from './slices/authSlice';
 import reportingReducer from './slices/reportingSlice';
 import { authMiddleware } from './middleware/authMiddleware';
-import { logout } from './actions';
 
 if (__DEV__) {
   console.log('⚡ Configuring simplified mobile Redux store...');
 }
 
-const appReducer = combineReducers({
-  auth: authReducer,
-  guessingGame: guessingGameReducer,
-  challengeCreation: challengeCreationReducer,
-  gameSession: gameSessionReducer,
-  playerProgression: playerProgressionReducer,
-  ui: uiReducer,
-  network: networkReducer,
-  reporting: reportingReducer,
-});
-
-const rootReducer = (state, action) => {
-  if (action.type === logout.type) {
-    // eslint-disable-next-line no-param-reassign
-    state = undefined;
-  }
-
-  return appReducer(state, action);
-};
-
 const store = configureStore({
-  reducer: rootReducer,
+  reducer: {
+    auth: authReducer,
+    guessingGame: guessingGameReducer,
+    challengeCreation: challengeCreationReducer,
+    gameSession: gameSessionReducer,
+    playerProgression: playerProgressionReducer,
+    ui: uiReducer,
+    network: networkReducer,
+    reporting: reportingReducer,
+  },
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware({
       serializableCheck: {
