@@ -54,7 +54,11 @@ export const loginUser = createAsyncThunk(
   'auth/login',
   async ({ email, password }: { email: string; password: string }, { rejectWithValue }) => {
     try {
-      const user = await authService.login(email, password);
+      // First, log in to get the auth token set in the service
+      await authService.login(email, password);
+
+      // Then, fetch the full user profile from the /me endpoint
+      const user = await authService.fetchSelf();
       const permissions = await authService.getUserPermissions();
       
       return {
