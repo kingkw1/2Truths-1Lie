@@ -1522,10 +1522,16 @@ class DatabaseService:
     
     def hash_password(self, password: str) -> str:
         """Hash a password using bcrypt"""
+        # bcrypt has a 72-byte limit, truncate if necessary
+        if len(password) > 72:
+            password = password[:72]
         return self.pwd_context.hash(password)
     
     def verify_password(self, plain_password: str, hashed_password: str) -> bool:
         """Verify a password against its hash"""
+        # bcrypt has a 72-byte limit, truncate if necessary
+        if len(plain_password) > 72:
+            plain_password = plain_password[:72]
         return self.pwd_context.verify(plain_password, hashed_password)
     
     def create_user(self, email: str, password: str, name: Optional[str] = None) -> Optional[Dict[str, Any]]:

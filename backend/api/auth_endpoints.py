@@ -57,11 +57,18 @@ async def register(request: RegisterRequest):
                 detail="Invalid email format"
             )
         
-        # Validate password strength (minimum requirements)
+        # Validate password strength (minimum and maximum requirements)
         if len(request.password) < 6:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Password must be at least 6 characters long"
+            )
+        
+        # bcrypt has a 72-byte limit, so we enforce a reasonable character limit
+        if len(request.password) > 72:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Password must be no more than 72 characters long"
             )
         
         # Create user in database
@@ -111,6 +118,13 @@ async def login(request: LoginRequest):
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Email and password are required"
+            )
+        
+        # Validate password length to prevent bcrypt errors
+        if len(request.password) > 72:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Password must be no more than 72 characters long"
             )
         
         # Authenticate user against database

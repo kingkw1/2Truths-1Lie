@@ -131,6 +131,8 @@ export const useAuthRedux = (): UseAuthReduxReturn => {
 
   const isPasswordValid = useCallback((password: string): boolean => {
     // Password must be at least 8 characters and contain at least one letter and one number
+    // Also enforce maximum length to prevent bcrypt issues
+    if (password.length > 72) return false;
     const passwordRegex = /^(?=.*[A-Za-z])(?=.*\d)[A-Za-z\d@$!%*#?&]{8,}$/;
     return passwordRegex.test(password);
   }, []);

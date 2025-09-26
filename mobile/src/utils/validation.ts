@@ -32,6 +32,7 @@ export const validateEmail = (email: string): ValidationResult => {
  */
 export interface PasswordRequirements {
   minLength?: number;
+  maxLength?: number;
   requireLetter?: boolean;
   requireNumber?: boolean;
   requireSpecialChar?: boolean;
@@ -43,6 +44,7 @@ export const validatePassword = (
 ): ValidationResult => {
   const {
     minLength = 8,
+    maxLength = 72,
     requireLetter = true,
     requireNumber = true,
     requireSpecialChar = false,
@@ -54,6 +56,10 @@ export const validatePassword = (
 
   if (password.length < minLength) {
     return { isValid: false, error: `Password must be at least ${minLength} characters` };
+  }
+
+  if (password.length > maxLength) {
+    return { isValid: false, error: `Password must be no more than ${maxLength} characters` };
   }
 
   if (requireLetter && !/[A-Za-z]/.test(password)) {

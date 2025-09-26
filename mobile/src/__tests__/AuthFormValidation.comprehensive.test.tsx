@@ -235,8 +235,13 @@ describe('Comprehensive Authentication Form Validation Tests', () => {
       const longPassword = 'a'.repeat(50) + '1';
       await testPasswordValidation(longPassword, null);
 
-      const veryLongPassword = 'a'.repeat(200) + '1';
-      await testPasswordValidation(veryLongPassword, null);
+      // Test password at the bcrypt limit (72 characters)
+      const maxLengthPassword = 'a'.repeat(71) + '1';
+      await testPasswordValidation(maxLengthPassword, null);
+
+      // Test password that exceeds bcrypt limit (should fail)
+      const tooLongPassword = 'a'.repeat(72) + '1';
+      await testPasswordValidation(tooLongPassword, 'Password must be no more than 72 characters long');
     });
   });
 

@@ -492,6 +492,10 @@ export class AuthService {
     if (!password || password.length < 6) {
       throw new Error('Password must be at least 6 characters long');
     }
+
+    if (password.length > 72) {
+      throw new Error('Password must be no more than 72 characters long');
+    }
   }
 
   /**
@@ -507,6 +511,8 @@ export class AuthService {
    */
   public isValidPassword(password: string): boolean {
     // Password must be at least 8 characters and contain at least one letter and one number
+    // Also enforce maximum length to prevent bcrypt issues
+    if (!password || password.length > 72) return false;
     const passwordRegex = /^(?=.*[A-Za-z])(?=.*\d)[A-Za-z\d@$!%*#?&]{8,}$/;
     return passwordRegex.test(password);
   }
