@@ -325,11 +325,8 @@ export class AuthService {
     
     // Clear all authentication data
     await this.clearAuthData();
-
-    // Create a new guest user
-    await this.createGuestUser();
     
-    console.log('✅ Logout completed, new guest session created');
+    console.log('✅ Logout completed. User session cleared.');
   }
 
   /**

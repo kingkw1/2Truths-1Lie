@@ -19,7 +19,7 @@ const AccountScreen = () => {
   const navigation = useNavigation();
   const premiumStatusHook = usePremiumStatus() as any; // Type assertion to handle refresh method
   const { isPremium, loading, error, customerInfo } = premiumStatusHook;
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
 
   const handleManageSubscription = async () => {
     try {
@@ -68,9 +68,19 @@ const AccountScreen = () => {
     }
   };
 
-  const handleLogout = () => {
-    // TODO: Dispatch logout action and clear user session
-    Alert.alert('Log Out', 'You have been logged out.');
+  const handleLogout = async () => {
+    try {
+      // The `logout` function from `useAuth` now handles everything:
+      // - Logging out from RevenueCat
+      // - Clearing the auth token from AsyncStorage
+      // - Updating the Redux state via `logoutUser` thunk
+      // The state change will automatically trigger navigation to the Auth screen.
+      await logout();
+      console.log('Logout successful.');
+    } catch (e) {
+      console.error('Logout failed', e);
+      Alert.alert('Error', 'An error occurred during logout. Please try again.');
+    }
   };
 
   const handleEditProfile = () => {
