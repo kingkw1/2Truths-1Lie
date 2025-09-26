@@ -7,6 +7,7 @@ import {
   ViewStyle,
   TextStyle,
 } from 'react-native';
+import HapticsService from '../services/HapticsService';
 
 interface AuthButtonProps {
   title: string;
@@ -30,6 +31,11 @@ export const AuthButton: React.FC<AuthButtonProps> = ({
   loadingText,
 }) => {
   const isDisabled = loading || disabled;
+
+  const handlePress = () => {
+    HapticsService.triggerImpact('medium');
+    onPress();
+  };
 
   const getButtonStyle = (): ViewStyle[] => {
     const baseStyle: ViewStyle[] = [styles.button];
@@ -74,7 +80,7 @@ export const AuthButton: React.FC<AuthButtonProps> = ({
   return (
     <TouchableOpacity
       style={getButtonStyle()}
-      onPress={onPress}
+      onPress={handlePress}
       disabled={isDisabled}
       activeOpacity={0.8}
     >

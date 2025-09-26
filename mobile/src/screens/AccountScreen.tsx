@@ -1,4 +1,4 @@
-import React, { useContext } from 'react';
+import React, { useState, useEffect, useContext } from 'react';
 import {
   SafeAreaView,
   ScrollView,
@@ -11,6 +11,7 @@ import {
   Alert,
   Switch,
 } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useNavigation } from '@react-navigation/native';
 import Purchases from 'react-native-purchases';
 import { usePremiumStatus } from '../hooks/usePremiumStatus';
@@ -24,6 +25,43 @@ const AccountScreen = () => {
   const { isPremium, loading, error, customerInfo } = premiumStatusHook;
   const { user, logout } = useAuth();
   const styles = getStyles(colors);
+  const [isHapticsEnabled, setIsHapticsEnabled] = useState(true);
+
+  useEffect(() => {
+    const loadHapticsPreference = async () => {
+      try {
+        const value = await AsyncStorage.getItem('hapticsEnabled');
+        // AsyncStorage returns null if the key doesn't exist. Default to true.
+        // It returns 'true' or 'false' as strings.
+        if (value !== null) {
+          setIsHapticsEnabled(value === 'true');
+        }
+      } catch (e) {
+        console.error('Failed to load haptics preference.', e);
+      }
+    };
+
+    loadHapticsPreference();
+  }, []);
+
+  const handleHapticsToggle = async (newValue: boolean) => {
+    setIsHapticsEnabled(newValue);
+    try {
+      await AsyncStorage.setItem('hapticsEnabled', String(newValue));
+
+      // Placeholder for PATCH API call for logged-in users
+      if (user) {
+        console.log(`SYNC HAPTICS PREFERENCE: User ${user.id} set haptics to ${newValue}. PATCH to /api/user/preferences`);
+        // Example:
+        // await api.patch('/user/preferences', { hapticsEnabled: newValue });
+      }
+    } catch (e) {
+      console.error('Failed to save haptics preference.', e);
+      // Optionally, revert state if saving fails
+      setIsHapticsEnabled(!newValue);
+      Alert.alert('Error', 'Could not save your preference. Please try again.');
+    }
+  };
 
   const handleManageSubscription = async () => {
     try {
@@ -132,6 +170,15 @@ const AccountScreen = () => {
               onValueChange={toggleTheme}
               trackColor={{ false: '#767577', true: '#81b0ff' }}
               thumbColor={theme === 'dark' ? '#f4f3f4' : '#f4f3f4'}
+            />
+          </View>
+          <View style={styles.cardRow}>
+            <Text style={styles.label}>Haptic Feedback</Text>
+            <Switch
+              value={isHapticsEnabled}
+              onValueChange={handleHapticsToggle}
+              trackColor={{ false: '#767577', true: '#81b0ff' }}
+              thumbColor={isHapticsEnabled ? '#f4f3f4' : '#f4f3f4'}
             />
           </View>
         </View>
