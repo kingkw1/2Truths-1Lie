@@ -474,6 +474,38 @@ export class AuthService {
     return permissions.includes(permission) || permissions.includes('admin');
   }
 
+  public async fetchSelf(): Promise<AuthUser> {
+    if (!this.authToken) {
+      throw new Error('No auth token available to fetch user profile.');
+    }
+    try {
+      const response = await fetch(`${this.getApiBaseUrl()}/api/v1/auth/me`, {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${this.authToken}`,
+          'Content-Type': 'application/json',
+        },
+      });
+      if (!response.ok) {
+        throw new Error(`Failed to fetch user profile: ${response.status}`);
+      }
+      const userData = await response.json();
+      // The backend /me endpoint returns the user object directly
+      // It needs to be mapped to our AuthUser interface
+      const user: AuthUser = {
+        id: userData.id,
+        name: userData.name || userData.email.split('@')[0],
+        email: userData.email,
+        createdAt: userData.created_at,
+        avatar: userData.avatar,
+      };
+      return user;
+    } catch (error) {
+      console.error('Error fetching self:', error);
+      throw error;
+    }
+  }
+
   /**
    * Validate email and password format
    */

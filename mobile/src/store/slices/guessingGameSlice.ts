@@ -93,6 +93,12 @@ const guessingGameSlice = createSlice({
       state.lastSuccessfulLoad = Date.now(); // Store as timestamp
     },
 
+    removeChallenge: (state, action: PayloadAction<string>) => {
+      state.availableChallenges = state.availableChallenges.filter(
+        (challenge) => challenge.id !== action.payload
+      );
+    },
+
     setLoading: (state, action: PayloadAction<boolean>) => {
       state.isLoading = action.payload;
       if (action.payload) {
@@ -272,6 +278,7 @@ export const {
   startGuessingSession,
   selectChallenge,
   loadChallenges,
+  removeChallenge,
   setLoading,
   setChallengeLoadError,
   clearChallengeLoadError,

@@ -29,6 +29,7 @@ import { Video, AVPlaybackStatus, ResizeMode } from 'expo-av';
 import * as Haptics from 'expo-haptics';
 import { useAppDispatch, useAppSelector } from '../store';
 import {
+  removeChallenge,
   selectChallenge,
   startGuessingSession,
   submitGuess,
@@ -36,6 +37,8 @@ import {
   endGuessingSession,
   clearGuessResult,
 } from '../store/slices/guessingGameSlice';
+import { selectUser } from '../store/slices/authSlice';
+import { realChallengeAPI } from '../services/realChallengeAPI';
 import { FullscreenVideoPlayer } from '../components/FullscreenVideoPlayer';
 import { AnimatedFeedback } from '../shared/AnimatedFeedback';
 import { EnhancedChallenge, MediaCapture, VideoSegment, GuessResult } from '../types';
@@ -129,9 +132,44 @@ export const FullscreenGuessScreen: React.FC<FullscreenGuessScreenProps> = ({
   const { currentSession, guessSubmitted, guessResult, currentStreak } = useAppSelector(
     (state) => state.guessingGame
   );
+  const currentUser = useAppSelector(selectUser);
 
   const [selectedStatement, setSelectedStatement] = useState<number | null>(null);
   const [showVideo, setShowVideo] = useState(false);
+
+  const isOwner = challenge?.creatorId === currentUser?.id;
+
+  const performDelete = async () => {
+    if (!challenge?.id) {
+      Alert.alert('Error', 'Challenge ID is missing, cannot delete.');
+      return;
+    }
+    try {
+      const response = await realChallengeAPI.deleteChallenge(challenge.id);
+      if (response.success) {
+        Alert.alert('Success', 'Challenge has been deleted.');
+        dispatch(removeChallenge(challenge.id));
+        onBack(); // Navigate back after deletion
+      } else {
+        throw new Error(response.error || 'Failed to delete challenge.');
+      }
+    } catch (error: any) {
+      console.error('Error deleting challenge:', error);
+      Alert.alert('Error', error.message || 'An unexpected error occurred while deleting.');
+    }
+  };
+
+  const handleDeleteChallenge = () => {
+    Alert.alert(
+      'Delete Challenge',
+      'Are you sure you want to permanently delete this challenge?',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Delete', style: 'destructive', onPress: performDelete },
+      ],
+      { cancelable: true }
+    );
+  };
 
   // Initialize guessing session on mount
   useEffect(() => {
@@ -347,9 +385,16 @@ export const FullscreenGuessScreen: React.FC<FullscreenGuessScreenProps> = ({
       
       {/* Minimal header with back button and statement indicator */}
       <SafeAreaView style={styles.header}>
-        <TouchableOpacity onPress={onBack} style={styles.backButton}>
-          <Text style={styles.backButtonText}>←</Text>
-        </TouchableOpacity>
+        <View style={styles.headerControls}>
+          <TouchableOpacity onPress={onBack} style={styles.backButton}>
+            <Text style={styles.backButtonText}>←</Text>
+          </TouchableOpacity>
+          {isOwner && (
+            <TouchableOpacity onPress={handleDeleteChallenge} style={styles.deleteButton}>
+              <Text style={styles.deleteButtonText}>🗑️</Text>
+            </TouchableOpacity>
+          )}
+        </View>
         
         {/* Statement indicator bubble at top */}
         {selectedStatement !== null && !guessSubmitted && (
@@ -469,6 +514,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     paddingBottom: 10,
   },
+  headerControls: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
   backButton: {
     width: 44,
     height: 44,
@@ -481,6 +531,17 @@ const styles = StyleSheet.create({
     color: '#ffffff',
     fontSize: 24,
     fontWeight: 'bold',
+  },
+  deleteButton: {
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: 'rgba(0, 0, 0, 0.3)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  deleteButtonText: {
+    fontSize: 24,
   },
   topStatementIndicator: {
     position: 'absolute',

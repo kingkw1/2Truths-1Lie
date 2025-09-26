@@ -78,7 +78,7 @@ export const FullscreenVideoPlayer: React.FC<FullscreenVideoPlayerProps> = ({
     }
   }, [isLoading, fadeAnim]);
 
-  
+
 
   const playSegment = useCallback(async (segmentIndex: number, seekMethod: 'setPosition' | 'playFromPosition' | 'fastForward' = 'setPosition') => {
     const callId = Math.random().toString(36).substring(7);
@@ -102,7 +102,6 @@ export const FullscreenVideoPlayer: React.FC<FullscreenVideoPlayerProps> = ({
     console.log(`🎯 CALL_DEBUG [${callId}]: Playing segment ${segmentIndex} from ${startTimeMs}ms to ${endTimeMs}ms (duration: ${durationMs}ms)`);
 
     try {
-      // Load video if not loaded
       if (currentVideoUrl !== mergedVideo.streamingUrl) {
         console.log(`🎯 CALL_DEBUG [${callId}]: Loading new video: ${mergedVideo.streamingUrl}`);
         setCurrentVideoUrl(mergedVideo.streamingUrl);
@@ -112,57 +111,30 @@ export const FullscreenVideoPlayer: React.FC<FullscreenVideoPlayerProps> = ({
         console.log(`🎯 CALL_DEBUG [${callId}]: Video loaded successfully`);
       }
 
-      // Get current status to check if video is ready
       const initialStatus = await videoRef.current.getStatusAsync();
       if (!initialStatus.isLoaded) {
         console.log(`🎯 CALL_DEBUG [${callId}]: Video not loaded, cannot seek`);
         return;
       }
 
-      console.log(`🎯 CALL_DEBUG [${callId}]: Initial position: ${initialStatus.positionMillis}ms, seeking to: ${startTimeMs}ms`);
-      
-      // Check video duration vs expected segment times
-      if (initialStatus.durationMillis) {
-        console.log(`🎯 CALL_DEBUG [${callId}]: Actual video duration: ${initialStatus.durationMillis}ms`);
-        console.log(`🎯 CALL_DEBUG [${callId}]: Expected segment end: ${endTimeMs}ms`);
-        
-        if (endTimeMs > initialStatus.durationMillis) {
-          console.log(`🎯 CALL_DEBUG [${callId}]: ⚠️  WARNING: Segment end (${endTimeMs}ms) exceeds actual video duration (${initialStatus.durationMillis}ms)`);
-          console.log(`🎯 CALL_DEBUG [${callId}]: This suggests the segment data doesn't match the actual merged video`);
-        }
-      }
-
-      // Clear any existing timeout
       if (timeoutIdRef.current) {
         clearTimeout(timeoutIdRef.current);
         timeoutIdRef.current = null;
       }
 
-      // Use precise setPositionAsync 
-      console.log(`🎯 CALL_DEBUG [${callId}]: Using setPositionAsync method`);
       await videoRef.current.setPositionAsync(startTimeMs);
       await videoRef.current.playAsync();
       setIsPlaying(true);
 
-      // Set timeout to stop at end time, but adjust if segment exceeds video duration
       let timeoutDuration = durationMs;
       if (initialStatus.durationMillis && endTimeMs > initialStatus.durationMillis) {
-        // Adjust timeout to actual remaining video duration
         const remainingDuration = initialStatus.durationMillis - startTimeMs;
-        timeoutDuration = Math.max(remainingDuration, 100); // At least 100ms
-        console.log(`🎯 CALL_DEBUG [${callId}]: Adjusted timeout from ${durationMs}ms to ${timeoutDuration}ms due to video duration limit`);
+        timeoutDuration = Math.max(remainingDuration, 100);
       }
       
-      console.log(`🎯 CALL_DEBUG [${callId}]: Setting timeout for ${timeoutDuration}ms to stop segment`);
       timeoutIdRef.current = setTimeout(async () => {
-        console.log(`🎯 CALL_DEBUG [${callId}]: Timeout reached, stopping segment playback`);
-        
         try {
           if (videoRef.current) {
-            const currentStatus = await videoRef.current.getStatusAsync();
-            if (currentStatus.isLoaded) {
-              console.log(`🎯 CALL_DEBUG [${callId}]: Final position when stopping: ${currentStatus.positionMillis}ms (target was ${endTimeMs}ms)`);
-            }
             await videoRef.current.pauseAsync();
             setIsPlaying(false);
           }
