@@ -296,11 +296,9 @@ export const FullscreenGuessScreen: React.FC<FullscreenGuessScreenProps> = ({
 
         dispatch(setGuessResult(realResult));
         
-        // If the guess was correct, refresh the challenge list to remove completed challenge
-        if (backendResult.correct) {
-          console.log(`🔄 REFRESH: Refreshing challenge list after correct guess`);
-          onRefreshChallenges?.();
-        }
+        // Refresh the challenge list to remove attempted challenge (both correct AND incorrect)
+        console.log(`🔄 REFRESH: Refreshing challenge list after ${backendResult.correct ? 'correct' : 'incorrect'} guess`);
+        onRefreshChallenges?.();
         
         // Automatically proceed to completion after showing result
         setTimeout(() => {
@@ -331,6 +329,10 @@ export const FullscreenGuessScreen: React.FC<FullscreenGuessScreenProps> = ({
         };
 
         dispatch(setGuessResult(fallbackResult));
+        
+        // Also refresh challenge list for fallback case
+        console.log(`🔄 REFRESH: Refreshing challenge list after fallback ${wasCorrect ? 'correct' : 'incorrect'} guess`);
+        onRefreshChallenges?.();
         
         setTimeout(() => {
           onComplete?.();
