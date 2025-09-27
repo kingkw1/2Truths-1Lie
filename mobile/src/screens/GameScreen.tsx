@@ -40,6 +40,7 @@ import { ReportButton } from '../components/ReportButton';
 import { ReportModal, ModerationReason } from '../components/ReportModal';
 import { submitReport } from '../store/slices/reportingSlice';
 import { ThemeContext } from '../context/ThemeContext';
+import { store } from '../store';
 
 // Helper function to convert backend challenge to frontend format
 const convertBackendChallenge = (backendChallenge: BackendChallenge): EnhancedChallenge => {
@@ -399,17 +400,102 @@ export const GameScreen: React.FC<GameScreenProps> = ({
     setSelectedStatement(null);
   };
 
-  const handleSubmitGuess = () => {
+  const handleSubmitGuess = async () => {
     if (selectedStatement === null || !currentSession) return;
 
     dispatch(submitGuess(selectedStatement));
 
-    // Simulate guess result
-    setTimeout(() => {
+    // Handle guess result with REAL API call
+    try {
+      // Get the statement ID that the user guessed
+      const guessedStatement = currentSession.statements[selectedStatement];
+      const guessedStatementId = guessedStatement?.id || `statement_${selectedStatement}`;
+      
+      console.log(`🎯 GAMESCREEN_API: Submitting guess to backend API`);
+      console.log(`🎯 GAMESCREEN_API: Challenge ID: ${currentSession.challengeId}`);
+      console.log(`🎯 GAMESCREEN_API: Guessed Statement ID: ${guessedStatementId}`);
+      
+      // Call real backend API
+      const apiResponse = await realChallengeAPI.submitGuess(
+        currentSession.challengeId,
+        guessedStatementId
+      );
+      
+      if (apiResponse.success && apiResponse.data) {
+        const backendResult = apiResponse.data;
+        console.log(`✅ GAMESCREEN_API_SUCCESS: Backend response:`, backendResult);
+        
+        // Import updateUserScore action
+        const { updateUserScore } = await import('../store/slices/authSlice');
+        
+        // Update user score in Redux if points were earned
+        if (backendResult.points_earned > 0) {
+          console.log(`💰 GAMESCREEN_SCORE: User earned ${backendResult.points_earned} points`);
+          
+          // Get current user score and add earned points
+          const currentUser = (store.getState() as any).auth.user;
+          if (currentUser) {
+            const newScore = (currentUser.score || 0) + backendResult.points_earned;
+            dispatch(updateUserScore(newScore));
+            console.log(`✅ GAMESCREEN_SCORE_UPDATED: User score updated to ${newScore}`);
+          }
+        }
+        
+        // Find the correct statement index for revealing the answer
+        const correctStatement = currentSession.statements.findIndex((stmt: any) => stmt.isLie);
+        
+        // Create result object based on backend response
+        const realResult: GuessResult = {
+          sessionId: currentSession.sessionId,
+          playerId: currentSession.playerId,
+          challengeId: currentSession.challengeId,
+          guessedStatement: selectedStatement,
+          correctStatement,
+          wasCorrect: backendResult.correct,
+          pointsEarned: backendResult.points_earned,
+          timeBonus: 0, // Backend doesn't provide time bonus yet
+          accuracyBonus: 0, // Backend doesn't provide accuracy bonus yet
+          streakBonus: 0, // Backend doesn't provide streak bonus yet
+          totalScore: backendResult.points_earned,
+          newAchievements: [], // Backend doesn't provide achievements yet
+        };
+
+        dispatch(setGuessResult(realResult));
+        
+      } else {
+        // Handle API error - fall back to mock behavior for now
+        console.error(`❌ GAMESCREEN_API_ERROR: Failed to submit guess:`, apiResponse.error);
+        
+        // Create fallback mock result
+        const correctStatement = currentSession.statements.findIndex((stmt: any) => stmt.isLie);
+        const wasCorrect = selectedStatement === correctStatement;
+
+        const fallbackResult: GuessResult = {
+          sessionId: currentSession.sessionId,
+          playerId: currentSession.playerId,
+          challengeId: currentSession.challengeId,
+          guessedStatement: selectedStatement,
+          correctStatement,
+          wasCorrect,
+          pointsEarned: wasCorrect ? 100 : 0,
+          timeBonus: 20,
+          accuracyBonus: wasCorrect ? 30 : 0,
+          streakBonus: wasCorrect ? 10 : 0,
+          totalScore: wasCorrect ? 160 : 0,
+          newAchievements: wasCorrect ? ['first_correct_guess'] : [],
+        };
+
+        dispatch(setGuessResult(fallbackResult));
+      }
+      
+    } catch (error) {
+      console.error(`❌ GAMESCREEN_GUESS_ERROR:`, error);
+      
+      // Create fallback mock result on error
       const correctStatement = currentSession.statements.findIndex((stmt: any) => stmt.isLie);
       const wasCorrect = selectedStatement === correctStatement;
 
-      const mockResult: GuessResult = {
+      const errorFallbackResult: GuessResult = {
         sessionId: currentSession.sessionId,
         playerId: currentSession.playerId,
         challengeId: currentSession.challengeId,
@@ -424,8 +510,8 @@ export const GameScreen: React.FC<GameScreenProps> = ({
         newAchievements: wasCorrect ? ['first_correct_guess'] : [],
       };
 
-      dispatch(setGuessResult(mockResult));
-    }, 1500);
+      dispatch(setGuessResult(errorFallbackResult));
+    }
   };
 
   const handleNewGame = () => {
@@ -928,6 +1014,7 @@ export const GameScreen: React.FC<GameScreenProps> = ({
             visible={!!currentSession && !guessSubmitted && selectedStatement !== null}
             onPress={handleSubmitGuess}
             text="Submit Guess"
+            styles={styles}
           />
         </SafeAreaView>
       )}
@@ -936,7 +1023,12 @@ export const GameScreen: React.FC<GameScreenProps> = ({
 };
 
 // Floating submit button appears above system UI and is device-agnostic
-const FloatingSubmitButton: React.FC<{ visible: boolean; onPress: () => void; text: string }> = ({ visible, onPress, text }) => {
+const FloatingSubmitButton: React.FC<{ 
+  visible: boolean; 
+  onPress: () => void; 
+  text: string; 
+  styles: any 
+}> = ({ visible, onPress, text, styles }) => {
   if (!visible) return null;
   return (
     <TouchableOpacity
@@ -953,7 +1045,7 @@ const FloatingSubmitButton: React.FC<{ visible: boolean; onPress: () => void; te
 // Platform-aware bottom padding so buttons aren't hidden behind system UI (Android nav bar)
 const bottomPadding = Platform.OS === 'android' ? 96 : 20;
 
-const getStyles = (colors) => StyleSheet.create({
+const getStyles = (colors: any) => StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.background,

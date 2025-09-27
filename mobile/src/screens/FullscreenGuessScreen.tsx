@@ -42,6 +42,7 @@ import { realChallengeAPI } from '../services/realChallengeAPI';
 import { FullscreenVideoPlayer } from '../components/FullscreenVideoPlayer';
 import { AnimatedFeedback } from '../shared/AnimatedFeedback';
 import { EnhancedChallenge, MediaCapture, VideoSegment, GuessResult } from '../types';
+import { store } from '../store';
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 
@@ -225,7 +226,7 @@ export const FullscreenGuessScreen: React.FC<FullscreenGuessScreenProps> = ({
     }
   }, [guessSubmitted, mergedVideo]);
 
-  const handleStatementLongPress = useCallback((index: number) => {
+  const handleStatementLongPress = useCallback(async (index: number) => {
     if (guessSubmitted) return;
     
     console.log(`🔥 FULLSCREEN_SCREEN: Statement ${index + 1} long-pressed - submitting guess`);
@@ -234,35 +235,130 @@ export const FullscreenGuessScreen: React.FC<FullscreenGuessScreenProps> = ({
     // Submit guess automatically on long press
     dispatch(submitGuess(index));
 
-    // Handle guess result
-    setTimeout(() => {
+    // Handle guess result with REAL API call
+    try {
       if (!currentSession) return;
       
-      const correctStatement = currentSession.statements.findIndex((stmt: any) => stmt.isLie);
-      const wasCorrect = index === correctStatement;
-
-      const mockResult: GuessResult = {
-        sessionId: currentSession.sessionId,
-        playerId: currentSession.playerId,
-        challengeId: currentSession.challengeId,
-        guessedStatement: index,
-        correctStatement,
-        wasCorrect,
-        pointsEarned: wasCorrect ? 100 : 0,
-        timeBonus: 20,
-        accuracyBonus: wasCorrect ? 30 : 0,
-        streakBonus: wasCorrect ? 10 : 0,
-        totalScore: wasCorrect ? 160 : 0,
-        newAchievements: wasCorrect ? ['first_correct_guess'] : [],
-      };
-
-      dispatch(setGuessResult(mockResult));
+      // Get the statement ID that the user guessed
+      const guessedStatement = currentSession.statements[index];
+      const guessedStatementId = guessedStatement?.id || `statement_${index}`;
       
-      // Automatically proceed to completion after showing result
-      setTimeout(() => {
-        onComplete?.();
-      }, 2000);
-    }, 1500);
+      console.log(`🎯 API_CALL: Submitting guess to backend API`);
+      console.log(`🎯 API_CALL: Challenge ID: ${currentSession.challengeId}`);
+      console.log(`🎯 API_CALL: Guessed Statement ID: ${guessedStatementId}`);
+      
+      // Call real backend API
+      const apiResponse = await realChallengeAPI.submitGuess(
+        currentSession.challengeId,
+        guessedStatementId
+      );
+      
+      if (apiResponse.success && apiResponse.data) {
+        const backendResult = apiResponse.data;
+        console.log(`✅ API_SUCCESS: Backend response:`, backendResult);
+        
+        // Import updateUserScore action
+        const { updateUserScore } = await import('../store/slices/authSlice');
+        
+        // Update user score in Redux if points were earned
+        if (backendResult.points_earned > 0) {
+          console.log(`💰 SCORE_UPDATE: User earned ${backendResult.points_earned} points`);
+          
+          // Get current user score and add earned points
+          const currentUser = (store.getState() as any).auth.user;
+          if (currentUser) {
+            const newScore = (currentUser.score || 0) + backendResult.points_earned;
+            dispatch(updateUserScore(newScore));
+            console.log(`✅ SCORE_UPDATED: User score updated to ${newScore}`);
+          }
+        }
+        
+        // Find the correct statement index for revealing the answer
+        const correctStatement = currentSession.statements.findIndex((stmt: any) => stmt.isLie);
+        
+        // Create result object based on backend response
+        const realResult: GuessResult = {
+          sessionId: currentSession.sessionId,
+          playerId: currentSession.playerId,
+          challengeId: currentSession.challengeId,
+          guessedStatement: index,
+          correctStatement,
+          wasCorrect: backendResult.correct,
+          pointsEarned: backendResult.points_earned,
+          timeBonus: 0, // Backend doesn't provide time bonus yet
+          accuracyBonus: 0, // Backend doesn't provide accuracy bonus yet
+          streakBonus: 0, // Backend doesn't provide streak bonus yet
+          totalScore: backendResult.points_earned,
+          newAchievements: [], // Backend doesn't provide achievements yet
+        };
+
+        dispatch(setGuessResult(realResult));
+        
+        // Automatically proceed to completion after showing result
+        setTimeout(() => {
+          onComplete?.();
+        }, 2000);
+        
+      } else {
+        // Handle API error - fall back to mock behavior for now
+        console.error(`❌ API_ERROR: Failed to submit guess:`, apiResponse.error);
+        
+        // Create fallback mock result
+        const correctStatement = currentSession.statements.findIndex((stmt: any) => stmt.isLie);
+        const wasCorrect = index === correctStatement;
+
+        const fallbackResult: GuessResult = {
+          sessionId: currentSession.sessionId,
+          playerId: currentSession.playerId,
+          challengeId: currentSession.challengeId,
+          guessedStatement: index,
+          correctStatement,
+          wasCorrect,
+          pointsEarned: wasCorrect ? 100 : 0,
+          timeBonus: 20,
+          accuracyBonus: wasCorrect ? 30 : 0,
+          streakBonus: wasCorrect ? 10 : 0,
+          totalScore: wasCorrect ? 160 : 0,
+          newAchievements: wasCorrect ? ['first_correct_guess'] : [],
+        };
+
+        dispatch(setGuessResult(fallbackResult));
+        
+        setTimeout(() => {
+          onComplete?.();
+        }, 2000);
+      }
+      
+    } catch (error) {
+      console.error(`❌ GUESS_SUBMISSION_ERROR:`, error);
+      
+      // Create fallback mock result on error
+      if (currentSession) {
+        const correctStatement = currentSession.statements.findIndex((stmt: any) => stmt.isLie);
+        const wasCorrect = index === correctStatement;
+
+        const errorFallbackResult: GuessResult = {
+          sessionId: currentSession.sessionId,
+          playerId: currentSession.playerId,
+          challengeId: currentSession.challengeId,
+          guessedStatement: index,
+          correctStatement,
+          wasCorrect,
+          pointsEarned: wasCorrect ? 100 : 0,
+          timeBonus: 20,
+          accuracyBonus: wasCorrect ? 30 : 0,
+          streakBonus: wasCorrect ? 10 : 0,
+          totalScore: wasCorrect ? 160 : 0,
+          newAchievements: wasCorrect ? ['first_correct_guess'] : [],
+        };
+
+        dispatch(setGuessResult(errorFallbackResult));
+        
+        setTimeout(() => {
+          onComplete?.();
+        }, 2000);
+      }
+    }
 
     // Strong haptic feedback for submission
     if (Platform.OS === 'ios') {

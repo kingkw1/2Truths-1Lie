@@ -596,9 +596,7 @@ class ChallengeService:
                 break
         
         if existing_guess:
-            # TEMPORARY: Allow multiple guesses for testing progression system
-            logger.warning(f"User {user_id} already guessed on challenge {request.challenge_id}, allowing duplicate for testing")
-            # raise ChallengeServiceError("User has already guessed on this challenge")
+            raise ChallengeServiceError("User has already guessed on this challenge")
         
         # Validate guessed statement exists
         guessed_statement = None

@@ -432,6 +432,7 @@ export class RealChallengeAPIService {
         method: 'POST',
         headers,
         body: JSON.stringify({
+          challenge_id: challengeId,
           guessed_lie_statement_id: guessedStatementId,
         }),
       });
