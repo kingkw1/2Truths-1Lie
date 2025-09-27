@@ -8,7 +8,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.responses import JSONResponse
 import logging
 
-from services.auth_service import get_current_user, get_authenticated_user
+from services.auth_service import get_current_user, get_authenticated_user, get_current_user_with_permissions
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from services.challenge_service import challenge_service, ChallengeNotFoundError, ChallengeAccessDeniedError
 from services.upload_service import ChunkedUploadService
@@ -173,20 +173,23 @@ def enrich_challenge_with_creator_name(challenge: Challenge) -> dict:
 @router.post("/", response_model=Challenge, status_code=status.HTTP_201_CREATED)
 async def create_challenge(
     request: CreateChallengeRequest,
-    creator_id: str = Depends(get_authenticated_user)
+    user_payload: dict = Depends(get_current_user_with_permissions)
 ) -> Challenge:
     """
     Create a new challenge with 3 statements and their associated media
     """
     try:
-        logger.info(f"Creating challenge for user {creator_id}")
+        creator_id = user_payload.get("sub")
+        is_premium = user_payload.get("is_premium", False)
+        logger.info(f"Creating challenge for user {creator_id} (Premium: {is_premium})")
         logger.debug(f"Challenge request: {request.model_dump()}")
         
         # Create the challenge using the service
         challenge = await challenge_service.create_challenge(
             creator_id=creator_id,
             request=request,
-            upload_service=upload_service
+            upload_service=upload_service,
+            is_premium=is_premium
         )
         
         logger.info(f"Challenge created successfully: {challenge.challenge_id}")

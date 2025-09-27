@@ -16,6 +16,7 @@ import { ChallengeCreationScreen } from '../screens/ChallengeCreationScreen';
 import { MainStackParamList } from './types';
 import { useAuth } from '../hooks/useAuth';
 import { useTokenBalance } from '../hooks/useTokenBalance';
+import { usePremiumStatus } from '../hooks/usePremiumStatus';
 import { AuthGuard } from '../components/AuthGuard';
 
 const Stack = createNativeStackNavigator<MainStackParamList>();
@@ -40,6 +41,7 @@ interface HomeScreenProps {
 const HomeScreen: React.FC<HomeScreenProps> = ({ navigation, onLogout, styles }) => {
   const { user, isAuthenticated, isGuest, triggerAuthFlow } = useAuth();
   const { balance, loading: isLoading, error, refresh: refreshTokenBalance } = useTokenBalance();
+  const { isPremium } = usePremiumStatus();
 
   useFocusEffect(
     React.useCallback(() => {
@@ -82,7 +84,7 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation, onLogout, styles })
           <Text style={styles.welcomeText}>
             {isGuest || !isAuthenticated
               ? 'Sign In to Your Account'
-              : `Welcome, ${user?.name}! (🏆 ${user?.score ?? 0})`}
+              : `Welcome, ${user?.name}${isPremium ? ' 🕵️' : ''}! (🏆 ${user?.score ?? 0})`}
           </Text>
           <Text style={styles.profileCardIcon}>〉</Text>
         </Pressable>
