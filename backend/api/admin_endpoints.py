@@ -662,3 +662,51 @@ async def set_premium_status(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to set premium status"
         )
+
+
+# TEMPORARY DEBUG ENDPOINT - REMOVE AFTER TESTING
+@router.post("/debug/set-premium-user-10")
+async def debug_set_premium_user_10():
+    """
+    TEMPORARY: Set premium status for user 10 directly
+    This is for testing the premium rate limiting fix
+    """
+    try:
+        db_service = get_db_service()
+        
+        # Find user 10
+        user = db_service.get_user_by_id(10)
+        if not user:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="User 10 not found"
+            )
+
+        # Set premium status
+        success = db_service.set_user_premium_status(10, True)
+
+        if not success:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Failed to update premium status in database"
+            )
+
+        # Verify the change
+        updated_user = db_service.get_user_by_id(10)
+        
+        return {
+            "message": "Successfully set premium status for user 10",
+            "user_id": 10,
+            "email": user.get('email'),
+            "old_premium": user.get('is_premium'),
+            "new_premium": updated_user.get('is_premium')
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to set premium status for user 10: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to set premium status: {str(e)}"
+        )
