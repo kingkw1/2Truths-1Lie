@@ -85,6 +85,42 @@ upload_service = ChunkedUploadService()
 challenge_service = ChallengeService()
 rate_limiter = RateLimiter()
 
+@app.on_event("startup")
+async def startup_event():
+    """Run startup tasks including database migrations"""
+    import logging
+    logger = logging.getLogger(__name__)
+    
+    try:
+        # Run score migration if needed
+        from services.database_service import get_db_service
+        db_service = get_db_service()
+        
+        # Check if score column exists
+        try:
+            db_service._execute_query(
+                "SELECT score FROM users LIMIT 1",
+                ()
+            )
+            logger.info("✅ Score column already exists")
+        except Exception as e:
+            if "does not exist" in str(e):
+                logger.info("📝 Adding score column to users table...")
+                try:
+                    db_service._execute_query(
+                        "ALTER TABLE users ADD COLUMN score INTEGER NOT NULL DEFAULT 0",
+                        ()
+                    )
+                    logger.info("✅ Score column added successfully")
+                except Exception as migration_error:
+                    logger.error(f"❌ Failed to add score column: {migration_error}")
+            else:
+                logger.error(f"❌ Database check failed: {e}")
+                
+    except Exception as e:
+        logger.error(f"❌ Startup migration failed: {e}")
+        # Don't fail startup if migration fails
+
 @app.get("/")
 async def root():
     """Health check endpoint"""
