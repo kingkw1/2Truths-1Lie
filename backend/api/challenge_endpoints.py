@@ -180,7 +180,10 @@ async def create_challenge(
     """
     try:
         creator_id = user_payload.get("sub")
-        is_premium = user_payload.get("is_premium", False)
+        # Always check current premium status from database instead of relying on JWT token
+        db_service = get_db_service()
+        user_data = db_service.get_user_by_id(int(creator_id))
+        is_premium = user_data.get("is_premium", False) if user_data else False
         logger.info(f"Creating challenge for user {creator_id} (Premium: {is_premium})")
         logger.debug(f"Challenge request: {request.model_dump()}")
         
