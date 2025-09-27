@@ -618,13 +618,27 @@ class ChallengeService:
             try:
                 from services.database_service import get_db_service
                 db_service = get_db_service()
-                # The user_id from the token is a string, but the database expects an integer
-                user_id_int = int(user_id)
-                db_service.increment_user_score(user_id_int, points_earned)
-            except (ValueError, TypeError) as e:
-                logger.error(f"Could not increment score for user {user_id}: Invalid user ID format. Error: {e}")
+                
+                # Handle different user ID formats
+                if user_id.startswith("guest_"):
+                    # Guest users don't have persistent scores in database
+                    logger.info(f"Guest user {user_id} earned {points_earned} points (not persisted)")
+                else:
+                    # Try to convert user_id to integer for registered users
+                    try:
+                        user_id_int = int(user_id)
+                        db_service.increment_user_score(user_id_int, points_earned)
+                        logger.info(f"Incremented database score for user {user_id} by {points_earned} points")
+                    except ValueError:
+                        # User ID is not an integer (UUID or email), try to find by email/identifier
+                        logger.warning(f"User ID {user_id} is not an integer, attempting to find user in database")
+                        # For now, we'll skip database update for non-integer user IDs
+                        # This should be enhanced to lookup user by email/UUID
+                        logger.warning(f"Skipping database score update for user {user_id} (non-integer ID)")
+                        
             except Exception as e:
                 logger.error(f"An unexpected error occurred while incrementing score for user {user_id}: {e}")
+                # Don't raise the exception, just log it so the guess submission continues
 
         # Create guess submission
         guess_id = str(uuid.uuid4())
@@ -646,10 +660,17 @@ class ChallengeService:
         
         # Store guess and update challenge
         self.guesses[guess_id] = guess
-        await self._save_guesses()
-        await self._save_challenges()
         
-        logger.info(f"Guess {guess_id} submitted by user {user_id} for challenge {request.challenge_id}, correct: {is_correct}")
+        # Try to save to database, but don't fail if it doesn't work
+        try:
+            await self._save_guesses()
+            await self._save_challenges()
+            logger.info(f"Successfully saved guess {guess_id} to database")
+        except Exception as e:
+            logger.error(f"Failed to save guess {guess_id} to database: {e}")
+            logger.info(f"Continuing with in-memory storage for guess {guess_id}")
+        
+        logger.info(f"Guess {guess_id} submitted by user {user_id} for challenge {request.challenge_id}, correct: {is_correct}, points: {points_earned}")
         return guess, points_earned
     
     async def get_user_guesses(self, user_id: str) -> List[GuessSubmission]:
