@@ -1540,8 +1540,11 @@ class DatabaseService:
     def hash_password(self, password: str) -> str:
         """Hash a password using bcrypt"""
         # bcrypt has a 72-byte limit, truncate if necessary
-        if len(password) > 72:
-            password = password[:72]
+        # Ensure we're working with string characters, not bytes when counting
+        if len(password.encode('utf-8')) > 72:
+            # Truncate by bytes, not characters, to avoid encoding issues
+            password_bytes = password.encode('utf-8')[:72]
+            password = password_bytes.decode('utf-8', errors='ignore')
         
         if self.use_direct_bcrypt:
             import bcrypt
@@ -1550,14 +1553,19 @@ class DatabaseService:
             salt = bcrypt.gensalt()
             return bcrypt.hashpw(password_bytes, salt).decode('utf-8')
         else:
+            # For passlib, also ensure password is within byte limits
+            password_bytes = password.encode('utf-8')[:72]
+            password = password_bytes.decode('utf-8', errors='ignore')
             return self.pwd_context.hash(password)
     
     def verify_password(self, plain_password: str, hashed_password: str) -> bool:
         """Verify a password against its hash"""
         try:
             # bcrypt has a 72-byte limit, truncate if necessary
-            if len(plain_password) > 72:
-                plain_password = plain_password[:72]
+            # Handle by bytes, not characters, to match hash_password behavior
+            if len(plain_password.encode('utf-8')) > 72:
+                password_bytes = plain_password.encode('utf-8')[:72]
+                plain_password = password_bytes.decode('utf-8', errors='ignore')
             
             if self.use_direct_bcrypt:
                 import bcrypt
@@ -1566,6 +1574,9 @@ class DatabaseService:
                 hash_bytes = hashed_password.encode('utf-8')
                 return bcrypt.checkpw(password_bytes, hash_bytes)
             else:
+                # For passlib, also ensure password is within byte limits
+                password_bytes = plain_password.encode('utf-8')[:72]
+                plain_password = password_bytes.decode('utf-8', errors='ignore')
                 return self.pwd_context.verify(plain_password, hashed_password)
                 
         except ValueError as e:
