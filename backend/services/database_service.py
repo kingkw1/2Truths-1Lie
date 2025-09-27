@@ -875,6 +875,16 @@ class DatabaseService:
             cursor.execute("CREATE INDEX IF NOT EXISTS idx_token_transactions_type ON token_transactions(transaction_type)")
             cursor.execute("CREATE INDEX IF NOT EXISTS idx_token_transactions_revenuecat ON token_transactions(revenuecat_transaction_id)")
             cursor.execute("CREATE INDEX IF NOT EXISTS idx_token_balances_last_updated ON token_balances(last_updated)")
+
+            # Create rate_limit_records table
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS rate_limit_records (
+                    id SERIAL PRIMARY KEY,
+                    user_id VARCHAR(255) NOT NULL,
+                    timestamp REAL NOT NULL
+                )
+            """)
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_rate_limit_records_user_id ON rate_limit_records(user_id)")
     
     def _init_sqlite_database(self):
         """Initialize SQLite database tables (development/testing only)"""
@@ -1168,6 +1178,16 @@ class DatabaseService:
                     CREATE INDEX IF NOT EXISTS idx_user_sessions_active 
                     ON user_sessions(is_active, expires_at)
                 """)
+
+                # Create rate_limit_records table
+                cursor.execute("""
+                    CREATE TABLE IF NOT EXISTS rate_limit_records (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        user_id TEXT NOT NULL,
+                        timestamp REAL NOT NULL
+                    )
+                """)
+                cursor.execute("CREATE INDEX IF NOT EXISTS idx_rate_limit_records_user_id ON rate_limit_records(user_id)")
                 
                 # Enable foreign key constraints (SQLite doesn't enable them by default)
                 cursor.execute("PRAGMA foreign_keys = ON")

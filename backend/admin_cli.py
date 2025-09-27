@@ -133,6 +133,25 @@ class AdminCLI:
                 print(f"❌ Error getting stats: {e}")
                 return {}
 
+    async def set_premium_status(self, email: str, status: bool) -> bool:
+        """Set a user's premium status."""
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            try:
+                response = await client.post(
+                    f"{self.base_url}/api/v1/admin/users/set-premium-status",
+                    headers=self.headers,
+                    json={"email": email, "is_premium": status}
+                )
+                if response.status_code == 200:
+                    print(f"✅ Successfully set premium status for {email} to {status}")
+                    return True
+                else:
+                    print(f"❌ Failed to set premium status: {response.status_code} - {response.text}")
+                    return False
+            except Exception as e:
+                print(f"❌ Error setting premium status: {e}")
+                return False
+
 async def main():
     parser = argparse.ArgumentParser(description="2Truths-1Lie Admin CLI Tool")
     parser.add_argument("--url", default="https://2truths-1lie-production.up.railway.app", 
@@ -157,6 +176,11 @@ async def main():
     
     # Stats command
     subparsers.add_parser("stats", help="Show moderation statistics")
+
+    # Set Premium command
+    premium_parser = subparsers.add_parser("set-premium", help="Set a user's premium status")
+    premium_parser.add_argument("email", help="User's email address")
+    premium_parser.add_argument("status", help="Premium status (true or false)")
     
     # Interactive mode
     subparsers.add_parser("interactive", help="Interactive mode")
@@ -228,6 +252,13 @@ async def main():
             print(json.dumps(stats, indent=2))
         else:
             print("❌ No statistics available")
+
+    elif args.command == "set-premium":
+        print(f"👑 Setting premium status for {args.email} to {args.status}...")
+        status_bool = args.status.lower() == 'true'
+        success = await admin.set_premium_status(args.email, status_bool)
+        if not success:
+            print("❌ Failed to set premium status.")
     
     elif args.command == "interactive":
         print("🎮 Interactive Mode - Type 'help' for commands, 'quit' to exit")
