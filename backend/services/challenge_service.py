@@ -541,21 +541,21 @@ class ChallengeService:
     ) -> Tuple[List[Challenge], int]:
         """List challenges with pagination and filtering"""
         
-        # Get correctly guessed challenges for the user
-        correctly_guessed_ids = []
+        # Get attempted challenges for the user (both correct and incorrect guesses)
+        attempted_challenge_ids = []
         if user_id:
             try:
                 from services.database_service import get_db_service
                 db_service = get_db_service()
-                correctly_guessed_ids = db_service.get_correctly_guessed_challenge_ids(int(user_id))
+                attempted_challenge_ids = db_service.get_attempted_challenge_ids(int(user_id))
             except Exception as e:
-                logger.error(f"Failed to get correctly guessed challenges for user {user_id}: {e}")
+                logger.error(f"Failed to get attempted challenges for user {user_id}: {e}")
 
         # Filter challenges
         filtered_challenges = []
         for challenge in self.challenges.values():
-            # Exclude correctly guessed challenges
-            if user_id and challenge.challenge_id in correctly_guessed_ids:
+            # Exclude attempted challenges (both correct and incorrect guesses)
+            if user_id and challenge.challenge_id in attempted_challenge_ids:
                 continue
 
             # Filter by creator

@@ -3144,6 +3144,20 @@ class DatabaseService:
             categorized_error = self._handle_database_exception(operation, e)
             raise categorized_error
 
+    def get_attempted_challenge_ids(self, user_id: int) -> List[str]:
+        """Retrieves a list of challenge_ids for a given user_id regardless of whether the guess was correct or incorrect."""
+        operation = "get_attempted_challenge_ids"
+        self._validate_database_operation(operation)
+        try:
+            results = self._execute_select(
+                "SELECT DISTINCT challenge_id FROM guess_history WHERE user_id = ?",
+                (user_id,),
+            )
+            return [row["challenge_id"] for row in results] if results else []
+        except Exception as e:
+            categorized_error = self._handle_database_exception(operation, e)
+            raise categorized_error
+
 
 # Global instance - will be initialized when first accessed
 db_service = None
