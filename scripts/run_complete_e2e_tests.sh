@@ -62,8 +62,7 @@ if [ -d "backend" ] && [ -f "backend/requirements.txt" ]; then
         print_color $YELLOW "⚠️  No virtual environment found, creating one..."
         python3 -m venv .venv
         source .venv/bin/activate
-        pip install -r requirements.txt
-        pip install -r test-requirements.txt
+        pip install -r requirements-test.txt
     else
         # Activate virtual environment
         if [ -d ".venv" ]; then
@@ -73,9 +72,11 @@ if [ -d "backend" ] && [ -f "backend/requirements.txt" ]; then
         fi
     fi
     
-    # Install test dependencies
-    print_color $BLUE "📦 Installing backend test dependencies..."
-    pip install -r test-requirements.txt > /dev/null 2>&1
+    # The virtual environment setup already installs dependencies.
+    # This block is now only for activating the venv if it exists.
+
+    # Set TESTING environment variable to true
+    export TESTING=true
     
     # Run backend E2E tests
     print_color $BLUE "🧪 Running backend E2E tests..."

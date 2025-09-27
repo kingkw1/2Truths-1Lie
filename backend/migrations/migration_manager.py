@@ -714,8 +714,9 @@ COMMIT;
                 migration_module.upgrade(db_conn)
 
                 with db_conn.cursor() as cursor:
+                    placeholder = "%s" if self._is_postgres_connection(db_conn) else "?"
                     cursor.execute(
-                        "INSERT INTO migration_history (migration_id, description) VALUES (%s, %s)",
+                        f"INSERT INTO migration_history (migration_id, description) VALUES ({placeholder}, {placeholder})",
                         (migration_id, migration_module.__doc__ or "")
                     )
                 db_conn.commit()
