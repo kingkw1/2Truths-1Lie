@@ -77,6 +77,8 @@ PRODUCT_TOKEN_MAP = {
     "token_pack_large": 25,    # Large token pack
 }
 
+PREMIUM_PRODUCT_IDS = {"pro_monthly", "pro_annual"}
+
 @router.get("/balance", response_model=TokenBalanceResponse)
 async def get_token_balance(
     current_user: dict = Depends(get_current_user_with_permissions)
@@ -394,137 +396,68 @@ async def revenuecat_webhook(
     request: Request,
     x_revenuecat_signature: Optional[str] = Header(None)
 ):
-    """Handle RevenueCat webhook events for token purchases"""
+    """Handle RevenueCat webhook events for token purchases and premium status."""
+    body = await request.body()
+    if x_revenuecat_signature and not verify_revenuecat_webhook(body, x_revenuecat_signature):
+        logger.warning("Invalid RevenueCat webhook signature")
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid webhook signature")
+
     try:
-        # Get raw body for signature verification
-        body = await request.body()
-        
-        # Verify webhook signature
-        if x_revenuecat_signature:
-            if not verify_revenuecat_webhook(body, x_revenuecat_signature):
-                logger.warning("Invalid RevenueCat webhook signature")
-                raise HTTPException(
-                    status_code=status.HTTP_401_UNAUTHORIZED,
-                    detail="Invalid webhook signature"
-                )
-        
-        # Parse webhook payload
+        payload = json.loads(body.decode('utf-8'))
+    except json.JSONDecodeError as e:
+        logger.error(f"Invalid JSON in webhook payload: {e}")
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid JSON payload")
+
+    event = payload.get('event', {})
+    app_user_id = event.get('app_user_id')
+    product_id = event.get('product_id')
+    event_type = event.get('type')
+
+    if not app_user_id:
+        logger.error("Missing app_user_id in webhook event")
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Missing required fields in webhook payload")
+
+    db_service = get_db_service()
+    token_service = get_token_service()
+
+    # --- Handle Premium Status Updates ---
+    if product_id in PREMIUM_PRODUCT_IDS:
+        is_premium_active = event_type in ['INITIAL_PURCHASE', 'RENEWAL', 'UNCANCELLATION']
+        is_premium_inactive = event_type in ['CANCELLATION', 'EXPIRATION', 'PRODUCT_CHANGE']
+
         try:
-            payload = json.loads(body.decode('utf-8'))
-        except json.JSONDecodeError as e:
-            logger.error(f"Invalid JSON in webhook payload: {e}")
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Invalid JSON payload"
-            )
-        
-        # Extract event data
-        event = payload.get('event', {})
-        event_type = event.get('type')
-        
-        # Only process purchase events
-        if event_type not in ['INITIAL_PURCHASE', 'RENEWAL', 'NON_RENEWING_PURCHASE']:
-            logger.info(f"Ignoring webhook event type: {event_type}")
-            return {"status": "ignored", "reason": "Not a purchase event"}
-        
-        # Extract purchase data
-        app_user_id = event.get('app_user_id')
-        product_id = event.get('product_id')
-        transaction_id = event.get('transaction_id')
-        
-        if not all([app_user_id, product_id, transaction_id]):
-            logger.error(f"Missing required fields in webhook: {event}")
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Missing required fields in webhook payload"
-            )
-        
-        # Map product to tokens
-        tokens_to_add = PRODUCT_TOKEN_MAP.get(product_id)
-        if tokens_to_add is None:
-            logger.warning(f"Unknown product ID in webhook: {product_id}")
-            return {"status": "ignored", "reason": f"Unknown product: {product_id}"}
-        
-        # Create purchase event
-        from token_models.token_models import TokenPurchaseEvent
-        purchase_event = TokenPurchaseEvent(
-            user_id=app_user_id,
-            product_id=product_id,
-            transaction_id=transaction_id,
-            tokens_purchased=tokens_to_add,
-            purchase_price=event.get('price'),
-            purchase_currency=event.get('currency')
-        )
-        
-        # Add tokens to user balance
-        token_service = get_token_service()
-        logger.info(f"Processing webhook purchase: {tokens_to_add} tokens for user {app_user_id}, product {product_id}")
-        
+            user_id_int = int(app_user_id)
+            if is_premium_active:
+                logger.info(f"Setting premium status to TRUE for user {app_user_id} due to {event_type}")
+                db_service.set_user_premium_status(user_id_int, True)
+            elif is_premium_inactive:
+                logger.info(f"Setting premium status to FALSE for user {app_user_id} due to {event_type}")
+                db_service.set_user_premium_status(user_id_int, False)
+        except ValueError:
+            logger.error(f"Invalid app_user_id format for premium status update: {app_user_id}")
+        except Exception as e:
+            logger.error(f"Failed to update premium status for user {app_user_id}: {e}")
+            # Do not re-raise; token purchase might still need to be processed
+
+    # --- Handle Token Purchases ---
+    tokens_to_add = PRODUCT_TOKEN_MAP.get(product_id)
+    if tokens_to_add and event_type in ['INITIAL_PURCHASE', 'RENEWAL', 'NON_RENEWING_PURCHASE']:
+        logger.info(f"Processing token purchase: {tokens_to_add} tokens for user {app_user_id}, product {product_id}")
         try:
-            # Use the same approach as the working manual endpoint
-            # Get current balance first
-            current_balance_response = token_service.get_user_balance(str(app_user_id))
-            current_balance = current_balance_response.balance
-            new_balance = current_balance + tokens_to_add
-            
-            # Use direct database update like in manual endpoint
-            db_service = get_db_service()
-            import uuid
-            import time
-            
-            transaction_id = str(uuid.uuid4())
-            metadata_json = json.dumps({
-                "revenuecat_purchase": True,
-                "product_id": product_id,
-                "transaction_id": transaction_id,
-                "webhook_processed": True
-            })
-            
-            # Direct database update
-            db_service._execute_upsert(
-                "token_balances",
-                {
-                    "user_id": str(app_user_id),
-                    "balance": new_balance,
-                    "last_updated": "NOW()"
-                },
-                ["user_id"],
-                ["balance", "last_updated"]
+            # This logic should be encapsulated in the token_service
+            token_service.add_tokens_for_purchase(
+                user_id=app_user_id,
+                product_id=product_id,
+                tokens_to_add=tokens_to_add,
+                transaction_id=event.get('transaction_id'),
+                event_data=event
             )
-            
-            logger.info(f"Webhook: Added {tokens_to_add} tokens to user {app_user_id}, balance: {current_balance} -> {new_balance}")
-            success = True
-                
-        except Exception as token_error:
-            logger.error(f"Error adding tokens: {token_error}")
-            raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail=f"Token addition failed: {str(token_error)}"
-            )
-        
-        if success:
-            logger.info(f"Successfully processed token purchase: {tokens_to_add} tokens for user {app_user_id}")
-            return {
-                "status": "success", 
-                "tokens_added": tokens_to_add,
-                "user_id": app_user_id,
-                "transaction_id": transaction_id
-            }
-        else:
-            logger.error(f"Failed to process token purchase for user {app_user_id}")
-            raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail="Failed to process token purchase"
-            )
-            
-    except HTTPException:
-        raise
-    except Exception as e:
-        logger.error(f"Error processing RevenueCat webhook: {e}")
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Internal server error processing webhook"
-        )
+        except Exception as e:
+            logger.error(f"Failed to process token purchase for user {app_user_id}: {e}")
+            # Decide if this should be a fatal error for the webhook
+            # For now, we log and continue
+
+    return {"status": "success", "message": "Webhook processed"}
 
 @router.post("/test-webhook-debug")
 async def test_webhook_debug():

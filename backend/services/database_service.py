@@ -2008,6 +2008,25 @@ class DatabaseService:
             logger.error(f"Failed to reactivate user {user_id}: {e}")
             raise
 
+    def set_user_premium_status(self, user_id: int, is_premium: bool) -> bool:
+        """Sets the premium status for a user."""
+        try:
+            rows_affected = self._execute_update(
+                "users",
+                {"is_premium": is_premium, "updated_at": datetime.utcnow()},
+                "id = ?",
+                (user_id,)
+            )
+            if rows_affected > 0:
+                logger.info(f"Set is_premium={is_premium} for user {user_id}")
+                return True
+            else:
+                logger.warning(f"Could not set premium status for user {user_id}, user not found.")
+                return False
+        except Exception as e:
+            logger.error(f"Failed to set premium status for user {user_id}: {e}")
+            raise
+
     def increment_user_score(self, user_id: int, points: int) -> bool:
         """Increment user's score by a given amount of points."""
         try:
