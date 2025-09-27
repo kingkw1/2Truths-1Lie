@@ -41,6 +41,7 @@ import { ReportModal, ModerationReason } from '../components/ReportModal';
 import { submitReport } from '../store/slices/reportingSlice';
 import { ThemeContext } from '../context/ThemeContext';
 import { store } from '../store';
+import HapticsService from '../services/HapticsService';
 
 // Helper function to convert backend challenge to frontend format
 const convertBackendChallenge = (backendChallenge: BackendChallenge): EnhancedChallenge => {
@@ -373,6 +374,7 @@ export const GameScreen: React.FC<GameScreenProps> = ({
   };
 
   const handleSelectChallenge = (challenge: EnhancedChallenge) => {
+    HapticsService.triggerImpact('light');
     console.log(`🎯 TIMING_DEBUG: Starting challenge ${challenge.id}`);
     
     // Validate timing data for the selected challenge
@@ -526,6 +528,7 @@ export const GameScreen: React.FC<GameScreenProps> = ({
   };
 
   const handleCreateChallenge = () => {
+    HapticsService.triggerImpact('medium');
     console.log('🚨🚨🚨 CREATE_CHALLENGE: BUTTON CLICKED! 🚨🚨🚨');
     console.log('🚨🚨🚨 This should definitely appear in logs if button is working 🚨🚨🚨');
     console.log('🎯 CREATE_CHALLENGE: Auth state:', { isAuthenticated, isGuest });

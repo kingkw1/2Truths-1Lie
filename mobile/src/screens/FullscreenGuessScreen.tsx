@@ -26,7 +26,7 @@ import {
   Animated,
 } from 'react-native';
 import { Video, AVPlaybackStatus, ResizeMode } from 'expo-av';
-import * as Haptics from 'expo-haptics';
+import HapticsService from '../services/HapticsService';
 import { useAppDispatch, useAppSelector } from '../store';
 import {
   removeChallenge,
@@ -88,9 +88,7 @@ const useLongPress = (callback: () => void, delay = 600) => { // Reduced from 80
       animatedValue.setValue(0);
       
       // Enhanced haptic feedback for successful long press
-      if (Platform.OS === 'ios') {
-        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
-      }
+      HapticsService.triggerImpact('heavy');
     }, delay);
   }, [callback, delay, animatedValue, progressValue]);
 
@@ -223,9 +221,7 @@ export const FullscreenGuessScreen: React.FC<FullscreenGuessScreenProps> = ({
     setShowVideo(true);
 
     // Light haptic feedback for tap
-    if (Platform.OS === 'ios') {
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    }
+    HapticsService.triggerImpact('light');
   }, [guessSubmitted, mergedVideo]);
 
   const handleStatementLongPress = useCallback(async (index: number) => {
@@ -296,6 +292,13 @@ export const FullscreenGuessScreen: React.FC<FullscreenGuessScreenProps> = ({
 
         dispatch(setGuessResult(realResult));
         
+        // Trigger haptic feedback based on result
+        if (backendResult.correct) {
+          HapticsService.triggerNotification('success');
+        } else {
+          HapticsService.triggerNotification('warning');
+        }
+        
         // Refresh the challenge list to remove attempted challenge (both correct AND incorrect)
         console.log(`🔄 REFRESH: Refreshing challenge list after ${backendResult.correct ? 'correct' : 'incorrect'} guess`);
         onRefreshChallenges?.();
@@ -329,6 +332,13 @@ export const FullscreenGuessScreen: React.FC<FullscreenGuessScreenProps> = ({
         };
 
         dispatch(setGuessResult(fallbackResult));
+        
+        // Trigger haptic feedback for fallback case
+        if (wasCorrect) {
+          HapticsService.triggerNotification('success');
+        } else {
+          HapticsService.triggerNotification('warning');
+        }
         
         // Also refresh challenge list for fallback case
         console.log(`🔄 REFRESH: Refreshing challenge list after fallback ${wasCorrect ? 'correct' : 'incorrect'} guess`);
@@ -364,6 +374,13 @@ export const FullscreenGuessScreen: React.FC<FullscreenGuessScreenProps> = ({
 
         dispatch(setGuessResult(errorFallbackResult));
         
+        // Trigger haptic feedback for error fallback case
+        if (wasCorrect) {
+          HapticsService.triggerNotification('success');
+        } else {
+          HapticsService.triggerNotification('warning');
+        }
+        
         setTimeout(() => {
           onComplete?.();
         }, 2000);
@@ -371,9 +388,7 @@ export const FullscreenGuessScreen: React.FC<FullscreenGuessScreenProps> = ({
     }
 
     // Strong haptic feedback for submission
-    if (Platform.OS === 'ios') {
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
-    }
+    HapticsService.triggerImpact('heavy');
   }, [guessSubmitted, currentSession, dispatch, onComplete]);
 
   const handleNewGame = useCallback(() => {
@@ -410,9 +425,7 @@ export const FullscreenGuessScreen: React.FC<FullscreenGuessScreenProps> = ({
           customLongPressHandler.startPress();
           
           // Immediate haptic feedback on press start
-          if (Platform.OS === 'ios') {
-            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-          }
+          HapticsService.triggerImpact('light');
         }}
         onPressOut={() => {
           const pressDuration = Date.now() - pressStartTime.current;

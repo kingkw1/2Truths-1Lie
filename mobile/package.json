@@ -39,7 +39,7 @@
     "expo-dev-client": "~6.0.12",
     "expo-device": "~8.0.7",
     "expo-file-system": "~19.0.14",
-    "expo-haptics": "~15.0.7",
+    "expo-haptics": "^15.0.7",
     "expo-intent-launcher": "~13.0.7",
     "expo-linking": "~8.0.8",
     "expo-media-library": "~18.2.0",

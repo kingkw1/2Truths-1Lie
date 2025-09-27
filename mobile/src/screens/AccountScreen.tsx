@@ -1,4 +1,4 @@
-import React, { useContext } from 'react';
+import React, { useState, useEffect, useContext } from 'react';
 import {
   SafeAreaView,
   ScrollView,
@@ -11,11 +11,13 @@ import {
   Alert,
   Switch,
 } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useNavigation } from '@react-navigation/native';
 import Purchases from 'react-native-purchases';
 import { usePremiumStatus } from '../hooks/usePremiumStatus';
 import { useAuth } from '../hooks/useAuth';
 import { ThemeContext } from '../context/ThemeContext';
+import HapticsService from '../services/HapticsService';
 
 const AccountScreen = () => {
   const navigation = useNavigation();
@@ -24,6 +26,44 @@ const AccountScreen = () => {
   const { isPremium, loading, error, customerInfo } = premiumStatusHook;
   const { user, logout } = useAuth();
   const styles = getStyles(colors);
+  const [isHapticsEnabled, setIsHapticsEnabled] = useState(true);
+
+  useEffect(() => {
+    const loadHapticsPreference = async () => {
+      try {
+        const value = await AsyncStorage.getItem('hapticsEnabled');
+        // AsyncStorage returns null if the key doesn't exist. Default to true.
+        // It returns 'true' or 'false' as strings.
+        if (value !== null) {
+          setIsHapticsEnabled(value === 'true');
+        }
+      } catch (e) {
+        console.error('Failed to load haptics preference.', e);
+      }
+    };
+
+    loadHapticsPreference();
+  }, []);
+
+  const handleHapticsToggle = async (newValue: boolean) => {
+    HapticsService.triggerImpact('light');
+    setIsHapticsEnabled(newValue);
+    try {
+      await AsyncStorage.setItem('hapticsEnabled', String(newValue));
+
+      // Placeholder for PATCH API call for logged-in users
+      if (user) {
+        console.log(`SYNC HAPTICS PREFERENCE: User ${user.id} set haptics to ${newValue}. PATCH to /api/user/preferences`);
+        // Example:
+        // await api.patch('/user/preferences', { hapticsEnabled: newValue });
+      }
+    } catch (e) {
+      console.error('Failed to save haptics preference.', e);
+      // Optionally, revert state if saving fails
+      setIsHapticsEnabled(!newValue);
+      Alert.alert('Error', 'Could not save your preference. Please try again.');
+    }
+  };
 
   const handleManageSubscription = async () => {
     try {
@@ -73,6 +113,7 @@ const AccountScreen = () => {
   };
 
   const handleLogout = async () => {
+    HapticsService.triggerImpact('heavy');
     try {
       // The `logout` function from `useAuth` now handles everything:
       // - Logging out from RevenueCat
@@ -90,6 +131,36 @@ const AccountScreen = () => {
   const handleEditProfile = () => {
     // Placeholder for navigating to an edit profile screen
     Alert.alert('Edit Profile', 'This would navigate to an edit profile screen.');
+  };
+
+  const handleToggleTheme = () => {
+    HapticsService.triggerImpact('light');
+    toggleTheme();
+  };
+
+  const handleDeleteAccount = () => {
+    Alert.alert(
+      'Delete Account',
+      'Are you sure you want to permanently delete your account? This action cannot be undone.',
+      [
+        {
+          text: 'Cancel',
+          style: 'cancel',
+        },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: () => {
+            HapticsService.triggerImpact('heavy');
+            console.log('ACCOUNT DELETED: Placeholder for delete account logic.');
+            // Perform account deletion logic here
+            // Example: await api.delete('/user/account');
+            // Then log out
+            logout();
+          },
+        },
+      ]
+    );
   };
 
   return (
@@ -129,9 +200,18 @@ const AccountScreen = () => {
             <Text style={styles.label}>Dark Mode</Text>
             <Switch
               value={theme === 'dark'}
-              onValueChange={toggleTheme}
+              onValueChange={handleToggleTheme}
               trackColor={{ false: '#767577', true: '#81b0ff' }}
               thumbColor={theme === 'dark' ? '#f4f3f4' : '#f4f3f4'}
+            />
+          </View>
+          <View style={styles.cardRow}>
+            <Text style={styles.label}>Haptic Feedback</Text>
+            <Switch
+              value={isHapticsEnabled}
+              onValueChange={handleHapticsToggle}
+              trackColor={{ false: '#767577', true: '#81b0ff' }}
+              thumbColor={isHapticsEnabled ? '#f4f3f4' : '#f4f3f4'}
             />
           </View>
         </View>
@@ -167,6 +247,11 @@ const AccountScreen = () => {
         {/* Log Out Button */}
         <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
           <Text style={styles.logoutButtonText}>Log Out</Text>
+        </TouchableOpacity>
+
+        {/* Delete Account Button */}
+        <TouchableOpacity style={[styles.logoutButton, styles.deleteButton]} onPress={handleDeleteAccount}>
+          <Text style={styles.logoutButtonText}>Delete Account</Text>
         </TouchableOpacity>
       </ScrollView>
     </SafeAreaView>
@@ -252,6 +337,10 @@ const getStyles = (colors) => StyleSheet.create({
     borderRadius: 8,
     alignItems: 'center',
     marginTop: 16,
+  },
+  deleteButton: {
+    backgroundColor: '#8B0000',
+    marginTop: 8,
   },
   logoutButtonText: {
     color: '#ffffff',
