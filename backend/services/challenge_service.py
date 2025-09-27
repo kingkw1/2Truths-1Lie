@@ -611,17 +611,21 @@ class ChallengeService:
         # Check if guess is correct
         is_correct = request.guessed_lie_statement_id == challenge.lie_statement_id
         
-        # Calculate points (simple scoring system)
+        # Calculate points and update user score if correct
         points_earned = 0
         if is_correct:
-            base_points = 100
-            # Bonus for quick response (if provided)
-            if request.response_time_seconds and request.response_time_seconds < 30:
-                time_bonus = max(0, int((30 - request.response_time_seconds) * 2))
-                points_earned = base_points + time_bonus
-            else:
-                points_earned = base_points
-        
+            points_earned = 10  # Fixed points for a correct guess
+            try:
+                from services.database_service import get_db_service
+                db_service = get_db_service()
+                # The user_id from the token is a string, but the database expects an integer
+                user_id_int = int(user_id)
+                db_service.increment_user_score(user_id_int, points_earned)
+            except (ValueError, TypeError) as e:
+                logger.error(f"Could not increment score for user {user_id}: Invalid user ID format. Error: {e}")
+            except Exception as e:
+                logger.error(f"An unexpected error occurred while incrementing score for user {user_id}: {e}")
+
         # Create guess submission
         guess_id = str(uuid.uuid4())
         guess = GuessSubmission(

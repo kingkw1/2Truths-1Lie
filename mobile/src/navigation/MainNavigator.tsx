@@ -80,7 +80,9 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation, onLogout, styles })
           }}
         >
           <Text style={styles.welcomeText}>
-            {isGuest || !isAuthenticated ? 'Sign In to Your Account' : `Welcome, ${user?.name}!`}
+            {isGuest || !isAuthenticated
+              ? 'Sign In to Your Account'
+              : `Welcome, ${user?.name}! (🏆 ${user?.score ?? 0})`}
           </Text>
           <Text style={styles.profileCardIcon}>〉</Text>
         </Pressable>

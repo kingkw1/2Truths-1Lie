@@ -177,10 +177,11 @@ Examples:
   %(prog)s full --sqlite app.db --postgres "postgresql://user:pass@localhost/db"
   %(prog)s check --sqlite app.db --postgres "postgresql://user:pass@localhost/db"
   %(prog)s status --postgres "postgresql://user:pass@localhost/db"
+  %(prog)s upgrade --postgres "postgresql://user:pass@localhost/db"
         """
     )
     
-    parser.add_argument('command', choices=['validate', 'schema', 'data', 'full', 'check', 'status'],
+    parser.add_argument('command', choices=['validate', 'schema', 'data', 'full', 'check', 'status', 'upgrade'],
                        help='Migration command to run')
     parser.add_argument('--sqlite', required=False, 
                        help='Path to SQLite database file')
@@ -198,7 +199,7 @@ Examples:
     logger = logging.getLogger(__name__)
     
     # Validate required arguments
-    if args.command != 'status' and not args.sqlite:
+    if args.command not in ['status', 'upgrade'] and not args.sqlite:
         logger.error("--sqlite argument is required for this command")
         return 1
     
@@ -246,7 +247,24 @@ Examples:
                 return 0
             else:
                 return 1
-                
+
+        elif args.command == 'upgrade':
+            if args.dry_run:
+                logger.info("Would apply versioned migrations to PostgreSQL database")
+                return 0
+
+            logger.info("Applying versioned migrations...")
+            # The sqlite path is not needed for versioned migrations, but the manager requires it.
+            sqlite_path = args.sqlite if args.sqlite else "dummy.db"
+            manager = MigrationManager(sqlite_path, args.postgres)
+
+            import psycopg2
+            with psycopg2.connect(args.postgres) as postgres_conn:
+                manager.apply_versioned_migrations(postgres_conn)
+
+            logger.info("Versioned migrations applied successfully.")
+            return 0
+
         elif args.command == 'status':
             show_migration_status(args.sqlite, args.postgres)
             return 0

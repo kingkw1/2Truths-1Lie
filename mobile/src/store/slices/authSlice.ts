@@ -50,6 +50,23 @@ export const initializeAuth = createAsyncThunk(
   }
 );
 
+export const updateUserScore = createAsyncThunk(
+  'auth/updateScore',
+  async (score: number, { getState, rejectWithValue }) => {
+    try {
+      const { auth } = getState() as { auth: AuthState };
+      if (!auth.user) {
+        return rejectWithValue('User not authenticated');
+      }
+      const updatedUser = { ...auth.user, score };
+      await authService.updateProfile(updatedUser);
+      return updatedUser;
+    } catch (error: any) {
+      return rejectWithValue(error.message || 'Score update failed');
+    }
+  }
+);
+
 export const loginUser = createAsyncThunk(
   'auth/login',
   async ({ email, password }: { email: string; password: string }, { rejectWithValue }) => {
@@ -246,6 +263,14 @@ const authSlice = createSlice({
       .addCase(loginUser.rejected, (state, action) => {
         state.isLoading = false;
         state.error = action.payload as string;
+      });
+
+    // Update score
+    builder
+      .addCase(updateUserScore.fulfilled, (state, action) => {
+        if (state.user) {
+          state.user.score = action.payload.score;
+        }
       });
 
     // Signup user

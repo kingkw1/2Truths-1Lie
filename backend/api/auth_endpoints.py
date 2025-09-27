@@ -339,14 +339,25 @@ async def get_current_user_info(
 ):
     """Get current user information"""
     try:
-        return {
-            "user_id": current_user_data.get("sub"),
-            "email": current_user_data.get("email"),
-            "type": current_user_data.get("type", "user"),
-            "permissions": current_user_data.get("permissions", []),
-            "created_at": current_user_data.get("iat"),
-            "expires_at": current_user_data.get("exp")
-        }
+        user_id = current_user_data.get("sub")
+        user_type = current_user_data.get("type", "user")
+
+        if user_type != "authenticated" or not user_id:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="User is not authenticated"
+            )
+
+        # Fetch full user data from the database
+        user_info = get_db_service().get_user_by_id(int(user_id))
+
+        if not user_info:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="User not found"
+            )
+
+        return user_info
         
     except Exception as e:
         logger.error(f"Error getting user info: {e}")

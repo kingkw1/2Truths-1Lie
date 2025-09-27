@@ -13,6 +13,7 @@ export interface AuthUser {
   email?: string;
   avatar?: string;
   createdAt: string;
+  score?: number;
 }
 
 export interface AuthResponse {
@@ -25,6 +26,7 @@ export interface AuthResponse {
     email: string;
     name?: string;
     created_at: string;
+    score?: number;
   };
 }
 
@@ -498,6 +500,7 @@ export class AuthService {
         email: userData.email,
         createdAt: userData.created_at,
         avatar: userData.avatar,
+        score: userData.score,
       };
       return user;
     } catch (error) {
@@ -563,6 +566,7 @@ export class AuthService {
         name: data.user.name || data.user.email.split('@')[0] || 'User',
         email: data.user.email,
         createdAt: data.user.created_at,
+        score: data.user.score,
       };
     }
 
