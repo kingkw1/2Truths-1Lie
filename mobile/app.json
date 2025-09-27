@@ -6,11 +6,6 @@
     "orientation": "portrait",
     "icon": "./assets/app_icon_scaled.png",
     "userInterfaceStyle": "light",
-    "splash": {
-      "image": "./assets/app_icon_scaled.png",
-      "resizeMode": "contain",
-      "backgroundColor": "#4a90e2"
-    },
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.kingkw1.twotruths"
