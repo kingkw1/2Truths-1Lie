@@ -13,9 +13,14 @@ from services.auth_service import get_current_user
 from services.challenge_service import challenge_service
 from services.database_service import get_db_service
 from models import Challenge, ChallengeListResponse, ModerationReviewRequest, ReportedChallengesResponse, ReportedChallenge
+from pydantic import BaseModel, EmailStr
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/v1/admin", tags=["admin"])
+
+class SetPremiumRequest(BaseModel):
+    email: EmailStr
+    is_premium: bool
 
 # Database service will be accessed via get_db_service() function
 
@@ -606,4 +611,54 @@ async def search_challenges_admin(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to search challenges"
+        )
+
+@router.post("/users/set-premium-status")
+async def set_premium_status(
+    request: SetPremiumRequest,
+    admin_user_id: str = Depends(get_current_user)
+):
+    """
+    Set a user's premium status (admin only).
+    """
+    try:
+        db_service = get_db_service()
+
+        # Find user by email
+        user = db_service.get_user_by_email(request.email)
+        if not user:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"User with email {request.email} not found"
+            )
+
+        # Set premium status
+        success = db_service.set_user_premium_status(user['id'], request.is_premium)
+
+        if not success:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Failed to update premium status in database"
+            )
+
+        # Log the admin action
+        log_admin_action(
+            action="set_premium_status",
+            user_id=admin_user_id,
+            details={"target_email": request.email, "new_status": request.is_premium}
+        )
+
+        return {
+            "message": "Premium status updated successfully",
+            "email": request.email,
+            "is_premium": request.is_premium
+        }
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to set premium status for {request.email}: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to set premium status"
         )

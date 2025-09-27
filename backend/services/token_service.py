@@ -124,40 +124,59 @@ class TokenService:
             logger.error(f"Failed to spend tokens for user {user_id}: {e}")
             raise
 
-    def add_tokens_from_purchase(self, purchase_event: TokenPurchaseEvent) -> bool:
-        """Add tokens from a verified purchase event"""
+    def add_tokens_for_purchase(
+        self,
+        user_id: str,
+        product_id: str,
+        tokens_to_add: int,
+        transaction_id: Optional[str] = None,
+        event_data: Optional[Dict[str, Any]] = None
+    ) -> bool:
+        """
+        Adds tokens to a user's balance from a purchase event, ensuring atomicity.
+
+        Args:
+            user_id: The ID of the user.
+            product_id: The ID of the purchased product.
+            tokens_to_add: The number of tokens to add.
+            transaction_id: The unique ID from the payment provider (e.g., RevenueCat).
+            event_data: The full event data from the webhook for logging.
+
+        Returns:
+            True if the tokens were added successfully, False otherwise.
+        """
         try:
             # Get current balance
-            balance_response = self.get_user_balance(purchase_event.user_id)
+            balance_response = self.get_user_balance(user_id)
             current_balance = balance_response.balance
-            new_balance = current_balance + purchase_event.tokens_purchased
+            new_balance = current_balance + tokens_to_add
             
-            transaction_id = str(uuid.uuid4())
+            # Generate a unique transaction ID if one isn't provided
+            internal_transaction_id = str(uuid.uuid4())
             
-            # Execute transaction
+            # Execute the transaction
             self._execute_token_transaction(
-                user_id=purchase_event.user_id,
-                transaction_id=transaction_id,
+                user_id=user_id,
+                transaction_id=internal_transaction_id,
                 transaction_type=TokenTransactionType.PURCHASE,
-                amount=purchase_event.tokens_purchased,
+                amount=tokens_to_add,
                 balance_before=current_balance,
                 balance_after=new_balance,
-                description=f"Token purchase: {purchase_event.product_id}",
+                description=f"Token purchase: {product_id}",
                 metadata={
-                    "product_id": purchase_event.product_id,
-                    "revenuecat_transaction_id": purchase_event.transaction_id,
-                    "purchase_price": purchase_event.purchase_price,
-                    "purchase_currency": purchase_event.purchase_currency
+                    "product_id": product_id,
+                    "revenuecat_transaction_id": transaction_id,
+                    "purchase_event": event_data or {}
                 },
-                revenuecat_transaction_id=purchase_event.transaction_id,
-                revenuecat_product_id=purchase_event.product_id
+                revenuecat_transaction_id=transaction_id,
+                revenuecat_product_id=product_id
             )
             
-            logger.info(f"Added {purchase_event.tokens_purchased} tokens to user {purchase_event.user_id} from purchase {purchase_event.transaction_id}")
+            logger.info(f"Successfully added {tokens_to_add} tokens to user {user_id} for product {product_id}")
             return True
             
         except Exception as e:
-            logger.error(f"Failed to add tokens from purchase for user {purchase_event.user_id}: {e}")
+            logger.error(f"Failed to add tokens from purchase for user {user_id}: {e}")
             return False
 
     def add_tokens_for_testing(self, user_id: str, amount: int, description: str = "Test token addition") -> bool:
