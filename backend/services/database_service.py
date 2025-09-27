@@ -752,6 +752,25 @@ class DatabaseService:
             cursor.execute("CREATE INDEX IF NOT EXISTS idx_guesses_user_id ON guesses(user_id)")
             cursor.execute("CREATE INDEX IF NOT EXISTS idx_guesses_submitted_at ON guesses(submitted_at DESC)")
             
+            # Create guess_history table for challenge completion tracking
+            cursor.execute("""
+                CREATE TABLE IF NOT EXISTS guess_history (
+                    id SERIAL PRIMARY KEY,
+                    user_id INTEGER NOT NULL,
+                    challenge_id VARCHAR(255) NOT NULL,
+                    was_correct BOOLEAN NOT NULL,
+                    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                    CONSTRAINT fk_guess_history_user_id 
+                        FOREIGN KEY (user_id) REFERENCES users (id) 
+                        ON DELETE CASCADE
+                )
+            """)
+            
+            # Create indexes on guess_history table
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_guess_history_user_id ON guess_history(user_id)")
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_guess_history_challenge_id ON guess_history(challenge_id)")
+            cursor.execute("CREATE INDEX IF NOT EXISTS idx_guess_history_user_challenge ON guess_history(user_id, challenge_id)")
+            
             # Create user_reports table for content moderation
             cursor.execute("""
                 CREATE TABLE IF NOT EXISTS user_reports (
@@ -945,6 +964,29 @@ class DatabaseService:
                 """)
                 cursor.execute("""
                     CREATE INDEX IF NOT EXISTS idx_guesses_submitted_at ON guesses(submitted_at DESC)
+                """)
+                
+                # Create guess_history table for challenge completion tracking
+                cursor.execute("""
+                    CREATE TABLE IF NOT EXISTS guess_history (
+                        id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        user_id INTEGER NOT NULL,
+                        challenge_id TEXT NOT NULL,
+                        was_correct BOOLEAN NOT NULL,
+                        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                        FOREIGN KEY (user_id) REFERENCES users (id) ON DELETE CASCADE
+                    )
+                """)
+                
+                # Create indexes on guess_history table
+                cursor.execute("""
+                    CREATE INDEX IF NOT EXISTS idx_guess_history_user_id ON guess_history(user_id)
+                """)
+                cursor.execute("""
+                    CREATE INDEX IF NOT EXISTS idx_guess_history_challenge_id ON guess_history(challenge_id)
+                """)
+                cursor.execute("""
+                    CREATE INDEX IF NOT EXISTS idx_guess_history_user_challenge ON guess_history(user_id, challenge_id)
                 """)
                 
                 # Add name column to existing users table if it doesn't exist
@@ -3070,6 +3112,37 @@ class DatabaseService:
                 )
         
         logger.info(f"Environment validation passed: {env_info}")
+
+    def add_guess_history_record(self, user_id: int, challenge_id: str, was_correct: bool) -> None:
+        """Adds a new record to the guess_history table."""
+        operation = "add_guess_history_record"
+        self._validate_database_operation(operation)
+        try:
+            self._execute_insert(
+                "guess_history",
+                {
+                    "user_id": user_id,
+                    "challenge_id": challenge_id,
+                    "was_correct": was_correct,
+                },
+            )
+        except Exception as e:
+            categorized_error = self._handle_database_exception(operation, e)
+            raise categorized_error
+
+    def get_correctly_guessed_challenge_ids(self, user_id: int) -> List[str]:
+        """Retrieves a list of challenge_ids for a given user_id where was_correct is true."""
+        operation = "get_correctly_guessed_challenge_ids"
+        self._validate_database_operation(operation)
+        try:
+            results = self._execute_select(
+                "SELECT challenge_id FROM guess_history WHERE user_id = ? AND was_correct = TRUE",
+                (user_id,),
+            )
+            return [row["challenge_id"] for row in results] if results else []
+        except Exception as e:
+            categorized_error = self._handle_database_exception(operation, e)
+            raise categorized_error
 
 
 # Global instance - will be initialized when first accessed

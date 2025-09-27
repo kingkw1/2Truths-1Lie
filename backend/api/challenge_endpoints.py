@@ -294,7 +294,8 @@ async def list_challenges_authenticated(
             page=actual_page,
             page_size=actual_page_size,
             creator_id=creator_filter,
-            status=status_filter
+            status=status_filter,
+            user_id=user_id
         )
         
         logger.debug(f"Retrieved {len(challenges)} challenges for authenticated user")

@@ -536,13 +536,28 @@ class ChallengeService:
         page_size: int = 20,
         creator_id: Optional[str] = None,
         status: Optional[ChallengeStatus] = None,
-        tags: Optional[List[str]] = None
+        tags: Optional[List[str]] = None,
+        user_id: Optional[str] = None
     ) -> Tuple[List[Challenge], int]:
         """List challenges with pagination and filtering"""
         
+        # Get correctly guessed challenges for the user
+        correctly_guessed_ids = []
+        if user_id:
+            try:
+                from services.database_service import get_db_service
+                db_service = get_db_service()
+                correctly_guessed_ids = db_service.get_correctly_guessed_challenge_ids(int(user_id))
+            except Exception as e:
+                logger.error(f"Failed to get correctly guessed challenges for user {user_id}: {e}")
+
         # Filter challenges
         filtered_challenges = []
         for challenge in self.challenges.values():
+            # Exclude correctly guessed challenges
+            if user_id and challenge.challenge_id in correctly_guessed_ids:
+                continue
+
             # Filter by creator
             if creator_id and challenge.creator_id != creator_id:
                 continue
@@ -670,6 +685,23 @@ class ChallengeService:
             logger.error(f"Failed to save guess {guess_id} to database: {e}")
             logger.info(f"Continuing with in-memory storage for guess {guess_id}")
         
+        # Record guess in history for challenge completion tracking
+        logger.info(f"About to record guess history for user {user_id} and challenge {request.challenge_id}")
+        try:
+            from services.database_service import get_db_service
+            db_service = get_db_service()
+            logger.info(f"Got database service, calling add_guess_history_record...")
+            db_service.add_guess_history_record(
+                user_id=int(user_id),
+                challenge_id=request.challenge_id,
+                was_correct=is_correct
+            )
+            logger.info(f"✅ Guess history recorded successfully for user {user_id} and challenge {request.challenge_id}")
+        except Exception as e:
+            logger.error(f"❌ Failed to record guess history for user {user_id}: {e}")
+            import traceback
+            logger.error(f"❌ Traceback: {traceback.format_exc()}")
+
         logger.info(f"Guess {guess_id} submitted by user {user_id} for challenge {request.challenge_id}, correct: {is_correct}, points: {points_earned}")
         return guess, points_earned
     
