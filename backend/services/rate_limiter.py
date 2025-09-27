@@ -1,14 +1,12 @@
 """
-Rate limiting service for preventing spam and abuse
+Rate limiting service for preventing spam and abuse, backed by a persistent database.
 """
-import json
 import time
-from pathlib import Path
-from typing import Dict, List, Optional
-from datetime import datetime, timedelta
+from datetime import datetime
 import logging
 
 from config import settings
+from services.database_service import get_db_service
 
 logger = logging.getLogger(__name__)
 
@@ -17,55 +15,28 @@ class RateLimitExceeded(Exception):
     pass
 
 class RateLimiter:
-    """Rate limiter for API endpoints"""
-    
+    """Rate limiter for API endpoints, backed by the database."""
+
     def __init__(self):
-        self.rate_limit_file = settings.TEMP_DIR / "rate_limits.json"
-        self.user_requests: Dict[str, List[float]] = {}
-        self._load_data()
-    
-    def _load_data(self):
-        """Load rate limit data from disk"""
+        self.db_service = get_db_service()
+
+    async def _cleanup_old_requests(self, user_id: str, window_hours: int = 1):
+        """Remove requests older than the time window from the database."""
+        cutoff_time = time.time() - (window_hours * 3600)
+        query = "DELETE FROM rate_limit_records WHERE user_id = ? AND timestamp < ?"
         try:
-            if self.rate_limit_file.exists():
-                with open(self.rate_limit_file, 'r') as f:
-                    data = json.load(f)
-                    # Convert timestamps back to floats
-                    self.user_requests = {
-                        user_id: [float(ts) for ts in timestamps]
-                        for user_id, timestamps in data.items()
-                    }
+            self.db_service._execute_query(query, (user_id, cutoff_time))
         except Exception as e:
-            logger.error(f"Error loading rate limit data: {e}")
-            self.user_requests = {}
-    
-    async def _save_data(self):
-        """Save rate limit data to disk"""
-        try:
-            with open(self.rate_limit_file, 'w') as f:
-                json.dump(self.user_requests, f, indent=2)
-        except Exception as e:
-            logger.error(f"Error saving rate limit data: {e}")
-    
-    def _cleanup_old_requests(self, user_id: str, window_hours: int = 1):
-        """Remove requests older than the time window"""
-        if user_id not in self.user_requests:
-            return
-        
-        cutoff_time = time.time() - (window_hours * 3600)  # Convert hours to seconds
-        self.user_requests[user_id] = [
-            timestamp for timestamp in self.user_requests[user_id]
-            if timestamp > cutoff_time
-        ]
-    
+            logger.error(f"Error cleaning up old rate limit requests for user {user_id}: {e}")
+
     async def check_rate_limit(
-        self, 
-        user_id: str, 
-        limit: int = None, 
+        self,
+        user_id: str,
+        limit: int = None,
         window_hours: int = 1
     ) -> bool:
         """
-        Check if user has exceeded rate limit
+        Check if user has exceeded rate limit using the database.
         
         Args:
             user_id: User identifier
@@ -73,27 +44,33 @@ class RateLimiter:
             window_hours: Time window in hours (default 1 hour)
             
         Returns:
-            True if within rate limit, False if exceeded
+            True if within rate limit
             
         Raises:
             RateLimitExceeded: If rate limit is exceeded
         """
         if limit is None:
             limit = settings.UPLOAD_RATE_LIMIT
-        
-        # Clean up old requests
-        self._cleanup_old_requests(user_id, window_hours)
-        
-        # Check current request count
-        current_requests = len(self.user_requests.get(user_id, []))
-        
+
+        await self._cleanup_old_requests(user_id, window_hours)
+
+        query = "SELECT timestamp FROM rate_limit_records WHERE user_id = ?"
+        try:
+            results = self.db_service._execute_select(query, (user_id,))
+            request_timestamps = [row['timestamp'] for row in results] if results else []
+        except Exception as e:
+            logger.error(f"Error checking rate limit for user {user_id}: {e}")
+            # Fail open - don't block user if rate limiter fails
+            return True
+
+        current_requests = len(request_timestamps)
+
         if current_requests >= limit:
-            # Calculate time until next request is allowed
-            if user_id in self.user_requests and self.user_requests[user_id]:
-                oldest_request = min(self.user_requests[user_id])
+            if request_timestamps:
+                oldest_request = min(request_timestamps)
                 reset_time = oldest_request + (window_hours * 3600)
                 wait_seconds = max(0, reset_time - time.time())
-                
+
                 raise RateLimitExceeded(
                     f"Rate limit exceeded. Maximum {limit} requests per {window_hours} hour(s). "
                     f"Try again in {int(wait_seconds // 60)} minutes and {int(wait_seconds % 60)} seconds."
@@ -102,43 +79,50 @@ class RateLimiter:
                 raise RateLimitExceeded(
                     f"Rate limit exceeded. Maximum {limit} requests per {window_hours} hour(s)."
                 )
-        
+
         return True
-    
+
     async def record_request(self, user_id: str):
-        """Record a new request for the user"""
+        """Record a new request for the user in the database."""
         current_time = time.time()
-        
-        if user_id not in self.user_requests:
-            self.user_requests[user_id] = []
-        
-        self.user_requests[user_id].append(current_time)
-        await self._save_data()
-        
-        logger.info(f"Recorded request for user {user_id} at {datetime.fromtimestamp(current_time)}")
-    
-    async def get_rate_limit_status(self, user_id: str, limit: int = None, window_hours: int = 1) -> Dict:
+        try:
+            self.db_service._execute_insert(
+                "rate_limit_records",
+                {"user_id": user_id, "timestamp": current_time}
+            )
+            logger.info(f"Recorded request for user {user_id} at {datetime.fromtimestamp(current_time)}")
+        except Exception as e:
+            logger.error(f"Error recording request for user {user_id}: {e}")
+
+    async def get_rate_limit_status(self, user_id: str, limit: int = None, window_hours: int = 1) -> dict:
         """
-        Get current rate limit status for a user
+        Get current rate limit status for a user from the database.
         
         Returns:
             Dictionary with rate limit information
         """
         if limit is None:
             limit = settings.UPLOAD_RATE_LIMIT
+
+        await self._cleanup_old_requests(user_id, window_hours)
         
-        # Clean up old requests
-        self._cleanup_old_requests(user_id, window_hours)
-        
-        current_requests = len(self.user_requests.get(user_id, []))
+        query = "SELECT timestamp FROM rate_limit_records WHERE user_id = ?"
+        try:
+            results = self.db_service._execute_select(query, (user_id,))
+            request_timestamps = [row['timestamp'] for row in results] if results else []
+        except Exception as e:
+            logger.error(f"Error getting rate limit status for user {user_id}: {e}")
+            request_timestamps = []
+
+
+        current_requests = len(request_timestamps)
         remaining_requests = max(0, limit - current_requests)
-        
-        # Calculate reset time
+
         reset_time = None
-        if user_id in self.user_requests and self.user_requests[user_id]:
-            oldest_request = min(self.user_requests[user_id])
+        if request_timestamps:
+            oldest_request = min(request_timestamps)
             reset_time = datetime.fromtimestamp(oldest_request + (window_hours * 3600))
-        
+
         return {
             "limit": limit,
             "remaining": remaining_requests,
@@ -146,30 +130,25 @@ class RateLimiter:
             "window_hours": window_hours,
             "reset_time": reset_time.isoformat() if reset_time else None
         }
-    
+
     async def reset_user_limit(self, user_id: str):
-        """Reset rate limit for a specific user (admin function)"""
-        if user_id in self.user_requests:
-            del self.user_requests[user_id]
-            await self._save_data()
+        """Reset rate limit for a specific user (admin function)."""
+        query = "DELETE FROM rate_limit_records WHERE user_id = ?"
+        try:
+            self.db_service._execute_query(query, (user_id,))
             logger.info(f"Rate limit reset for user {user_id}")
-    
+        except Exception as e:
+            logger.error(f"Error resetting rate limit for user {user_id}: {e}")
+
     async def cleanup_expired_limits(self, window_hours: int = 1):
-        """Clean up expired rate limit data for all users"""
+        """Clean up expired rate limit data for all users from the database."""
         cutoff_time = time.time() - (window_hours * 3600)
-        users_to_remove = []
-        
-        for user_id in self.user_requests:
-            self._cleanup_old_requests(user_id, window_hours)
-            if not self.user_requests[user_id]:  # No requests left after cleanup
-                users_to_remove.append(user_id)
-        
-        # Remove users with no recent requests
-        for user_id in users_to_remove:
-            del self.user_requests[user_id]
-        
-        if users_to_remove:
-            await self._save_data()
-            logger.info(f"Cleaned up rate limit data for {len(users_to_remove)} users")
-        
-        return len(users_to_remove)
+        query = "DELETE FROM rate_limit_records WHERE timestamp < ?"
+        try:
+            rows_affected = self.db_service._execute_query(query, (cutoff_time,))
+            if rows_affected > 0:
+                logger.info(f"Cleaned up {rows_affected} expired rate limit records.")
+            return rows_affected
+        except Exception as e:
+            logger.error(f"Error cleaning up expired rate limits: {e}")
+            return 0
