@@ -2861,18 +2861,10 @@ class DatabaseService:
                     submitted_at_raw = row["submitted_at"] if isinstance(row, dict) else row[6]
                     submitted_at = None
                     if submitted_at_raw:
-                        if isinstance(submitted_at_raw, datetime):
-                            submitted_at = submitted_at_raw  # Already a datetime object
-                        elif isinstance(submitted_at_raw, str):
-                            try:
-                                submitted_at = datetime.fromisoformat(submitted_at_raw)
-                            except ValueError:
-                                # Handle cases where the string might not be a valid ISO format
-                                logger.warning(f"Could not parse submitted_at string: {submitted_at_raw}")
-                                submitted_at = None
-                        else:
-                            logger.warning(f"Unexpected type for submitted_at: {type(submitted_at_raw)}")
-
+                        if isinstance(submitted_at_raw, str):
+                            submitted_at = datetime.fromisoformat(submitted_at_raw)
+                        elif isinstance(submitted_at_raw, datetime):
+                            submitted_at = submitted_at_raw
 
                     guess = GuessSubmission(
                         guess_id=row["guess_id"] if isinstance(row, dict) else row[0],
