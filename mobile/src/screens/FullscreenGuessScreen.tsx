@@ -50,6 +50,7 @@ interface FullscreenGuessScreenProps {
   challenge: EnhancedChallenge;
   onBack: () => void;
   onComplete?: () => void;
+  onRefreshChallenges?: () => void;
 }
 
 // Custom hook for long press gesture detection
@@ -128,6 +129,7 @@ export const FullscreenGuessScreen: React.FC<FullscreenGuessScreenProps> = ({
   challenge,
   onBack,
   onComplete,
+  onRefreshChallenges,
 }) => {
   const dispatch = useAppDispatch();
   const { currentSession, guessSubmitted, guessResult, currentStreak } = useAppSelector(
@@ -293,6 +295,12 @@ export const FullscreenGuessScreen: React.FC<FullscreenGuessScreenProps> = ({
         };
 
         dispatch(setGuessResult(realResult));
+        
+        // If the guess was correct, refresh the challenge list to remove completed challenge
+        if (backendResult.correct) {
+          console.log(`🔄 REFRESH: Refreshing challenge list after correct guess`);
+          onRefreshChallenges?.();
+        }
         
         // Automatically proceed to completion after showing result
         setTimeout(() => {

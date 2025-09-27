@@ -937,6 +937,10 @@ export const GameScreen: React.FC<GameScreenProps> = ({
             // Return to challenge browser instead of home screen
             handleNewGame();
           }}
+          onRefreshChallenges={() => {
+            console.log('🔄 REFRESH: Refreshing challenges after completion');
+            loadChallengesFromAPI();
+          }}
         />
       ) : (
         /* Traditional interface with header and layout */
