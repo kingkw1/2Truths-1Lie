@@ -694,7 +694,8 @@ class DatabaseService:
                     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                     is_active BOOLEAN DEFAULT TRUE,
-                    last_login TIMESTAMP
+                    last_login TIMESTAMP,
+                    is_premium BOOLEAN DEFAULT FALSE
                 )
             """)
             
@@ -885,7 +886,8 @@ class DatabaseService:
                         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                         is_active BOOLEAN DEFAULT TRUE,
-                        last_login TIMESTAMP
+                        last_login TIMESTAMP,
+                        is_premium BOOLEAN DEFAULT FALSE
                     )
                 """)
                 
@@ -1729,7 +1731,7 @@ class DatabaseService:
         try:
             # Get user by email with password hash
             user_data = self._execute_select(
-                "SELECT id, email, password_hash, name, score, created_at, is_active, last_login FROM users WHERE email = ? AND is_active = TRUE",
+                "SELECT id, email, password_hash, name, score, is_premium, created_at, is_active, last_login FROM users WHERE email = ? AND is_active = TRUE",
                 (email,),
                 fetch_one=True
             )
@@ -1758,6 +1760,7 @@ class DatabaseService:
                 "email": user_data["email"],
                 "name": user_data["name"],
                 "score": user_data["score"],
+                "is_premium": user_data["is_premium"],
                 "created_at": user_data["created_at"],
                 "is_active": bool(user_data["is_active"]),
                 "last_login": current_time.isoformat()
@@ -1787,7 +1790,7 @@ class DatabaseService:
         operation = "get_user_by_id"
         try:
             user_data = self._execute_select(
-                "SELECT id, email, name, score, created_at, is_active, last_login FROM users WHERE id = ? AND is_active = TRUE",
+                "SELECT id, email, name, score, is_premium, created_at, is_active, last_login FROM users WHERE id = ? AND is_active = TRUE",
                 (user_id,),
                 fetch_one=True
             )
@@ -1801,6 +1804,7 @@ class DatabaseService:
                 "email": user_data["email"],
                 "name": user_data["name"],
                 "score": user_data["score"],
+                "is_premium": user_data["is_premium"],
                 "created_at": user_data["created_at"],
                 "is_active": bool(user_data["is_active"]),
                 "last_login": user_data["last_login"]
@@ -1830,7 +1834,7 @@ class DatabaseService:
         operation = "get_user_by_id_all_status"
         try:
             user_data = self._execute_select(
-                "SELECT id, email, name, score, created_at, is_active, last_login FROM users WHERE id = ?",
+                "SELECT id, email, name, score, is_premium, created_at, is_active, last_login FROM users WHERE id = ?",
                 (user_id,),
                 fetch_one=True
             )
@@ -1844,6 +1848,7 @@ class DatabaseService:
                 "email": user_data["email"],
                 "name": user_data["name"],
                 "score": user_data["score"],
+                "is_premium": user_data["is_premium"],
                 "created_at": user_data["created_at"],
                 "is_active": bool(user_data["is_active"]),
                 "last_login": user_data["last_login"]
@@ -1873,7 +1878,7 @@ class DatabaseService:
         operation = "get_user_by_email"
         try:
             user_data = self._execute_select(
-                "SELECT id, email, name, score, created_at, is_active, last_login FROM users WHERE email = ? AND is_active = TRUE",
+                "SELECT id, email, name, score, is_premium, created_at, is_active, last_login FROM users WHERE email = ? AND is_active = TRUE",
                 (email,),
                 fetch_one=True
             )
@@ -1887,6 +1892,7 @@ class DatabaseService:
                 "email": user_data["email"],
                 "name": user_data["name"],
                 "score": user_data["score"],
+                "is_premium": user_data["is_premium"],
                 "created_at": user_data["created_at"],
                 "is_active": bool(user_data["is_active"]),
                 "last_login": user_data["last_login"]

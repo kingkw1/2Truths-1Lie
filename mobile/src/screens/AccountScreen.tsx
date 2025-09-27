@@ -173,6 +173,7 @@ const AccountScreen = () => {
             <Text style={styles.label}>Name</Text>
             <View style={{ flexDirection: 'row', alignItems: 'center' }}>
               <Text style={styles.value}>{user?.name || 'Guest User'}</Text>
+              {isPremium && <Text style={styles.premiumBadge}>🕵️</Text>}
               <Pressable onPress={handleEditProfile}>
                 <Text style={styles.editText}>Edit</Text>
               </Pressable>
@@ -303,6 +304,10 @@ const getStyles = (colors) => StyleSheet.create({
   editText: {
     fontSize: 16,
     color: colors.primary,
+    marginLeft: 8,
+  },
+  premiumBadge: {
+    fontSize: 16,
     marginLeft: 8,
   },
   chevron: {

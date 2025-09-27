@@ -170,18 +170,20 @@ class ChallengeService:
             logger.error(f"Error saving guesses: {e}")
     
     async def create_challenge(
-        self, 
-        creator_id: str, 
+        self,
+        creator_id: str,
         request: CreateChallengeRequest,
-        upload_service
+        upload_service,
+        is_premium: bool = False
     ) -> Challenge:
         """Create a new challenge"""
-        
-        # Check rate limit before creating challenge
-        try:
-            await self.rate_limiter.check_rate_limit(creator_id)
-        except RateLimitExceeded as e:
-            raise ChallengeServiceError(str(e))
+
+        # Check rate limit before creating challenge, skipping for premium users
+        if not is_premium:
+            try:
+                await self.rate_limiter.check_rate_limit(creator_id)
+            except RateLimitExceeded as e:
+                raise ChallengeServiceError(str(e))
         
         # Validate challenge creation request
         validation_result = await gameplay_validator.validate_challenge_creation(request, upload_service)

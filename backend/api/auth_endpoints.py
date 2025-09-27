@@ -82,7 +82,7 @@ async def register(request: RegisterRequest):
         
         # Create tokens for the new user
         access_token = auth_service.create_access_token(
-            data={"sub": str(user_data["id"]), "email": user_data["email"], "type": "authenticated"}
+            data={"sub": str(user_data["id"]), "email": user_data["email"], "type": "authenticated", "is_premium": user_data.get("is_premium", False)}
         )
         refresh_token = auth_service.create_refresh_token(str(user_data["id"]))
         
@@ -138,7 +138,7 @@ async def login(request: LoginRequest):
         
         # Create tokens for authenticated user
         access_token = auth_service.create_access_token(
-            data={"sub": str(user_data["id"]), "email": user_data["email"], "type": "authenticated"}
+            data={"sub": str(user_data["id"]), "email": user_data["email"], "type": "authenticated", "is_premium": user_data.get("is_premium", False)}
         )
         refresh_token = auth_service.create_refresh_token(str(user_data["id"]))
         
