@@ -158,7 +158,8 @@ describe('authSlice', () => {
           createdAt: new Date().toISOString(),
         };
 
-        mockAuthService.login.mockResolvedValue(mockUser);
+        mockAuthService.login.mockResolvedValue(mockUser);  // This might be used by login but not stored
+        mockAuthService.fetchSelf.mockResolvedValue(mockUser);  // This is what gets stored in state
         mockAuthService.getUserPermissions.mockResolvedValue(['read', 'write']);
 
         await store.dispatch(loginUser({ email: 'test@example.com', password: 'password' }) as any);
