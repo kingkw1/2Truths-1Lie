@@ -691,6 +691,7 @@ class DatabaseService:
                     email VARCHAR(255) UNIQUE NOT NULL,
                     password_hash VARCHAR(255) NOT NULL,
                     name VARCHAR(255),
+                    score INTEGER NOT NULL DEFAULT 0,
                     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                     is_active BOOLEAN DEFAULT TRUE,
@@ -708,6 +709,20 @@ class DatabaseService:
                         WHERE table_name = 'users' AND column_name = 'is_premium'
                     ) THEN
                         ALTER TABLE users ADD COLUMN is_premium BOOLEAN DEFAULT FALSE;
+                    END IF;
+                END
+                $$;
+            """)
+
+            # Add score column to users table if it doesn't exist (for migration)
+            cursor.execute("""
+                DO $$
+                BEGIN
+                    IF NOT EXISTS (
+                        SELECT FROM information_schema.columns
+                        WHERE table_name = 'users' AND column_name = 'score'
+                    ) THEN
+                        ALTER TABLE users ADD COLUMN score INTEGER NOT NULL DEFAULT 0;
                     END IF;
                 END
                 $$;
@@ -907,6 +922,7 @@ class DatabaseService:
                         email TEXT UNIQUE NOT NULL,
                         password_hash TEXT NOT NULL,
                         name TEXT,
+                        score INTEGER NOT NULL DEFAULT 0,
                         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                         is_active BOOLEAN DEFAULT TRUE,
@@ -1029,6 +1045,13 @@ class DatabaseService:
                 except sqlite3.OperationalError as e:
                     if "duplicate column name" not in str(e).lower():
                         logger.warning(f"Failed to add is_premium column: {e}")
+
+                # Add score column to users table if it doesn't exist (for migration)
+                try:
+                    cursor.execute("ALTER TABLE users ADD COLUMN score INTEGER NOT NULL DEFAULT 0")
+                except sqlite3.OperationalError as e:
+                    if "duplicate column name" not in str(e).lower():
+                        logger.warning(f"Failed to add score column: {e}")
                 
                 # Create user_reports table for content moderation
                 cursor.execute("""
@@ -2824,24 +2847,32 @@ class DatabaseService:
         try:
             from models import GuessSubmission
             from datetime import datetime
-            
+
             guesses = {}
-            
+
             results = self._execute_query("""
                 SELECT guess_id, challenge_id, user_id, guessed_lie_statement_id,
                        is_correct, response_time_seconds, submitted_at
                 FROM guesses
             """, fetch_all=True)
-                
+
             for row in results:
                 try:
                     submitted_at_raw = row["submitted_at"] if isinstance(row, dict) else row[6]
                     submitted_at = None
                     if submitted_at_raw:
-                        if isinstance(submitted_at_raw, str):
-                            submitted_at = datetime.fromisoformat(submitted_at_raw)
-                        elif isinstance(submitted_at_raw, datetime):
-                            submitted_at = submitted_at_raw
+                        if isinstance(submitted_at_raw, datetime):
+                            submitted_at = submitted_at_raw  # Already a datetime object
+                        elif isinstance(submitted_at_raw, str):
+                            try:
+                                submitted_at = datetime.fromisoformat(submitted_at_raw)
+                            except ValueError:
+                                # Handle cases where the string might not be a valid ISO format
+                                logger.warning(f"Could not parse submitted_at string: {submitted_at_raw}")
+                                submitted_at = None
+                        else:
+                            logger.warning(f"Unexpected type for submitted_at: {type(submitted_at_raw)}")
+
 
                     guess = GuessSubmission(
                         guess_id=row["guess_id"] if isinstance(row, dict) else row[0],
@@ -2852,15 +2883,15 @@ class DatabaseService:
                         response_time_seconds=row["response_time_seconds"] if isinstance(row, dict) else row[5],
                         submitted_at=submitted_at
                     )
-                    
+
                     guesses[guess.guess_id] = guess
-                    
+
                 except Exception as e:
                     logger.error(f"Error parsing guess row: {e}")
                     continue
-                
+
             return guesses
-            
+
         except Exception as e:
             logger.error(f"Error loading all guesses: {e}")
             return {}
