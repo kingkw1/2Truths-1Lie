@@ -17,6 +17,7 @@ import Purchases from 'react-native-purchases';
 import { usePremiumStatus } from '../hooks/usePremiumStatus';
 import { useAuth } from '../hooks/useAuth';
 import { ThemeContext } from '../context/ThemeContext';
+import HapticsService from '../services/HapticsService';
 
 const AccountScreen = () => {
   const navigation = useNavigation();
@@ -45,6 +46,7 @@ const AccountScreen = () => {
   }, []);
 
   const handleHapticsToggle = async (newValue: boolean) => {
+    HapticsService.triggerImpact('light');
     setIsHapticsEnabled(newValue);
     try {
       await AsyncStorage.setItem('hapticsEnabled', String(newValue));
@@ -111,6 +113,7 @@ const AccountScreen = () => {
   };
 
   const handleLogout = async () => {
+    HapticsService.triggerImpact('heavy');
     try {
       // The `logout` function from `useAuth` now handles everything:
       // - Logging out from RevenueCat
@@ -128,6 +131,36 @@ const AccountScreen = () => {
   const handleEditProfile = () => {
     // Placeholder for navigating to an edit profile screen
     Alert.alert('Edit Profile', 'This would navigate to an edit profile screen.');
+  };
+
+  const handleToggleTheme = () => {
+    HapticsService.triggerImpact('light');
+    toggleTheme();
+  };
+
+  const handleDeleteAccount = () => {
+    Alert.alert(
+      'Delete Account',
+      'Are you sure you want to permanently delete your account? This action cannot be undone.',
+      [
+        {
+          text: 'Cancel',
+          style: 'cancel',
+        },
+        {
+          text: 'Delete',
+          style: 'destructive',
+          onPress: () => {
+            HapticsService.triggerImpact('heavy');
+            console.log('ACCOUNT DELETED: Placeholder for delete account logic.');
+            // Perform account deletion logic here
+            // Example: await api.delete('/user/account');
+            // Then log out
+            logout();
+          },
+        },
+      ]
+    );
   };
 
   return (
@@ -167,7 +200,7 @@ const AccountScreen = () => {
             <Text style={styles.label}>Dark Mode</Text>
             <Switch
               value={theme === 'dark'}
-              onValueChange={toggleTheme}
+              onValueChange={handleToggleTheme}
               trackColor={{ false: '#767577', true: '#81b0ff' }}
               thumbColor={theme === 'dark' ? '#f4f3f4' : '#f4f3f4'}
             />
@@ -214,6 +247,11 @@ const AccountScreen = () => {
         {/* Log Out Button */}
         <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
           <Text style={styles.logoutButtonText}>Log Out</Text>
+        </TouchableOpacity>
+
+        {/* Delete Account Button */}
+        <TouchableOpacity style={[styles.logoutButton, styles.deleteButton]} onPress={handleDeleteAccount}>
+          <Text style={styles.logoutButtonText}>Delete Account</Text>
         </TouchableOpacity>
       </ScrollView>
     </SafeAreaView>
@@ -299,6 +337,10 @@ const getStyles = (colors) => StyleSheet.create({
     borderRadius: 8,
     alignItems: 'center',
     marginTop: 16,
+  },
+  deleteButton: {
+    backgroundColor: '#8B0000',
+    marginTop: 8,
   },
   logoutButtonText: {
     color: '#ffffff',

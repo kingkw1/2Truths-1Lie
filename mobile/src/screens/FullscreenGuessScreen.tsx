@@ -26,7 +26,7 @@ import {
   Animated,
 } from 'react-native';
 import { Video, AVPlaybackStatus, ResizeMode } from 'expo-av';
-import * as Haptics from 'expo-haptics';
+import HapticsService from '../services/HapticsService';
 import { useAppDispatch, useAppSelector } from '../store';
 import {
   removeChallenge,
@@ -86,9 +86,7 @@ const useLongPress = (callback: () => void, delay = 600) => { // Reduced from 80
       animatedValue.setValue(0);
       
       // Enhanced haptic feedback for successful long press
-      if (Platform.OS === 'ios') {
-        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
-      }
+      HapticsService.triggerImpact('heavy');
     }, delay);
   }, [callback, delay, animatedValue, progressValue]);
 
@@ -220,9 +218,7 @@ export const FullscreenGuessScreen: React.FC<FullscreenGuessScreenProps> = ({
     setShowVideo(true);
 
     // Light haptic feedback for tap
-    if (Platform.OS === 'ios') {
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-    }
+    HapticsService.triggerImpact('light');
   }, [guessSubmitted, mergedVideo]);
 
   const handleStatementLongPress = useCallback((index: number) => {
@@ -240,6 +236,12 @@ export const FullscreenGuessScreen: React.FC<FullscreenGuessScreenProps> = ({
       
       const correctStatement = currentSession.statements.findIndex((stmt: any) => stmt.isLie);
       const wasCorrect = index === correctStatement;
+
+      if (wasCorrect) {
+        HapticsService.triggerNotification('success');
+      } else {
+        HapticsService.triggerNotification('warning');
+      }
 
       const mockResult: GuessResult = {
         sessionId: currentSession.sessionId,
@@ -265,9 +267,7 @@ export const FullscreenGuessScreen: React.FC<FullscreenGuessScreenProps> = ({
     }, 1500);
 
     // Strong haptic feedback for submission
-    if (Platform.OS === 'ios') {
-      Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Heavy);
-    }
+    HapticsService.triggerImpact('heavy');
   }, [guessSubmitted, currentSession, dispatch, onComplete]);
 
   const handleNewGame = useCallback(() => {
@@ -304,9 +304,7 @@ export const FullscreenGuessScreen: React.FC<FullscreenGuessScreenProps> = ({
           customLongPressHandler.startPress();
           
           // Immediate haptic feedback on press start
-          if (Platform.OS === 'ios') {
-            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
-          }
+          HapticsService.triggerImpact('light');
         }}
         onPressOut={() => {
           const pressDuration = Date.now() - pressStartTime.current;
