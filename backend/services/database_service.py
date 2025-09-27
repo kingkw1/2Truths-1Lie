@@ -2835,6 +2835,14 @@ class DatabaseService:
                 
             for row in results:
                 try:
+                    submitted_at_raw = row["submitted_at"] if isinstance(row, dict) else row[6]
+                    submitted_at = None
+                    if submitted_at_raw:
+                        if isinstance(submitted_at_raw, str):
+                            submitted_at = datetime.fromisoformat(submitted_at_raw)
+                        elif isinstance(submitted_at_raw, datetime):
+                            submitted_at = submitted_at_raw
+
                     guess = GuessSubmission(
                         guess_id=row["guess_id"] if isinstance(row, dict) else row[0],
                         challenge_id=row["challenge_id"] if isinstance(row, dict) else row[1],
@@ -2842,7 +2850,7 @@ class DatabaseService:
                         guessed_lie_statement_id=row["guessed_lie_statement_id"] if isinstance(row, dict) else row[3],
                         is_correct=bool(row["is_correct"] if isinstance(row, dict) else row[4]),
                         response_time_seconds=row["response_time_seconds"] if isinstance(row, dict) else row[5],
-                        submitted_at=datetime.fromisoformat(row["submitted_at"] if isinstance(row, dict) else row[6]) if (row["submitted_at"] if isinstance(row, dict) else row[6]) else None
+                        submitted_at=submitted_at
                     )
                     
                     guesses[guess.guess_id] = guess
