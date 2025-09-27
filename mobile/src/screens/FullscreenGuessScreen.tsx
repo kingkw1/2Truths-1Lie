@@ -300,8 +300,11 @@ export const FullscreenGuessScreen: React.FC<FullscreenGuessScreenProps> = ({
         }
         
         // Refresh the challenge list to remove attempted challenge (both correct AND incorrect)
+        // Add a small delay to allow backend to process the guess fully
         console.log(`🔄 REFRESH: Refreshing challenge list after ${backendResult.correct ? 'correct' : 'incorrect'} guess`);
-        onRefreshChallenges?.();
+        setTimeout(() => {
+          onRefreshChallenges?.();
+        }, 500); // 500ms delay
         
         // Automatically proceed to completion after showing result
         setTimeout(() => {
@@ -341,8 +344,11 @@ export const FullscreenGuessScreen: React.FC<FullscreenGuessScreenProps> = ({
         }
         
         // Also refresh challenge list for fallback case
+        // Add a small delay to allow backend to process the guess fully
         console.log(`🔄 REFRESH: Refreshing challenge list after fallback ${wasCorrect ? 'correct' : 'incorrect'} guess`);
-        onRefreshChallenges?.();
+        setTimeout(() => {
+          onRefreshChallenges?.();
+        }, 500); // 500ms delay
         
         setTimeout(() => {
           onComplete?.();

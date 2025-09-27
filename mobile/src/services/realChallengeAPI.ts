@@ -382,6 +382,12 @@ export class RealChallengeAPIService {
         console.error('❌ API call failed with status:', response.status);
         const errorText = await response.text();
         console.error('❌ Error response:', errorText);
+        
+        // Special handling for 502 errors (backend unavailable)
+        if (response.status === 502) {
+          console.log('🔄 502 error detected - backend temporarily unavailable, will let retry logic handle this');
+        }
+        
         throw new Error(`HTTP error! status: ${response.status}`);
       }
 
