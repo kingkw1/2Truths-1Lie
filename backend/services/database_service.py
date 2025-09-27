@@ -699,6 +699,20 @@ class DatabaseService:
                 )
             """)
             
+            # Add is_premium column to users table if it doesn't exist (for migration)
+            cursor.execute("""
+                DO $$
+                BEGIN
+                    IF NOT EXISTS (
+                        SELECT FROM information_schema.columns
+                        WHERE table_name = 'users' AND column_name = 'is_premium'
+                    ) THEN
+                        ALTER TABLE users ADD COLUMN is_premium BOOLEAN DEFAULT FALSE;
+                    END IF;
+                END
+                $$;
+            """)
+
             # Create indexes on users table for faster lookups
             cursor.execute("CREATE INDEX IF NOT EXISTS idx_users_email ON users(email)")
             cursor.execute("CREATE INDEX IF NOT EXISTS idx_users_is_active ON users(is_active)")
@@ -998,6 +1012,13 @@ class DatabaseService:
                     # Column already exists or other issue
                     if "duplicate column name" not in str(e).lower():
                         logger.warning(f"Failed to add name column: {e}")
+
+                # Add is_premium column to users table if it doesn't exist (for migration)
+                try:
+                    cursor.execute("ALTER TABLE users ADD COLUMN is_premium BOOLEAN DEFAULT FALSE")
+                except sqlite3.OperationalError as e:
+                    if "duplicate column name" not in str(e).lower():
+                        logger.warning(f"Failed to add is_premium column: {e}")
                 
                 # Create user_reports table for content moderation
                 cursor.execute("""
