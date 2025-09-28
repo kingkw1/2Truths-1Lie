@@ -37,6 +37,9 @@ class Settings(BaseSettings):
     @property
     def database_url(self) -> str:
         """Get the appropriate database URL based on environment"""
+        if os.getenv("TESTING") == "true":
+            # Use a separate test database
+            return f"sqlite:///{self.BACKEND_DIR / 'test.db'}"
         if self.DATABASE_URL:
             # Production: Use Railway PostgreSQL
             return self.DATABASE_URL
