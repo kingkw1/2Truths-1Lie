@@ -42,18 +42,11 @@ def setup_test_database():
     # 2. Run database migrations to create a fresh schema
     try:
         print("Initializing new test database and creating schema...")
-        # Use a dummy postgres_url since it's not used for SQLite migrations
-        manager = MigrationManager(sqlite_path=str(db_path), postgres_url="")
-
-        # Establish a connection to the new SQLite database
-        with sqlite3.connect(db_path) as conn:
-            # The database_service initializes the base schema
-            from services.database_service import DatabaseService
-            db_service = DatabaseService()
-            db_service._init_sqlite_database()
-
-            # Then we apply any versioned migrations
-            manager.apply_versioned_migrations(conn)
+        
+        # Initialize the database service to create the schema
+        from services.database_service import DatabaseService
+        db_service = DatabaseService()
+        db_service._init_sqlite_database()
 
         print("Test database schema created successfully.")
     except Exception as e:
