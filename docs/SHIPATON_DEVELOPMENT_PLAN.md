@@ -19,8 +19,8 @@ Following a highly productive sprint, the project's core game loop is now comple
 * **Day 10 (Sat, Sept 27): TIER 1 - MONETIZATION & UI SPRINT**
     * **Development Focus**: With the backend game loop fixed, today's focus is on wiring up the full user-facing monetization experience and UI.
         * [ ] **Implement Subscription Perks:**
-            * [ ] Unlock unlimited challenge creation for `isPremium` users.
-            * [ ] Display a visual "Pro" badge in the UI for subscribers.
+            * [X] Unlock unlimited challenge creation for `isPremium` users.
+            * [X] Display a visual "Pro" badge in the UI for subscribers.
         * [ ] **Implement Token Spending & New UI:**
             * [ ] Implement the "Wizard of Oz" 50/50 hint functionality.
             * [ ] Display the user's `score` prominently on the home screen profile card.

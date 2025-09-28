@@ -30,6 +30,7 @@ import { realChallengeAPI } from '../services/realChallengeAPI';
 import { mobileMediaIntegration } from '../services/mobileMediaIntegration';
 import { errorHandlingService } from '../services/errorHandlingService';
 import { useErrorHandling } from '../hooks/useErrorHandling';
+import { usePremiumStatus } from '../hooks/usePremiumStatus';
 import { AuthStatusBanner } from '../components/ProtectedScreen';
 import { useAuth } from '../hooks/useAuth';
 import { ThemeContext } from '../context/ThemeContext';
@@ -69,6 +70,7 @@ export const ChallengeCreationScreen: React.FC<ChallengeCreationScreenProps> = (
 }) => {
   const { colors } = useContext(ThemeContext);
   const dispatch = useAppDispatch();
+  const { isPremium } = usePremiumStatus();
   const {
     currentChallenge,
     validationErrors,
@@ -501,9 +503,12 @@ export const ChallengeCreationScreen: React.FC<ChallengeCreationScreenProps> = (
         Other players will try to guess which statement is the lie!
       </Text>
 
-      <View style={styles.rateLimitContainer}>
-        <Text style={styles.rateLimitText}>
-          ⏰ Rate Limit: You can create up to 5 challenges per hour
+      <View style={isPremium ? styles.premiumLimitContainer : styles.rateLimitContainer}>
+        <Text style={isPremium ? styles.premiumLimitText : styles.rateLimitText}>
+          {isPremium 
+            ? '🕵️ As a Pro member, you have unlimited challenge creations!'
+            : '⏰ Rate Limit: You can create up to 5 challenges per hour'
+          }
         </Text>
       </View>
 
@@ -853,7 +858,7 @@ export const ChallengeCreationScreen: React.FC<ChallengeCreationScreenProps> = (
   );
 };
 
-const getStyles = (colors) => StyleSheet.create({
+const getStyles = (colors: any) => StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.background,
@@ -912,6 +917,22 @@ const getStyles = (colors) => StyleSheet.create({
     color: colors.warningText,
     textAlign: 'center',
     fontWeight: '500',
+  },
+  premiumLimitContainer: {
+    backgroundColor: colors.successBackground || '#E8F5E8',
+    padding: 15,
+    borderRadius: 8,
+    marginBottom: 25,
+    borderLeftWidth: 4,
+    borderLeftColor: colors.success || '#4CAF50',
+    borderWidth: 1,
+    borderColor: colors.success || '#4CAF50',
+  },
+  premiumLimitText: {
+    fontSize: 14,
+    color: colors.successText || '#2E7D32',
+    textAlign: 'center',
+    fontWeight: '600',
   },
   instructionsList: {
     marginBottom: 30,
