@@ -141,32 +141,37 @@ export const ChallengeCreationScreen: React.FC<ChallengeCreationScreenProps> = (
 
   const handlePermissionsAndStartRecording = async () => {
     if (!permission) {
-      // Permissions are still loading, wait a moment
+      // Permissions are still loading, wait a moment.
       return;
     }
 
-    let finalStatus = permission.status;
+    // Start with the current permission status.
+    let finalPermission = permission;
 
-    if (!permission.granted) {
+    // If permissions are not already granted, request them.
+    if (!finalPermission.granted) {
       console.log('Requesting camera and microphone permissions...');
       const response = await requestPermission();
-      finalStatus = response.status;
+      finalPermission = response;
     }
 
-    if (finalStatus === 'granted') {
-      console.log('Permissions granted, starting recording...');
+    // Check the final permission status. The 'granted' property is only true if
+    // both camera and microphone permissions are granted.
+    if (finalPermission.granted) {
+      console.log('All required permissions granted, starting recording...');
       setCurrentStep('recording');
       setCurrentStatementIndex(0);
       setIsRetakeMode(false);
       setShowCameraModal(true);
     } else {
+      // If either permission is denied, show an alert and do not proceed.
       console.log('Permissions denied.');
       Alert.alert(
         'Permissions Required',
-        'This app needs camera and microphone access to create a challenge. Please grant permissions in your device settings.',
+        'This app needs both camera and microphone access to create a challenge. Please grant both permissions in your device settings to continue.',
         [
           { text: 'Cancel', style: 'cancel' },
-          { text: 'Open Settings', onPress: () => Linking.openSettings() }
+          { text: 'Open Settings', onPress: () => Linking.openSettings() },
         ]
       );
     }
