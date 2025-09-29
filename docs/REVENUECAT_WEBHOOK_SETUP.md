@@ -31,7 +31,7 @@ Enable the following webhook events:
 
 ### 4. Test Webhook
 1. Use RevenueCat's webhook test feature in the dashboard
-2. Or use our testing tool: `python tools/test_revenuecat_webhook.py`
+2. Or use our testing tool: `python tools/testing/revenuecat_webhook_test.py`
 
 ## Environment Variables
 
@@ -49,7 +49,7 @@ export REVENUECAT_WEBHOOK_SECRET="your_secret_from_revenuecat"
 
 # Run the test script
 cd /path/to/2Truths-1Lie
-python tools/test_revenuecat_webhook.py
+python tools/testing/revenuecat_webhook_test.py
 ```
 
 ### Option 2: RevenueCat Dashboard Test
@@ -94,8 +94,8 @@ Expected response:
 - ✅ **Solution**: Verify product IDs in RevenueCat match our configuration
 
 #### 4. User Not Found
-- ❌ **Cause**: RevenueCat user ID doesn't match database user
-- ✅ **Solution**: Ensure user sync between RevenueCat and database
+- ❌ **Cause**: RevenueCat uses email as user ID, database uses numeric IDs
+- ✅ **Solution**: Webhook handler now automatically maps email to database user ID
 
 ## Expected Workflow
 

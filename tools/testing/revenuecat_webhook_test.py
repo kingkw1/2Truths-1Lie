@@ -1,7 +1,17 @@
 #!/usr/bin/env python3
 """
-Tool to test RevenueCat webhook endpoint manually.
-This helps debug webhook issues by simulating a RevenueCat webhook call.
+RevenueCat Webhook Integration Test Tool
+
+This tool tests the RevenueCat webhook endpoint by simulating webhook calls.
+Use this for:
+- Debugging webhook integration issues
+- Testing token granting functionality  
+- Validating webhook signature verification
+- Integration testing during development
+
+Usage:
+    export REVENUECAT_WEBHOOK_SECRET="your_secret_here"
+    python tools/testing/revenuecat_webhook_test.py
 """
 
 import requests
@@ -11,7 +21,7 @@ import hashlib
 import os
 from typing import Dict, Any
 
-def create_test_webhook_payload(user_id: str = "fake1@gmail.com", product_id: str = "pro_monthly") -> Dict[str, Any]:
+def create_test_webhook_payload(user_id: str = "revenuecat_test@example.com", product_id: str = "pro_monthly") -> Dict[str, Any]:
     """Create a test webhook payload similar to what RevenueCat would send."""
     return {
         "api_version": "1.0",
@@ -34,7 +44,7 @@ def sign_payload(payload: str, secret: str) -> str:
 def test_webhook(
     webhook_url: str,
     webhook_secret: str,
-    user_id: str = "fake1@gmail.com",
+    user_id: str = "revenuecat_test@example.com",
     product_id: str = "pro_monthly"
 ):
     """Test the RevenueCat webhook endpoint."""
@@ -118,5 +128,5 @@ if __name__ == "__main__":
         print("   Set it with: export REVENUECAT_WEBHOOK_SECRET='your_secret_here'")
         exit(1)
     
-    # Test with the user from the logs
-    test_webhook(WEBHOOK_URL, WEBHOOK_SECRET, "fake1@gmail.com", "pro_monthly")
+    # Test with the new test user
+    test_webhook(WEBHOOK_URL, WEBHOOK_SECRET, "revenuecat_test@example.com", "pro_monthly")

@@ -1,8 +1,52 @@
 # Testing Tools
 
-This directory contains scripts for testing premium user functionality and rate limiting.
+This directory contains tools for testing and validating the 2Truths-1Lie application functionality.
 
-## Scripts
+## RevenueCat Integration Testing
+
+### `revenuecat_webhook_test.py`
+Tests the RevenueCat webhook integration by simulating webhook calls.
+
+**Purpose:**
+- Validate webhook signature verification
+- Test token granting functionality
+- Debug webhook integration issues
+- Verify user lookup and mapping
+
+**Usage:**
+```bash
+export REVENUECAT_WEBHOOK_SECRET="your_secret_here"
+python tools/testing/revenuecat_webhook_test.py
+```
+
+**What it tests:**
+- ✅ Webhook endpoint availability
+- ✅ HMAC signature verification
+- ✅ User email-to-ID mapping
+- ✅ Token granting (10 tokens per subscription)
+- ✅ Database transaction handling
+
+## User Management Testing
+
+### `create_test_user.py`
+Creates test users with known credentials for testing purposes.
+
+**Purpose:**
+- Create consistent test accounts
+- Provide known credentials for QA testing
+- Support automated testing scenarios
+
+**Usage:**
+```bash
+python tools/testing/create_test_user.py
+```
+
+**Creates:**
+- Email: `revenuecat_test@example.com`
+- Password: `TestPassword123!`
+- Username: `revenuecat_test_user`
+
+## Legacy Testing Scripts
 
 ### `test_premium_fix.py`
 Tests the premium user rate limiting fix by attempting to:

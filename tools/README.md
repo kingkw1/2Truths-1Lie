@@ -8,6 +8,8 @@ This directory contains Python utilities and scripts for development, testing, d
 |------|---------|-------------|
 | `reset_rate_limits.py` | **Reset API rate limits** | When testing rate-limited endpoints |
 | `auth/generate_test_token.py` | **Generate JWT tokens** | For API testing and authentication |
+| `testing/revenuecat_webhook_test.py` | **Test RevenueCat webhooks** | Debug subscription integration |
+| `testing/create_test_user.py` | **Create test users** | QA testing and development |
 | `testing/validate.py` | **Validate backend services** | Before deployment or after changes |
 | `migration/migrate_challenge_urls.py` | **Migrate legacy URLs** | During database schema updates |
 | `monitoring/export_monitoring_metrics.py` | **Export system metrics** | For monitoring system setup |
