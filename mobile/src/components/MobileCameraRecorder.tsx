@@ -1092,15 +1092,8 @@ export const MobileCameraRecorder: React.FC<MobileCameraRecorderProps> = ({
         Platform.OS === 'android' && styles.bottomControlsAndroid
       ]} pointerEvents="box-none">
         <Text style={styles.instructionText}>
-          Statement {statementIndex + 1}: Record your video (Debug: ready={cameraReady.toString()}, loading={isLoading.toString()})
+          Statement {statementIndex + 1}: Record your video
         </Text>
-        
-        {/* Recording tips */}
-        {!isRecordingFromRedux && (
-          <Text style={styles.tipsText}>
-            💡 {Platform.OS === 'ios' ? 'Tap and hold for best results' : 'Keep your device steady'}
-          </Text>
-        )}
         
         <View style={styles.recordingControls} pointerEvents="box-none">
           {!isRecordingFromRedux ? (
