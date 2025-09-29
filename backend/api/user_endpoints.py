@@ -41,14 +41,13 @@ async def get_my_guesses(
 @router.patch("/me/profile", response_model=User)
 async def update_my_profile(
     profile_update: UserProfileUpdate,
-    current_user: Dict[str, Any] = Depends(get_current_user),
+    user_id: str = Depends(get_current_user),
     db_service: DatabaseService = Depends(get_db_service)
 ):
     """
     Update the current user's profile
     """
     try:
-        user_id = current_user.get("id")
         if not user_id:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
@@ -63,7 +62,7 @@ async def update_my_profile(
                 detail="No update data provided"
             )
 
-        updated_user = db_service.update_user_profile(user_id, update_data)
+        updated_user = db_service.update_user_profile(int(user_id), update_data)
 
         if not updated_user:
             raise HTTPException(
@@ -71,12 +70,12 @@ async def update_my_profile(
                 detail="User not found"
             )
 
-        return updated_user
+        return User(**updated_user)
 
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Failed to update profile for user {current_user.get('id')}: {str(e)}", exc_info=True)
+        logger.error(f"Failed to update profile for user {user_id}: {str(e)}", exc_info=True)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to update user profile"
