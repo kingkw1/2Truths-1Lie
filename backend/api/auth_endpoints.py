@@ -14,6 +14,7 @@ from services.auth_service import (
     create_access_token
 )
 from services.database_service import get_db_service
+from schemas import User
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/v1/auth", tags=["authentication"])
@@ -35,7 +36,7 @@ class TokenResponse(BaseModel):
     token_type: str = "bearer"
     expires_in: int
     permissions: list
-    user: Optional[dict] = None
+    user: Optional[User] = None
 
 class RefreshRequest(BaseModel):
     refresh_token: str
@@ -93,12 +94,7 @@ async def register(request: RegisterRequest):
             refresh_token=refresh_token,
             expires_in=1800,  # 30 minutes
             permissions=["media:read", "media:upload", "media:delete", "challenge:create", "challenge:read", "challenge:play"],
-            user={
-                "id": str(user_data["id"]),
-                "email": user_data["email"],
-                "name": user_data.get("name"),
-                "created_at": user_data["created_at"]
-            }
+            user=User(**user_data)
         )
         
     except HTTPException:
@@ -149,12 +145,7 @@ async def login(request: LoginRequest):
             refresh_token=refresh_token,
             expires_in=1800,  # 30 minutes
             permissions=["media:read", "media:upload", "media:delete", "challenge:create", "challenge:read", "challenge:play"],
-            user={
-                "id": str(user_data["id"]),
-                "email": user_data["email"],
-                "name": user_data.get("name"),
-                "created_at": user_data["created_at"]
-            }
+            user=User(**user_data)
         )
         
     except HTTPException:
@@ -333,7 +324,7 @@ async def logout(
             "revoked": False
         }
 
-@router.get("/me")
+@router.get("/me", response_model=User)
 async def get_current_user_info(
     current_user_data: dict = Depends(get_current_user_with_permissions)
 ):
@@ -357,7 +348,7 @@ async def get_current_user_info(
                 detail="User not found"
             )
 
-        return user_info
+        return User(**user_info)
         
     except Exception as e:
         logger.error(f"Error getting user info: {e}")
