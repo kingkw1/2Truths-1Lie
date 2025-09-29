@@ -6,14 +6,17 @@ import json
 import os
 import hmac
 import hashlib
+import logging
 from token_models.revenuecat_webhook_models import RevenueCatWebhook
 from services.token_service import TokenService
 from services.database_service import get_db_service
 
 router = APIRouter()
 
+logger = logging.getLogger(__name__)
+
 REVENUECAT_WEBHOOK_SECRET = os.environ.get("REVENUECAT_WEBHOOK_SECRET")
-PRO_SUBSCRIPTION_PRODUCT_ID = "pro_monthly_subscription" # Assuming this is the product ID for "Pro" subscription
+PRO_SUBSCRIPTION_PRODUCT_IDS = ["pro_monthly", "pro_annual"]  # Support both monthly and annual
 TOKENS_TO_GRANT = 10
 
 def get_token_service() -> TokenService:
@@ -30,15 +33,21 @@ async def handle_revenuecat_webhook(
     """
     Handles RevenueCat webhooks for subscription events.
     """
+    logger.info("🎯 RevenueCat webhook received")
+    
     if not REVENUECAT_WEBHOOK_SECRET:
+        logger.error("❌ RevenueCat webhook secret not configured")
         raise HTTPException(status_code=500, detail="RevenueCat webhook secret is not configured.")
 
     if not authorization:
+        logger.warning("⚠️ Authorization header missing in webhook")
         raise HTTPException(status_code=401, detail="Authorization header is missing.")
 
     # Verify signature
     try:
         raw_body = await request.body()
+        logger.info(f"📦 Webhook payload size: {len(raw_body)} bytes")
+        
         expected_signature = hmac.new(
             REVENUECAT_WEBHOOK_SECRET.encode("utf-8"),
             raw_body,
@@ -50,15 +59,27 @@ async def handle_revenuecat_webhook(
         # A common format is `t=<timestamp>,v1=<signature>`. The documentation is a bit ambiguous.
         # Let's assume for now the header is just the signature.
         # A more robust implementation would parse the header.
+        logger.debug(f"🔐 Expected signature: {expected_signature[:10]}...")
+        logger.debug(f"🔐 Received signature: {authorization[:10] if authorization else 'None'}...")
+        
         if not hmac.compare_digest(expected_signature, authorization):
+             logger.error("❌ Webhook signature verification failed")
              raise HTTPException(status_code=403, detail="Webhook signature verification failed.")
+        
+        logger.info("✅ Webhook signature verified successfully")
     except Exception as e:
+        logger.error(f"❌ Webhook signature verification error: {e}")
         raise HTTPException(status_code=403, detail=f"Webhook signature verification failed: {e}")
 
     try:
         payload = json.loads(raw_body)
+        logger.info(f"📋 Webhook payload parsed successfully")
+        logger.debug(f"📋 Payload keys: {list(payload.keys())}")
+        
         webhook_data = RevenueCatWebhook.parse_obj(payload)
+        logger.info("✅ Webhook data validated successfully")
     except Exception as e:
+        logger.error(f"❌ Invalid webhook payload: {e}")
         raise HTTPException(status_code=400, detail=f"Invalid webhook payload: {e}")
 
     event = webhook_data.event
@@ -66,8 +87,12 @@ async def handle_revenuecat_webhook(
     user_id = event.app_user_id
     product_id = event.product_id
 
+    logger.info(f"🎯 Processing event: type={event_type}, user={user_id}, product={product_id}")
+
     if event_type in ["INITIAL_PURCHASE", "RENEWAL"]:
-        if product_id == PRO_SUBSCRIPTION_PRODUCT_ID:
+        logger.info(f"💰 Processing purchase/renewal event")
+        if product_id in PRO_SUBSCRIPTION_PRODUCT_IDS:
+            logger.info(f"🎯 Product matches Pro subscription, granting {TOKENS_TO_GRANT} tokens")
             try:
                 success = token_service.add_tokens_for_purchase(
                     user_id=user_id,
@@ -77,8 +102,28 @@ async def handle_revenuecat_webhook(
                     event_data=payload
                 )
                 if not success:
+                    logger.error("❌ Token service failed to grant tokens")
                     raise HTTPException(status_code=500, detail="Failed to grant tokens.")
+                logger.info(f"✅ Successfully granted {TOKENS_TO_GRANT} tokens to user {user_id}")
             except Exception as e:
+                logger.error(f"❌ Failed to process purchase event: {e}")
                 raise HTTPException(status_code=500, detail=f"Failed to process purchase event: {e}")
+        else:
+            logger.info(f"ℹ️ Product {product_id} is not a Pro subscription, skipping token grant")
+    else:
+        logger.info(f"ℹ️ Event type {event_type} is not a purchase/renewal, skipping")
 
+    logger.info("✅ Webhook processed successfully")
     return {"status": "ok"}
+
+@router.get("/webhooks/revenuecat/health")
+async def webhook_health_check():
+    """
+    Simple health check endpoint for RevenueCat webhook.
+    """
+    return {
+        "status": "healthy",
+        "webhook_secret_configured": bool(REVENUECAT_WEBHOOK_SECRET),
+        "supported_products": PRO_SUBSCRIPTION_PRODUCT_IDS,
+        "tokens_per_subscription": TOKENS_TO_GRANT
+    }
