@@ -18,6 +18,7 @@ import { useAuth } from '../hooks/useAuth';
 import { useTokenBalance } from '../hooks/useTokenBalance';
 import { usePremiumStatus } from '../hooks/usePremiumStatus';
 import { AuthGuard } from '../components/AuthGuard';
+import { realChallengeAPI } from '../services/realChallengeAPI';
 
 const Stack = createNativeStackNavigator<MainStackParamList>();
 
@@ -108,8 +109,12 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation, onLogout, styles })
 
           <TouchableOpacity
             style={[styles.menuButton, styles.secondaryButton]}
-            onPress={() => {
+            onPress={async () => {
+              console.log('🚨🚨🚨 MAIN_NAV: CREATE CHALLENGE BUTTON CLICKED! 🚨🚨🚨');
+              console.log('🔍 MAIN_NAV: Debug info - isAuthenticated:', isAuthenticated, 'isGuest:', isGuest);
+              
               if (!isAuthenticated || isGuest) {
+                console.log('🚨 MAIN_NAV: Blocking guest - showing auth popup');
                 Alert.alert(
                   'Sign In Required',
                   'Please sign in to create a challenge',
@@ -120,7 +125,52 @@ const HomeScreen: React.FC<HomeScreenProps> = ({ navigation, onLogout, styles })
                 );
                 return;
               }
-              navigation.navigate('Create');
+
+              console.log('✅ MAIN_NAV: User authenticated, checking creation status...');
+              console.log('🔍 MAIN_NAV: isPremium check - isPremium:', isPremium);
+
+              // Check premium status from RevenueCat
+              if (isPremium) {
+                console.log('✅ MAIN_NAV: Premium user - proceeding to creation');
+                navigation.navigate('Create');
+                return;
+              }
+
+              // Non-premium user, check API
+              console.log('🔍 MAIN_NAV: Non-premium user, calling API to check creation status...');
+              try {
+                console.log('🔍 MAIN_NAV: Calling realChallengeAPI.getCreationStatus()...');
+                const response = await realChallengeAPI.getCreationStatus();
+                console.log('🔍 MAIN_NAV: API response received:', JSON.stringify(response));
+                
+                if (response.success && response.data?.canCreate) {
+                  console.log('✅ MAIN_NAV: Non-premium user has creations left - proceeding');
+                  navigation.navigate('Create');
+                } else {
+                  console.log('🚫 MAIN_NAV: Non-premium user has no creations left - showing paywall');
+                  console.log('🚫 MAIN_NAV: Response data:', JSON.stringify(response.data));
+                  Alert.alert(
+                    'Creation Limit Reached',
+                    'You have used all your free challenge creations. Upgrade to "Pro" for unlimited creations!',
+                    [
+                      { text: 'Later', style: 'cancel' },
+                      {
+                        text: 'Upgrade to Pro',
+                        onPress: () => {
+                          console.log('🛒 MAIN_NAV: Navigating to store screen...');
+                          navigation.navigate('Store');
+                        },
+                      },
+                    ]
+                  );
+                }
+              } catch (error) {
+                console.error('❌ MAIN_NAV: Error checking creation status:', error);
+                Alert.alert(
+                  'Error',
+                  'Could not check your creation status. Please try again later.'
+                );
+              }
             }}
           >
             <Text style={styles.menuButtonIcon}>🎬</Text>
@@ -190,7 +240,7 @@ export const MainNavigator: React.FC<MainNavigatorProps> = ({ onLogout }) => {
   );
 };
 
-const getStyles = (colors) => StyleSheet.create({
+const getStyles = (colors: any) => StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: colors.background,

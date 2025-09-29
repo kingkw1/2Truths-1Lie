@@ -43,6 +43,8 @@ import { submitReport } from '../store/slices/reportingSlice';
 import { ThemeContext } from '../context/ThemeContext';
 import { store } from '../store';
 import HapticsService from '../services/HapticsService';
+import { usePremiumStatus } from '../hooks/usePremiumStatus';
+import { useNavigation } from '@react-navigation/native';
 
 // Helper function to convert backend challenge to frontend format
 const convertBackendChallenge = (backendChallenge: BackendChallenge): EnhancedChallenge => {
@@ -249,8 +251,10 @@ export const GameScreen: React.FC<GameScreenProps> = ({
   // console.log('🏠 GAMESCREEN: Component rendered, hideCreateButton =', hideCreateButton);
   
   const dispatch = useAppDispatch();
+  const navigation = useNavigation();
   const { isAuthenticated, isGuest, triggerAuthFlow } = useAuth();
   const { handleAuthRequired, validateReportPermissions } = useReportAuth();
+  const { isPremium } = usePremiumStatus();
   const currentUser = useAppSelector(selectUser);
   const {
     availableChallenges,
@@ -530,8 +534,13 @@ export const GameScreen: React.FC<GameScreenProps> = ({
   };
 
   const handleCreateChallenge = async () => {
+    console.log('🚨🚨🚨 CREATE_CHALLENGE: FUNCTION ENTERED! 🚨🚨🚨');
+    console.log('🚨🚨🚨 CREATE_CHALLENGE: This should appear immediately when button is pressed! 🚨🚨🚨');
+    
     HapticsService.triggerImpact('medium');
     console.log('🚨🚨🚨 CREATE_CHALLENGE: BUTTON CLICKED! 🚨🚨🚨');
+    console.log('🔍 CREATE_CHALLENGE: Debug info - isAuthenticated:', isAuthenticated, 'isGuest:', isGuest);
+    console.log('🔍 CREATE_CHALLENGE: Current user:', JSON.stringify(currentUser));
 
     // First, check for authentication
     if (!isAuthenticated || isGuest) {
@@ -559,22 +568,28 @@ export const GameScreen: React.FC<GameScreenProps> = ({
 
     // User is authenticated, now check creation permissions
     console.log('✅ CREATE_CHALLENGE: User authenticated, checking creation status...');
+    console.log('🔍 CREATE_CHALLENGE: isPremium check - isPremium:', isPremium);
 
-    // Check premium status from Redux store
-    if (currentUser?.isPremium) {
+    // Check premium status from RevenueCat
+    if (isPremium) {
         console.log('✅ CREATE_CHALLENGE: Premium user - proceeding to creation');
         setShowChallengeCreation(true);
         return;
     }
 
     // Non-premium user, check API
+    console.log('🔍 CREATE_CHALLENGE: Non-premium user, calling API to check creation status...');
     try {
+        console.log('🔍 CREATE_CHALLENGE: Calling realChallengeAPI.getCreationStatus()...');
         const response = await realChallengeAPI.getCreationStatus();
+        console.log('🔍 CREATE_CHALLENGE: API response received:', JSON.stringify(response));
+        
         if (response.success && response.data?.canCreate) {
             console.log('✅ CREATE_CHALLENGE: Non-premium user has creations left - proceeding');
             setShowChallengeCreation(true);
         } else {
             console.log('🚫 CREATE_CHALLENGE: Non-premium user has no creations left - showing paywall');
+            console.log('🚫 CREATE_CHALLENGE: Response data:', JSON.stringify(response.data));
             Alert.alert(
                 'Creation Limit Reached',
                 'You have used all your free challenge creations. Upgrade to "Pro" for unlimited creations!',
@@ -583,8 +598,9 @@ export const GameScreen: React.FC<GameScreenProps> = ({
                     {
                         text: 'Upgrade to Pro',
                         onPress: () => {
-                            // This would navigate to the store screen
-                            console.log('Navigate to store screen...');
+                            console.log('🛒 CREATE_CHALLENGE: Navigating to store screen...');
+                            // Navigate to store screen
+                            (navigation as any).navigate('Store');
                         },
                     },
                 ]

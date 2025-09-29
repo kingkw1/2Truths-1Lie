@@ -46,6 +46,28 @@ python tools/testing/create_test_user.py
 - Password: `TestPassword123!`
 - Username: `revenuecat_test_user`
 
+## Rate Limiting Testing
+
+### `test_creation_limits.py`
+Tests the challenge creation rate limiting functionality.
+
+**Purpose:**
+- Validate creation-status endpoint functionality
+- Test rate limiting enforcement
+- Verify new user creation permissions
+- Support monetization flow testing
+
+**Usage:**
+```bash
+python tools/testing/test_creation_limits.py
+```
+
+**What it tests:**
+- ✅ Creation-status endpoint availability
+- ✅ New user creation permissions (should be `canCreate: true`)
+- ✅ Rate limiting detection
+- ✅ API authentication and authorization
+
 ## Legacy Testing Scripts
 
 ### `test_premium_fix.py`
