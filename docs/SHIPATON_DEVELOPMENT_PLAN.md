@@ -18,21 +18,21 @@ Following a highly productive sprint, the project's core game loop is now comple
 
 * **Day 10 (Sat, Sept 27): TIER 1 - MONETIZATION & UI SPRINT**
     * **Development Focus**: With the backend game loop fixed, today's focus is on wiring up the full user-facing monetization experience and UI.
-        * [ ] **Implement Subscription Perks:**
+        * [X] **Implement Subscription Perks:**
             * [X] Unlock unlimited challenge creation for `isPremium` users.
             * [X] Display a visual "Pro" badge in the UI for subscribers.
         * [ ] **Implement Token Spending & New UI:**
             * [ ] Implement the "Wizard of Oz" 50/50 hint functionality.
             * [ ] Display the user's `score` prominently on the home screen profile card.
     * **Public Focus**:
-        * [ ] Post a screen recording for the **#BuildInPublic Award** showing the complete loop: getting points, seeing the score update, and seeing a challenge disappear from the feed.
+        * [X] Post a screen recording for the **#BuildInPublic Award** showing the complete loop: getting points, seeing the score update, and seeing a challenge disappear from the feed.
 
 * **Day 11 (Sun, Sept 28): TIER 1 - PRE-SUBMISSION POLISH & NARRATIVE**
     * **Development Focus**:
         * [ ] **Rapid Bug Bash**: Hunt down and fix any remaining crashes or major bugs in the complete game and purchase flows.
-        * [ ] **Final Assets:** Create the final 1024x1024 app icon and high-resolution screenshots.
+        * [X] **Final Assets:** Create the final 1024x1024 app icon and high-resolution screenshots.
     * **Public Focus**:
-        * [ ] Draft the written submission essays for each targeted award category on Devpost (HAMM, Design, Build & Grow, etc.).
+        * [X] Draft the written submission essays for each targeted award category on Devpost (HAMM, Design, Build & Grow, etc.).
 
 * **Day 12 (Mon, Sept 29): TIER 1 - VIDEO PRODUCTION & FINAL QA**
     * **Development Focus**:
