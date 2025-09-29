@@ -44,6 +44,7 @@ export const AnimatedFeedback: React.FC<AnimatedFeedbackProps> = ({
   const scaleAnim = useRef(new Animated.Value(0.3)).current;
   const slideAnim = useRef(new Animated.Value(50)).current;
   const scoreScaleAnim = useRef(new Animated.Value(0.8)).current;
+  const scoreOpacityAnim = useRef(new Animated.Value(0)).current;
   const shakeAnim = useRef(new Animated.Value(0)).current;
   const particleAnims = useRef(Array.from({length: 8}, () => new Animated.Value(0))).current;
 
@@ -134,13 +135,20 @@ export const AnimatedFeedback: React.FC<AnimatedFeedbackProps> = ({
         setAnimationPhase('score');
         animateScore();
         
-        // Animate score scale
-        Animated.spring(scoreScaleAnim, {
-          toValue: 1,
-          tension: 100,
-          friction: 6,
-          useNativeDriver: true,
-        }).start();
+        // Animate score scale and opacity
+        Animated.parallel([
+          Animated.spring(scoreScaleAnim, {
+            toValue: 1,
+            tension: 100,
+            friction: 6,
+            useNativeDriver: true,
+          }),
+          Animated.timing(scoreOpacityAnim, {
+            toValue: 1,
+            duration: 400, // fade in
+            useNativeDriver: true,
+          }),
+        ]).start();
 
         // Particle effects for correct answers
         if (stableResult.wasCorrect) {
@@ -231,20 +239,23 @@ export const AnimatedFeedback: React.FC<AnimatedFeedbackProps> = ({
         )}
 
         {/* Score Display */}
-        {(animationPhase === 'score' || animationPhase === 'streak' || animationPhase === 'complete') && (
-          <Animated.View style={[
+        <Animated.View
+          style={[
             styles.scoreContainer,
-            { transform: [{ scale: scoreScaleAnim }] }
-          ]}>
-            <AnimatedTextInput
-              ref={textInputRef}
-              style={styles.scoreDisplay}
-              defaultValue="+0"
-              editable={false}
-              underlineColorAndroid="transparent"
-            />
-          </Animated.View>
-        )}
+            {
+              opacity: scoreOpacityAnim,
+              transform: [{ scale: scoreScaleAnim }],
+            },
+          ]}
+        >
+          <AnimatedTextInput
+            ref={textInputRef}
+            style={styles.scoreDisplay}
+            defaultValue="+0"
+            editable={false}
+            underlineColorAndroid="transparent"
+          />
+        </Animated.View>
 
         {/* Streak Animation */}
         {animationPhase === 'streak' && showStreakAnimation && currentStreak > 1 && (
