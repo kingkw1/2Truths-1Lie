@@ -5,9 +5,12 @@
  */
 
 import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, Animated, Dimensions, Platform } from 'react-native';
+import { View, Text, StyleSheet, Animated, Dimensions, Platform, TextInput } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import { GuessResult } from '../types';
+
+// Create an Animated TextInput component
+const AnimatedTextInput = Animated.createAnimatedComponent(TextInput);
 
 interface AnimatedFeedbackProps {
   result: GuessResult | null | undefined;
@@ -29,16 +32,19 @@ export const AnimatedFeedback: React.FC<AnimatedFeedbackProps> = ({
     console.log('🎬 AnimatedFeedback: No result provided, not rendering');
     return null;
   }
+
   const [animationPhase, setAnimationPhase] = useState<'initial' | 'result' | 'score' | 'streak' | 'complete'>('initial');
-  const [scoreCounter, setScoreCounter] = useState(0);
   const animationStartedRef = useRef(false);
   const stableResultRef = useRef(result);
+  const scoreValue = useRef(new Animated.Value(0)).current;
+  const textInputRef = useRef<TextInput>(null);
 
   // Animated values
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const scaleAnim = useRef(new Animated.Value(0.3)).current;
   const slideAnim = useRef(new Animated.Value(50)).current;
   const scoreScaleAnim = useRef(new Animated.Value(0.8)).current;
+  const scoreOpacityAnim = useRef(new Animated.Value(0)).current;
   const shakeAnim = useRef(new Animated.Value(0)).current;
   const particleAnims = useRef(Array.from({length: 8}, () => new Animated.Value(0))).current;
 
@@ -53,8 +59,32 @@ export const AnimatedFeedback: React.FC<AnimatedFeedbackProps> = ({
   // Use the stable result for all animations
   const stableResult = stableResultRef.current;
 
+  // Add a listener to the animated value to update the text input
+  useEffect(() => {
+    const listener = scoreValue.addListener(v => {
+      if (textInputRef.current) {
+        const scoreText = `+${Math.round(v.value).toLocaleString()}`;
+        textInputRef.current.setNativeProps({ text: scoreText });
+      }
+    });
+
+    return () => {
+      scoreValue.removeListener(listener);
+    };
+  }, [scoreValue]);
+
   useEffect(() => {
     console.log('🎬 AnimatedFeedback component mounted with result:', stableResult);
+
+    const animateScore = () => {
+      // We don't use the native driver here because this is updating a prop on a JS component.
+      Animated.timing(scoreValue, {
+        toValue: stableResult.totalScore,
+        duration: 1000,
+        useNativeDriver: false,
+      }).start();
+    };
+
     const sequence = async () => {
       // Haptic feedback
       if (Platform.OS === 'ios') {
@@ -105,13 +135,20 @@ export const AnimatedFeedback: React.FC<AnimatedFeedbackProps> = ({
         setAnimationPhase('score');
         animateScore();
         
-        // Animate score scale
-        Animated.spring(scoreScaleAnim, {
-          toValue: 1,
-          tension: 100,
-          friction: 6,
-          useNativeDriver: true,
-        }).start();
+        // Animate score scale and opacity
+        Animated.parallel([
+          Animated.spring(scoreScaleAnim, {
+            toValue: 1,
+            tension: 100,
+            friction: 6,
+            useNativeDriver: true,
+          }),
+          Animated.timing(scoreOpacityAnim, {
+            toValue: 1,
+            duration: 400, // fade in
+            useNativeDriver: true,
+          }),
+        ]).start();
 
         // Particle effects for correct answers
         if (stableResult.wasCorrect) {
@@ -135,23 +172,6 @@ export const AnimatedFeedback: React.FC<AnimatedFeedbackProps> = ({
 
     sequence();
   }, [stableResult, showStreakAnimation, currentStreak, onAnimationComplete]);
-
-  const animateScore = () => {
-    const duration = 1000;
-    const steps = 30;
-    const increment = stableResult.totalScore / steps;
-    let current = 0;
-    
-    const timer = setInterval(() => {
-      current += increment;
-      if (current >= stableResult.totalScore) {
-        setScoreCounter(stableResult.totalScore);
-        clearInterval(timer);
-      } else {
-        setScoreCounter(Math.floor(current));
-      }
-    }, duration / steps);
-  };
 
   const animateParticles = () => {
     const animations = particleAnims.map((anim, index) => 
@@ -219,38 +239,23 @@ export const AnimatedFeedback: React.FC<AnimatedFeedbackProps> = ({
         )}
 
         {/* Score Display */}
-        {(animationPhase === 'score' || animationPhase === 'streak' || animationPhase === 'complete') && (
-          <Animated.View style={[
+        <Animated.View
+          style={[
             styles.scoreContainer,
-            { transform: [{ scale: scoreScaleAnim }] }
-          ]}>
-            <Text style={styles.scoreDisplay}>
-              +{scoreCounter.toLocaleString()} points
-            </Text>
-            
-            {/* Score Breakdown */}
-            <View style={styles.scoreBreakdown}>
-              <View style={styles.scoreItem}>
-                <Text style={styles.scoreLabel}>Base</Text>
-                <Text style={styles.scoreValue}>+{stableResult.pointsEarned}</Text>
-              </View>
-              <View style={styles.scoreItem}>
-                <Text style={styles.scoreLabel}>Time</Text>
-                <Text style={styles.scoreValue}>+{stableResult.timeBonus}</Text>
-              </View>
-              <View style={styles.scoreItem}>
-                <Text style={styles.scoreLabel}>Accuracy</Text>
-                <Text style={styles.scoreValue}>+{stableResult.accuracyBonus}</Text>
-              </View>
-              {stableResult.streakBonus > 0 && (
-                <View style={styles.scoreItem}>
-                  <Text style={styles.scoreLabel}>Streak</Text>
-                  <Text style={styles.scoreValue}>+{stableResult.streakBonus}</Text>
-                </View>
-              )}
-            </View>
-          </Animated.View>
-        )}
+            {
+              opacity: scoreOpacityAnim,
+              transform: [{ scale: scoreScaleAnim }],
+            },
+          ]}
+        >
+          <AnimatedTextInput
+            ref={textInputRef}
+            style={styles.scoreDisplay}
+            defaultValue="+0"
+            editable={false}
+            underlineColorAndroid="transparent"
+          />
+        </Animated.View>
 
         {/* Streak Animation */}
         {animationPhase === 'streak' && showStreakAnimation && currentStreak > 1 && (
