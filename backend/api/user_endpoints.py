@@ -70,7 +70,16 @@ async def update_my_profile(
                 detail="User not found"
             )
 
-        return User(**updated_user)
+        return User(
+            id=str(updated_user["id"]),
+            email=updated_user["email"],
+            name=updated_user.get("name"),
+            score=updated_user.get("score", 0),
+            is_premium=updated_user.get("is_premium", False),
+            created_at=updated_user["created_at"],
+            is_active=updated_user["is_active"],
+            last_login=updated_user.get("last_login"),
+        )
 
     except HTTPException:
         raise
