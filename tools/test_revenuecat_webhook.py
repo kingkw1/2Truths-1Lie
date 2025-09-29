@@ -14,6 +14,7 @@ from typing import Dict, Any
 def create_test_webhook_payload(user_id: str = "fake1@gmail.com", product_id: str = "pro_monthly") -> Dict[str, Any]:
     """Create a test webhook payload similar to what RevenueCat would send."""
     return {
+        "api_version": "1.0",
         "event": {
             "id": "test_transaction_12345",
             "type": "INITIAL_PURCHASE",
