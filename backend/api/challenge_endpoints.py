@@ -52,13 +52,15 @@ async def get_cloud_storage_service():
 def extract_s3_key_from_url(url: str) -> Optional[str]:
     """Extract S3 key from full S3 URL
     
-    Expected URL format: https://{bucket}.s3.{region}.amazonaws.com/{key}
-    Returns the key part or None if not a valid S3 URL
+    Expected URL format: https://{bucket}.s3.{region}.amazonaws.com/{key}[?query_params]
+    Returns the key part (without query parameters) or None if not a valid S3 URL
     """
     if not url or not url.startswith('https://'):
         return None
     
     try:
+        import urllib.parse
+        
         # Parse URL to extract key
         # Format: https://{bucket}.s3.{region}.amazonaws.com/{key}
         if '.s3.' in url and '.amazonaws.com/' in url:
@@ -66,7 +68,16 @@ def extract_s3_key_from_url(url: str) -> Optional[str]:
             amazonaws_pos = url.find('.amazonaws.com/')
             if amazonaws_pos != -1:
                 key_start = amazonaws_pos + len('.amazonaws.com/')
-                return url[key_start:]
+                key_with_params = url[key_start:]
+                
+                # Remove query parameters if present
+                if '?' in key_with_params:
+                    key_with_params = key_with_params.split('?')[0]
+                
+                # URL decode the key (handles cases where the key itself is encoded)
+                key = urllib.parse.unquote(key_with_params)
+                
+                return key
     except Exception as e:
         logger.warning(f"Failed to extract S3 key from URL {url}: {e}")
     
