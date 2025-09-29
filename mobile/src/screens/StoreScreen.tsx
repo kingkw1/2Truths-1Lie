@@ -26,7 +26,7 @@ export const StoreScreen: React.FC = () => {
   const [purchasing, setPurchasing] = useState(false);
   const [selectedPackage, setSelectedPackage] = useState<PurchasesPackage | null>(null);
   const { offerings, isLoading: offeringsLoading, error: offeringsError } = useOfferings();
-  const { isPremium } = usePremiumStatus();
+  const { isPremium, customerInfo } = usePremiumStatus();
   const { user } = useAuth();
   const { balance, loading: tokenBalanceLoading, refresh: refreshTokenBalance } = useTokenBalance();
   const styles = getStyles(colors);
@@ -219,7 +219,7 @@ export const StoreScreen: React.FC = () => {
 
       {/* Header */}
       <Text style={styles.title}>
-        {isPremium ? 'Manage Subscription' : 'Upgrade to Pro'}
+        {isPremium ? 'Token Store' : 'Upgrade to Pro'}
       </Text>
 
       {/* Subscription Hero Section */}
@@ -335,17 +335,21 @@ export const StoreScreen: React.FC = () => {
         </View>
       )}
 
-      {/* À La Carte Token Section */}
+      {/* À La Carte Token Section - Prioritized for Premium Users */}
       {tokenPackages.length > 0 && (
         <>
-          {/* Visual Separator */}
-          <View style={styles.separatorContainer}>
-            <Text style={styles.separatorText}>— Or, Get a Few Tokens —</Text>
-          </View>
+          {/* Visual Separator - Only show for non-premium users */}
+          {!isPremium && (
+            <View style={styles.separatorContainer}>
+              <Text style={styles.separatorText}>— Or, Get a Few Tokens —</Text>
+            </View>
+          )}
 
           {/* Token Packages */}
           <View style={styles.tokenSection}>
-            <Text style={styles.tokenSectionTitle}>Token Packs</Text>
+            <Text style={styles.tokenSectionTitle}>
+              {isPremium ? 'Get More Tokens' : 'Token Packs'}
+            </Text>
             <View style={styles.tokenPackagesContainer}>
               {/* Small Token Pack */}
               <TouchableOpacity 
@@ -393,34 +397,107 @@ export const StoreScreen: React.FC = () => {
         </>
       )}
 
-      {/* Existing subscription packages for premium users */}
-      {isPremium && (
-        <View style={styles.packagesContainer}>
-          {subscriptionPackages.map((pkg) => (
-            <ProductCard 
-              key={pkg.identifier} 
-              pkg={pkg} 
-              onPress={handlePurchase}
+      {/* Subscription Management Card for Premium Users */}
+      {isPremium && customerInfo && (
+        <View style={styles.subscriptionManagementCard}>
+          <Text style={styles.subscriptionCardTitle}>Your Subscription</Text>
+          
+          {/* Current Plan Display */}
+          <View style={styles.currentPlanContainer}>
+            <Text style={styles.currentPlanLabel}>Current Plan:</Text>
+            <Text style={styles.currentPlanValue}>
+              {(() => {
+                const activeSubscriptions = customerInfo.activeSubscriptions;
+                if (activeSubscriptions.includes('pro_monthly') || activeSubscriptions.includes('pro_monthly:pro-monthly')) {
+                  return 'Pro Monthly';
+                } else if (activeSubscriptions.includes('pro_annual') || activeSubscriptions.includes('pro_annual:pro-annual')) {
+                  return 'Pro Annual';
+                } else {
+                  return 'Pro Subscription';
+                }
+              })()}
+            </Text>
+          </View>
+
+          {/* Conditional Upgrade Button */}
+          {(() => {
+            const activeSubscriptions = customerInfo.activeSubscriptions;
+            const isMonthly = activeSubscriptions.some(sub => 
+              sub.includes('monthly') || sub.includes('pro_monthly')
+            );
+            
+            if (isMonthly) {
+              const annualPackage = subscriptionPackages.find(pkg => 
+                pkg.identifier === 'pro_annual' || 
+                pkg.identifier === 'annual' ||
+                pkg.packageType === 'ANNUAL'
+              );
+              
+              if (annualPackage) {
+                return (
+                  <TouchableOpacity
+                    style={styles.upgradeButton}
+                    onPress={() => handlePurchase(annualPackage)}
+                    disabled={purchasing}
+                  >
+                    <Text style={styles.upgradeButtonText}>
+                      {purchasing ? 'Processing...' : 'Upgrade to Annual & Save 17%'}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              }
+            }
+            return null;
+          })()}
+
+          {/* Management Options */}
+          <View style={styles.managementOptionsContainer}>
+            <TouchableOpacity
+              style={styles.manageSubscriptionButton}
+              onPress={() => {
+                // Open subscription management
+                if (Platform.OS === 'ios') {
+                  Purchases.showManageSubscriptions();
+                } else {
+                  // For Android, you might need to open Play Store subscription page
+                  Alert.alert(
+                    'Manage Subscription',
+                    'To manage your subscription, please visit the Google Play Store.',
+                    [{ text: 'OK' }]
+                  );
+                }
+              }}
+            >
+              <Text style={styles.manageSubscriptionButtonText}>Manage Subscription</Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity 
+              style={styles.restorePurchasesLink}
+              onPress={handleRestorePurchases}
               disabled={purchasing}
-            />
-          ))}
+            >
+              <Text style={styles.restorePurchasesLinkText}>Restore Purchases</Text>
+            </TouchableOpacity>
+          </View>
         </View>
       )}
 
-      {/* Restore Purchases Button */}
-      <TouchableOpacity 
-        style={styles.restoreButton} 
-        onPress={handleRestorePurchases}
-        disabled={purchasing}
-      >
-        <Text style={styles.restoreButtonText}>Restore Purchases</Text>
-      </TouchableOpacity>
+      {/* Restore Purchases Button - Only for non-premium users */}
+      {!isPremium && (
+        <TouchableOpacity 
+          style={styles.restoreButton} 
+          onPress={handleRestorePurchases}
+          disabled={purchasing}
+        >
+          <Text style={styles.restoreButtonText}>Restore Purchases</Text>
+        </TouchableOpacity>
+      )}
       </ScrollView>
     </SafeAreaView>
   );
 };
 
-const getStyles = (colors) => StyleSheet.create({
+const getStyles = (colors: any) => StyleSheet.create({
   safeArea: {
     flex: 1,
     backgroundColor: colors.background,
@@ -704,5 +781,100 @@ const getStyles = (colors) => StyleSheet.create({
     fontWeight: '600',
     color: colors.storeBalanceText,
     textAlign: 'center',
+  },
+  // New styles for subscription management card
+  subscriptionManagementCard: {
+    backgroundColor: colors.card,
+    borderRadius: 16,
+    padding: 20,
+    marginHorizontal: 16,
+    marginTop: 24,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: colors.border,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  subscriptionCardTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: colors.text,
+    marginBottom: 16,
+    textAlign: 'center',
+  },
+  currentPlanContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    backgroundColor: colors.background,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: colors.border,
+  },
+  currentPlanLabel: {
+    fontSize: 16,
+    color: colors.placeholder,
+    fontWeight: '500',
+  },
+  currentPlanValue: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: colors.text,
+  },
+  upgradeButton: {
+    backgroundColor: colors.primary,
+    paddingVertical: 14,
+    paddingHorizontal: 20,
+    borderRadius: 12,
+    marginBottom: 16,
+    shadowColor: colors.primary,
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 4,
+  },
+  upgradeButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '600',
+    textAlign: 'center',
+  },
+  managementOptionsContainer: {
+    flexDirection: 'column',
+    gap: 12,
+  },
+  manageSubscriptionButton: {
+    backgroundColor: colors.storeRestoreButtonBackground,
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  manageSubscriptionButtonText: {
+    color: colors.card,
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  restorePurchasesLink: {
+    alignItems: 'center',
+    paddingVertical: 8,
+  },
+  restorePurchasesLinkText: {
+    color: colors.primary,
+    fontSize: 14,
+    fontWeight: '500',
+    textDecorationLine: 'underline',
   },
 });
