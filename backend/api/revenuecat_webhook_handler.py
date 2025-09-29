@@ -6,9 +6,9 @@ import json
 import os
 import hmac
 import hashlib
-from ..token_models.revenuecat_webhook_models import RevenueCatWebhook
-from ..services.token_service import TokenService
-from ..services.database_service import get_db_service
+from token_models.revenuecat_webhook_models import RevenueCatWebhook
+from services.token_service import TokenService
+from services.database_service import get_db_service
 
 router = APIRouter()
 
