@@ -12,14 +12,10 @@ from services.auth_service import get_current_user
 from services.database_service import DatabaseService, get_db_service
 from services.challenge_service import challenge_service
 from models import Challenge, ChallengeListResponse
-from api.auth_endpoints import User
+from schemas import User, UserProfileUpdate
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/v1/users", tags=["users"])
-
-class UserProfileUpdate(BaseModel):
-    name: Optional[str] = None
-    score: Optional[int] = None
 
 
 @router.get("/me/guesses")
