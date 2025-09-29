@@ -9,7 +9,7 @@ import hashlib
 import logging
 from token_models.revenuecat_webhook_models import RevenueCatWebhook
 from services.token_service import TokenService
-from services.database_service import get_db_service
+from services.database_service import get_db_service, DatabaseService
 
 router = APIRouter()
 
@@ -24,11 +24,16 @@ def get_token_service() -> TokenService:
     db_service = get_db_service()
     return TokenService(db_service)
 
+def get_database_service() -> DatabaseService:
+    """Dependency injector for DatabaseService"""
+    return get_db_service()
+
 @router.post("/webhooks/revenuecat")
 async def handle_revenuecat_webhook(
     request: Request,
     authorization: str = Header(None),
-    token_service: TokenService = Depends(get_token_service)
+    token_service: TokenService = Depends(get_token_service),
+    db_service: DatabaseService = Depends(get_database_service)
 ):
     """
     Handles RevenueCat webhooks for subscription events.
@@ -84,18 +89,30 @@ async def handle_revenuecat_webhook(
 
     event = webhook_data.event
     event_type = event.type
-    user_id = event.app_user_id
+    revenuecat_user_id = event.app_user_id  # This is the email from RevenueCat
     product_id = event.product_id
 
-    logger.info(f"🎯 Processing event: type={event_type}, user={user_id}, product={product_id}")
+    logger.info(f"🎯 Processing event: type={event_type}, revenuecat_user={revenuecat_user_id}, product={product_id}")
 
     if event_type in ["INITIAL_PURCHASE", "RENEWAL"]:
         logger.info(f"💰 Processing purchase/renewal event")
         if product_id in PRO_SUBSCRIPTION_PRODUCT_IDS:
             logger.info(f"🎯 Product matches Pro subscription, granting {TOKENS_TO_GRANT} tokens")
+            
+            # Look up user by email to get numeric user ID
             try:
+                logger.info(f"🔍 Looking up user by email: {revenuecat_user_id}")
+                user = db_service.get_user_by_email(revenuecat_user_id)
+                
+                if not user:
+                    logger.error(f"❌ User not found in database: {revenuecat_user_id}")
+                    raise HTTPException(status_code=404, detail=f"User not found: {revenuecat_user_id}")
+                
+                database_user_id = str(user["id"])  # Convert to string as expected by token service
+                logger.info(f"✅ Found user: email={revenuecat_user_id}, database_id={database_user_id}")
+                
                 success = token_service.add_tokens_for_purchase(
-                    user_id=user_id,
+                    user_id=database_user_id,
                     product_id=product_id,
                     tokens_to_add=TOKENS_TO_GRANT,
                     transaction_id=event.id,
@@ -104,7 +121,9 @@ async def handle_revenuecat_webhook(
                 if not success:
                     logger.error("❌ Token service failed to grant tokens")
                     raise HTTPException(status_code=500, detail="Failed to grant tokens.")
-                logger.info(f"✅ Successfully granted {TOKENS_TO_GRANT} tokens to user {user_id}")
+                logger.info(f"✅ Successfully granted {TOKENS_TO_GRANT} tokens to user {revenuecat_user_id} (id: {database_user_id})")
+            except HTTPException:
+                raise  # Re-raise HTTP exceptions
             except Exception as e:
                 logger.error(f"❌ Failed to process purchase event: {e}")
                 raise HTTPException(status_code=500, detail=f"Failed to process purchase event: {e}")
