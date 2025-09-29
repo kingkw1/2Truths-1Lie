@@ -620,7 +620,8 @@ class DatabaseService:
                 self.conn = self.db_service._get_validated_connection("transaction")
                 # Begin transaction (implicit in most cases, explicit for safety)
                 if self.db_service.is_postgres:
-                    self.conn.execute("BEGIN")
+                    with self.conn.cursor() as cursor:
+                        cursor.execute("BEGIN")
                 else:
                     self.conn.execute("BEGIN")
                 return self.conn

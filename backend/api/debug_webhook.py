@@ -10,46 +10,91 @@ logger = logging.getLogger(__name__)
 
 @router.post("/webhooks/revenuecat/debug")
 async def debug_revenuecat_webhook(request: Request):
-    """Debug webhook endpoint that logs everything."""
+    """Debug webhook endpoint that returns detailed information."""
+    debug_info = {
+        "steps": [],
+        "user_info": None,
+        "balance_info": None,
+        "token_grant_test": None,
+        "error": None
+    }
+    
     try:
         raw_body = await request.body()
-        headers = dict(request.headers)
-        
-        logger.info(f"🎯 DEBUG: Webhook received")
-        logger.info(f"📦 DEBUG: Body: {raw_body.decode()}")
-        logger.info(f"📋 DEBUG: Headers: {headers}")
-        
         payload = json.loads(raw_body)
-        logger.info(f"📄 DEBUG: Parsed payload: {payload}")
+        debug_info["steps"].append("✅ Payload parsed successfully")
         
         # Test database connection
         from services.database_service import get_db_service
         db_service = get_db_service()
+        debug_info["steps"].append("✅ Database service initialized")
         
         # Try to look up the user
         if 'event' in payload and 'app_user_id' in payload['event']:
             user_email = payload['event']['app_user_id']
-            logger.info(f"🔍 DEBUG: Looking up user: {user_email}")
+            debug_info["steps"].append(f"🔍 Looking up user: {user_email}")
             
             user = db_service.get_user_by_email(user_email)
             if user:
-                logger.info(f"✅ DEBUG: User found: id={user['id']}, email={user['email']}")
+                debug_info["user_info"] = {
+                    "id": user['id'],
+                    "email": user['email'],
+                    "is_premium": user.get('is_premium', False)
+                }
+                debug_info["steps"].append(f"✅ User found: id={user['id']}")
                 
                 # Try to test token service
                 from services.token_service import TokenService
                 token_service = TokenService(db_service)
+                debug_info["steps"].append("✅ Token service initialized")
                 
-                logger.info(f"🪙 DEBUG: Getting current balance for user {user['id']}")
+                # Get current balance
                 balance = token_service.get_user_balance(str(user['id']))
-                logger.info(f"💰 DEBUG: Current balance: {balance.balance}")
+                debug_info["balance_info"] = {
+                    "current_balance": balance.balance,
+                    "last_updated": balance.last_updated
+                }
+                debug_info["steps"].append(f"✅ Current balance retrieved: {balance.balance}")
+                
+                # Test actual token granting
+                try:
+                    debug_info["steps"].append("🧪 Testing token granting...")
+                    success = token_service.add_tokens_for_purchase(
+                        user_id=str(user['id']),
+                        product_id=payload['event']['product_id'],
+                        tokens_to_add=10,
+                        transaction_id=payload['event']['id'],
+                        event_data=payload
+                    )
+                    debug_info["token_grant_test"] = {
+                        "success": success,
+                        "attempted_tokens": 10
+                    }
+                    if success:
+                        debug_info["steps"].append("✅ Token granting test SUCCEEDED")
+                        # Get new balance
+                        new_balance = token_service.get_user_balance(str(user['id']))
+                        debug_info["token_grant_test"]["new_balance"] = new_balance.balance
+                    else:
+                        debug_info["steps"].append("❌ Token granting test FAILED")
+                        
+                except Exception as token_error:
+                    debug_info["token_grant_test"] = {
+                        "success": False,
+                        "error": str(token_error)
+                    }
+                    debug_info["steps"].append(f"❌ Token granting exception: {str(token_error)}")
                 
             else:
-                logger.error(f"❌ DEBUG: User not found: {user_email}")
+                debug_info["steps"].append(f"❌ User not found: {user_email}")
+        else:
+            debug_info["steps"].append("❌ Invalid payload structure")
         
-        return {"debug": "success", "message": "Check logs for details"}
+        return {"debug": "success", **debug_info}
     
     except Exception as e:
-        logger.error(f"💥 DEBUG: Exception: {e}")
+        debug_info["error"] = str(e)
+        debug_info["steps"].append(f"💥 Exception: {str(e)}")
         import traceback
-        logger.error(f"🔍 DEBUG: Traceback: {traceback.format_exc()}")
-        return {"debug": "error", "error": str(e)}
+        debug_info["traceback"] = traceback.format_exc()
+        return {"debug": "error", **debug_info}
