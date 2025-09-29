@@ -2031,6 +2031,44 @@ class DatabaseService:
             logger.error(f"Failed to reactivate user {user_id}: {e}")
             raise
 
+    def update_user_profile(self, user_id: int, profile_data: Dict[str, Any]) -> Optional[Dict[str, Any]]:
+        """
+        Update user profile with a dictionary of data.
+        Only whitelisted fields are updated.
+        """
+        operation = "update_user_profile"
+        self._validate_database_operation(operation)
+
+        # Whitelist of fields that can be updated
+        allowed_fields = {"name", "score"}
+
+        update_data = {key: value for key, value in profile_data.items() if key in allowed_fields}
+
+        if not update_data:
+            logger.warning(f"No valid fields to update for user {user_id}")
+            return self.get_user_by_id(user_id)
+
+        # Add updated_at timestamp
+        update_data["updated_at"] = datetime.utcnow()
+
+        try:
+            rows_affected = self._execute_update(
+                "users",
+                update_data,
+                "id = ?",
+                (user_id,)
+            )
+
+            if rows_affected > 0:
+                logger.info(f"Successfully updated profile for user {user_id} with data: {update_data}")
+                return self.get_user_by_id(user_id)
+            else:
+                logger.warning(f"User {user_id} not found, could not update profile.")
+                return None
+        except Exception as e:
+            categorized_error = self._handle_database_exception(operation, e)
+            raise categorized_error
+
     def set_user_premium_status(self, user_id: int, is_premium: bool) -> bool:
         """Sets the premium status for a user."""
         try:
