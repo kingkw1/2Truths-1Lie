@@ -46,6 +46,11 @@ def test_webhook(
     print(f"   Secret configured: {'Yes' if webhook_secret else 'No'}")
     print()
     
+    # Test debug endpoint first
+    debug_url = webhook_url.replace("/revenuecat", "/revenuecat/debug")
+    print(f"🔍 First testing debug endpoint: {debug_url}")
+    print()
+    
     # Create test payload
     payload = create_test_webhook_payload(user_id, product_id)
     payload_json = json.dumps(payload)
@@ -59,6 +64,17 @@ def test_webhook(
     print(f"🔐 Generated signature: {signature[:20]}...")
     print()
     
+    # Test debug endpoint first (no signature required)
+    try:
+        print("🔍 Testing debug endpoint...")
+        debug_response = requests.post(debug_url, json=payload, headers={"Content-Type": "application/json"})
+        print(f"🐛 Debug Response Status: {debug_response.status_code}")
+        print(f"🐛 Debug Response Body: {debug_response.text}")
+        print()
+    except Exception as e:
+        print(f"🐛 Debug endpoint failed: {e}")
+        print()
+    
     # Make the request
     headers = {
         "Content-Type": "application/json",
@@ -71,11 +87,23 @@ def test_webhook(
         
         print(f"✅ Response Status: {response.status_code}")
         print(f"📄 Response Body: {response.text}")
+        print(f"📋 Response Headers: {dict(response.headers)}")
         
         if response.status_code == 200:
             print("🎉 Webhook processed successfully!")
         else:
             print("❌ Webhook failed!")
+            
+        # Test with a different user that definitely exists
+        if response.status_code != 200:
+            print("\n🔄 Testing with a user ID that might work better...")
+            test_payload_numeric = create_test_webhook_payload("10", product_id)  # Try numeric ID
+            test_signature = sign_payload(json.dumps(test_payload_numeric), webhook_secret)
+            test_headers = {"Content-Type": "application/json", "Authorization": test_signature}
+            
+            print(f"📦 Testing with numeric user ID: 10")
+            test_response = requests.post(webhook_url, json=test_payload_numeric, headers=test_headers)
+            print(f"📊 Numeric ID test - Status: {test_response.status_code}, Body: {test_response.text}")
             
     except Exception as e:
         print(f"💥 Request failed: {e}")

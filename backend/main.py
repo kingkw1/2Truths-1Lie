@@ -66,6 +66,7 @@ from api.token_endpoints import router as token_router
 from api.hint_endpoints import router as hint_router
 from api.hint_endpoints_simple import router as hint_simple_router
 from api.revenuecat_webhook_handler import router as revenuecat_router
+from api.debug_webhook import router as debug_webhook_router
 
 app.include_router(challenge_router)
 app.include_router(challenge_video_router)
@@ -76,6 +77,7 @@ app.include_router(token_router)
 app.include_router(hint_router)
 app.include_router(hint_simple_router)
 app.include_router(revenuecat_router, prefix="/api")
+app.include_router(debug_webhook_router, prefix="/api")
 
 # CORS middleware for frontend integration
 app.add_middleware(
