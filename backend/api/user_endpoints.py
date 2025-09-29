@@ -8,8 +8,8 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from pydantic import BaseModel
 import logging
 
-from services.auth_service import get_current_user, get_db_service
-from services.database_service import DatabaseService
+from services.auth_service import get_current_user
+from services.database_service import DatabaseService, get_db_service
 from services.challenge_service import challenge_service
 from models import Challenge, ChallengeListResponse, User
 
