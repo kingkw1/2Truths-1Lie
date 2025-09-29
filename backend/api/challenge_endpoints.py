@@ -4,6 +4,7 @@ Handles challenge creation, retrieval, and management
 """
 
 from typing import List, Optional
+from typing import List, Optional
 from fastapi import APIRouter, Depends, HTTPException, status
 from fastapi.responses import JSONResponse
 import logging
@@ -14,6 +15,7 @@ from services.challenge_service import challenge_service, ChallengeNotFoundError
 from services.upload_service import ChunkedUploadService
 from services.cloud_storage_service import create_cloud_storage_service, CloudStorageError
 from services.database_service import get_db_service
+from services.rate_limiter import RateLimiter
 
 # Database service will be accessed via get_db_service() function
 from models import (
@@ -206,6 +208,42 @@ def enrich_challenge_with_creator_name(challenge: Challenge) -> dict:
         challenge_dict["creator_name"] = f"User {challenge.creator_id[:8]}"
     
     return challenge_dict
+
+
+@router.get("/creation-status", response_model=dict)
+async def get_creation_status(
+    user_payload: dict = Depends(get_current_user_with_permissions)
+) -> dict:
+    """
+    Check if the current user can create a new challenge.
+    """
+    try:
+        user_id = user_payload.get("sub")
+        db_service = get_db_service()
+        user_data = db_service.get_user_by_id(int(user_id))
+
+        if not user_data:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="User not found"
+            )
+
+        is_premium = user_data.get("is_premium", False)
+        if is_premium:
+            return {"canCreate": True}
+
+        rate_limiter = RateLimiter()
+        status = await rate_limiter.get_rate_limit_status(user_id)
+
+        can_create = status.get("remaining", 0) > 0
+        return {"canCreate": can_create}
+
+    except Exception as e:
+        logger.error(f"Failed to get creation status for user {user_id}: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to retrieve creation status"
+        )
 
 
 @router.post("/", response_model=Challenge, status_code=status.HTTP_201_CREATED)

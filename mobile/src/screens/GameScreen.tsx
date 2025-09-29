@@ -529,15 +529,13 @@ export const GameScreen: React.FC<GameScreenProps> = ({
     loadChallengesFromAPI(false);
   };
 
-  const handleCreateChallenge = () => {
+  const handleCreateChallenge = async () => {
     HapticsService.triggerImpact('medium');
     console.log('🚨🚨🚨 CREATE_CHALLENGE: BUTTON CLICKED! 🚨🚨🚨');
-    console.log('🚨🚨🚨 This should definitely appear in logs if button is working 🚨🚨🚨');
-    console.log('🎯 CREATE_CHALLENGE: Auth state:', { isAuthenticated, isGuest });
-    console.log('🎯 CREATE_CHALLENGE: Should block?', (!isAuthenticated || isGuest));
-    
+
+    // First, check for authentication
     if (!isAuthenticated || isGuest) {
-      console.log('🚨 CREATE_CHALLENGE: Blocking user - showing auth popup');
+      console.log('🚨 CREATE_CHALLENGE: Blocking guest - showing auth popup');
       Alert.alert(
         'Sign In Required',
         'Please sign in to create a challenge',
@@ -558,10 +556,47 @@ export const GameScreen: React.FC<GameScreenProps> = ({
       );
       return;
     }
-    
-    console.log('✅ CREATE_CHALLENGE: User authenticated - proceeding to creation');
-    // User is authenticated, proceed with challenge creation
-    setShowChallengeCreation(true);
+
+    // User is authenticated, now check creation permissions
+    console.log('✅ CREATE_CHALLENGE: User authenticated, checking creation status...');
+
+    // Check premium status from Redux store
+    if (currentUser?.isPremium) {
+        console.log('✅ CREATE_CHALLENGE: Premium user - proceeding to creation');
+        setShowChallengeCreation(true);
+        return;
+    }
+
+    // Non-premium user, check API
+    try {
+        const response = await realChallengeAPI.getCreationStatus();
+        if (response.success && response.data?.canCreate) {
+            console.log('✅ CREATE_CHALLENGE: Non-premium user has creations left - proceeding');
+            setShowChallengeCreation(true);
+        } else {
+            console.log('🚫 CREATE_CHALLENGE: Non-premium user has no creations left - showing paywall');
+            Alert.alert(
+                'Creation Limit Reached',
+                'You have used all your free challenge creations. Upgrade to "Pro" for unlimited creations!',
+                [
+                    { text: 'Later', style: 'cancel' },
+                    {
+                        text: 'Upgrade to Pro',
+                        onPress: () => {
+                            // This would navigate to the store screen
+                            console.log('Navigate to store screen...');
+                        },
+                    },
+                ]
+            );
+        }
+    } catch (error) {
+        console.error('❌ CREATE_CHALLENGE: Error checking creation status:', error);
+        Alert.alert(
+            'Error',
+            'Could not check your creation status. Please try again later.'
+        );
+    }
   };
 
   const handleReportChallenge = (challengeId: string) => {
