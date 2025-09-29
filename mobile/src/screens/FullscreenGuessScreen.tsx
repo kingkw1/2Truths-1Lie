@@ -421,7 +421,7 @@ export const FullscreenGuessScreen: React.FC<FullscreenGuessScreenProps> = ({
 
     try {
       // Make API request to use hint
-      const response = await makeAuthenticatedRequest(`${getApiBaseUrl()}/api/hints/use`, {
+      const response = await makeAuthenticatedRequest('/api/hints/use', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
