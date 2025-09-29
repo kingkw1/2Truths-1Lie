@@ -25,6 +25,7 @@ import {
   clearChallengeLoadError,
   resetRetryCount,
 } from '../store/slices/guessingGameSlice';
+import { selectUser } from '../store/slices/authSlice';
 import { EnhancedChallenge, GuessResult } from '../types';
 import { ChallengeCreationScreen } from './ChallengeCreationScreen';
 import FullscreenGuessScreen from './FullscreenGuessScreen';
@@ -250,6 +251,7 @@ export const GameScreen: React.FC<GameScreenProps> = ({
   const dispatch = useAppDispatch();
   const { isAuthenticated, isGuest, triggerAuthFlow } = useAuth();
   const { handleAuthRequired, validateReportPermissions } = useReportAuth();
+  const currentUser = useAppSelector(selectUser);
   const {
     availableChallenges,
     selectedChallenge,
@@ -653,6 +655,18 @@ export const GameScreen: React.FC<GameScreenProps> = ({
       <Text style={styles.title}>
         {hideCreateButton ? 'Choose a Challenge' : 'Two Truths & a Lie'}
       </Text>
+      
+      {/* Profile Card */}
+      {currentUser && (
+        <View style={styles.profileCard}>
+          <Text style={styles.profileName}>
+            {currentUser.name} {currentUser.score ? `(🏆 ${currentUser.score})` : ''}
+          </Text>
+          {isGuest && (
+            <Text style={styles.guestLabel}>Guest Player</Text>
+          )}
+        </View>
+      )}
       
       {/* Create Challenge Button - only show if not hidden */}
       {!hideCreateButton && (
@@ -1429,5 +1443,33 @@ const getStyles = (colors: any) => StyleSheet.create({
   },
   headerSpacer: {
     width: 60, // Match the approximate width of the back button for centering
+  },
+  // Profile Card styles
+  profileCard: {
+    backgroundColor: colors.card,
+    marginVertical: 10,
+    marginHorizontal: 0,
+    borderRadius: 12,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: colors.border,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
+  },
+  profileName: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: colors.text,
+    textAlign: 'center',
+  },
+  guestLabel: {
+    fontSize: 14,
+    color: colors.text,
+    opacity: 0.7,
+    textAlign: 'center',
+    marginTop: 4,
   },
 });

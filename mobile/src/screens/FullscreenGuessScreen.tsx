@@ -37,12 +37,14 @@ import {
   endGuessingSession,
   clearGuessResult,
 } from '../store/slices/guessingGameSlice';
-import { selectUser } from '../store/slices/authSlice';
+import { selectUser, updateUserScore } from '../store/slices/authSlice';
 import { realChallengeAPI } from '../services/realChallengeAPI';
 import { FullscreenVideoPlayer } from '../components/FullscreenVideoPlayer';
 import { AnimatedFeedback } from '../shared/AnimatedFeedback';
 import { EnhancedChallenge, MediaCapture, VideoSegment, GuessResult } from '../types';
 import { store } from '../store';
+import { useTokenBalance } from '../hooks/useTokenBalance';
+import { getApiBaseUrl, makeAuthenticatedRequest } from '../services/tokenAPI';
 
 const { width: screenWidth, height: screenHeight } = Dimensions.get('window');
 
@@ -134,9 +136,12 @@ export const FullscreenGuessScreen: React.FC<FullscreenGuessScreenProps> = ({
     (state) => state.guessingGame
   );
   const currentUser = useAppSelector(selectUser);
+  const { balance: tokenBalance, refresh: refreshTokenBalance } = useTokenBalance();
 
   const [selectedStatement, setSelectedStatement] = useState<number | null>(null);
   const [showVideo, setShowVideo] = useState(false);
+  const [disabledStatements, setDisabledStatements] = useState<number[]>([]);
+  const [hintUsed, setHintUsed] = useState(false);
 
   const isOwner = challenge?.creatorId === currentUser?.id;
 
@@ -403,6 +408,77 @@ export const FullscreenGuessScreen: React.FC<FullscreenGuessScreenProps> = ({
     onComplete?.();
   }, [dispatch, onComplete]);
 
+  // Handle hint token usage
+  const handleUseHint = useCallback(async () => {
+    if (tokenBalance <= 0) {
+      Alert.alert(
+        'Insufficient Tokens',
+        'You need at least 1 token to use a hint. Purchase tokens from the store.',
+        [{ text: 'OK' }]
+      );
+      return;
+    }
+
+    try {
+      // Make API request to use hint
+      const response = await makeAuthenticatedRequest(`${getApiBaseUrl()}/api/hints/use`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      });
+
+      if (response.success) {
+        // Update local token balance
+        dispatch(updateUserScore((currentUser?.score || 0))); // Trigger token balance refresh
+
+        // Implement 50/50 hint logic - disable one of the two truth statements
+        if (!hintUsed && challenge?.statements) {
+          const lieIndex = challenge.statements.findIndex(stmt => stmt.isLie);
+          const truthIndices = challenge.statements
+            .map((stmt, idx) => ({ stmt, idx }))
+            .filter(({ stmt }) => !stmt.isLie)
+            .map(({ idx }) => idx);
+
+          if (truthIndices.length >= 2) {
+            // Randomly disable one of the truth statements
+            const randomTruthIndex = truthIndices[Math.floor(Math.random() * truthIndices.length)];
+            setDisabledStatements([randomTruthIndex]);
+            setHintUsed(true);
+
+            Alert.alert(
+              'Hint Used! 💡',
+              'One incorrect option has been eliminated.',
+              [{ text: 'Got it!' }]
+            );
+
+            // Haptic feedback for successful hint
+            HapticsService.triggerImpact('medium');
+          }
+        }
+
+        // Refresh token balance
+        await refreshTokenBalance();
+      }
+    } catch (error: any) {
+      console.error('Failed to use hint:', error);
+      
+      if (error.status === 402) {
+        Alert.alert(
+          'Insufficient Tokens',
+          'You need at least 1 token to use a hint. Purchase tokens from the store.',
+          [{ text: 'OK' }]
+        );
+      } else {
+        Alert.alert(
+          'Error',
+          'Failed to use hint. Please try again.',
+          [{ text: 'OK' }]
+        );
+      }
+    }
+  }, [tokenBalance, hintUsed, challenge, currentUser, dispatch, refreshTokenBalance]);
+
   // Statement button component with gesture handling
   const StatementButton: React.FC<{
     index: number;
@@ -410,6 +486,7 @@ export const FullscreenGuessScreen: React.FC<FullscreenGuessScreenProps> = ({
   }> = ({ index, isSelected }) => {
     const pressStartTime = useRef<number>(0);
     const longPressTriggered = useRef<boolean>(false);
+    const isDisabled = disabledStatements.includes(index);
 
     // Create a custom long press handler for this button
     const wrappedLongPressCallback = useCallback(() => {
@@ -424,8 +501,11 @@ export const FullscreenGuessScreen: React.FC<FullscreenGuessScreenProps> = ({
         style={[
           styles.statementButton,
           isSelected && styles.selectedStatementButton,
+          isDisabled && styles.disabledStatementButton,
         ]}
         onPressIn={() => {
+          if (isDisabled) return;
+          
           pressStartTime.current = Date.now();
           longPressTriggered.current = false;
           customLongPressHandler.startPress();
@@ -434,6 +514,8 @@ export const FullscreenGuessScreen: React.FC<FullscreenGuessScreenProps> = ({
           HapticsService.triggerImpact('light');
         }}
         onPressOut={() => {
+          if (isDisabled) return;
+          
           const pressDuration = Date.now() - pressStartTime.current;
           customLongPressHandler.endPress();
           
@@ -442,8 +524,8 @@ export const FullscreenGuessScreen: React.FC<FullscreenGuessScreenProps> = ({
             handleStatementTap(index);
           }
         }}
-        disabled={guessSubmitted}
-        activeOpacity={0.8}
+        disabled={guessSubmitted || isDisabled}
+        activeOpacity={isDisabled ? 1 : 0.8}
       >
         {/* Circular Progress Indicator */}
         <Animated.View
@@ -556,6 +638,28 @@ export const FullscreenGuessScreen: React.FC<FullscreenGuessScreenProps> = ({
 
       {/* Bottom statement selector buttons */}
       <View style={styles.bottomControls}>
+        {/* Hint button */}
+        {!guessSubmitted && !hintUsed && (
+          <View style={styles.hintContainer}>
+            <TouchableOpacity
+              style={[
+                styles.hintButton,
+                tokenBalance <= 0 && styles.hintButtonDisabled
+              ]}
+              onPress={handleUseHint}
+              disabled={tokenBalance <= 0}
+              activeOpacity={0.7}
+            >
+              <Text style={[
+                styles.hintButtonText,
+                tokenBalance <= 0 && styles.hintButtonTextDisabled
+              ]}>
+                Use Hint (💎1)
+              </Text>
+            </TouchableOpacity>
+          </View>
+        )}
+
         <View style={styles.statementButtonsContainer}>
           <StatementButton
             index={0}
@@ -576,7 +680,9 @@ export const FullscreenGuessScreen: React.FC<FullscreenGuessScreenProps> = ({
           <Text style={styles.instructionText}>
             {guessSubmitted 
               ? 'Challenge complete!' 
-              : 'Tap to watch • Hold to select and submit'
+              : hintUsed 
+                ? 'One incorrect option eliminated • Tap to watch • Hold to select'
+                : 'Tap to watch • Hold to select and submit'
             }
           </Text>
         </View>
@@ -864,6 +970,38 @@ const styles = StyleSheet.create({
     backgroundColor: 'rgba(255, 255, 255, 0.3)',
     top: -3,
     left: -3,
+  },
+  // Hint button styles
+  hintContainer: {
+    alignItems: 'center',
+    marginBottom: 15,
+  },
+  hintButton: {
+    backgroundColor: 'rgba(76, 175, 80, 0.9)', // Green background
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderRadius: 25,
+    borderWidth: 2,
+    borderColor: 'rgba(255, 255, 255, 0.3)',
+  },
+  hintButtonDisabled: {
+    backgroundColor: 'rgba(128, 128, 128, 0.5)', // Gray when disabled
+    borderColor: 'rgba(255, 255, 255, 0.1)',
+  },
+  hintButtonText: {
+    color: '#ffffff',
+    fontSize: 16,
+    fontWeight: '600',
+    textAlign: 'center',
+  },
+  hintButtonTextDisabled: {
+    color: 'rgba(255, 255, 255, 0.4)',
+  },
+  // Disabled statement button style
+  disabledStatementButton: {
+    backgroundColor: 'rgba(128, 128, 128, 0.3)',
+    borderColor: 'rgba(255, 255, 255, 0.2)',
+    opacity: 0.5,
   },
 });
 
