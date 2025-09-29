@@ -62,11 +62,6 @@ class AuthService:
         
         encoded_jwt = jwt.encode(to_encode, settings.SECRET_KEY, algorithm=settings.ALGORITHM)
         
-        # === DIAGNOSTIC LOGGING FOR JWT TOKENS ===
-        print(f"=== BEGIN JWT FOR USER {data.get('sub', 'UNKNOWN')} ===")
-        print(encoded_jwt)
-        print("=== END JWT ===")
-        
         # Store session in database for persistent session management
         user_id = data.get("sub")
         session_type = data.get("type", "user")

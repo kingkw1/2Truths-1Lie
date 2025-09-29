@@ -64,6 +64,7 @@ from api.admin_endpoints import router as admin_router
 from api.monitoring_endpoints import router as monitoring_router
 from api.token_endpoints import router as token_router
 from api.hint_endpoints import router as hint_router
+from api.hint_endpoints_simple import router as hint_simple_router
 
 app.include_router(challenge_router)
 app.include_router(challenge_video_router)
@@ -72,6 +73,7 @@ app.include_router(admin_router)
 app.include_router(monitoring_router)
 app.include_router(token_router)
 app.include_router(hint_router)
+app.include_router(hint_simple_router)
 
 # CORS middleware for frontend integration
 app.add_middleware(
