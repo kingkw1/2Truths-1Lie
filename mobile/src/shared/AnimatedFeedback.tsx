@@ -5,9 +5,12 @@
  */
 
 import React, { useState, useEffect, useRef } from 'react';
-import { View, Text, StyleSheet, Animated, Dimensions, Platform } from 'react-native';
+import { View, Text, StyleSheet, Animated, Dimensions, Platform, TextInput } from 'react-native';
 import * as Haptics from 'expo-haptics';
 import { GuessResult } from '../types';
+
+// Create an Animated TextInput component
+const AnimatedTextInput = Animated.createAnimatedComponent(TextInput);
 
 interface AnimatedFeedbackProps {
   result: GuessResult | null | undefined;
@@ -29,10 +32,12 @@ export const AnimatedFeedback: React.FC<AnimatedFeedbackProps> = ({
     console.log('🎬 AnimatedFeedback: No result provided, not rendering');
     return null;
   }
+
   const [animationPhase, setAnimationPhase] = useState<'initial' | 'result' | 'score' | 'streak' | 'complete'>('initial');
-  const [scoreCounter, setScoreCounter] = useState(0);
   const animationStartedRef = useRef(false);
   const stableResultRef = useRef(result);
+  const scoreValue = useRef(new Animated.Value(0)).current;
+  const textInputRef = useRef<TextInput>(null);
 
   // Animated values
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -53,8 +58,32 @@ export const AnimatedFeedback: React.FC<AnimatedFeedbackProps> = ({
   // Use the stable result for all animations
   const stableResult = stableResultRef.current;
 
+  // Add a listener to the animated value to update the text input
+  useEffect(() => {
+    const listener = scoreValue.addListener(v => {
+      if (textInputRef.current) {
+        const scoreText = `+${Math.round(v.value).toLocaleString()} points`;
+        textInputRef.current.setNativeProps({ text: scoreText });
+      }
+    });
+
+    return () => {
+      scoreValue.removeListener(listener);
+    };
+  }, [scoreValue]);
+
   useEffect(() => {
     console.log('🎬 AnimatedFeedback component mounted with result:', stableResult);
+
+    const animateScore = () => {
+      // We don't use the native driver here because this is updating a prop on a JS component.
+      Animated.timing(scoreValue, {
+        toValue: stableResult.totalScore,
+        duration: 1000,
+        useNativeDriver: false,
+      }).start();
+    };
+
     const sequence = async () => {
       // Haptic feedback
       if (Platform.OS === 'ios') {
@@ -136,23 +165,6 @@ export const AnimatedFeedback: React.FC<AnimatedFeedbackProps> = ({
     sequence();
   }, [stableResult, showStreakAnimation, currentStreak, onAnimationComplete]);
 
-  const animateScore = () => {
-    const duration = 1000;
-    const steps = 30;
-    const increment = stableResult.totalScore / steps;
-    let current = 0;
-    
-    const timer = setInterval(() => {
-      current += increment;
-      if (current >= stableResult.totalScore) {
-        setScoreCounter(stableResult.totalScore);
-        clearInterval(timer);
-      } else {
-        setScoreCounter(Math.floor(current));
-      }
-    }, duration / steps);
-  };
-
   const animateParticles = () => {
     const animations = particleAnims.map((anim, index) => 
       Animated.sequence([
@@ -224,9 +236,13 @@ export const AnimatedFeedback: React.FC<AnimatedFeedbackProps> = ({
             styles.scoreContainer,
             { transform: [{ scale: scoreScaleAnim }] }
           ]}>
-            <Text style={styles.scoreDisplay}>
-              +{scoreCounter.toLocaleString()} points
-            </Text>
+            <AnimatedTextInput
+              ref={textInputRef}
+              style={styles.scoreDisplay}
+              defaultValue="+0 points"
+              editable={false}
+              underlineColorAndroid="transparent"
+            />
             
             {/* Score Breakdown */}
             <View style={styles.scoreBreakdown}>
