@@ -24,6 +24,7 @@ import {
   Alert,
   PanResponder,
   Animated,
+  ActivityIndicator,
 } from 'react-native';
 import { Video, AVPlaybackStatus, ResizeMode } from 'expo-av';
 import HapticsService from '../services/HapticsService';
@@ -142,6 +143,10 @@ export const FullscreenGuessScreen: React.FC<FullscreenGuessScreenProps> = ({
   const [showVideo, setShowVideo] = useState(false);
   const [disabledStatements, setDisabledStatements] = useState<number[]>([]);
   const [hintUsed, setHintUsed] = useState(false);
+  const [isAnimating, setIsAnimating] = useState(false);
+  const [isModalVisible, setIsModalVisible] = useState(false);
+  const [finalResult, setFinalResult] = useState<GuessResult | null>(null);
+  const [animationResult, setAnimationResult] = useState<GuessResult | null>(null);
 
   const isOwner = challenge?.creatorId === currentUser?.id;
 
@@ -230,27 +235,44 @@ export const FullscreenGuessScreen: React.FC<FullscreenGuessScreenProps> = ({
   }, [guessSubmitted, mergedVideo]);
 
   const handleStatementLongPress = useCallback(async (index: number) => {
-    if (guessSubmitted) return;
-    
+    if (guessSubmitted || isAnimating) return; // Prevent multiple submissions
+
     console.log(`🔥 FULLSCREEN_SCREEN: Statement ${index + 1} long-pressed - submitting guess`);
     setSelectedStatement(index);
-    
-    // Submit guess automatically on long press
-    dispatch(submitGuess(index));
+    HapticsService.triggerImpact('heavy');
 
-    // Handle guess result with REAL API call
+    // 1. Determine preliminary result for immediate animation
+    if (!currentSession) return;
+
+    const correctStatement = currentSession.statements.findIndex((stmt: any) => stmt.isLie);
+    const wasCorrect = index === correctStatement;
+
+    const preliminaryResult: GuessResult = {
+      sessionId: currentSession.sessionId,
+      playerId: currentSession.playerId,
+      challengeId: currentSession.challengeId,
+      guessedStatement: index,
+      correctStatement,
+      wasCorrect,
+      pointsEarned: wasCorrect ? 10 : 0,
+      timeBonus: 0,
+      accuracyBonus: 0,
+      streakBonus: 0,
+      totalScore: wasCorrect ? 10 : 0,
+      newAchievements: [],
+    };
+
+    // 2. Trigger animation immediately
+    setAnimationResult(preliminaryResult);
+    setIsAnimating(true);
+    dispatch(submitGuess(index)); // Mark as submitted in Redux
+
+    // 3. Handle API call in the background
     try {
-      if (!currentSession) return;
-      
-      // Get the statement ID that the user guessed
       const guessedStatement = currentSession.statements[index];
       const guessedStatementId = guessedStatement?.id || `statement_${index}`;
       
-      console.log(`🎯 API_CALL: Submitting guess to backend API`);
-      console.log(`🎯 API_CALL: Challenge ID: ${currentSession.challengeId}`);
-      console.log(`🎯 API_CALL: Guessed Statement ID: ${guessedStatementId}`);
-      
-      // Call real backend API
+      console.log(`🎯 API_CALL: Submitting guess to backend API in background`);
       const apiResponse = await realChallengeAPI.submitGuess(
         currentSession.challengeId,
         guessedStatementId
@@ -258,153 +280,43 @@ export const FullscreenGuessScreen: React.FC<FullscreenGuessScreenProps> = ({
       
       if (apiResponse.success && apiResponse.data) {
         const backendResult = apiResponse.data;
-        console.log(`✅ API_SUCCESS: Backend response:`, backendResult);
+        console.log(`✅ API_SUCCESS: Backend response received:`, backendResult);
         
-        // Import updateUserScore action
-        const { updateUserScore } = await import('../store/slices/authSlice');
-        
-        // Update user score in Redux if points were earned
         if (backendResult.points_earned > 0) {
-          console.log(`💰 SCORE_UPDATE: User earned ${backendResult.points_earned} points`);
-          
-          // Get current user score and add earned points
           const currentUser = (store.getState() as any).auth.user;
           if (currentUser) {
             const newScore = (currentUser.score || 0) + backendResult.points_earned;
             dispatch(updateUserScore(newScore));
-            console.log(`✅ SCORE_UPDATED: User score updated to ${newScore}`);
           }
         }
         
-        // Find the correct statement index for revealing the answer
-        const correctStatement = currentSession.statements.findIndex((stmt: any) => stmt.isLie);
-        
-        // Create result object based on backend response
         const realResult: GuessResult = {
-          sessionId: currentSession.sessionId,
-          playerId: currentSession.playerId,
-          challengeId: currentSession.challengeId,
-          guessedStatement: index,
-          correctStatement,
-          wasCorrect: backendResult.correct,
+          ...preliminaryResult,
           pointsEarned: backendResult.points_earned,
-          timeBonus: 0, // Backend doesn't provide time bonus yet
-          accuracyBonus: 0, // Backend doesn't provide accuracy bonus yet
-          streakBonus: 0, // Backend doesn't provide streak bonus yet
           totalScore: backendResult.points_earned,
-          newAchievements: [], // Backend doesn't provide achievements yet
         };
-
-        dispatch(setGuessResult(realResult));
         
-        // Trigger haptic feedback based on result
-        if (backendResult.correct) {
-          HapticsService.triggerNotification('success');
-        } else {
-          HapticsService.triggerNotification('warning');
-        }
-        
-        // Refresh the challenge list to remove attempted challenge (both correct AND incorrect)
-        // Add a small delay to allow backend to process the guess fully
-        console.log(`🔄 REFRESH: Refreshing challenge list after ${backendResult.correct ? 'correct' : 'incorrect'} guess`);
-        setTimeout(() => {
-          onRefreshChallenges?.();
-        }, 500); // 500ms delay
-        
-        // Automatically proceed to completion after showing result
-        setTimeout(() => {
-          onComplete?.();
-        }, 2000);
-        
+        setFinalResult(realResult);
       } else {
-        // Handle API error - fall back to mock behavior for now
         console.error(`❌ API_ERROR: Failed to submit guess:`, apiResponse.error);
-        
-        // Create fallback mock result
-        const correctStatement = currentSession.statements.findIndex((stmt: any) => stmt.isLie);
-        const wasCorrect = index === correctStatement;
-
-        const fallbackResult: GuessResult = {
-          sessionId: currentSession.sessionId,
-          playerId: currentSession.playerId,
-          challengeId: currentSession.challengeId,
-          guessedStatement: index,
-          correctStatement,
-          wasCorrect,
-          pointsEarned: wasCorrect ? 100 : 0,
-          timeBonus: 20,
-          accuracyBonus: wasCorrect ? 30 : 0,
-          streakBonus: wasCorrect ? 10 : 0,
-          totalScore: wasCorrect ? 160 : 0,
-          newAchievements: wasCorrect ? ['first_correct_guess'] : [],
-        };
-
-        dispatch(setGuessResult(fallbackResult));
-        
-        // Trigger haptic feedback for fallback case
-        if (wasCorrect) {
-          HapticsService.triggerNotification('success');
-        } else {
-          HapticsService.triggerNotification('warning');
-        }
-        
-        // Also refresh challenge list for fallback case
-        // Add a small delay to allow backend to process the guess fully
-        console.log(`🔄 REFRESH: Refreshing challenge list after fallback ${wasCorrect ? 'correct' : 'incorrect'} guess`);
-        setTimeout(() => {
-          onRefreshChallenges?.();
-        }, 500); // 500ms delay
-        
-        setTimeout(() => {
-          onComplete?.();
-        }, 2000);
+        setFinalResult(preliminaryResult); // Use preliminary as fallback
       }
-      
     } catch (error) {
       console.error(`❌ GUESS_SUBMISSION_ERROR:`, error);
-      
-      // Create fallback mock result on error
-      if (currentSession) {
-        const correctStatement = currentSession.statements.findIndex((stmt: any) => stmt.isLie);
-        const wasCorrect = index === correctStatement;
-
-        const errorFallbackResult: GuessResult = {
-          sessionId: currentSession.sessionId,
-          playerId: currentSession.playerId,
-          challengeId: currentSession.challengeId,
-          guessedStatement: index,
-          correctStatement,
-          wasCorrect,
-          pointsEarned: wasCorrect ? 100 : 0,
-          timeBonus: 20,
-          accuracyBonus: wasCorrect ? 30 : 0,
-          streakBonus: wasCorrect ? 10 : 0,
-          totalScore: wasCorrect ? 160 : 0,
-          newAchievements: wasCorrect ? ['first_correct_guess'] : [],
-        };
-
-        dispatch(setGuessResult(errorFallbackResult));
-        
-        // Trigger haptic feedback for error fallback case
-        if (wasCorrect) {
-          HapticsService.triggerNotification('success');
-        } else {
-          HapticsService.triggerNotification('warning');
-        }
-        
-        setTimeout(() => {
-          onComplete?.();
-        }, 2000);
-      }
+      setFinalResult(preliminaryResult); // Use preliminary as fallback
     }
 
-    // Strong haptic feedback for submission
-    HapticsService.triggerImpact('heavy');
-  }, [guessSubmitted, currentSession, dispatch, onComplete]);
+    // Refresh challenges in the background
+    setTimeout(() => {
+      onRefreshChallenges?.();
+    }, 500);
 
-  const handleNewGame = useCallback(() => {
+  }, [guessSubmitted, currentSession, dispatch, isAnimating, onRefreshChallenges]);
+
+  const handleCloseModal = useCallback(() => {
+    setIsModalVisible(false);
+    setFinalResult(null);
     dispatch(endGuessingSession());
-    // Instead of going back to home screen, trigger completion to return to challenge browser
     onComplete?.();
   }, [dispatch, onComplete]);
 
@@ -688,41 +600,48 @@ export const FullscreenGuessScreen: React.FC<FullscreenGuessScreenProps> = ({
         </View>
       </View>
 
-      {/* Results feedback overlay */}
-      {guessResult && (
+      {/* Results Modal */}
+      {isModalVisible && (
         <View style={styles.resultsOverlay}>
           <View style={styles.resultsContainer}>
-            <Text style={[
-              styles.resultText,
-              guessResult.wasCorrect ? styles.correctText : styles.incorrectText
-            ]}>
-              {guessResult.wasCorrect ? '🎉 Correct!' : '❌ Wrong!'}
-            </Text>
-            <Text style={styles.lieRevealText}>
-              The lie was statement {guessResult.correctStatement + 1}
-            </Text>
-            <Text style={styles.scoreText}>
-              +{guessResult.totalScore} points
-            </Text>
-            
-            <TouchableOpacity
-              style={styles.playAgainButton}
-              onPress={handleNewGame}
-            >
-              <Text style={styles.playAgainText}>Play Again</Text>
-            </TouchableOpacity>
+            {finalResult ? (
+              <>
+                <Text style={[
+                  styles.resultText,
+                  finalResult.wasCorrect ? styles.correctText : styles.incorrectText
+                ]}>
+                  {finalResult.wasCorrect ? '🎉 Correct!' : '❌ Wrong!'}
+                </Text>
+                <Text style={styles.lieRevealText}>
+                  The lie was statement {finalResult.correctStatement + 1}
+                </Text>
+                <Text style={styles.scoreText}>
+                  +{finalResult.totalScore} points
+                </Text>
+                <TouchableOpacity
+                  style={styles.playAgainButton}
+                  onPress={handleCloseModal}
+                >
+                  <Text style={styles.playAgainText}>Back to Challenges</Text>
+                </TouchableOpacity>
+              </>
+            ) : (
+              <ActivityIndicator size="large" color="#007AFF" />
+            )}
           </View>
         </View>
       )}
 
       {/* Animated feedback for streaks and achievements */}
-      {guessResult && (
+      {isAnimating && animationResult && (
         <AnimatedFeedback
-          result={guessResult}
+          result={animationResult}
           currentStreak={currentStreak}
           showStreakAnimation={currentStreak > 1}
           onAnimationComplete={() => {
-            dispatch(clearGuessResult());
+            setIsAnimating(false);
+            setIsModalVisible(true);
+            setAnimationResult(null); // Clean up animation state
           }}
         />
       )}
