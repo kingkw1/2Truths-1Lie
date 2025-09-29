@@ -3,16 +3,22 @@ User-specific API Endpoints
 Handles user guesses, user challenges, and rate limiting
 """
 
-from typing import List, Optional
+from typing import List, Optional, Dict, Any
 from fastapi import APIRouter, Depends, HTTPException, status
+from pydantic import BaseModel
 import logging
 
-from services.auth_service import get_current_user
+from services.auth_service import get_current_user, get_db_service
+from services.database_service import DatabaseService
 from services.challenge_service import challenge_service
-from models import Challenge, ChallengeListResponse
+from models import Challenge, ChallengeListResponse, User
 
 logger = logging.getLogger(__name__)
 router = APIRouter(prefix="/api/v1/users", tags=["users"])
+
+class UserProfileUpdate(BaseModel):
+    name: Optional[str] = None
+    score: Optional[int] = None
 
 
 @router.get("/me/guesses")
@@ -33,6 +39,50 @@ async def get_my_guesses(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to get user guesses"
+        )
+
+@router.patch("/me/profile", response_model=User)
+async def update_my_profile(
+    profile_update: UserProfileUpdate,
+    current_user: Dict[str, Any] = Depends(get_current_user),
+    db_service: DatabaseService = Depends(get_db_service)
+):
+    """
+    Update the current user's profile
+    """
+    try:
+        user_id = current_user.get("id")
+        if not user_id:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Could not validate credentials",
+            )
+
+        update_data = profile_update.model_dump(exclude_unset=True)
+
+        if not update_data:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="No update data provided"
+            )
+
+        updated_user = db_service.update_user_profile(user_id, update_data)
+
+        if not updated_user:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="User not found"
+            )
+
+        return updated_user
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to update profile for user {current_user.get('id')}: {str(e)}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to update user profile"
         )
 
 

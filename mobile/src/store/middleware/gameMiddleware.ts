@@ -5,6 +5,7 @@
 
 import { Middleware } from '@reduxjs/toolkit';
 import storage from '../../utils/storage';
+import { updateUserProfile } from '../slices/authSlice';
 import { 
   addExperience, 
   addAchievement, 
@@ -67,6 +68,14 @@ export const gameMiddleware: Middleware = (store) => (next) => (action: any) => 
           streakIncrement: true 
         }));
         
+        // Update user score
+        const { user } = state.auth;
+        if (user) {
+          const currentScore = user.score || 0;
+          const newScore = currentScore + 10; // Add 10 points for correct guess
+          store.dispatch(updateUserProfile({ score: newScore }));
+        }
+
         // Check for streak achievements
         const currentStreak = (state.playerProgression.progression?.currentStreak || 0) + 1;
         if (currentStreak === 5) {

@@ -335,17 +335,37 @@ export class AuthService {
    * Update user profile
    */
   public async updateProfile(updates: Partial<AuthUser>): Promise<AuthUser> {
-    if (!this.currentUser) {
-      throw new Error('No user logged in');
+    if (!this.currentUser || !this.authToken) {
+      throw new Error('No user logged in or no auth token');
     }
 
-    this.currentUser = {
-      ...this.currentUser,
-      ...updates,
-    };
+    try {
+      const response = await fetch(`${this.getApiBaseUrl()}/api/v1/users/me/profile`, {
+        method: 'PATCH',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${this.authToken}`,
+        },
+        body: JSON.stringify(updates),
+      });
 
-    await AsyncStorage.setItem('currentUser', JSON.stringify(this.currentUser));
-    return this.currentUser;
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({ detail: 'Failed to update profile' }));
+        throw new Error(errorData.detail || 'Failed to update profile');
+      }
+
+      const updatedUser: AuthUser = await response.json();
+
+      this.currentUser = updatedUser;
+      await AsyncStorage.setItem('currentUser', JSON.stringify(this.currentUser));
+
+      console.log('✅ User profile updated successfully:', this.currentUser);
+      return this.currentUser;
+
+    } catch (error: any) {
+      console.error('❌ Profile update failed:', error);
+      throw this.normalizeAuthError(error);
+    }
   }
 
   /**
