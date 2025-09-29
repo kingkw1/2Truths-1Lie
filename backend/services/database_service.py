@@ -356,6 +356,9 @@ class DatabaseService:
         # Initialize bcrypt context with robust error handling
         try:
             self.pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+            # Test the context to ensure it works properly
+            test_result = self.pwd_context.hash("test")
+            self.use_direct_bcrypt = False
             logger.info("bcrypt context initialized successfully")
         except Exception as e:
             logger.error(f"bcrypt initialization failed: {e}")
@@ -364,12 +367,13 @@ class DatabaseService:
                 import bcrypt
                 # Use direct bcrypt instead of passlib if initialization fails
                 self.use_direct_bcrypt = True
+                self.pwd_context = None  # Set to None to avoid using it
                 logger.warning("Falling back to direct bcrypt implementation")
             except ImportError:
                 logger.error("bcrypt library not available")
                 raise RuntimeError(f"Password hashing initialization failed: {e}")
         
-        # Set fallback flag
+        # Set fallback flag if not already set
         self.use_direct_bcrypt = getattr(self, 'use_direct_bcrypt', False)
         
         # Set up database-specific properties
@@ -1655,17 +1659,36 @@ class DatabaseService:
             password_bytes = password.encode('utf-8')[:72]
             password = password_bytes.decode('utf-8', errors='ignore')
         
-        if self.use_direct_bcrypt:
-            import bcrypt
-            # Encode password to bytes and hash directly
-            password_bytes = password.encode('utf-8')[:72]  # Ensure byte limit
-            salt = bcrypt.gensalt()
-            return bcrypt.hashpw(password_bytes, salt).decode('utf-8')
-        else:
-            # For passlib, also ensure password is within byte limits
-            password_bytes = password.encode('utf-8')[:72]
-            password = password_bytes.decode('utf-8', errors='ignore')
-            return self.pwd_context.hash(password)
+        # Try direct bcrypt first if passlib failed, or if explicitly configured
+        if self.use_direct_bcrypt or self.pwd_context is None:
+            try:
+                import bcrypt
+                # Encode password to bytes and hash directly
+                password_bytes = password.encode('utf-8')[:72]  # Ensure byte limit
+                salt = bcrypt.gensalt()
+                return bcrypt.hashpw(password_bytes, salt).decode('utf-8')
+            except Exception as e:
+                logger.error(f"Direct bcrypt hashing failed: {e}")
+                if self.pwd_context is None:
+                    raise RuntimeError(f"Password hashing failed: {e}")
+        
+        # Fall back to passlib if available
+        if self.pwd_context is not None:
+            try:
+                # For passlib, also ensure password is within byte limits
+                password_bytes = password.encode('utf-8')[:72]
+                password = password_bytes.decode('utf-8', errors='ignore')
+                return self.pwd_context.hash(password)
+            except Exception as e:
+                logger.error(f"Passlib bcrypt hashing failed: {e}")
+                # Try direct bcrypt as last resort
+                import bcrypt
+                password_bytes = password.encode('utf-8')[:72]
+                salt = bcrypt.gensalt()
+                return bcrypt.hashpw(password_bytes, salt).decode('utf-8')
+        
+        # This should not happen if initialization worked properly
+        raise RuntimeError("No password hashing method available")
     
     def verify_password(self, plain_password: str, hashed_password: str) -> bool:
         """Verify a password against its hash"""
@@ -1676,17 +1699,36 @@ class DatabaseService:
                 password_bytes = plain_password.encode('utf-8')[:72]
                 plain_password = password_bytes.decode('utf-8', errors='ignore')
             
-            if self.use_direct_bcrypt:
-                import bcrypt
-                # Use direct bcrypt verification
-                password_bytes = plain_password.encode('utf-8')[:72]
-                hash_bytes = hashed_password.encode('utf-8')
-                return bcrypt.checkpw(password_bytes, hash_bytes)
-            else:
-                # For passlib, also ensure password is within byte limits
-                password_bytes = plain_password.encode('utf-8')[:72]
-                plain_password = password_bytes.decode('utf-8', errors='ignore')
-                return self.pwd_context.verify(plain_password, hashed_password)
+            # Try direct bcrypt first if passlib failed, or if explicitly configured
+            if self.use_direct_bcrypt or self.pwd_context is None:
+                try:
+                    import bcrypt
+                    # Use direct bcrypt verification
+                    password_bytes = plain_password.encode('utf-8')[:72]
+                    hash_bytes = hashed_password.encode('utf-8')
+                    return bcrypt.checkpw(password_bytes, hash_bytes)
+                except Exception as e:
+                    logger.error(f"Direct bcrypt verification failed: {e}")
+                    if self.pwd_context is None:
+                        return False
+            
+            # Fall back to passlib if available
+            if self.pwd_context is not None:
+                try:
+                    # For passlib, also ensure password is within byte limits
+                    password_bytes = plain_password.encode('utf-8')[:72]
+                    plain_password = password_bytes.decode('utf-8', errors='ignore')
+                    return self.pwd_context.verify(plain_password, hashed_password)
+                except Exception as e:
+                    logger.error(f"Passlib bcrypt verification failed: {e}")
+                    # Try direct bcrypt as last resort
+                    import bcrypt
+                    password_bytes = plain_password.encode('utf-8')[:72]
+                    hash_bytes = hashed_password.encode('utf-8')
+                    return bcrypt.checkpw(password_bytes, hash_bytes)
+            
+            # This should not happen if initialization worked properly
+            return False
                 
         except ValueError as e:
             if "password cannot be longer than 72 bytes" in str(e):
