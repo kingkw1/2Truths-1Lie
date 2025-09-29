@@ -337,7 +337,21 @@ async def list_challenges_authenticated(
             # Add merged video information if available
             if challenge.is_merged_video:
                 # Generate signed URL for merged video
-                signed_video_url = await get_signed_url_for_video(challenge.merged_video_url, user_id)
+                merged_video_url = challenge.merged_video_url
+                
+                # If merged_video_url is null, try to extract it from statements (legacy challenges)
+                if not merged_video_url and challenge_dict.get("statements"):
+                    # Look for merged video URL in the first statement (they all point to the same merged video)
+                    first_statement = challenge_dict["statements"][0]
+                    if first_statement.get("media_url"):
+                        # Extract S3 key from the statement's media_url
+                        legacy_url = first_statement["media_url"]
+                        s3_key = extract_s3_key_from_url(legacy_url)
+                        if s3_key:
+                            merged_video_url = s3_key  # Use the S3 key for regeneration
+                            logger.info(f"Extracted merged video S3 key from statements: {s3_key}")
+                
+                signed_video_url = await get_signed_url_for_video(merged_video_url, user_id)
                 
                 challenge_dict["merged_video_info"] = {
                     "has_merged_video": True,
