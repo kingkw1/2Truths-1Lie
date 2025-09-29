@@ -77,7 +77,22 @@ async def get_signed_url_for_video(video_url: str, user_id: str = None) -> str:
     if not video_url:
         return video_url
     
-    # Check if it's already a full URL (http/https)
+    # Check if it's already a full S3 URL (always regenerate these to ensure they're not expired)
+    if video_url.startswith('https://') and 's3.amazonaws.com' in video_url:
+        # Extract S3 key from the URL and regenerate signed URL
+        s3_key = extract_s3_key_from_url(video_url)
+        if s3_key:
+            try:
+                cloud_storage = await get_cloud_storage_service()
+                if cloud_storage:
+                    signed_url = await cloud_storage.get_file_url(s3_key)
+                    logger.info(f"Regenerated S3 signed URL for key: {s3_key}")
+                    return signed_url
+            except Exception as e:
+                logger.error(f"Failed to regenerate S3 signed URL for {video_url}: {e}")
+        # If we can't regenerate, fall through to other checks
+    
+    # Check if it's already a full URL (http/https) that's not S3
     if video_url.startswith(('http://', 'https://')):
         return video_url
     
