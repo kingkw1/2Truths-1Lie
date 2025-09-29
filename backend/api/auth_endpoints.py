@@ -89,13 +89,21 @@ async def register(request: RegisterRequest):
         
         logger.info(f"New user registered: {request.email}")
         
-        user_data['id'] = str(user_data['id'])
         return TokenResponse(
             access_token=access_token,
             refresh_token=refresh_token,
             expires_in=1800,  # 30 minutes
             permissions=["media:read", "media:upload", "media:delete", "challenge:create", "challenge:read", "challenge:play"],
-            user=User(**user_data)
+            user=User(
+                id=str(user_data["id"]),
+                email=user_data["email"],
+                name=user_data.get("name"),
+                score=user_data.get("score", 0),
+                is_premium=user_data.get("is_premium", False),
+                created_at=user_data["created_at"],
+                is_active=user_data["is_active"],
+                last_login=user_data.get("last_login"),
+            )
         )
         
     except HTTPException:
@@ -141,13 +149,21 @@ async def login(request: LoginRequest):
         
         logger.info(f"User logged in successfully: {request.email}")
         
-        user_data['id'] = str(user_data['id'])
         return TokenResponse(
             access_token=access_token,
             refresh_token=refresh_token,
             expires_in=1800,  # 30 minutes
             permissions=["media:read", "media:upload", "media:delete", "challenge:create", "challenge:read", "challenge:play"],
-            user=User(**user_data)
+            user=User(
+                id=str(user_data["id"]),
+                email=user_data["email"],
+                name=user_data.get("name"),
+                score=user_data.get("score", 0),
+                is_premium=user_data.get("is_premium", False),
+                created_at=user_data["created_at"],
+                is_active=user_data["is_active"],
+                last_login=user_data.get("last_login"),
+            )
         )
         
     except HTTPException:
@@ -350,8 +366,16 @@ async def get_current_user_info(
                 detail="User not found"
             )
 
-        user_info['id'] = str(user_info['id'])
-        return User(**user_info)
+        return User(
+            id=str(user_info["id"]),
+            email=user_info["email"],
+            name=user_info.get("name"),
+            score=user_info.get("score", 0),
+            is_premium=user_info.get("is_premium", False),
+            created_at=user_info["created_at"],
+            is_active=user_info["is_active"],
+            last_login=user_info.get("last_login"),
+        )
         
     except Exception as e:
         logger.error(f"Error getting user info: {e}")
