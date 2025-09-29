@@ -499,6 +499,40 @@ export class RealChallengeAPIService {
       };
     }
   }
+
+  async getCreationStatus(): Promise<APIResponse<{ canCreate: boolean }>> {
+    try {
+      console.log('🎯 CHALLENGE: Checking creation status');
+
+      const headers = await this.getAuthHeaders();
+      const response = await fetch(`${this.baseUrl}/api/v1/challenges/creation-status`, {
+        method: 'GET',
+        headers,
+      });
+
+      if (!response.ok) {
+        const errorText = await response.text().catch(() => 'Unknown error');
+        throw new Error(`Failed to get creation status: ${response.status} ${errorText}`);
+      }
+
+      const result = await response.json();
+      console.log('✅ CHALLENGE: Creation status received:', result);
+
+      return {
+        success: true,
+        data: result,
+        timestamp: new Date(),
+      };
+
+    } catch (error: any) {
+      console.error('❌ CHALLENGE: Error getting creation status:', error);
+      return {
+        success: false,
+        error: error.message || 'Failed to get creation status',
+        timestamp: new Date(),
+      };
+    }
+  }
 }
 
 // Create singleton instance
