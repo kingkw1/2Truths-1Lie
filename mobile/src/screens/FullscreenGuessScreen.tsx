@@ -654,7 +654,7 @@ export const FullscreenGuessScreen: React.FC<FullscreenGuessScreenProps> = ({
                 styles.hintButtonText,
                 tokenBalance <= 0 && styles.hintButtonTextDisabled
               ]}>
-                Use Hint (💎1)
+                Use Hint (🪙1)
               </Text>
             </TouchableOpacity>
           </View>

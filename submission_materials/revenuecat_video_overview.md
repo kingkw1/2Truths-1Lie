@@ -39,7 +39,7 @@
     * **Visuals:** Show a free user trying to create too many challenges and hitting the rate limit. They are presented with the polished, hierarchical Store screen. Show a finger tapping the **"Annual (Best Value)"** option, then tapping the main **"Start 7-Day Free Trial"** button. Show the smooth Google Play purchase flow. The user returns to the app, and we see the "Pro" badge (🕵️) is now on their profile.
     * **VO:** "2Truths-1Lie uses a robust hybrid freemium model, **powered by the RevenueCat SDK**. Our 'Pro' subscription, accessible via a 7-day free trial, is for our most engaged users. It unlocks valuable perks like **unlimited challenge creation** and a monthly stipend of our virtual currency."
 * **Shot 6: Spending Tokens (1:45 - 2:05)**
-    * **Visuals:** Show the user playing a challenge. They hesitate, then tap the "Use Hint (💎1)" button. We see a "truth" option get disabled via the 50/50 hint. The user then makes the correct guess.
+    * **Visuals:** Show the user playing a challenge. They hesitate, then tap the "Use Hint (🪙1)" button. We see a "truth" option get disabled via the 50/50 hint. The user then makes the correct guess.
     * **VO:** "For players who want a competitive edge, consumable 'Tokens' can be purchased and spent on a '50/50' lie-detection hint. This strategy allows players to **pay for meaningful moments of gameplay**, minimizing friction for free users while offering compelling value for subscribers."
 
 ---

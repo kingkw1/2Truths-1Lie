@@ -32,7 +32,7 @@
 * **🏆 Persistent Scoring & Progression:** Correct guesses earn points that are tracked on your user profile. The game has real stakes!
 * **🧩 Challenge Completion:** A dynamic feed that hides challenges you've already solved, ensuring a fresh experience every time.
 * **✨ Premium Features:** A "Pro" subscription that unlocks valuable perks for our most dedicated players.
-* **💎 Consumable Hints:** Spendable "Tokens" provide a 50/50 hint to help you spot the lie.
+* **🪙 Consumable Hints:** Spendable "Tokens" provide a 50/50 hint to help you spot the lie.
 * **🌙 Polished UI/UX:** A beautiful, responsive interface featuring a hand-tuned Dark Mode and satisfying haptic feedback.
 
 ## 💰 Monetization Model (for the HAMM Award)
