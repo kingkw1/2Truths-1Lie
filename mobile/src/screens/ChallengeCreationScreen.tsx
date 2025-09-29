@@ -22,6 +22,7 @@ import {
   enterPreviewMode,
   exitPreviewMode,
 } from '../store/slices/challengeCreationSlice';
+import { Camera, useCameraPermissions } from 'expo-camera';
 import { MobileCameraRecorder } from '../components/MobileCameraRecorder';
 import { EnhancedMobileCameraIntegration } from '../components/EnhancedMobileCameraIntegration';
 import { FullscreenLieSelectionScreen } from './FullscreenLieSelectionScreen';
@@ -69,6 +70,7 @@ export const ChallengeCreationScreen: React.FC<ChallengeCreationScreenProps> = (
   onCancel,
 }) => {
   const { colors } = useContext(ThemeContext);
+  const [permission, requestPermission] = useCameraPermissions();
   const dispatch = useAppDispatch();
   const { isPremium } = usePremiumStatus();
   const {
@@ -137,11 +139,49 @@ export const ChallengeCreationScreen: React.FC<ChallengeCreationScreenProps> = (
     // This allows users to review their recordings and select the lie first
   }, [individualRecordings, currentStep]);
 
+  const handlePermissionsAndStartRecording = async () => {
+    if (!permission) {
+      // Permissions are still loading, wait a moment.
+      return;
+    }
+
+    // Start with the current permission status.
+    let finalPermission = permission;
+
+    // If permissions are not already granted, request them.
+    if (!finalPermission.granted) {
+      console.log('Requesting camera and microphone permissions...');
+      const response = await requestPermission();
+      finalPermission = response;
+    }
+
+    // Check the final permission status. The 'granted' property is only true if
+    // both camera and microphone permissions are granted.
+    if (finalPermission.granted) {
+      console.log('All required permissions granted, starting recording...');
+      setCurrentStep('recording');
+      setCurrentStatementIndex(0);
+      setIsRetakeMode(false);
+      setShowCameraModal(true);
+    } else {
+      // If either permission is denied, show an alert and do not proceed.
+      console.log('Permissions denied.');
+      Alert.alert(
+        'Permissions Required',
+        'This app needs both camera and microphone access to create a challenge. Please grant both permissions in your device settings to continue.',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          { text: 'Open Settings', onPress: () => Linking.openSettings() },
+        ]
+      );
+    }
+  };
+
   const handleStartRecording = () => {
-    setCurrentStep('recording');
-    setCurrentStatementIndex(0);
-    setIsRetakeMode(false); // Ensure we're not in retake mode for initial recording
-    setShowCameraModal(true);
+    handlePermissionsAndStartRecording().catch(err => {
+      console.error("Error handling permissions and starting recording:", err);
+      Alert.alert('Error', 'An unexpected error occurred. Please try again.');
+    });
   };
 
   const handleRecordingComplete = (media: MediaCapture) => {
