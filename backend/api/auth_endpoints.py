@@ -89,6 +89,7 @@ async def register(request: RegisterRequest):
         
         logger.info(f"New user registered: {request.email}")
         
+        user_data['id'] = str(user_data['id'])
         return TokenResponse(
             access_token=access_token,
             refresh_token=refresh_token,
@@ -140,6 +141,7 @@ async def login(request: LoginRequest):
         
         logger.info(f"User logged in successfully: {request.email}")
         
+        user_data['id'] = str(user_data['id'])
         return TokenResponse(
             access_token=access_token,
             refresh_token=refresh_token,
@@ -348,6 +350,7 @@ async def get_current_user_info(
                 detail="User not found"
             )
 
+        user_info['id'] = str(user_info['id'])
         return User(**user_info)
         
     except Exception as e:
