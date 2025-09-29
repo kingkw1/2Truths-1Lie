@@ -123,6 +123,18 @@ async def get_signed_url_for_video(video_url: str, user_id: str = None) -> str:
         except Exception as e:
             logger.error(f"Failed to generate S3 signed URL for {video_url}: {e}")
     
+    # Handle plain S3 key (not a full URL) - generate signed URL directly
+    if not video_url.startswith(('http://', 'https://', '/api/')) and '.' in video_url:
+        # This looks like a plain S3 key (e.g., "merged_video_12_1759007972.mp4")
+        try:
+            cloud_storage = await get_cloud_storage_service()
+            if cloud_storage:
+                signed_url = await cloud_storage.get_file_url(video_url)
+                logger.info(f"Generated signed URL for S3 key: {video_url}")
+                return signed_url
+        except Exception as e:
+            logger.error(f"Failed to generate signed URL for S3 key {video_url}: {e}")
+    
     # Handle media ID - generate signed URL for local media access
     media_id = None
     if video_url.startswith('/api/v1/media/'):
