@@ -62,7 +62,7 @@ export const AnimatedFeedback: React.FC<AnimatedFeedbackProps> = ({
   useEffect(() => {
     const listener = scoreValue.addListener(v => {
       if (textInputRef.current) {
-        const scoreText = `+${Math.round(v.value).toLocaleString()} points`;
+        const scoreText = `+${Math.round(v.value).toLocaleString()}`;
         textInputRef.current.setNativeProps({ text: scoreText });
       }
     });
@@ -239,32 +239,10 @@ export const AnimatedFeedback: React.FC<AnimatedFeedbackProps> = ({
             <AnimatedTextInput
               ref={textInputRef}
               style={styles.scoreDisplay}
-              defaultValue="+0 points"
+              defaultValue="+0"
               editable={false}
               underlineColorAndroid="transparent"
             />
-            
-            {/* Score Breakdown */}
-            <View style={styles.scoreBreakdown}>
-              <View style={styles.scoreItem}>
-                <Text style={styles.scoreLabel}>Base</Text>
-                <Text style={styles.scoreValue}>+{stableResult.pointsEarned}</Text>
-              </View>
-              <View style={styles.scoreItem}>
-                <Text style={styles.scoreLabel}>Time</Text>
-                <Text style={styles.scoreValue}>+{stableResult.timeBonus}</Text>
-              </View>
-              <View style={styles.scoreItem}>
-                <Text style={styles.scoreLabel}>Accuracy</Text>
-                <Text style={styles.scoreValue}>+{stableResult.accuracyBonus}</Text>
-              </View>
-              {stableResult.streakBonus > 0 && (
-                <View style={styles.scoreItem}>
-                  <Text style={styles.scoreLabel}>Streak</Text>
-                  <Text style={styles.scoreValue}>+{stableResult.streakBonus}</Text>
-                </View>
-              )}
-            </View>
           </Animated.View>
         )}
 
