@@ -82,7 +82,7 @@ async def register(request: RegisterRequest):
         
         # Create tokens for the new user
         access_token = auth_service.create_access_token(
-            data={"sub": str(user_data["id"]), "email": user_data["email"], "type": "authenticated", "is_premium": user_data.get("is_premium", False)}
+            data={"sub": str(user_data["id"]), "email": user_data["email"], "type": "user", "is_premium": user_data.get("is_premium", False)}
         )
         refresh_token = auth_service.create_refresh_token(str(user_data["id"]))
         
@@ -138,7 +138,7 @@ async def login(request: LoginRequest):
         
         # Create tokens for authenticated user
         access_token = auth_service.create_access_token(
-            data={"sub": str(user_data["id"]), "email": user_data["email"], "type": "authenticated", "is_premium": user_data.get("is_premium", False)}
+            data={"sub": str(user_data["id"]), "email": user_data["email"], "type": "user", "is_premium": user_data.get("is_premium", False)}
         )
         refresh_token = auth_service.create_refresh_token(str(user_data["id"]))
         
@@ -256,7 +256,7 @@ async def validate_token(
         
         # For authenticated users, fetch full user data from database
         user_info = None
-        if user_type == "authenticated" and user_id:
+        if user_type == "user" and user_id:
             try:
                 # Fetch user from database to get name and other details
                 user_info = get_db_service().get_user_by_id(int(user_id))
@@ -342,7 +342,7 @@ async def get_current_user_info(
         user_id = current_user_data.get("sub")
         user_type = current_user_data.get("type", "user")
 
-        if user_type != "authenticated" or not user_id:
+        if user_type != "user" or not user_id:
             raise HTTPException(
                 status_code=status.HTTP_401_UNAUTHORIZED,
                 detail="User is not authenticated"
