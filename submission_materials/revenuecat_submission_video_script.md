@@ -101,9 +101,13 @@
         * **On-screen text:** "Try every premium perk - Free 7-day trial for Shipaton reviewers!"
     * **Audio:** Music swells to a final, triumphant chord. **VO:** "This is 2 Truths & 1 Lie, built for the RevenueCat Shipaton. Thank you for watching! Download the app today on the Google Play Store and experience all premium features with a free 7-day trial."
 
-* **Shot 10: The Final Human Connection (The Second Bookend)**
+* **Shot 10 (New): The Final Polish Montage**
     * **Timecode:** 2:57 - 3:00
-    * **Visuals:** **Live Action.** A quick, 3-second shot of you and your wife on a couch, sharing the phone and laughing together as you play the game.
-    * **Editing:** Fade to black as the music fades out.
-    * **Audio:** Music fades out completely.
+    * **Visuals:** A final, rapid-fire montage of your app's most polished moments. Use quick cuts (less than 1 second each) of footage you have already recorded:
+        * The smooth "Correct!" result animation.
+        * The Dark Mode switch toggling.
+        * A button being pressed with the haptic feedback visual pulse.
+        * The "Pro" badge (🕵️) animating next to the user's name.
+    * **Editing:** This should be very fast, timed to the final three beats of the music before the final fade out. Each cut should land directly on a beat. End with a quick fade to black.
+    * **Audio:** The final triumphant chords of the music play over this montage before fading to silence on the black screen.
     * **Script:** *(No voiceover)*

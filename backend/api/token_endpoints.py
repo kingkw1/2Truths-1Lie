@@ -426,15 +426,27 @@ async def revenuecat_webhook(
         is_premium_inactive = event_type in ['CANCELLATION', 'EXPIRATION', 'PRODUCT_CHANGE']
 
         try:
-            user_id_int = int(app_user_id)
+            # Handle both email and numeric user IDs
+            if "@" in app_user_id:
+                # Email-based user ID - look up the numeric ID
+                user_data = db_service.get_user_by_email(app_user_id)
+                if user_data:
+                    user_id_int = user_data["id"]
+                else:
+                    logger.error(f"User not found for email: {app_user_id}")
+                    raise ValueError(f"User not found for email: {app_user_id}")
+            else:
+                # Numeric user ID
+                user_id_int = int(app_user_id)
+            
             if is_premium_active:
-                logger.info(f"Setting premium status to TRUE for user {app_user_id} due to {event_type}")
+                logger.info(f"Setting premium status to TRUE for user {app_user_id} (ID: {user_id_int}) due to {event_type}")
                 db_service.set_user_premium_status(user_id_int, True)
             elif is_premium_inactive:
-                logger.info(f"Setting premium status to FALSE for user {app_user_id} due to {event_type}")
+                logger.info(f"Setting premium status to FALSE for user {app_user_id} (ID: {user_id_int}) due to {event_type}")
                 db_service.set_user_premium_status(user_id_int, False)
-        except ValueError:
-            logger.error(f"Invalid app_user_id format for premium status update: {app_user_id}")
+        except ValueError as ve:
+            logger.error(f"Invalid app_user_id format for premium status update: {app_user_id} - {ve}")
         except Exception as e:
             logger.error(f"Failed to update premium status for user {app_user_id}: {e}")
             # Do not re-raise; token purchase might still need to be processed
@@ -498,3 +510,55 @@ async def test_webhook_debug():
         
     except Exception as e:
         return {"error": str(e)}
+
+@router.post("/manual-token-grant")
+async def manual_token_grant(
+    request: Request,
+    current_user=Depends(get_current_user)
+):
+    """
+    Manually grant tokens to a user after purchase verification.
+    This is a workaround for webhook timing issues.
+    """
+    try:
+        body = await request.json()
+        product_id = body.get('product_id')
+        transaction_id = body.get('transaction_id', 'manual_grant')
+        
+        if not product_id:
+            raise HTTPException(status_code=400, detail="Missing product_id")
+        
+        tokens_to_add = PRODUCT_TOKEN_MAP.get(product_id)
+        if not tokens_to_add:
+            raise HTTPException(status_code=400, detail=f"Unknown product_id: {product_id}")
+        
+        # Use the authenticated user's email as user_id
+        user_email = current_user.get('email')
+        if not user_email:
+            raise HTTPException(status_code=400, detail="No user email found")
+        
+        token_service = get_token_service()
+        success = token_service.add_tokens_for_purchase(
+            user_id=user_email,
+            product_id=product_id,
+            tokens_to_add=tokens_to_add,
+            transaction_id=transaction_id,
+            event_data={"type": "MANUAL_GRANT", "source": "app_direct"}
+        )
+        
+        if success:
+            balance_response = token_service.get_user_balance(user_email)
+            return {
+                "success": True,
+                "tokens_added": tokens_to_add,
+                "new_balance": balance_response.balance,
+                "message": f"Successfully added {tokens_to_add} tokens"
+            }
+        else:
+            raise HTTPException(status_code=500, detail="Failed to add tokens")
+            
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Manual token grant failed: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
