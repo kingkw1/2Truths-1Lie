@@ -19,11 +19,13 @@ import { useTokenBalance } from '../hooks/useTokenBalance';
 import { ProductCard } from '../components/ProductCard';
 import { TrialBanner } from '../components/TrialBanner';
 import { revenueCatUserSync } from '../services/revenueCatUserSync';
+import { TokenAPI } from '../services/tokenAPI';
 import { ThemeContext } from '../context/ThemeContext';
 
 export const StoreScreen: React.FC = () => {
   const { colors } = useContext(ThemeContext);
   const [purchasing, setPurchasing] = useState(false);
+  const [pollingTokens, setPollingTokens] = useState(false);
   const [selectedPackage, setSelectedPackage] = useState<PurchasesPackage | null>(null);
   const { offerings, isLoading: offeringsLoading, error: offeringsError } = useOfferings();
   const { isPremium, customerInfo } = usePremiumStatus();
@@ -134,6 +136,10 @@ export const StoreScreen: React.FC = () => {
       const customerInfo = await Purchases.getCustomerInfo();
       console.log(`🆔 Making purchase with RevenueCat User ID: ${customerInfo.originalAppUserId}`);
       
+      // Check if this is a token purchase before making the purchase
+      const isTokenPurchase = pkg.product.identifier.toLowerCase().includes('token');
+      const currentTokenBalance = balance; // Get current balance before purchase
+      
       const { customerInfo: purchaseCustomerInfo } = await Purchases.purchasePackage(pkg);
       
       const premiumEntitlement = purchaseCustomerInfo.entitlements.active['premium'];
@@ -146,13 +152,105 @@ export const StoreScreen: React.FC = () => {
         } else {
           Alert.alert('Success', 'You are now a premium user!');
         }
-      } else {
-        // Token purchase
-        Alert.alert('Purchase Successful!', `You've purchased ${pkg.identifier}. Tokens will be added to your account shortly.`);
+      } else if (isTokenPurchase) {
+        // Token purchase - implement robust polling mechanism
+        console.log('🔄 Starting token balance polling after purchase...');
+        setPollingTokens(true);
         
-        // Refresh token balance after successful token purchase
-        console.log('🔄 Refreshing token balance after successful purchase...');
-        await refreshTokenBalance();
+        let pollCount = 0;
+        const maxPolls = 8; // 15 seconds (8 * 2 = 16 seconds max)
+        let pollingInterval: NodeJS.Timeout | null = null;
+        let timeoutHandle: NodeJS.Timeout | null = null;
+        
+        const startPolling = (): Promise<void> => {
+          return new Promise((resolve, reject) => {
+            pollingInterval = setInterval(async () => {
+              try {
+                pollCount++;
+                console.log(`🔄 Polling attempt ${pollCount}/${maxPolls} for token balance update...`);
+                
+                // Get fresh balance directly from API for most reliable check
+                const balanceResponse = await TokenAPI.getBalance();
+                const newBalance = balanceResponse.balance;
+                
+                console.log(`🔍 Polling balance check - Current: ${newBalance}, Original: ${currentTokenBalance}`);
+                
+                // Check if balance has increased
+                if (newBalance > currentTokenBalance) {
+                  console.log(`✅ Token balance updated! Old: ${currentTokenBalance}, New: ${newBalance}`);
+                  
+                  // Clear polling
+                  if (pollingInterval) {
+                    clearInterval(pollingInterval);
+                    pollingInterval = null;
+                  }
+                  if (timeoutHandle) {
+                    clearTimeout(timeoutHandle);
+                    timeoutHandle = null;
+                  }
+                  
+                  // Refresh the hook's balance to update UI
+                  await refreshTokenBalance();
+                  setPollingTokens(false);
+                  
+                  // Show success message
+                  Alert.alert(
+                    'Success!', 
+                    `Your tokens have been added to your account. New balance: ${newBalance} tokens.`
+                  );
+                  
+                  resolve();
+                  return;
+                }
+                
+                // Stop polling if max attempts reached
+                if (pollCount >= maxPolls) {
+                  if (pollingInterval) {
+                    clearInterval(pollingInterval);
+                    pollingInterval = null;
+                  }
+                  
+                  setPollingTokens(false);
+                  console.log('⚠️ Token balance polling reached maximum attempts');
+                  Alert.alert(
+                    'Purchase Processing', 
+                    'There was a delay processing your purchase. Please restart the app to see your new balance.'
+                  );
+                  
+                  resolve();
+                }
+              } catch (error) {
+                console.error('🔍 Error during token balance polling:', error);
+                // Continue polling even if one attempt fails
+                pollCount--; // Don't count failed attempts
+              }
+            }, 2000); // Poll every 2 seconds
+            
+            // Set timeout to stop polling after 15 seconds
+            timeoutHandle = setTimeout(() => {
+              if (pollingInterval) {
+                clearInterval(pollingInterval);
+                pollingInterval = null;
+              }
+              
+              setPollingTokens(false);
+              console.log('⚠️ Token balance polling timed out after 15 seconds');
+              Alert.alert(
+                'Purchase Processing', 
+                'There was a delay processing your purchase. Please restart the app to see your new balance.'
+              );
+              
+              resolve();
+            }, 15000); // 15 second timeout
+          });
+        };
+        
+        // Start the polling process
+        await startPolling();
+        
+      } else {
+        // Non-token, non-premium purchase
+        Alert.alert('Purchase Successful!', `You've purchased ${pkg.identifier}.`);
       }
     } catch (e: any) {
       // Handle user cancellation silently
@@ -166,6 +264,7 @@ export const StoreScreen: React.FC = () => {
       }
     } finally {
       setPurchasing(false);
+      setPollingTokens(false);
     }
   };
 
@@ -255,7 +354,7 @@ export const StoreScreen: React.FC = () => {
                     setSelectedPackage(monthlyPackage);
                   }
                 }}
-                disabled={purchasing}
+                disabled={purchasing || pollingTokens}
               >
                 <Text style={[
                   styles.planTitle,
@@ -288,7 +387,7 @@ export const StoreScreen: React.FC = () => {
                     setSelectedPackage(annualPackage);
                   }
                 }}
-                disabled={purchasing}
+                disabled={purchasing || pollingTokens}
               >
                 {/* Save 17% Badge */}
                 <View style={styles.savingsBadge}>
@@ -326,10 +425,10 @@ export const StoreScreen: React.FC = () => {
                 Alert.alert('Please select a plan', 'Choose Monthly or Annual plan to continue');
               }
             }}
-            disabled={purchasing || !selectedPackage}
+            disabled={purchasing || pollingTokens || !selectedPackage}
           >
             <Text style={styles.primaryCtaText}>
-              {purchasing ? 'Processing...' : 'Start 7-Day Free Trial'}
+              {purchasing ? (pollingTokens ? 'Verifying Purchase...' : 'Processing...') : 'Start 7-Day Free Trial'}
             </Text>
           </TouchableOpacity>
         </View>
@@ -358,7 +457,7 @@ export const StoreScreen: React.FC = () => {
                   const smallPack = tokenPackages.find(pkg => pkg.identifier === 'token_pack_small');
                   if (smallPack) handlePurchase(smallPack);
                 }}
-                disabled={purchasing}
+                disabled={purchasing || pollingTokens}
               >
                 <Text style={styles.tokenAmount}>5 Tokens</Text>
                 <Text style={styles.tokenPrice}>$1.99</Text>
@@ -376,7 +475,7 @@ export const StoreScreen: React.FC = () => {
                     const largePack = tokenPackages.find(pkg => pkg.identifier === 'token_pack_large');
                     if (largePack) handlePurchase(largePack);
                   }}
-                  disabled={purchasing}
+                  disabled={purchasing || pollingTokens}
                 >
                   <Text style={styles.tokenAmount}>25 Tokens</Text>
                   <Text style={styles.tokenPrice}>$7.99</Text>
@@ -392,6 +491,12 @@ export const StoreScreen: React.FC = () => {
               <Text style={styles.currentBalanceText}>
                 Your Current Balance: {balance} 🪙
               </Text>
+              {pollingTokens && (
+                <View style={styles.pollingIndicator}>
+                  <ActivityIndicator size="small" color={colors.primary} />
+                  <Text style={styles.pollingText}>Verifying your purchase...</Text>
+                </View>
+              )}
             </View>
           )}
         </>
@@ -438,10 +543,10 @@ export const StoreScreen: React.FC = () => {
                   <TouchableOpacity
                     style={styles.upgradeButton}
                     onPress={() => handlePurchase(annualPackage)}
-                    disabled={purchasing}
+                    disabled={purchasing || pollingTokens}
                   >
                     <Text style={styles.upgradeButtonText}>
-                      {purchasing ? 'Processing...' : 'Upgrade to Annual & Save 17%'}
+                      {purchasing ? (pollingTokens ? 'Verifying Purchase...' : 'Processing...') : 'Upgrade to Annual & Save 17%'}
                     </Text>
                   </TouchableOpacity>
                 );
@@ -474,7 +579,7 @@ export const StoreScreen: React.FC = () => {
             <TouchableOpacity 
               style={styles.restorePurchasesLink}
               onPress={handleRestorePurchases}
-              disabled={purchasing}
+              disabled={purchasing || pollingTokens}
             >
               <Text style={styles.restorePurchasesLinkText}>Restore Purchases</Text>
             </TouchableOpacity>
@@ -487,7 +592,7 @@ export const StoreScreen: React.FC = () => {
         <TouchableOpacity 
           style={styles.restoreButton} 
           onPress={handleRestorePurchases}
-          disabled={purchasing}
+          disabled={purchasing || pollingTokens}
         >
           <Text style={styles.restoreButtonText}>Restore Purchases</Text>
         </TouchableOpacity>
@@ -781,6 +886,20 @@ const getStyles = (colors: any) => StyleSheet.create({
     fontWeight: '600',
     color: colors.storeBalanceText,
     textAlign: 'center',
+  },
+  pollingIndicator: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 12,
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: colors.border,
+  },
+  pollingText: {
+    fontSize: 14,
+    color: colors.text,
+    marginLeft: 8,
+    fontStyle: 'italic',
   },
   // New styles for subscription management card
   subscriptionManagementCard: {

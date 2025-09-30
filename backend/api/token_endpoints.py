@@ -511,54 +511,39 @@ async def test_webhook_debug():
     except Exception as e:
         return {"error": str(e)}
 
-@router.post("/manual-token-grant")
-async def manual_token_grant(
-    request: Request,
-    current_user=Depends(get_current_user)
-):
-    """
-    Manually grant tokens to a user after purchase verification.
-    This is a workaround for webhook timing issues.
-    """
+@router.get("/debug-balance/{user_email}")
+async def debug_user_balance(user_email: str):
+    """Debug endpoint to check token balance for any user (no auth required)"""
     try:
-        body = await request.json()
-        product_id = body.get('product_id')
-        transaction_id = body.get('transaction_id', 'manual_grant')
-        
-        if not product_id:
-            raise HTTPException(status_code=400, detail="Missing product_id")
-        
-        tokens_to_add = PRODUCT_TOKEN_MAP.get(product_id)
-        if not tokens_to_add:
-            raise HTTPException(status_code=400, detail=f"Unknown product_id: {product_id}")
-        
-        # Use the authenticated user's email as user_id
-        user_email = current_user.get('email')
-        if not user_email:
-            raise HTTPException(status_code=400, detail="No user email found")
-        
         token_service = get_token_service()
-        success = token_service.add_tokens_for_purchase(
-            user_id=user_email,
-            product_id=product_id,
-            tokens_to_add=tokens_to_add,
-            transaction_id=transaction_id,
-            event_data={"type": "MANUAL_GRANT", "source": "app_direct"}
-        )
+        balance_response = token_service.get_user_balance(user_email)
         
-        if success:
-            balance_response = token_service.get_user_balance(user_email)
-            return {
-                "success": True,
-                "tokens_added": tokens_to_add,
-                "new_balance": balance_response.balance,
-                "message": f"Successfully added {tokens_to_add} tokens"
-            }
-        else:
-            raise HTTPException(status_code=500, detail="Failed to add tokens")
-            
-    except HTTPException:
-        raise
+        # Also get transaction history to see recent activity
+        try:
+            transactions = token_service.get_transaction_history(user_email, limit=10)
+            recent_transactions = [
+                {
+                    "type": tx["transaction_type"],
+                    "amount": tx["amount"],
+                    "balance_after": tx["balance_after"],
+                    "description": tx["description"],
+                    "created_at": str(tx["created_at"])
+                }
+                for tx in transactions[-5:]  # Last 5 transactions
+            ]
+        except Exception as e:
+            recent_transactions = [f"Error getting transactions: {str(e)}"]
+        
+        return {
+            "user_email": user_email,
+            "current_balance": balance_response.balance,
+            "last_updated": str(balance_response.last_updated),
+            "recent_transactions": recent_transactions
+        }
+        
     except Exception as e:
-        logger.error(f"Manual token grant failed: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        return {
+            "user_email": user_email,
+            "error": str(e),
+            "current_balance": "unknown"
+        }
