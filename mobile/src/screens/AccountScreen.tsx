@@ -73,44 +73,7 @@ const AccountScreen = () => {
     }
   };
 
-  const handleDebugSubscription = async () => {
-    try {
-      // Force refresh customer info from RevenueCat servers (bypassing cache)
-      const freshCustomerInfo = await Purchases.getCustomerInfo();
-      
-      console.log('🔍 DEBUG: Fresh customer info:', {
-        activeEntitlements: Object.keys(freshCustomerInfo.entitlements.active),
-        allEntitlements: Object.keys(freshCustomerInfo.entitlements.all),
-        activeSubscriptions: freshCustomerInfo.activeSubscriptions,
-        allPurchasedProductIdentifiers: freshCustomerInfo.allPurchasedProductIdentifiers,
-      });
-      
-      // Check multiple possible entitlement names
-      const possibleEntitlements = ['premium', 'pro', 'investigator', 'pro_access'];
-      const activeEntitlementNames = Object.keys(freshCustomerInfo.entitlements.active);
-      const foundEntitlements = possibleEntitlements.filter(name => 
-        freshCustomerInfo.entitlements.active[name] !== undefined
-      );
 
-      // Trigger a manual refresh of the premium status hook if available
-      if (premiumStatusHook.refresh) {
-        await premiumStatusHook.refresh();
-      }
-
-      // Show debug info to user
-      Alert.alert(
-        'Debug Subscription Status',
-        `Active Entitlements: ${activeEntitlementNames.join(', ') || 'None'}\n` +
-        `Found Known Entitlements: ${foundEntitlements.join(', ') || 'None'}\n` +
-        `Active Subscriptions: ${freshCustomerInfo.activeSubscriptions.join(', ') || 'None'}\n` +
-        `All Purchased: ${freshCustomerInfo.allPurchasedProductIdentifiers.join(', ') || 'None'}\n` +
-        `Current isPremium: ${isPremium}\n` +
-        `Loading: ${loading}`
-      );
-    } catch (e) {
-      Alert.alert('Debug Error', `Failed to debug: ${e}`);
-    }
-  };
 
   const handleLogout = async () => {
     HapticsService.triggerImpact('heavy');
@@ -229,9 +192,6 @@ const AccountScreen = () => {
           <TouchableOpacity style={styles.button} onPress={handleManageSubscription}>
             <Text style={styles.buttonText}>Manage Subscription</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={[styles.button, styles.debugButton]} onPress={handleDebugSubscription}>
-            <Text style={styles.buttonText}>Debug Subscription Status</Text>
-          </TouchableOpacity>
         </View>
 
         {/* Legal Card */}
@@ -331,10 +291,6 @@ const getStyles = (colors) => StyleSheet.create({
     color: '#ffffff',
     fontSize: 16,
     fontWeight: 'bold',
-  },
-  debugButton: {
-    backgroundColor: '#17a2b8',
-    marginTop: 8,
   },
   logoutButton: {
     backgroundColor: '#dc3545',
