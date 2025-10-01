@@ -1,10 +1,10 @@
 # 🏗 Technical Architecture: 2Truths-1Lie
 
-> **Kiro-Powered Architecture**: Production-ready system built through spec-driven development
+> **Production-Ready Architecture**: Modern mobile game with RevenueCat monetization integration
 
 ## 🎯 Architecture Overview
 
-**2Truths-1Lie** implements a modern, production-ready architecture combining React Native mobile development with FastAPI backend services. Built entirely through Kiro's spec-driven development workflow, the system demonstrates how AI-assisted development creates robust, scalable applications.
+**2Truths-1Lie** implements a modern, production-ready architecture combining React Native mobile development with FastAPI backend services. Built as a complete mobile gaming platform with integrated RevenueCat monetization, the system demonstrates scalable mobile app development with subscription and in-app purchase capabilities.
 
 ```mermaid
 graph TD
@@ -17,23 +17,23 @@ graph TD
     B -->|JWT Auth| F[🔐 Authentication <br> Secure Tokens];
 ```
 
-### 🎯 **Kiro-Driven Design Principles**
-- **Spec-First Development**: Every component started as Kiro specification
+### 🎯 **Production-Ready Design Principles**
+- **Modular Architecture**: Clean separation between presentation, business logic, and data layers
 - **Production Quality**: Live Google Play Store deployment with working features
-- **Rapid Development**: 70%+ code generation from structured requirements
-- **Maintainable**: Agent hooks for future automated maintenance
-- **Validated**: End-to-end testing and validation throughout development
+- **Monetization-First**: Integrated RevenueCat subscription and premium features
+- **Maintainable**: Well-structured codebase with comprehensive testing
+- **Scalable**: Built to handle growth from beta to production scale
 
-### 🔗 **Kiro Integration Evidence**
-- **[`.kiro/specs/`](../.kiro/specs/)** - Complete specification files for all major features
-- **[`.kiro/hooks/`](../.kiro/hooks/)** - Automated development hooks for future maintenance
-- **[`.kiro/steering/`](../.kiro/steering/)** - Technical steering documents and policies
+### � **RevenueCat Integration Architecture**
+- **[Premium Features](REVENUECAT_SETUP.md)** - Subscription-gated content and features
+- **In-App Purchases** - Individual challenge packs and customizations
+- **Analytics Integration** - Revenue tracking and user journey optimization
 
 ## 📱 Mobile Application Architecture
 
 ### 🏗 **React Native + Expo Framework**
 ```typescript
-// Core Application Structure (Kiro-Generated)
+// Core Application Structure (Production-Ready)
 mobile/src/
 ├── components/           
 │   ├── MobileCameraRecorder.tsx           # Core camera component with validation
@@ -54,7 +54,7 @@ mobile/src/
 
 ### � **Video Recording Pipeline**
 ```typescript
-// expo-camera Integration (Kiro-Assisted Implementation)
+// expo-camera Integration (Production Implementation)
 class MobileCameraRecorder {
   // Enhanced permission handling
   async requestPermissions(): Promise<boolean> {
@@ -88,7 +88,7 @@ class MobileCameraRecorder {
 
 ### 📤 **Upload Service Architecture**
 ```typescript
-// Resilient Upload Service (Kiro-Generated)
+// Resilient Upload Service (Production-Ready)
 class UploadService {
   // Pre-upload validation
   async validateFile(uri: string): Promise<boolean> {
@@ -136,7 +136,7 @@ const useAppState = () => useContext(AppStateContext);
 
 ### ⚡ **FastAPI Server Design**
 ```python
-# Production-Grade FastAPI Application (Kiro-Generated)
+# Production-Grade FastAPI Application
 backend/
 ├── main.py                 # Application entry point with Railway deployment
 ├── run.py                  # Development server runner
@@ -181,7 +181,7 @@ CREATE INDEX idx_challenges_status ON challenges(status);
 
 ### 🔐 **Authentication & Security**
 ```python
-# JWT Token Management (Kiro-Generated)
+# JWT Token Management (Production Implementation)
 class AuthService:
     def __init__(self):
         self.secret_key = settings.SECRET_KEY
@@ -208,7 +208,7 @@ class AuthService:
 
 ### 📹 **FFmpeg Video Merging**
 ```python
-# Video Processing Service (Kiro-Assisted Implementation)
+# Video Processing Service (Production Implementation)
 class VideoMergeService:
     def __init__(self):
         self.ffmpeg_binary = "ffmpeg"
@@ -417,11 +417,11 @@ Result: 100% success rate in video processing pipeline
 
 ## 🎯 Architecture Benefits
 
-### 🤖 **Kiro-Driven Development**
-- **Rapid Prototyping**: From specs to working code in hours
-- **Quality Assurance**: Built-in validation and error handling
-- **Maintainability**: Clear structure and documentation
-- **Scalability**: Production-ready patterns from day one
+### 💰 **Monetization Architecture**
+- **RevenueCat Integration**: Seamless subscription and purchase management
+- **Premium Features**: Subscription-gated content and advanced functionality
+- **Analytics Tracking**: Revenue optimization and user behavior insights
+- **Flexible Pricing**: Multiple subscription tiers and one-time purchases
 
 ### 🏗️ **Production-Ready Design**
 - **Real Users**: Live Google Play Store deployment
@@ -429,11 +429,11 @@ Result: 100% success rate in video processing pipeline
 - **Reliable**: Robust error handling and recovery mechanisms
 - **Secure**: JWT authentication and input validation
 
-### 🔄 **Development Velocity**
-- **Spec-to-Code**: 70%+ code generation from Kiro specifications
-- **Bug Prevention**: Validation at every layer prevents common issues
-- **Easy Deployment**: One-command builds for mobile and backend
-- **Future-Ready**: Agent hooks for automated maintenance
+### � **Scalability Features**
+- **Modular Codebase**: Clean architecture enabling rapid feature development
+- **Automated Testing**: Comprehensive test coverage preventing regressions
+- **Easy Deployment**: Streamlined build and release processes
+- **Monitoring Ready**: Built-in logging and performance tracking
 
 ---
 
@@ -443,11 +443,11 @@ Result: 100% success rate in video processing pipeline
 - **[Backend Guide](BACKEND_GUIDE.md)** - FastAPI development and deployment
 - **[API Documentation](api.md)** - Complete endpoint reference
 - **[Deployment Guide](DEPLOYMENT_GUIDE.md)** - Production deployment processes
-- **[Kiro Specs Overview](../.kiro/specs/README.md)** - How specs drove development
+- **[RevenueCat Setup Guide](REVENUECAT_SETUP.md)** - Monetization implementation details
 
 ---
 
-**Architecture Status**: Production Ready ✅  
+**Architecture Status**: Production Ready with RevenueCat Monetization ✅  
 **Deployment**: Live on Google Play Store 📱  
 **Powered by**: Kiro Spec-Driven Development 🤖
 
@@ -1133,4 +1133,4 @@ Reliability_Metrics:
 
 **Production-Ready Architecture** ✅  
 **Scalable to 1M+ Users** 📈  
-**AI-Powered Innovation** 🤖
+**RevenueCat Monetization** 💰

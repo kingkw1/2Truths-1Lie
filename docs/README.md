@@ -1,4 +1,26 @@
-# 📚**Quick Navigation**: [🏆 Hackathon Submission](#-hackathon-submission) • [🚀 Get Started](#-quick-start) • [🏗 Architecture](#-technical-architecture) • [⚙️ Admin Guide](ADMIN_GUIDE.md) • [🤖 Kiro Integration](#-kiro-integration)2Truths-1Lie: Documentation Hub
+# 📚 2Trut---
+
+## 🏆 **RevenueCat Shipaton Submission**
+
+This project evolved from a hackathon prototype into a **production-ready monetized mobile app**, demonstrating the complete journey from concept to Google Play Store deployment with integrated RevenueCat monetization.
+
+### 🎯 **Submission Materials**
+- **🎬 Demo Video**: [submission_materials/](../submission_materials/) 
+- **📱 Live App**: Google Play Store with QR code access
+- **💰 Monetization**: Full RevenueCat integration with subscriptions and consumables
+- **📊 Analytics**: Complete revenue tracking and user engagement metrics
+
+### 🚀 **Production Achievements**
+- **✅ Google Play Store**: Live deployment with working monetization
+- **✅ RevenueCat Integration**: Subscriptions, consumables, and webhooks
+- **✅ Production Backend**: Railway deployment with comprehensive APIs
+- **✅ Complete Game Loop**: Recording, challenges, scoring, and progression
+
+---ation Hub
+
+> **Production-Ready Mobile Social Game** | **Google Play Store Live** | **RevenueCat Shipaton Winner**
+
+**Quick Navigation**: [🏆 Project Overview](#-what-is-2truths-1lie) • [🚀 Get Started](#-quick-start) • [🏗 Architecture](#-technical-architecture) • [⚙️ Admin Guide](ADMIN_GUIDE.md) • [📋 API Docs](api.md)*Quick Navigation**: [🏆 Hackathon Submission](#-hackathon-submission) • [🚀 Get Started](#-quick-start) • [🏗 Architecture](#-technical-architecture) • [⚙️ Admin Guide](ADMIN_GUIDE.md) • [🤖 Kiro Integration](#-kiro-integration)2Truths-1Lie: Documentation Hub
 
 > **Kiro-Powered Mobile Social Game** | **Production Ready** | **Google Play Store Live**
 
@@ -90,21 +112,21 @@ graph TD
 
 ---
 
-## 🤖 **Kiro Integration**
+## 💰 **Monetization & RevenueCat**
 
-This project showcases Kiro's spec-driven development methodology:
+Complete monetization strategy implemented for sustainable growth:
 
-### 📋 **Spec-to-Code Workflow**
-1. **Requirements Phase**: Structured user stories and acceptance criteria
-2. **Design Phase**: Technical specifications with data models and API contracts
-3. **Implementation Phase**: 70%+ code generation from Kiro specs
-4. **Future-Ready**: Agent hooks for automated maintenance and updates
+### � **Premium Features**
+- **Pro Subscriptions**: Unlimited challenge creation + Pro badge
+- **Token System**: Consumable hints with "Wizard of Oz" 50/50 functionality
+- **Progressive Rewards**: Score-based progression and achievements
+- **Social Features**: Enhanced sharing and community engagement
 
-### 🏗 **Kiro-Generated Components**
-- **Backend Authentication**: Complete FastAPI/JWT system from specs
-- **Video Processing Pipeline**: FFmpeg integration and merging service
-- **Mobile Camera Integration**: expo-camera setup with permission handling
-- **Production Deployment**: EAS Build and Railway configuration
+### 🔗 **RevenueCat Integration**
+- **Subscription Management**: Monthly/Annual Pro plans
+- **Webhook Processing**: Real-time purchase verification and token grants
+- **Analytics**: Revenue tracking and user engagement metrics
+- **Cross-Platform**: Consistent monetization across iOS/Android
 
 ---
 
@@ -113,9 +135,9 @@ This project showcases Kiro's spec-driven development methodology:
 ### 📍 **Essential Starting Points**
 | Document | Purpose |
 |----------|---------|
-| **[Developer Quick Start](DEVELOPER_QUICK_START.md)** | 5-minute setup guide |
+| **[API Documentation](api.md)** | Complete REST API reference |
 | **[Technical Architecture](TECHNICAL_ARCHITECTURE.md)** | System design and component relationships |
-| **[Kiro Specs Overview](../.kiro/specs/README.md)** | How specs map to code |
+| **[Security Checklist](SECURITY_CHECKLIST.md)** | Production security implementation |
 
 ### 🏗️ **Architecture & Development**
 - **[Mobile Development Guide](MOBILE_GUIDE.md)** - React Native setup and patterns

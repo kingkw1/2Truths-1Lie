@@ -1,9 +1,9 @@
 # 📋 API Documentation
 
 ## Overview
-Production-ready RESTful API documentation for the **2Truths-1Lie** backend server. Built with **FastAPI** and optimized for React Native mobile clients with efficient video processing and challenge management.
+Production-ready RESTful API documentation for the **2Truths-1Lie** backend server. Built with **FastAPI** and optimized for React Native mobile clients with efficient video processing, challenge management, and RevenueCat monetization integration.
 
-> **🎯 Kiro Integration**: This API was developed following Kiro's spec-driven methodology with requirements and designs documented in `.kiro/specs/`. All endpoints have been validated against production mobile usage patterns.
+> **💰 RevenueCat Integration**: This API includes comprehensive monetization endpoints for subscription management, premium features, and revenue tracking as part of the RevenueCat Shipaton program. All endpoints have been validated against production mobile usage patterns.
 
 ## Base URLs
 - **Production (Railway)**: `https://2truths-1lie-production.up.railway.app`
@@ -532,7 +532,7 @@ const createChallenge = async (videoIds: string[], statements: string[], lieInde
 - [Backend Development Guide](BACKEND_GUIDE.md) - Server setup and development
 - [Mobile Integration Guide](MOBILE_GUIDE.md) - React Native client implementation
 - [Technical Architecture](TECHNICAL_ARCHITECTURE.md) - System architecture overview
-- [Main README](../README.md) - Project overview and Kiro integration
+- [Main README](../README.md) - Project overview and RevenueCat integration
 
 ### POST `/challenges`
 Create a new challenge.

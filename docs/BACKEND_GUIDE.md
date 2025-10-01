@@ -1,9 +1,9 @@
 # 🖥 Backend Development Guide
 
 ## Overview
-The **2Truths-1Lie** backend is a production-ready Python FastAPI server providing robust APIs for video upload, processing, challenge management, and user authentication. Built using **Kiro's spec-driven development methodology**, this backend delivers enterprise-grade video processing capabilities deployed on **Railway** infrastructure.
+The **2Truths-1Lie** backend is a production-ready Python FastAPI server providing robust APIs for video upload, processing, challenge management, and user authentication. Built as a complete mobile gaming backend with RevenueCat monetization integration, this system delivers enterprise-grade video processing capabilities deployed on **Railway** infrastructure.
 
-> **🎯 Kiro Integration**: This backend was developed following Kiro's specification-driven workflow, with detailed requirements and task management tracked in `.kiro/specs/`. See [Kiro Documentation](https://docs.kiro.ai) for the complete development methodology.
+> **💰 RevenueCat Integration**: This backend includes subscription management, premium feature gating, and analytics tracking to support the app's monetization strategy through the RevenueCat Shipaton program.
 
 ## 🚀 Quick Setup
 
@@ -214,12 +214,12 @@ GET /openapi.json       # OpenAPI specification
 
 ## 🔧 Development Guidelines
 
-### Kiro Spec-Driven Development
-Following **Kiro's methodology**, all backend development follows:
-1. **Requirements Specification**: Defined in `.kiro/specs/requirements/`
-2. **Design Documentation**: Detailed in `.kiro/specs/design/`
-3. **Task Management**: Tracked in `.kiro/specs/tasks/`
-4. **Implementation Validation**: Verified against specifications
+### Production Development Workflow
+Following **production-ready development practices**, all backend development follows:
+1. **Requirements Analysis**: Clear feature requirements and acceptance criteria
+2. **Design Documentation**: Technical specifications and API contracts
+3. **Implementation**: Modular, testable code with comprehensive error handling
+4. **Validation**: Thorough testing and code review process
 
 ### Code Quality Standards
 - **Type Hints**: All functions use Python type annotations
@@ -229,7 +229,7 @@ Following **Kiro's methodology**, all backend development follows:
 - **Testing**: Minimum 80% code coverage requirement
 
 ### Adding New API Endpoints
-1. **Specification**: Define requirements in `.kiro/specs/`
+1. **Specification**: Define requirements and acceptance criteria
 2. **Model Definition**: Create Pydantic request/response models
 3. **Service Layer**: Implement business logic in `services/`
 4. **Route Handler**: Create endpoint in appropriate `api/` module
@@ -273,7 +273,7 @@ ffprobe -v error -show_format -show_streams video.mp4
 ```
 
 ## 🔗 Related Documentation
-- [Main README](../README.md) - Project overview and Kiro integration
+- [Main README](../README.md) - Project overview and RevenueCat integration
 - [Technical Architecture](TECHNICAL_ARCHITECTURE.md) - System architecture
 - [Mobile Guide](MOBILE_GUIDE.md) - React Native integration
 - [API Documentation](api.md) - Complete API reference

@@ -4,12 +4,12 @@
 
 ```
 ┌─────────────────┐    ┌─────────────────┐    ┌─────────────────┐
-│  📱 Mobile App  │    │  🌐 Backend API │    │ 🤖 AI Services │
+│  📱 Mobile App  │    │  🌐 Backend API │    │ 💰 RevenueCat   │
 │                 │    │                 │    │                 │
-│ React Native    │◄──►│ Python FastAPI  │◄──►│ Emotion Model   │
-│ Expo Framework  │    │ SQLite/Postgres │    │ Video Analysis  │
-│ Redux Store     │    │ Media Upload    │    │ ML Pipeline     │
-│ Camera/Audio    │    │ Auth & Security │    │ Privacy-First   │
+│ React Native    │◄──►│ Python FastAPI  │◄──►│ Subscriptions   │
+│ Expo Framework  │    │ SQLite Database │    │ Webhooks        │
+│ Redux Store     │    │ Media Upload    │    │ Analytics       │
+│ Camera/Audio    │    │ Auth & Security │    │ Token System    │
 └─────────────────┘    └─────────────────┘    └─────────────────┘
 ```
 
@@ -48,19 +48,20 @@
 - **📊 Analytics** - Game statistics and user engagement tracking
 - **🌐 API Documentation** - Auto-generated OpenAPI/Swagger docs
 
-## AI/ML Pipeline
+## Monetization Architecture
 
-### Emotion Recognition
-- **🧠 Real-time Processing** - Low-latency emotion detection
-- **📱 On-Device Models** - Privacy-first local processing option
-- **☁️ Cloud Enhancement** - Optional cloud-based advanced analysis
-- **🎯 Confidence Scoring** - Lie detection probability metrics
+### RevenueCat Integration
+- **💎 Subscription Management** - Monthly/Annual Pro plans
+- **🎯 Consumable Tokens** - Hint purchases with backend validation
+- **🔄 Webhook Processing** - Real-time purchase verification
+- **📊 Revenue Analytics** - User lifetime value and engagement metrics
 
-### Data Flow
-1. **Video Capture** - Mobile app records user statements
-2. **Preprocessing** - Video/audio normalization and compression
-3. **AI Analysis** - Emotion recognition and confidence scoring
-4. **Result Display** - Real-time feedback to mobile users
+### Game Economy Data Flow
+1. **Purchase Event** - User initiates subscription or token purchase
+2. **RevenueCat Processing** - Payment verification and receipt validation
+3. **Webhook Notification** - Real-time backend notification
+4. **Token Grant** - Secure backend token balance update
+5. **UI Update** - Mobile app reflects new premium status
 
 ## Development Workflow
 
@@ -126,4 +127,4 @@ npm run demo          # Quick demo setup for presentations
 
 ---
 
-**🎯 Built for hackathon demonstration and production readiness**
+**🎯 Built for RevenueCat Shipaton and production deployment**

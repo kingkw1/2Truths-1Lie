@@ -1,6 +1,6 @@
 # 🤝 Contributing to 2Truths-1Lie
 
-Thank you for your interest in contributing to our AI-powered mobile social game! We welcome bug fixes, feature improvements, mobile optimizations, and AI enhancements.
+Thank you for your interest in contributing to our production-ready mobile social game! We welcome bug fixes, feature improvements, mobile optimizations, and monetization enhancements.
 
 ## 📚 Before You Start
 
@@ -39,7 +39,7 @@ npm run start:dev  # Launches both mobile and backend
 git checkout -b feature/mobile-enhancement
 ```
 
-- Follow mobile-first coding standards in `.kiro/steering/code-conventions.md`
+- Follow mobile-first coding standards and React Native best practices
 - Focus on React Native/Expo best practices and native performance
 - Write mobile-specific tests with React Native Testing Library
 - Test on both iOS and Android platforms where possible

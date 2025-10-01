@@ -1,9 +1,9 @@
 # 🚀 Deployment Guide
 
 ## Overview
-Production deployment guide for the **2Truths-1Lie** project, covering both mobile app deployment to Google Play Store and backend server deployment on Railway. This guide reflects the **live production deployment** achieved using **Kiro's spec-driven development methodology**.
+Production deployment guide for the **2Truths-1Lie** project, covering both mobile app deployment to Google Play Store and backend server deployment on Railway. This guide reflects the **live production deployment** with integrated RevenueCat monetization for the Shipaton program.
 
-> **🎯 Kiro Integration**: This deployment process follows Kiro's systematic development approach with deployment specifications tracked in `.kiro/specs/`. All deployment steps have been validated in production environments.
+> **💰 RevenueCat Deployment**: This deployment process includes RevenueCat subscription management and premium feature deployment. All monetization features have been validated in production environments.
 
 ## 📱 Mobile App Deployment
 
@@ -118,7 +118,7 @@ eas build --platform android --profile production
 3. **Store Listing Configuration**:
    - **App Name**: "2Truths 1 Lie"
    - **Short Description**: "Create video challenges mixing truths and lies"
-   - **Full Description**: Emphasizes video creation, social gameplay, and Kiro integration
+   - **Full Description**: Emphasizes video creation, social gameplay, and premium features
    - **Category**: Social/Entertainment
    - **Target Audience**: 13+ (Teen)
 
@@ -139,7 +139,7 @@ eas build --platform android --profile production
     "version": "1.0.0",
     "android": {
       "versionCode": 1,
-      "package": "com.kiro.twotruthsonelie"
+      "package": "com.revenuecat.twotruthsonelie"
     }
   }
 }
@@ -382,7 +382,7 @@ curl -X GET https://2truths-1lie-production.up.railway.app/docs
 - [Mobile Development Guide](MOBILE_GUIDE.md) - React Native app development
 - [Technical Architecture](TECHNICAL_ARCHITECTURE.md) - System architecture overview
 - [API Documentation](api.md) - Complete API reference
-- [Main README](../README.md) - Project overview and Kiro integration
+- [Main README](../README.md) - Project overview and RevenueCat integration
 
 ```bash
 # Build and run
