@@ -11,6 +11,7 @@ import json
 import hmac
 import hashlib
 import os
+import time
 
 from services.auth_service import (
     auth_service,
@@ -470,6 +471,44 @@ async def revenuecat_webhook(
             # For now, we log and continue
 
     return {"status": "success", "message": "Webhook processed"}
+
+@router.post("/debug/simulate-purchase")
+async def simulate_revenuecat_purchase(
+    user_email: str = "fake.kevin@gmail.com", 
+    product_id: str = "token_pack_small"
+):
+    """Simulate a RevenueCat purchase webhook for testing"""
+    try:
+        tokens_to_add = PRODUCT_TOKEN_MAP.get(product_id, 0)
+        if tokens_to_add == 0:
+            return {"error": f"Product {product_id} not found or gives 0 tokens"}
+        
+        token_service = get_token_service()
+        
+        # Simulate the webhook processing
+        success = token_service.add_tokens_for_purchase(
+            user_id=user_email,
+            product_id=product_id,
+            tokens_to_add=tokens_to_add,
+            transaction_id=f"sim_{int(time.time())}",
+            event_data={"simulated": True, "timestamp": time.time()}
+        )
+        
+        if success:
+            balance_response = token_service.get_user_balance(user_email)
+            return {
+                "success": True,
+                "tokens_added": tokens_to_add,
+                "new_balance": balance_response.balance,
+                "product_id": product_id,
+                "user_email": user_email
+            }
+        else:
+            return {"success": False, "error": "Failed to add tokens"}
+            
+    except Exception as e:
+        logger.error(f"Failed to simulate purchase: {e}")
+        return {"success": False, "error": str(e)}
 
 @router.post("/test-webhook-debug")
 async def test_webhook_debug():
