@@ -13,7 +13,7 @@ from fastapi.testclient import TestClient
 import io
 
 # Add backend to path
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..'))
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..'))
 
 from main import app
 from services.auth_service import create_test_token
