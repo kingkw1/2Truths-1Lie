@@ -76,19 +76,55 @@
 **Overall Vibe:** Authentic, resilient, and innovative. This is your **#BuildInPublic** and **Best Vibes** story.
 
 ---
-* **Shot 8: The Journey Montage**
-    * **Timecode:** 2:05 - 2:40
-    * **Visuals:** A rapid montage mixing screen recordings and AI-generated video clips.
-        * **Cut 1 (3s):** Screen recording of your Twitter feed. **Caption:** "Sharing the Journey in Public."
-        * **Cut 2 (3s):** **AI Video.** "An abstract animation of glowing red database servers with error symbols." **Caption:** "Overcoming a Multi-Day Backend Bug."
-        * **Cut 3 (3s):** **AI Video.** "An abstract animation of glowing lines of text flowing between a human icon and a brain icon." **Caption:** "Strategizing with our AI Project Managers: Gemini & Perplexity."
-        * **Cut 4 (3s):** Screen recording of a Jules/Copilot prompt. **Caption:** "Executing with our AI Developers."
-    * **Audio:** Music becomes more thoughtful and inspiring. **VO:** "This app was built completely in the open. We shared our entire journey, from strategic pivots to multi-day battles with backend bugs. Our development was supercharged by a multi-layered AI development team—using Google Gemini and Perplexity as our 'AI Project Managers' to craft expert prompts for our 'AI Developers,' Jules and VSC Copilot. This partnership was essential for navigating extreme technical challenges while maintaining a positive, 'vibe-coding' workflow."
+### **Revised Shot 8: The Journey Montage**
+
+**Timecode:** 2:05 - 2:40
+**Audio:** The music becomes more thoughtful and inspiring. The voiceover remains the same, as it's already paced well for this duration.
 
 ---
-### Part 5: The Close - "Where can I get it?" (2:40 - 3:00)
+#### **Act 1: The Public Journey & The Struggle (2:05 - 2:15)**
+*VOICEOVER: "This app was built completely in the open. We shared our entire journey, from strategic pivots to multi-day battles with backend bugs."*
 
-**Overall Vibe:** Confident, clear call to action.
+* **Cut 1 (5 seconds): The #BuildInPublic Story**
+    * **Visual:** Screen recording of you slowly scrolling through your Twitter/X feed, showing the various posts you've made.
+    * **On-Screen Caption:** "Sharing the Journey in Public"
+
+* **Cut 2 (5 seconds): The Backend Meltdown**
+    * **Visual:** The AI-generated video clip of the "glowing red database servers with error symbols."
+    * **On-Screen Caption:** "Overcoming a Multi-Day Backend Bug"
+
+---
+#### **Act 2: The AI Partnership Explained (2:15 - 2:30)**
+*VOICEOVER: "Our development was supercharged by a multi-layered AI development team—using Google Gemini and Perplexity as our 'AI Project Managers' to craft expert prompts for our 'AI Developers,' Jules and VSC Copilot."*
+
+* **Cut 3 (5 seconds): The Strategy Session**
+    * **Visual:** The AI-generated video clip of the "human icon and brain icon" collaborating.
+    * **On-Screen Caption:** "Strategizing with our AI Project Managers..."
+
+* **Cut 4 (5 seconds): Crafting the Prompts**
+    * **Visual:** A clean screen recording of one of the detailed prompts we crafted (for example, the prompt to fix the JSON parsing bug) being shown in a text editor.
+    * **On-Screen Caption:** "...Gemini & Perplexity."
+
+* **Cut 5 (5 seconds): The Execution**
+    * **Visual:** A screen recording of a VSC Copilot or Jules chat interface, showing a prompt being pasted and then lines of code being generated in response.
+    * **On-Screen Caption:** "Executing with our AI Developers."
+
+---
+#### **Act 3: The Payoff (2:30 - 2:40)**
+*VOICEOVER: "This partnership was essential for navigating extreme technical challenges while maintaining a positive, 'vibe-coding' workflow."*
+
+* **Cut 6 (5 seconds): The Broken Tests**
+    * **Visual:** A screen recording of your terminal showing a long list of red, failing test results from when the test suite was broken.
+    * **On-Screen Caption:** "Navigating Extreme Technical Challenges..."
+
+* **Cut 7 (5 seconds): The Final Success**
+    * **Visual:** A screen recording of the same terminal, now showing a clean run of the test suite with a final green "PASS" message.
+    * **On-Screen Caption:** "...and Finding Success."
+
+---
+### **Part 5: The Close - "Where can I get it?" (2:40 - 3:00)**
+
+**Overall Vibe:** Confident, clear call to action, ending on a high-energy, polished note.
 
 ---
 * **Shot 9: The Final Title Card**
