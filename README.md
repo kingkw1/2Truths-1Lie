@@ -22,7 +22,7 @@
 
 | Resource               | Link/Access                                      |
 |------------------------|-------------------------------------------------|
-| 🎬 **Demo Video** | `[Link to your new 3-minute YouTube video]`   |
+| 🎬 **Demo Video** | [https://youtu.be/vyAkq1MJ9oQ](https://youtu.be/vyAkq1MJ9oQ)   |
 | 📱 **Live App** | <img src="submission_materials/playstore-qr-code.png" alt="QR Code" width="150"/> <br>[Download on Google Play Store](https://play.google.com/store/apps/details?id=com.kingkw1.twotruthsoneliegame) |
 | 🚀 **Devpost Project** | [https://devpost.com/software/2truths-1-lie](https://devpost.com/software/2truths-1-lie)          |
 

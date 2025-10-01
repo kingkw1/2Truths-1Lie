@@ -1,4 +1,10 @@
-# 📚 2Trut---
+# 📚 2Truths-1Lie: Documentation Hub
+
+> **Production-Ready Mobile Social Game** | **Google Play Store Live** | **RevenueCat Shipaton Winner**
+
+**Quick Navigation**: [🏆 Project Overview](#-what-is-2truths-1lie) • [🚀 Get Started](#-quick-start) • [🏗 Architecture](#-technical-architecture) • [⚙️ Admin Guide](ADMIN_GUIDE.md) • [📋 API Docs](api.md)
+
+---
 
 ## 🏆 **RevenueCat Shipaton Submission**
 
@@ -16,32 +22,6 @@ This project evolved from a hackathon prototype into a **production-ready moneti
 - **✅ Production Backend**: Railway deployment with comprehensive APIs
 - **✅ Complete Game Loop**: Recording, challenges, scoring, and progression
 
----ation Hub
-
-> **Production-Ready Mobile Social Game** | **Google Play Store Live** | **RevenueCat Shipaton Winner**
-
-**Quick Navigation**: [🏆 Project Overview](#-what-is-2truths-1lie) • [🚀 Get Started](#-quick-start) • [🏗 Architecture](#-technical-architecture) • [⚙️ Admin Guide](ADMIN_GUIDE.md) • [📋 API Docs](api.md)*Quick Navigation**: [🏆 Hackathon Submission](#-hackathon-submission) • [🚀 Get Started](#-quick-start) • [🏗 Architecture](#-technical-architecture) • [⚙️ Admin Guide](ADMIN_GUIDE.md) • [🤖 Kiro Integration](#-kiro-integration)2Truths-1Lie: Documentation Hub
-
-> **Kiro-Powered Mobile Social Game** | **Production Ready** | **Google Play Store Live**
-
-**Quick Navigation**: [🏆 Hackathon Submission](#-hackathon-submission) • [� Get Started](#-quick-start) • [🏗 Architecture](#-technical-architecture) • [🤖 Kiro Integration](#-kiro-integration)
-
----
-
-## � **Hackathon Submission**
-
-This project was built for the **Code with Kiro Hackathon**, demonstrating how Kiro's spec-driven development transforms ideas into production-ready code.
-
-### 🎯 **Submission Materials**
-- **🎬 Demo Video**: [submission_materials/DEMO_VIDEO_LINK](../submission_materials/) 
-- **📱 Live App**: Google Play Store submission with QR code access
-- **� All Assets**: [submission_materials/](../submission_materials/) directory
-
-### 🤖 **Kiro Integration Evidence**
-- **📋 Complete Specs**: [`.kiro/specs/`](../.kiro/specs/) - All major features spec-driven
-- **🔧 Agent Hooks**: [`.kiro/hooks/`](../.kiro/hooks/) - Future automation setup
-- **📖 Steering Docs**: [`.kiro/steering/`](../.kiro/steering/) - Technical guidance
-
 ---
 
 ## 🎮 **What is 2Truths-1Lie?**
@@ -50,8 +30,8 @@ A **production-ready mobile social game** that modernizes the classic party iceb
 
 ### ✨ **Core Features**
 - **📹 Advanced Video Recording**: expo-camera integration with permission handling and validation
-- **� Real-time Video Processing**: FFmpeg-powered backend for seamless video merging
-- **� Secure Authentication**: JWT-based user system with production deployment
+- **🎬 Real-time Video Processing**: FFmpeg-powered backend for seamless video merging
+- **🔐 Secure Authentication**: JWT-based user system with production deployment
 - **☁️ Production Backend**: FastAPI server deployed on Railway with SQLite database
 - **📱 Mobile App**: React Native with EAS Build for Google Play Store deployment
 
@@ -101,7 +81,7 @@ graph TD
     B -->|Video Processing| E[🎬 FFmpeg Service <br> Video Merging];
     A -->|Video Upload| B;
     E -->|Merged Videos| D;
-    B -->|JWT Auth| F[� Authentication <br> Secure Tokens];
+    B -->|JWT Auth| F[🔐 Authentication <br> Secure Tokens];
 ```
 
 **Key Technical Achievements:**
@@ -116,9 +96,9 @@ graph TD
 
 Complete monetization strategy implemented for sustainable growth:
 
-### � **Premium Features**
+### 💎 **Premium Features**
 - **Pro Subscriptions**: Unlimited challenge creation + Pro badge
-- **Token System**: Consumable hints with "Wizard of Oz" 50/50 functionality
+- **Token System**: Consumable hints with intelligent hint functionality
 - **Progressive Rewards**: Score-based progression and achievements
 - **Social Features**: Enhanced sharing and community engagement
 
@@ -150,9 +130,8 @@ Complete monetization strategy implemented for sustainable growth:
 - **[Testing Guide](TESTING_GUIDE.md)** - Comprehensive testing strategies
 - **[Contributing Guidelines](CONTRIBUTING.md)** - How to contribute to the project
 
-### 🎯 **Project Context**
-- **[Product Overview](PRODUCT_OVERVIEW.md)** - Business case and features
-- **[Development Plan](DEVELOPMENT_PLAN.md)** - Project roadmap and milestones
+### 💰 **Monetization & Setup**
+- **[RevenueCat Setup Guide](REVENUECAT_SETUP.md)** - Complete monetization implementation
 
 ---
 
@@ -161,31 +140,27 @@ Complete monetization strategy implemented for sustainable growth:
 ```
 2Truths-1Lie/
 ├── README.md                    # 🏠 Main project homepage
-├── .kiro/                       # 🤖 Kiro spec-driven development
-│   ├── specs/                   # 📋 Complete feature specifications
-│   ├── hooks/                   # � Agent automation hooks
-│   └── steering/                # 📖 Technical guidance docs
 ├── mobile/                      # 📱 React Native mobile app
 ├── backend/                     # 🖥 Python FastAPI server
 ├── docs/                        # 📚 This documentation hub
-├── submission_materials/        # 🏆 Hackathon submission assets
-├── scripts/                     # � Development and testing scripts
-├── tools/                       # 🔧 Utilities and validation tools
-└── assets/                      # � App icons and graphics
+├── submission_materials/        # 🏆 RevenueCat Shipaton submission assets
+├── scripts/                     # 🔧 Development and testing scripts
+├── tools/                       # 🛠 Utilities and validation tools
+└── assets/                      # 🎨 App icons and graphics
 ```
 
 ---
 
 ## 🎯 **For Different Audiences**
 
-### 🏆 **Hackathon Judges**
+### 🏆 **RevenueCat Shipaton Judges**
 1. **Start here**: [Main README](../README.md) for project overview
-2. **Kiro Integration**: [`.kiro/specs/README.md`](../.kiro/specs/README.md) for spec-driven evidence
+2. **Monetization**: [RevenueCat Setup Guide](REVENUECAT_SETUP.md) for implementation details
 3. **Technical Details**: [Technical Architecture](TECHNICAL_ARCHITECTURE.md)
 4. **Live Demo**: [submission_materials/](../submission_materials/) for QR code and access
 
-### � **Developers**
-1. **Getting Started**: [Developer Quick Start](DEVELOPER_QUICK_START.md)
+### 👨‍💻 **Developers**
+1. **Getting Started**: Follow the [Quick Start](#-quick-start) guide above
 2. **Mobile Development**: [Mobile Guide](MOBILE_GUIDE.md) 
 3. **Backend Development**: [Backend Guide](BACKEND_GUIDE.md)
 4. **API Integration**: [API Documentation](api.md)
@@ -197,18 +172,18 @@ Complete monetization strategy implemented for sustainable growth:
 
 ---
 
-## � **Project Status**
+## 📊 **Project Status**
 
 ### ✅ **Production Ready**
 - **Mobile App**: Live on Google Play Store with video recording
 - **Backend API**: Deployed on Railway with JWT authentication  
 - **Video Processing**: FFmpeg-powered merging and validation
-- **EAS Build**: Automated deployment with proper signing
+- **RevenueCat**: Full monetization with subscriptions and consumables
 
 ### 🎯 **Key Differentiators**
-- **Spec-First Development**: Every feature started as Kiro specification
 - **Production Quality**: Real app with working video features deployed to store
 - **Advanced Video Processing**: Sophisticated mobile camera + backend FFmpeg integration
+- **Complete Monetization**: RevenueCat integration with multiple revenue streams
 - **Full-Stack**: Complete React Native + FastAPI + Railway deployment
 
 ---
@@ -224,15 +199,16 @@ Complete monetization strategy implemented for sustainable growth:
 ### ☁️ **Deployment Platforms**
 - [Railway Documentation](https://docs.railway.app/)
 - [Google Play Console](https://play.google.com/console/)
+- [RevenueCat Documentation](https://docs.revenuecat.com/)
 
 ---
 
-**Last Updated**: September 14, 2025  
-**Documentation Version**: 4.0 (Kiro Hackathon)  
-**Status**: Production Ready ✅
+**Last Updated**: October 1, 2025  
+**Documentation Version**: 5.0 (RevenueCat Shipaton)  
+**Status**: Production Ready with Monetization ✅
 
 ---
 
 <div align="center">
-Built with ❤️ and a Kiro 🤖 Partnership
+Built with ❤️ for the RevenueCat Shipaton 💰
 </div>
