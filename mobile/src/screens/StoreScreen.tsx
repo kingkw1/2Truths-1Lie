@@ -19,7 +19,7 @@ import { useTokenBalance } from '../hooks/useTokenBalance';
 import { ProductCard } from '../components/ProductCard';
 import { TrialBanner } from '../components/TrialBanner';
 import { revenueCatUserSync } from '../services/revenueCatUserSync';
-import { TokenAPI } from '../services/tokenAPI';
+import { TokenAPI, makeAuthenticatedRequest, getApiBaseUrl } from '../services/tokenAPI';
 import { ThemeContext } from '../context/ThemeContext';
 
 export const StoreScreen: React.FC = () => {
@@ -247,6 +247,33 @@ export const StoreScreen: React.FC = () => {
         
         // Start the polling process
         await startPolling();
+        
+        // If polling didn't work, try manual fallback
+        if (pollingTokens) {
+          console.log('🔧 Polling timeout reached, trying manual token addition fallback...');
+          try {
+            // Call our debug endpoint to manually add tokens
+            const result = await makeAuthenticatedRequest(
+              `/api/v1/tokens/debug/simulate-purchase?user_email=${encodeURIComponent(user?.email || '')}&product_id=${encodeURIComponent(pkg.product.identifier)}`,
+              { method: 'POST' }
+            );
+            
+            if (result.success) {
+              console.log(`✅ Manual token addition successful: ${result.tokens_added} tokens added`);
+              await refreshTokenBalance();
+              setPollingTokens(false);
+              
+              Alert.alert(
+                'Purchase Complete!', 
+                `Your ${result.tokens_added} tokens have been added to your account. New balance: ${result.new_balance} tokens.`
+              );
+            } else {
+              console.error('❌ Manual token addition failed:', result.error);
+            }
+          } catch (error) {
+            console.error('🔧 Manual fallback failed:', error);
+          }
+        }
         
       } else {
         // Non-token, non-premium purchase
