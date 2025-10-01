@@ -8,11 +8,11 @@
 
 <img src="https://github.com/kingkw1/public_media/raw/main/gifs/kiro_full_gameplay_condensed.gif" alt="App Demo GIF" width="25%">
 
-[![RevenueCat Shipaton](https://img.shields.io/badge/RevenueCat-Shipaton_2025-blueviolet.svg)](#)
+[![RevenueCat Shipaton](https://img.shields.io/badge/RevenueCat-Shipaton_2025-blueviolet.svg)](https://revenuecat.com/shipaton)
 [![Project Status](https://img.shields.io/badge/status-Live_on_Play_Store-brightgreen.svg)](#-submission-materials)
 [![License](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE.md)
 
-**[Watch the Demo Video](#) · [Download on Google Play](#-submission-materials) · [View Devpost Submission](#)**
+**[Watch the Demo Video](https://youtu.be/vyAkq1MJ9oQ) · [Download on Google Play](#-submission-materials) · [View Devpost Submission](https://devpost.com/software/2truths-1-lie)**
 
 </div>
 
@@ -44,9 +44,9 @@ We implemented a hybrid freemium model designed for player choice and long-term 
 
 This strategy, powered by RevenueCat, provides a scalable foundation that respects free players while offering compelling value for users who wish to invest deeper in the game.
 
-## ️ Technical Architecture
+## 🏗️ Technical Architecture
 
-The system is a modern, full-stack application built for a production environment.
+The system is a modern, full-stack application built for a production environment. For detailed technical documentation, see our [📚 Documentation Hub](docs/README.md).
 
 ```mermaid
 graph TD
@@ -84,7 +84,7 @@ We focused our sprint on features that would make us highly competitive for the 
 
 Get the project running on your local machine.
 
-**Prerequisites:** Node.js (v18+), Python (v3.9+), and the Expo Go app on your mobile device.
+**Prerequisites:** Node.js (v18+), Python (v3.12+), and the Expo Go app on your mobile device.
 
 1.  **Clone the repository:**
     ```bash
@@ -105,6 +105,21 @@ Get the project running on your local machine.
     npx expo start
     ```
     Scan the QR code with the Expo Go app on your phone.
+
+For detailed setup instructions, see our [📚 Documentation Hub](docs/README.md).
+
+## 📚 Documentation
+
+This project includes comprehensive documentation covering all aspects of development, deployment, and monetization:
+
+- **[📚 Documentation Hub](docs/README.md)** - Central hub for all project documentation
+- **[🏗 Technical Architecture](docs/TECHNICAL_ARCHITECTURE.md)** - Detailed system design and component relationships
+- **[📱 Mobile Development Guide](docs/MOBILE_GUIDE.md)** - React Native setup and development patterns
+- **[🖥 Backend Guide](docs/BACKEND_GUIDE.md)** - FastAPI backend development and deployment
+- **[💰 RevenueCat Setup Guide](docs/REVENUECAT_SETUP.md)** - Complete monetization implementation guide
+- **[📋 API Documentation](docs/api.md)** - Comprehensive REST API reference
+- **[🔒 Security Checklist](docs/SECURITY_CHECKLIST.md)** - Production security implementation
+- **[🧪 Testing Guide](docs/TESTING_GUIDE.md)** - Testing strategies and coverage
 
 ## 📜 License
 
