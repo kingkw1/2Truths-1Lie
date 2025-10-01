@@ -457,9 +457,21 @@ async def revenuecat_webhook(
     if tokens_to_add and event_type in ['INITIAL_PURCHASE', 'RENEWAL', 'NON_RENEWING_PURCHASE']:
         logger.info(f"Processing token purchase: {tokens_to_add} tokens for user {app_user_id}, product {product_id}")
         try:
-            # This logic should be encapsulated in the token_service
+            # Convert email to numeric user ID for token processing
+            target_user_id = app_user_id
+            if "@" in app_user_id:
+                # Email-based lookup - convert to numeric ID
+                user_data = db_service.get_user_by_email(app_user_id)
+                if user_data:
+                    target_user_id = str(user_data["id"])
+                    logger.info(f"Converted email {app_user_id} to user ID {target_user_id} for token processing")
+                else:
+                    logger.error(f"No user found for email {app_user_id} - cannot process token purchase")
+                    return {"status": "error", "message": f"User not found for email {app_user_id}"}
+            
+            # Process tokens with the correct user ID
             token_service.add_tokens_for_purchase(
-                user_id=app_user_id,
+                user_id=target_user_id,
                 product_id=product_id,
                 tokens_to_add=tokens_to_add,
                 transaction_id=event.get('transaction_id'),
